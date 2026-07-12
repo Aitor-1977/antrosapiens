@@ -77,10 +77,35 @@ opcionales. Si falta `fecha_publicacion`, el registro queda `no_fechado` y **no
 es consumible por la API**. Los incompletos van a `rechazos`, nunca a
 `evidencias`.
 
+## Prospectos — los cuatro ecosistemas
+
+El radar se enfoca en cuatro ecosistemas estratégicos. La tabla `prospectos`
+guarda cada entidad objetivo con una **categoría obligatoria** (`CHECK` en la
+BD) y su discurso corporativo ("Thick Data") extraído de URLs o perfiles:
+
+| Categoría | Discurso típico (Thick Data) |
+|---|---|
+| `VC` | tesis de inversión |
+| `Startup` | promesa de valor, perfil de founders/C-level |
+| `Incubadora` | programas de aceleración, portafolio |
+| `Corporativo` | comunicados institucionales, reportes de innovación |
+
+Campos de `prospectos`: `nombre`, `categoria` (obligatoria y literal),
+`discurso_corporativo` (texto largo), `tipo_discurso`, `url_perfil`,
+`fuente_discurso`, `fecha_captura`, `hash_dedup` (sha256 de nombre + categoría,
+único). El motor **almacena** el discurso tal cual — no lo interpreta ni lo
+puntúa. La categoría la declara el operador al alta (estructural), no se infiere
+del texto. La escritura es UPSERT por `hash_dedup` (enriquece sin duplicar);
+los inválidos van a `rechazos`.
+
+Endpoints (solo lectura): `GET /prospectos` (filtros `categoria`, `q`,
+`con_discurso`), `GET /prospectos/categorias`, `GET /prospectos/{id}`.
+
 ## Base de datos
 
 SQLite en Fase 1, con esquema escrito para migrar a PostgreSQL sin tocar el
-modelo (ver notas en `hd_scraper/db/schema.sql`).
+modelo (ver notas en `hd_scraper/db/schema.sql`). El `CHECK` de `categoria` y el
+UPSERT por `hash_dedup` funcionan igual en SQLite y en Postgres.
 
 ## Despliegue
 

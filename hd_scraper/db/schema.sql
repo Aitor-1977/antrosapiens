@@ -46,6 +46,30 @@ CREATE TABLE IF NOT EXISTS rechazos (
 
 CREATE INDEX IF NOT EXISTS idx_rechazos_motivo ON rechazos (motivo);
 
+-- Prospectos: entidades objetivo de los CUATRO ecosistemas estratégicos.
+-- `categoria` es OBLIGATORIA y acotada por CHECK (portable a SQLite y Postgres).
+-- Los campos de "Thick Data" guardan el discurso corporativo extraído de URLs o
+-- perfiles: el motor los ALMACENA tal cual, no los interpreta.
+CREATE TABLE IF NOT EXISTS prospectos (
+    id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+    nombre                TEXT NOT NULL,
+    categoria             TEXT NOT NULL,   -- VC | Startup | Incubadora | Corporativo
+    -- Thick Data (discurso corporativo)
+    discurso_corporativo  TEXT,            -- cuerpo de texto extraído (tesis, promesa, programa, comunicado…)
+    tipo_discurso         TEXT,            -- etiqueta estructural (tesis_inversion|promesa_valor|programa|portafolio|comunicado|reporte|perfil)
+    url_perfil            TEXT,            -- URL/perfil de donde se extrajo el discurso
+    fuente_discurso       TEXT,            -- nombre de la fuente/plataforma
+    fecha_captura         TEXT,            -- ISO 8601 de la captura del texto
+    -- Metadatos
+    hash_dedup            TEXT NOT NULL UNIQUE,  -- sha256(nombre normalizado + categoria)
+    creado_en             TEXT NOT NULL,
+    actualizado_en        TEXT NOT NULL,
+    CHECK (categoria IN ('VC', 'Startup', 'Incubadora', 'Corporativo'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_prospectos_categoria ON prospectos (categoria);
+CREATE INDEX IF NOT EXISTS idx_prospectos_nombre    ON prospectos (nombre);
+
 -- Cola de trabajos: reemplaza a Redis con una tabla simple en SQLite.
 CREATE TABLE IF NOT EXISTS jobs (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,

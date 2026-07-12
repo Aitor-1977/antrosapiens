@@ -29,6 +29,13 @@ ORIGENES_DECLARACION: frozenset[str] = frozenset(
     {"operador", "inversor", "prensa", "usuario"}
 )
 
+# categoria de prospecto: los cuatro ecosistemas estratégicos del radar.
+# Es obligatoria en la tabla `prospectos`. La declara el operador al alta del
+# prospecto (estructural): NO se infiere leyendo el discurso corporativo.
+CATEGORIAS: frozenset[str] = frozenset(
+    {"VC", "Startup", "Incubadora", "Corporativo"}
+)
+
 # Estados de un registro dentro de evidencias.
 ESTADO_OK = "ok"              # completo y fechado: consumible por la API.
 ESTADO_NO_FECHADO = "no_fechado"  # completo pero sin fecha_publicacion: NO consumible.
@@ -61,6 +68,12 @@ def normalizar_empresa(empresa: str) -> str:
 def calcular_hash_dedup(empresa: str, url_fuente: str) -> str:
     """hash_dedup = sha256(empresa_normalizada + url_normalizada). Único por registro."""
     base = f"{normalizar_empresa(empresa)}|{normalizar_url(url_fuente)}"
+    return hashlib.sha256(base.encode("utf-8")).hexdigest()
+
+
+def calcular_hash_prospecto(nombre: str, categoria: str) -> str:
+    """hash_dedup de prospecto = sha256(nombre_normalizado + categoria). Único."""
+    base = f"{normalizar_empresa(nombre)}|{categoria}"
     return hashlib.sha256(base.encode("utf-8")).hexdigest()
 
 
@@ -153,4 +166,47 @@ class EvidenceRecord:
             "tipo_evento": self.tipo_evento,
             "origen_declaracion": self.origen_declaracion,
             "hash_dedup": self.hash_dedup,
+        }
+
+
+@dataclass
+class ProspectoRecord:
+    """Un prospecto: entidad objetivo de uno de los cuatro ecosistemas.
+
+    ``categoria`` es OBLIGATORIA y literal (VC | Startup | Incubadora |
+    Corporativo). La declara el operador al alta (estructural); NO se infiere
+    leyendo el discurso.
+
+    Campos "Thick Data" (``discurso_corporativo`` y compañía) almacenan el texto
+    del discurso corporativo extraído de URLs o perfiles: el motor lo GUARDA tal
+    cual, no lo interpreta ni lo puntúa.
+    """
+    # --- Identidad + categorización obligatoria ---
+    nombre: str
+    categoria: str                       # uno de CATEGORIAS (obligatorio)
+    hash_dedup: str                      # sha256(nombre_norm + categoria), único
+
+    # --- Thick Data: discurso corporativo (texto largo) ---
+    discurso_corporativo: Optional[str] = None   # cuerpo de texto extraído
+    tipo_discurso: Optional[str] = None          # etiqueta estructural del discurso
+    url_perfil: Optional[str] = None             # URL/perfil de origen del discurso
+    fuente_discurso: Optional[str] = None        # nombre de la fuente/plataforma
+    fecha_captura: Optional[str] = None          # ISO 8601 de la captura del texto
+
+    # --- Metadatos ---
+    creado_en: str = field(default_factory=ahora_iso)
+    actualizado_en: str = field(default_factory=ahora_iso)
+
+    def to_row(self) -> dict:
+        return {
+            "nombre": self.nombre,
+            "categoria": self.categoria,
+            "hash_dedup": self.hash_dedup,
+            "discurso_corporativo": self.discurso_corporativo,
+            "tipo_discurso": self.tipo_discurso,
+            "url_perfil": self.url_perfil,
+            "fuente_discurso": self.fuente_discurso,
+            "fecha_captura": self.fecha_captura,
+            "creado_en": self.creado_en,
+            "actualizado_en": self.actualizado_en,
         }

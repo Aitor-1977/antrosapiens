@@ -12,12 +12,15 @@ from dataclasses import dataclass
 from dateutil import parser as date_parser
 
 from ..db.models import (
+    CATEGORIAS,
     ESTADO_NO_FECHADO,
     ESTADO_OK,
     ORIGENES_DECLARACION,
     TIPOS_EVENTO,
     EvidenceRecord,
+    ProspectoRecord,
     calcular_hash_dedup,
+    calcular_hash_prospecto,
 )
 
 # Campos obligatorios del contrato (fecha_publicacion NO entra aquí: su ausencia
@@ -87,5 +90,30 @@ def validate_record(record: EvidenceRecord) -> ValidationResult:
         return ValidationResult(True, estado=ESTADO_NO_FECHADO)
     if not _es_iso8601(record.fecha_publicacion):
         return ValidationResult(False, motivo="fecha_publicacion_no_iso8601")
+
+    return ValidationResult(True, estado=ESTADO_OK)
+
+
+def validate_prospecto(record: ProspectoRecord) -> ValidationResult:
+    """Valida un ``ProspectoRecord``.
+
+    Reglas: ``nombre`` no vacío; ``categoria`` obligatoria y dentro de
+    ``CATEGORIAS``; ``hash_dedup`` consistente; ``fecha_captura`` (si viene) ISO
+    8601. El discurso corporativo (Thick Data) es opcional y NO se valida por
+    contenido: solo se almacena. Un prospecto inválido va a `rechazos`.
+    """
+    if not record.nombre or not record.nombre.strip():
+        return ValidationResult(False, motivo="campo_obligatorio_vacio:nombre")
+    if not record.categoria or not record.categoria.strip():
+        return ValidationResult(False, motivo="campo_obligatorio_vacio:categoria")
+    if record.categoria not in CATEGORIAS:
+        return ValidationResult(False, motivo=f"categoria_invalida:{record.categoria}")
+
+    esperado = calcular_hash_prospecto(record.nombre, record.categoria)
+    if record.hash_dedup != esperado:
+        return ValidationResult(False, motivo="hash_dedup_inconsistente")
+
+    if record.fecha_captura and not _es_iso8601(record.fecha_captura):
+        return ValidationResult(False, motivo="fecha_captura_no_iso8601")
 
     return ValidationResult(True, estado=ESTADO_OK)

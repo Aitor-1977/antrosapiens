@@ -38,6 +38,18 @@ El **validador** (`hd_scraper/validation/validator.py`) es el **único guardián
 del contrato. Un registro incompleto va a `rechazos` con motivo, **nunca** a
 `evidencias`.
 
+## Prospectos (cuatro ecosistemas)
+
+Tabla `prospectos`: entidades objetivo del radar. `categoria` es OBLIGATORIA y
+literal — `VC | Startup | Incubadora | Corporativo` (`CHECK` en la BD). La
+declara el operador al alta (estructural), NO se infiere del discurso.
+
+Campos "Thick Data" (`discurso_corporativo`, `tipo_discurso`, `url_perfil`,
+`fuente_discurso`, `fecha_captura`) guardan el discurso corporativo extraído de
+URLs/perfiles: el motor lo ALMACENA, no lo interpreta. Escritura vía
+`hd_scraper/prospectos.py:upsert_prospecto` (UPSERT por `hash_dedup`, enriquece
+sin duplicar; inválidos → `rechazos`). Validación: `validate_prospecto`.
+
 ## Arquitectura
 
 - **Conectores** (`hd_scraper/connectors/`): clase base `Connector` con

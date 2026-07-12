@@ -15,7 +15,7 @@ from typing import Optional
 from fastapi import FastAPI, HTTPException, Query
 
 from ..db.database import get_db
-from ..db.models import ESTADO_OK, TIPOS_EVENTO
+from ..db.models import CATEGORIAS, ESTADO_OK, TIPOS_EVENTO
 
 app = FastAPI(
     title="hd-scraper API (solo lectura)",
@@ -49,10 +49,14 @@ def raiz() -> dict:
         "role": "evidence-extraction",
         "descripcion": "Extrae, normaliza y almacena señales públicas. No interpreta.",
         "estado": "vivo",
+        "ecosistemas": sorted(CATEGORIAS),
         "endpoints": {
             "GET /health": "estado del servicio",
             "GET /evidencias": "evidencia consumible (filtros: empresa, tipo_evento, desde, hasta)",
             "GET /evidencias/{id}": "una evidencia por id",
+            "GET /prospectos": "prospectos por ecosistema (filtros: categoria, q, con_discurso)",
+            "GET /prospectos/categorias": "conteo de prospectos por ecosistema",
+            "GET /prospectos/{id}": "un prospecto por id (incluye Thick Data)",
             "GET /salud-fuentes": "salud por fuente/conector",
             "GET /stats": "contadores agregados",
             "GET /docs": "documentación interactiva (OpenAPI)",
@@ -128,6 +132,76 @@ def salud_fuentes() -> dict:
     return {"items": [dict(f) for f in filas]}
 
 
+def _row_a_prospecto(row) -> dict:
+    return {
+        "id": row["id"],
+        "nombre": row["nombre"],
+        "categoria": row["categoria"],
+        "discurso_corporativo": row["discurso_corporativo"],
+        "tipo_discurso": row["tipo_discurso"],
+        "url_perfil": row["url_perfil"],
+        "fuente_discurso": row["fuente_discurso"],
+        "fecha_captura": row["fecha_captura"],
+        "creado_en": row["creado_en"],
+        "actualizado_en": row["actualizado_en"],
+    }
+
+
+@app.get("/prospectos")
+def listar_prospectos(
+    categoria: Optional[str] = Query(None, description="Filtra por ecosistema (VC|Startup|Incubadora|Corporativo)"),
+    q: Optional[str] = Query(None, description="Búsqueda por nombre (subcadena)"),
+    con_discurso: Optional[bool] = Query(None, description="Solo con/sin Thick Data"),
+    limite: int = Query(50, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+) -> dict:
+    if categoria is not None and categoria not in CATEGORIAS:
+        raise HTTPException(400, f"categoria inválida: {categoria}")
+
+    where: list[str] = ["1 = 1"]
+    params: list = []
+    if categoria:
+        where.append("categoria = ?")
+        params.append(categoria)
+    if q:
+        where.append("LOWER(nombre) LIKE ?")
+        params.append(f"%{q.lower()}%")
+    if con_discurso is True:
+        where.append("discurso_corporativo IS NOT NULL AND TRIM(discurso_corporativo) <> ''")
+    elif con_discurso is False:
+        where.append("(discurso_corporativo IS NULL OR TRIM(discurso_corporativo) = '')")
+
+    clausula = " AND ".join(where)
+    db = get_db()
+    total = db.fetch_one(f"SELECT COUNT(*) AS n FROM prospectos WHERE {clausula}", params)["n"]
+    filas = db.fetch_all(
+        f"SELECT * FROM prospectos WHERE {clausula} ORDER BY nombre ASC LIMIT ? OFFSET ?",
+        params + [limite, offset],
+    )
+    return {"total": total, "limite": limite, "offset": offset,
+            "items": [_row_a_prospecto(f) for f in filas]}
+
+
+@app.get("/prospectos/categorias")
+def prospectos_por_categoria() -> dict:
+    db = get_db()
+    filas = db.fetch_all(
+        "SELECT categoria, COUNT(*) AS n FROM prospectos GROUP BY categoria")
+    conteo = {c: 0 for c in sorted(CATEGORIAS)}
+    for f in filas:
+        conteo[f["categoria"]] = f["n"]
+    return {"categorias": conteo}
+
+
+@app.get("/prospectos/{prospecto_id}")
+def obtener_prospecto(prospecto_id: int) -> dict:
+    db = get_db()
+    row = db.fetch_one("SELECT * FROM prospectos WHERE id = ?", (prospecto_id,))
+    if row is None:
+        raise HTTPException(404, "prospecto no encontrado")
+    return _row_a_prospecto(row)
+
+
 @app.get("/stats")
 def stats() -> dict:
     db = get_db()
@@ -136,6 +210,8 @@ def stats() -> dict:
             "SELECT COUNT(*) AS n FROM evidencias WHERE estado = ?", (ESTADO_OK,))["n"],
         "evidencias_no_fechadas": db.fetch_one(
             "SELECT COUNT(*) AS n FROM evidencias WHERE estado = 'no_fechado'")["n"],
+        "prospectos": db.fetch_one("SELECT COUNT(*) AS n FROM prospectos")["n"],
+        "prospectos_por_categoria": prospectos_por_categoria()["categorias"],
         "rechazos": db.fetch_one("SELECT COUNT(*) AS n FROM rechazos")["n"],
         "fuentes_en_alerta": db.fetch_one(
             "SELECT COUNT(*) AS n FROM salud_fuentes WHERE alerta = 1")["n"],
