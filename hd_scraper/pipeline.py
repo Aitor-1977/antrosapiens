@@ -49,12 +49,13 @@ def _escribir_evidencia(db: Database, record: EvidenceRecord) -> bool:
     """Inserta en `evidencias` con dedup por hash_dedup. True si insertó."""
     cur = db.execute(
         """
-        INSERT OR IGNORE INTO evidencias (
+        INSERT INTO evidencias (
             cita_textual, fecha_extraccion, url_fuente, nombre_medio,
             empresa_mencionada, tipo_evento, origen_declaracion, hash_dedup,
             fecha_publicacion, persona_citada, cargo,
             connector, estado, raw_hash, creado_en
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT (hash_dedup) DO NOTHING
         """,
         (
             record.cita_textual, record.fecha_extraccion, record.url_fuente,

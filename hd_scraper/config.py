@@ -35,10 +35,29 @@ def _parse_slugs(valor: str) -> dict[str, str]:
     return out
 
 
+def _resolve_database_url() -> str:
+    """Resuelve la URL de la base según prioridad.
+
+    1. HD_DATABASE_URL (override explícito).
+    2. DATABASE_URL / POSTGRES_URL / POSTGRES_PRISMA_URL (los que inyecta Vercel
+       al conectar Postgres). Producción usa Postgres: sin memoria temporal.
+    3. Fallback SQLite (solo desarrollo local; en Vercel apunta a /tmp para no
+       romper la lectura mientras no haya Postgres conectado).
+    """
+    for var in ("HD_DATABASE_URL", "DATABASE_URL", "POSTGRES_URL", "POSTGRES_PRISMA_URL"):
+        valor = os.getenv(var)
+        if valor:
+            return valor
+    if os.getenv("VERCEL"):
+        return "sqlite:////tmp/hd_scraper.db"
+    return f"sqlite:///{DATA_DIR / 'hd_scraper.db'}"
+
+
 @dataclass(frozen=True)
 class Settings:
-    # Base de datos. sqlite:///ruta para SQLite; el esquema es portable a Postgres.
-    database_url: str = os.getenv("HD_DATABASE_URL", f"sqlite:///{DATA_DIR / 'hd_scraper.db'}")
+    # Base de datos. postgres://... para Postgres (producción); sqlite:///ruta
+    # para desarrollo/tests. El esquema tiene versión para cada motor.
+    database_url: str = field(default_factory=_resolve_database_url)
 
     # Retención del crudo (HTML/JSON comprimido) en disco.
     raw_dir: Path = RAW_DIR

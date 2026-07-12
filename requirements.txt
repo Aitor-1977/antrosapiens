@@ -1,4 +1,4 @@
-# hd-scraper — capa de extracción de evidencia (Fase 1)
+# hd-prospector — motor de extracción de evidencia
 # Runtime
 fastapi>=0.110,<1.0
 uvicorn[standard]>=0.29,<1.0
@@ -6,6 +6,8 @@ httpx>=0.27,<1.0
 feedparser>=6.0,<7.0
 apscheduler>=3.10,<4.0
 python-dateutil>=2.9,<3.0
+# PostgreSQL (producción). SQLite (dev/tests) usa la stdlib, sin paquete.
+psycopg[binary]>=3.1,<4.0
 # BeautifulSoup: incluido pero de uso restringido (solo si es indispensable).
 beautifulsoup4>=4.12,<5.0
 # Test

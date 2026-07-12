@@ -22,12 +22,11 @@ def encolar(db: Database, connector: str, query: QuerySpec) -> int:
     if connector not in REGISTRY:
         raise ValueError(f"conector desconocido: {connector}")
     ahora = ahora_iso()
-    cur = db.execute(
+    return db.insert_returning_id(
         """INSERT INTO jobs (connector, query_json, estado, creado_en, actualizado_en)
            VALUES (?, ?, 'pending', ?, ?)""",
         (connector, json.dumps(query.to_dict(), ensure_ascii=False), ahora, ahora),
     )
-    return cur.lastrowid
 
 
 def _marcar(db: Database, job_id: int, estado: str, resultado: str | None = None) -> None:
