@@ -55,7 +55,7 @@ class GdeltConnector(Connector):
         # La consulta usa el nombre de empresa entre comillas para precisión y
         # términos extra opcionales. No se agregan palabras que sesguen el
         # tipo_evento (que ya viene declarado en la QuerySpec).
-        q = f'"{query.empresa}"'
+        q = f'"{query.empresa}"' if query.exact else query.empresa
         if query.terminos:
             q += f" {query.terminos}"
         if self.sourcelang:

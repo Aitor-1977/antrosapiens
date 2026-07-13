@@ -342,9 +342,11 @@ def scrape(payload: ScrapeIn, x_ingest_token: Optional[str] = Header(None)) -> d
     if payload.categoria:
         if payload.categoria not in CATEGORIAS:
             raise HTTPException(400, f"categoria inválida: {payload.categoria}")
-        # Descubrimiento: solo Google News (rápido) sobre las consultas del ecosistema.
+        # Descubrimiento: solo Google News (rápido) sobre las consultas del
+        # ecosistema, en modo AMPLIO (exact=False) para no restringir con comillas.
         for termino, tipo in queries_para(payload.categoria):
-            query = QuerySpec(empresa=termino, tipo_evento=tipo, categoria=payload.categoria)
+            query = QuerySpec(empresa=termino, tipo_evento=tipo,
+                              categoria=payload.categoria, exact=False)
             resultados += _correr_query(db, query, ["google_news"])
         modo = {"modo": "categoria", "categoria": payload.categoria}
     elif payload.empresa and payload.empresa.strip():
@@ -569,7 +571,11 @@ _ADMIN_HTML = """<!doctype html>
         body: JSON.stringify(body) });
       const d = await r.json();
       if (!r.ok) { m.className = "msg err"; m.textContent = "Error: " + (d.detail || r.status); return; }
-      m.className = "msg ok"; m.textContent = `✓ ${d.total_escritos} señales nuevas en ${etiqueta}.`;
+      const vistas = (d.resultados||[]).reduce((a,x)=>a+(x.vistos||0),0);
+      const dup = (d.resultados||[]).reduce((a,x)=>a+(x.duplicados||0),0);
+      const err = (d.resultados||[]).reduce((a,x)=>a+(x.errores||0)+(x.error?1:0),0);
+      m.className = "msg ok";
+      m.textContent = `✓ ${d.total_escritos} nuevas · ${vistas} vistas · ${dup} repetidas · ${err} errores — ${etiqueta}.`;
       cargar();
     } catch (e) { m.className = "msg err"; m.textContent = "Error de red: " + e; }
     finally { document.querySelectorAll("button").forEach(b => b.disabled = false); }

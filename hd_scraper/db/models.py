@@ -90,6 +90,7 @@ class QuerySpec:
     terminos: Optional[str] = None   # términos extra opcionales para la búsqueda
     slug: Optional[str] = None       # slug de empresa (para job boards)
     categoria: Optional[str] = None  # ecosistema declarado (descubrimiento por categoría)
+    exact: bool = True               # True: frase exacta (nombre); False: amplia (descubrimiento)
 
     def to_dict(self) -> dict:
         return {
@@ -98,6 +99,7 @@ class QuerySpec:
             "terminos": self.terminos,
             "slug": self.slug,
             "categoria": self.categoria,
+            "exact": self.exact,
         }
 
     @classmethod
@@ -108,6 +110,7 @@ class QuerySpec:
             terminos=d.get("terminos"),
             slug=d.get("slug"),
             categoria=d.get("categoria"),
+            exact=d.get("exact", True),
         )
 
 

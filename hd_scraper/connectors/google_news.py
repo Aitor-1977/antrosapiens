@@ -57,10 +57,9 @@ class GoogleNewsConnector(Connector):
 
     # -- search ---------------------------------------------------------
     def _build_url(self, query: QuerySpec) -> str:
-        # La consulta a Google News se arma con el nombre de empresa (entre
-        # comillas para precisión) y términos extra opcionales. No se agregan
-        # palabras que sesguen la interpretación del tipo_evento.
-        q = f'"{query.empresa}"'
+        # Modo exacto (nombre de empresa): entre comillas para precisión.
+        # Modo amplio (descubrimiento por categoría): frase temática sin comillas.
+        q = f'"{query.empresa}"' if query.exact else query.empresa
         if query.terminos:
             q += f" {query.terminos}"
         return (
