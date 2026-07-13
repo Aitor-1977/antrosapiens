@@ -56,6 +56,10 @@ CREATE TABLE IF NOT EXISTS prospectos (
     id                    INTEGER PRIMARY KEY AUTOINCREMENT,
     nombre                TEXT NOT NULL,
     categoria             TEXT NOT NULL,   -- VC | Startup | Incubadora | Corporativo
+    -- Perfil de la entidad
+    vertical              TEXT,            -- sector/vertical (declarado o del sitio)
+    sitio_web             TEXT,            -- URL del sitio oficial
+    linkedin              TEXT,            -- enlace a LinkedIn
     -- Thick Data (discurso corporativo)
     discurso_corporativo  TEXT,            -- cuerpo de texto extraído (tesis, promesa, programa, comunicado…)
     tipo_discurso         TEXT,            -- etiqueta estructural (tesis_inversion|promesa_valor|programa|portafolio|comunicado|reporte|perfil)

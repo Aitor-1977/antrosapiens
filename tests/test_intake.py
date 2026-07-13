@@ -44,6 +44,19 @@ def test_post_ok_inserta_y_actualiza(cli, db):
     assert db.fetch_one("SELECT discurso_corporativo d FROM prospectos")["d"] == "v2"
 
 
+def test_post_guarda_perfil_vertical_web_linkedin(cli, db):
+    h = {"X-Ingest-Token": "secreto-123"}
+    r = cli.post("/prospectos", json={
+        "nombre": "Kaszek", "categoria": "VC", "vertical": "fintech e infra",
+        "sitio_web": "https://kaszek.com", "linkedin": "https://linkedin.com/company/kaszek",
+    }, headers=h)
+    assert r.status_code == 201
+    row = db.fetch_one("SELECT vertical, sitio_web, linkedin FROM prospectos WHERE nombre='Kaszek'")
+    assert row["vertical"] == "fintech e infra"
+    assert row["sitio_web"] == "https://kaszek.com"
+    assert row["linkedin"] == "https://linkedin.com/company/kaszek"
+
+
 def test_post_categoria_invalida_400(cli):
     h = {"X-Ingest-Token": "secreto-123"}
     r = cli.post("/prospectos", json=_payload(categoria="Fondo"), headers=h)

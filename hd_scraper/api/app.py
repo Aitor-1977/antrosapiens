@@ -25,7 +25,10 @@ from ..config import settings
 from ..connectors import REGISTRY
 from ..db.database import get_db
 from ..db.models import CATEGORIAS, ESTADO_OK, TIPOS_EVENTO, QuerySpec, ahora_iso
+import httpx
+
 from ..discovery import REGIONES, queries_para, region_clause
+from ..enrich import enriquecer
 from ..pipeline import run_connector
 from ..prospectos import nuevo_prospecto, upsert_prospecto
 from ..validation.validator import validate_prospecto
@@ -46,6 +49,9 @@ app = FastAPI(
 class ProspectoIn(BaseModel):
     nombre: str
     categoria: str
+    vertical: Optional[str] = None
+    sitio_web: Optional[str] = None
+    linkedin: Optional[str] = None
     discurso_corporativo: Optional[str] = None
     tipo_discurso: Optional[str] = None
     url_perfil: Optional[str] = None
@@ -65,6 +71,9 @@ def _exigir_token(token: Optional[str]) -> None:
 def _alta(payload: ProspectoIn) -> dict:
     record = nuevo_prospecto(
         payload.nombre, payload.categoria,
+        vertical=payload.vertical,
+        sitio_web=payload.sitio_web,
+        linkedin=payload.linkedin,
         discurso_corporativo=payload.discurso_corporativo,
         tipo_discurso=payload.tipo_discurso,
         url_perfil=payload.url_perfil,
@@ -116,6 +125,7 @@ def raiz() -> dict:
             "GET /prospectos/export.json": "descarga los prospectos en JSON (filtro: categoria)",
             "POST /prospectos": "alta de prospecto (requiere X-Ingest-Token)",
             "POST /scrape": "rastreo bajo demanda de una empresa (requiere X-Ingest-Token)",
+            "POST /enrich": "descubre web + discurso + enlaces de un nombre (requiere X-Ingest-Token)",
             "GET /admin": "panel web: buscar señales, revisar y dar de alta prospectos",
             "GET /salud-fuentes": "salud por fuente/conector",
             "GET /stats": "contadores agregados",
@@ -210,6 +220,9 @@ def _row_a_prospecto(row) -> dict:
         "id": row["id"],
         "nombre": row["nombre"],
         "categoria": row["categoria"],
+        "vertical": row["vertical"],
+        "sitio_web": row["sitio_web"],
+        "linkedin": row["linkedin"],
         "discurso_corporativo": row["discurso_corporativo"],
         "tipo_discurso": row["tipo_discurso"],
         "url_perfil": row["url_perfil"],
@@ -266,9 +279,9 @@ def prospectos_por_categoria() -> dict:
     return {"categorias": conteo}
 
 
-_EXPORT_COLS = ["id", "nombre", "categoria", "tipo_discurso", "url_perfil",
-                "fuente_discurso", "fecha_captura", "discurso_corporativo",
-                "creado_en", "actualizado_en"]
+_EXPORT_COLS = ["id", "nombre", "categoria", "vertical", "sitio_web", "linkedin",
+                "tipo_discurso", "url_perfil", "fuente_discurso", "fecha_captura",
+                "discurso_corporativo", "creado_en", "actualizado_en"]
 
 
 def _prospectos_filtrados(categoria: Optional[str]) -> list:
@@ -316,6 +329,12 @@ def _prospectos_a_markdown(filas: list) -> str:
             categoria_actual = f["categoria"]
             out += [f"## {categoria_actual}", ""]
         out.append(f"### {f['nombre']}")
+        if f["vertical"]:
+            out.append(f"- **Vertical:** {f['vertical']}")
+        if f["sitio_web"]:
+            out.append(f"- **Web:** <{f['sitio_web']}>")
+        if f["linkedin"]:
+            out.append(f"- **LinkedIn:** <{f['linkedin']}>")
         if f["tipo_discurso"]:
             out.append(f"- **Tipo de discurso:** {f['tipo_discurso']}")
         fuente, url = f["fuente_discurso"] or "", f["url_perfil"] or ""
@@ -504,6 +523,31 @@ def apple_icon() -> FileResponse:
     return FileResponse(_STATIC / "apple-touch-icon.png", media_type="image/png")
 
 
+class EnrichIn(BaseModel):
+    nombre: str
+
+
+@app.post("/enrich")
+def enrich(payload: EnrichIn, x_ingest_token: Optional[str] = Header(None)) -> dict:
+    """Enriquece un prospecto: descubre su web, extrae su discurso y da enlaces.
+
+    Best-effort: nunca falla; devuelve lo que logre más enlaces a LinkedIn/Google.
+    LinkedIn NO se raspa (términos): solo se da un enlace de búsqueda.
+    """
+    _exigir_token(x_ingest_token)
+    if not payload.nombre.strip():
+        raise HTTPException(400, "nombre vacío")
+
+    with httpx.Client(timeout=settings.request_timeout_s,
+                      headers={"User-Agent": settings.user_agent},
+                      follow_redirects=True) as client:
+        def http_get(url: str) -> str:
+            r = client.get(url)
+            r.raise_for_status()
+            return r.text
+        return enriquecer(payload.nombre.strip(), http_get)
+
+
 @app.get("/admin", response_class=HTMLResponse)
 def admin_form() -> str:
     """Pantalla de descubrimiento (scraping) y alta de prospectos (PWA instalable)."""
@@ -642,6 +686,18 @@ _ADMIN_HTML = """<!doctype html>
     <option value="Incubadora">Incubadora / Aceleradora</option>
     <option value="Corporativo">Corporativo</option>
   </select>
+
+  <button id="enrich_btn" class="sec">🔎 Enriquecer (buscar web + tesis)</button>
+  <div class="msg" id="e_msg"></div>
+  <div id="e_links" style="margin:.4rem 0; font-size:.85rem"></div>
+
+  <label>Vertical / sector</label>
+  <input id="vertical" placeholder="fintech, salud, logística…">
+  <label>Sitio web</label>
+  <input id="sitio_web" placeholder="https://…">
+  <label>LinkedIn</label>
+  <input id="linkedin" placeholder="https://www.linkedin.com/…">
+
   <label>Discurso corporativo (Thick Data)</label>
   <textarea id="discurso" placeholder="Tesis de inversión, promesa de valor, programa, comunicado…"></textarea>
   <label>Tipo de discurso</label>
@@ -735,10 +791,38 @@ _ADMIN_HTML = """<!doctype html>
   }
   window.prefill = (nombre) => { $("nombre").value = nombre; $("nombre").scrollIntoView({behavior:"smooth"}); };
 
+  // ③ Enriquecer: descubre web + tesis y precarga
+  $("enrich_btn").addEventListener("click", async () => {
+    const m = $("e_msg"), token = tok(), nombre = $("nombre").value.trim();
+    if (!token) { m.className = "msg err"; m.textContent = "Falta el token."; return; }
+    if (!nombre) { m.className = "msg err"; m.textContent = "Escribe el nombre primero."; return; }
+    $("enrich_btn").disabled = true; m.className = "msg"; m.style.display = "block"; m.textContent = "Buscando web y discurso…";
+    try {
+      const r = await fetch("/enrich", { method: "POST",
+        headers: { "Content-Type": "application/json", "X-Ingest-Token": token },
+        body: JSON.stringify({ nombre }) });
+      const d = await r.json();
+      if (!r.ok) { m.className = "msg err"; m.textContent = "Error: " + (d.detail || r.status); return; }
+      if (d.sitio_web) { $("sitio_web").value = d.sitio_web; if (!$("url_perfil").value) $("url_perfil").value = d.sitio_web; }
+      if (d.linkedin) $("linkedin").value = d.linkedin;
+      if (d.discurso && !$("discurso").value.trim()) { $("discurso").value = d.discurso; $("fuente_discurso").value = "sitio_oficial"; }
+      m.className = "msg ok";
+      m.textContent = d.sitio_web ? `✓ Web y discurso cargados${(d.notas||[]).length? " ("+d.notas.join("; ")+")":""}.` : `Sin web clara. Usa los enlaces. ${(d.notas||[]).join("; ")}`;
+      $("e_links").innerHTML =
+        `<a href="${esc(safeUrl(d.linkedin))}" target="_blank" rel="noopener">LinkedIn ↗</a> · ` +
+        `<a href="${esc(safeUrl(d.google))}" target="_blank" rel="noopener">Google ↗</a>` +
+        (d.sitio_web ? ` · <a href="${esc(safeUrl(d.sitio_web))}" target="_blank" rel="noopener">Web ↗</a>` : "");
+    } catch (e) { m.className = "msg err"; m.textContent = "Error de red: " + e; }
+    finally { $("enrich_btn").disabled = false; }
+  });
+
   // ③ Alta prospecto
   $("enviar").addEventListener("click", async () => {
     const m = $("msg"), token = tok();
     const body = { nombre: $("nombre").value.trim(), categoria: $("categoria").value,
+      vertical: $("vertical").value.trim() || null,
+      sitio_web: $("sitio_web").value.trim() || null,
+      linkedin: $("linkedin").value.trim() || null,
       discurso_corporativo: $("discurso").value.trim() || null,
       tipo_discurso: $("tipo_discurso").value.trim() || null,
       url_perfil: $("url_perfil").value.trim() || null,
@@ -751,7 +835,8 @@ _ADMIN_HTML = """<!doctype html>
         headers: { "Content-Type": "application/json", "X-Ingest-Token": token }, body: JSON.stringify(body) });
       const d = await r.json();
       if (r.ok) { m.className = "msg ok"; m.textContent = `✓ ${body.nombre} [${body.categoria}] — ${d.accion}.`;
-        $("discurso").value = ""; $("tipo_discurso").value = ""; $("url_perfil").value = ""; $("fuente_discurso").value = "";
+        ["discurso","tipo_discurso","url_perfil","fuente_discurso","vertical","sitio_web","linkedin"].forEach(id => $(id).value = "");
+        $("e_links").innerHTML = "";
         refrescarConteo();
       } else { m.className = "msg err"; m.textContent = "Error: " + (d.detail || r.status); }
     } catch (e) { m.className = "msg err"; m.textContent = "Error de red: " + e; }

@@ -51,6 +51,9 @@ CREATE TABLE IF NOT EXISTS prospectos (
     id                    BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     nombre                TEXT NOT NULL,
     categoria             TEXT NOT NULL,
+    vertical              TEXT,
+    sitio_web             TEXT,
+    linkedin              TEXT,
     discurso_corporativo  TEXT,
     tipo_discurso         TEXT,
     url_perfil            TEXT,
@@ -61,6 +64,11 @@ CREATE TABLE IF NOT EXISTS prospectos (
     actualizado_en        TEXT NOT NULL,
     CHECK (categoria IN ('VC', 'Startup', 'Incubadora', 'Corporativo'))
 );
+
+-- Migración idempotente: columnas de perfil en una `prospectos` ya existente.
+ALTER TABLE prospectos ADD COLUMN IF NOT EXISTS vertical  TEXT;
+ALTER TABLE prospectos ADD COLUMN IF NOT EXISTS sitio_web TEXT;
+ALTER TABLE prospectos ADD COLUMN IF NOT EXISTS linkedin  TEXT;
 
 CREATE INDEX IF NOT EXISTS idx_prospectos_categoria ON prospectos (categoria);
 CREATE INDEX IF NOT EXISTS idx_prospectos_nombre    ON prospectos (nombre);

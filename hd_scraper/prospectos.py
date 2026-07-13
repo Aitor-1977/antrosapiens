@@ -62,19 +62,24 @@ def upsert_prospecto(db: Database, record: ProspectoRecord) -> dict:
     if existe is None:
         db.execute(
             """INSERT INTO prospectos
-                 (nombre, categoria, discurso_corporativo, tipo_discurso, url_perfil,
+                 (nombre, categoria, vertical, sitio_web, linkedin,
+                  discurso_corporativo, tipo_discurso, url_perfil,
                   fuente_discurso, fecha_captura, hash_dedup, creado_en, actualizado_en)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (record.nombre, record.categoria, record.discurso_corporativo,
-             record.tipo_discurso, record.url_perfil, record.fuente_discurso,
-             record.fecha_captura, record.hash_dedup, ahora, ahora),
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (record.nombre, record.categoria, record.vertical, record.sitio_web,
+             record.linkedin, record.discurso_corporativo, record.tipo_discurso,
+             record.url_perfil, record.fuente_discurso, record.fecha_captura,
+             record.hash_dedup, ahora, ahora),
         )
         return {"ok": True, "accion": "insertado", "id": db.fetch_one(
             "SELECT id FROM prospectos WHERE hash_dedup = ?", (record.hash_dedup,))["id"]}
 
-    # UPSERT: refresca solo los campos de Thick Data que vengan con valor.
+    # UPSERT: refresca solo los campos de perfil/Thick Data que vengan con valor.
     db.execute(
         """UPDATE prospectos SET
+             vertical             = COALESCE(?, vertical),
+             sitio_web            = COALESCE(?, sitio_web),
+             linkedin             = COALESCE(?, linkedin),
              discurso_corporativo = COALESCE(?, discurso_corporativo),
              tipo_discurso        = COALESCE(?, tipo_discurso),
              url_perfil           = COALESCE(?, url_perfil),
@@ -82,7 +87,8 @@ def upsert_prospecto(db: Database, record: ProspectoRecord) -> dict:
              fecha_captura        = COALESCE(?, fecha_captura),
              actualizado_en       = ?
            WHERE hash_dedup = ?""",
-        (record.discurso_corporativo, record.tipo_discurso, record.url_perfil,
+        (record.vertical, record.sitio_web, record.linkedin,
+         record.discurso_corporativo, record.tipo_discurso, record.url_perfil,
          record.fuente_discurso, record.fecha_captura, ahora, record.hash_dedup),
     )
     return {"ok": True, "accion": "actualizado", "id": existe["id"]}

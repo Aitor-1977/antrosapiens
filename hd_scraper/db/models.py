@@ -193,6 +193,11 @@ class ProspectoRecord:
     categoria: str                       # uno de CATEGORIAS (obligatorio)
     hash_dedup: str                      # sha256(nombre_norm + categoria), único
 
+    # --- Perfil de la entidad ---
+    vertical: Optional[str] = None               # sector/vertical (declarado o del sitio)
+    sitio_web: Optional[str] = None              # URL del sitio oficial
+    linkedin: Optional[str] = None               # enlace a LinkedIn (búsqueda/perfil)
+
     # --- Thick Data: discurso corporativo (texto largo) ---
     discurso_corporativo: Optional[str] = None   # cuerpo de texto extraído
     tipo_discurso: Optional[str] = None          # etiqueta estructural del discurso
@@ -209,6 +214,9 @@ class ProspectoRecord:
             "nombre": self.nombre,
             "categoria": self.categoria,
             "hash_dedup": self.hash_dedup,
+            "vertical": self.vertical,
+            "sitio_web": self.sitio_web,
+            "linkedin": self.linkedin,
             "discurso_corporativo": self.discurso_corporativo,
             "tipo_discurso": self.tipo_discurso,
             "url_perfil": self.url_perfil,
