@@ -342,13 +342,16 @@ def scrape(payload: ScrapeIn, x_ingest_token: Optional[str] = Header(None)) -> d
     if payload.categoria:
         if payload.categoria not in CATEGORIAS:
             raise HTTPException(400, f"categoria inválida: {payload.categoria}")
+        if payload.tipo_evento not in TIPOS_EVENTO:
+            raise HTTPException(400, f"tipo_evento inválido: {payload.tipo_evento}")
         # Descubrimiento: solo Google News (rápido) sobre las consultas del
-        # ecosistema, en modo AMPLIO (exact=False) para no restringir con comillas.
-        for termino, tipo in queries_para(payload.categoria):
+        # ecosistema + el tipo de señal elegido, en modo AMPLIO (exact=False).
+        for termino, tipo in queries_para(payload.categoria, payload.tipo_evento):
             query = QuerySpec(empresa=termino, tipo_evento=tipo,
                               categoria=payload.categoria, exact=False)
             resultados += _correr_query(db, query, ["google_news"])
-        modo = {"modo": "categoria", "categoria": payload.categoria}
+        modo = {"modo": "categoria", "categoria": payload.categoria,
+                "tipo_evento": payload.tipo_evento}
     elif payload.empresa and payload.empresa.strip():
         if payload.tipo_evento not in TIPOS_EVENTO:
             raise HTTPException(400, f"tipo_evento inválido: {payload.tipo_evento}")
@@ -478,7 +481,16 @@ _ADMIN_HTML = """<!doctype html>
 
 <section>
   <h2>① Buscar por ecosistema</h2>
-  <div class="hint">Un toque rastrea ese ecosistema (consultas temáticas) y etiqueta las señales. Para descubrir sin teclear nombres.</div>
+  <div class="hint">Elige el tipo de señal y toca un ecosistema. Rastrea ese sector con ese tipo de evento y etiqueta las señales. Para descubrir sin teclear nombres.</div>
+  <label>Tipo de señal</label>
+  <select id="c_tipo">
+    <option value="ronda">ronda</option>
+    <option value="contratacion">contratación</option>
+    <option value="despido">despido</option>
+    <option value="lanzamiento">lanzamiento</option>
+    <option value="queja">queja</option>
+    <option value="cambio_sitio">cambio_sitio</option>
+  </select>
   <div class="cats">
     <button class="cat" data-cat="VC">VC</button>
     <button class="cat" data-cat="Startup">Startup</button>
@@ -582,9 +594,9 @@ _ADMIN_HTML = """<!doctype html>
   }
 
   document.querySelectorAll(".cat").forEach(btn => btn.addEventListener("click", () => {
-    const cat = btn.dataset.cat;
+    const cat = btn.dataset.cat, tipo = $("c_tipo").value;
     if ($("categoria")) $("categoria").value = cat;   // precarga categoría en ③
-    scrapear({ categoria: cat }, "ecosistema " + cat, () => cargarEvidencias({ categoria: cat }));
+    scrapear({ categoria: cat, tipo_evento: tipo }, `${cat} · ${tipo}`, () => cargarEvidencias({ categoria: cat }));
   }));
 
   $("s_btn").addEventListener("click", () => {

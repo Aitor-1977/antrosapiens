@@ -77,5 +77,17 @@ def test_scrape_categoria_invalida_400(cli):
     assert cli.post("/scrape", json={"categoria": "Fondo"}, headers=H).status_code == 400
 
 
+def test_scrape_categoria_respeta_tipo(cli, db):
+    r = cli.post("/scrape", json={"categoria": "Startup", "tipo_evento": "despido"}, headers=H)
+    assert r.status_code == 200 and r.json()["tipo_evento"] == "despido"
+    fila = db.fetch_one("SELECT tipo_evento, categoria FROM evidencias LIMIT 1")
+    assert fila["tipo_evento"] == "despido" and fila["categoria"] == "Startup"
+
+
+def test_scrape_categoria_tipo_invalido_400(cli):
+    r = cli.post("/scrape", json={"categoria": "VC", "tipo_evento": "opinion"}, headers=H)
+    assert r.status_code == 400
+
+
 def test_scrape_sin_empresa_ni_categoria_400(cli):
     assert cli.post("/scrape", json={}, headers=H).status_code == 400
