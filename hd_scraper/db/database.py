@@ -113,12 +113,30 @@ class Database:
 
 
 _db_singleton: Database | None = None
+_schema_ready: bool = False
 
 
 def get_db() -> Database:
-    """Instancia compartida (para API/scheduler). Crea el esquema si falta."""
-    global _db_singleton
-    if _db_singleton is None:
-        _db_singleton = Database()
+    """Instancia compartida con reconexión (segura en serverless).
+
+    En Vercel el proceso se reutiliza entre invocaciones y la conexión a Postgres
+    puede cerrarse por inactividad (Neon cierra conexiones ociosas). Antes de
+    reutilizar la conexión se hace un ping; si falló, se reconecta. El esquema se
+    aplica una sola vez por proceso (es idempotente de todos modos).
+    """
+    global _db_singleton, _schema_ready
+    if _db_singleton is not None:
+        try:
+            _db_singleton.fetch_one("SELECT 1")
+            return _db_singleton
+        except Exception:
+            try:
+                _db_singleton.close()
+            except Exception:
+                pass
+            _db_singleton = None
+    _db_singleton = Database()
+    if not _schema_ready:
         _db_singleton.init_schema()
+        _schema_ready = True
     return _db_singleton

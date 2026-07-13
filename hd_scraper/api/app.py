@@ -115,7 +115,7 @@ def raiz() -> dict:
             "GET /stats": "contadores agregados",
             "GET /docs": "documentación interactiva (OpenAPI)",
         },
-        "nota": "API de solo lectura. La extracción corre en un host aparte (ver README).",
+        "nota": "Lectura pública; escritura (prospectos/scrape) autenticada con X-Ingest-Token.",
     }
 
 
@@ -544,6 +544,7 @@ _ADMIN_HTML = """<!doctype html>
 <script>
   const $ = id => document.getElementById(id);
   const esc = s => (s||"").replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const safeUrl = u => /^https?:\\/\\//i.test(u||"") ? u : "#";   // solo http(s) en enlaces
   $("token").value = localStorage.getItem("hd_ingest_token") || "";
   const tok = () => { const t = $("token").value.trim(); localStorage.setItem("hd_ingest_token", t); return t; };
 
@@ -599,7 +600,7 @@ _ADMIN_HTML = """<!doctype html>
         <div class="card">
           <div>${esc(e.cita_textual)}</div>
           <div class="meta">${esc(e.nombre_medio)} · ${esc(e.tipo_evento)}${e.categoria ? " · " + esc(e.categoria) : ""} · ${(e.fecha_publicacion||"").slice(0,10)}
-            · <a href="${esc(e.url_fuente)}" target="_blank" rel="noopener">abrir ↗</a></div>
+            · <a href="${esc(safeUrl(e.url_fuente))}" target="_blank" rel="noopener">abrir ↗</a></div>
           <button class="sec" onclick="prefill(this.dataset.n)" data-n="${esc(e.empresa_mencionada)}">➕ Guardar como prospecto</button>
         </div>`).join("");
     } catch (e) { cont.innerHTML = '<div class="hint">No se pudieron cargar.</div>'; }
