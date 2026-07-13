@@ -67,7 +67,14 @@ def raiz() -> dict:
 
 @app.get("/health")
 def health() -> dict:
-    return {"status": "ok", "service": "hd-prospector", "role": "evidence-extraction"}
+    # Expone el motor de base activo (postgres|sqlite) para diagnóstico.
+    # NO revela credenciales: solo el dialecto.
+    return {
+        "status": "ok",
+        "service": "hd-prospector",
+        "role": "evidence-extraction",
+        "db": get_db().dialect,
+    }
 
 
 @app.get("/evidencias")
