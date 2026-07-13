@@ -24,7 +24,7 @@ from pydantic import BaseModel
 from ..config import settings
 from ..connectors import REGISTRY
 from ..db.database import get_db
-from ..db.models import CATEGORIAS, ESTADO_OK, TIPOS_EVENTO, QuerySpec
+from ..db.models import CATEGORIAS, ESTADO_OK, TIPOS_EVENTO, QuerySpec, ahora_iso
 from ..discovery import REGIONES, queries_para, region_clause
 from ..pipeline import run_connector
 from ..prospectos import nuevo_prospecto, upsert_prospecto
@@ -112,6 +112,7 @@ def raiz() -> dict:
             "GET /prospectos/categorias": "conteo de prospectos por ecosistema",
             "GET /prospectos/{id}": "un prospecto por id (incluye Thick Data)",
             "GET /prospectos/export.csv": "descarga los prospectos en CSV (filtro: categoria)",
+            "GET /prospectos/export.md": "descarga los prospectos en Markdown (filtro: categoria)",
             "GET /prospectos/export.json": "descarga los prospectos en JSON (filtro: categoria)",
             "POST /prospectos": "alta de prospecto (requiere X-Ingest-Token)",
             "POST /scrape": "rastreo bajo demanda de una empresa (requiere X-Ingest-Token)",
@@ -303,6 +304,39 @@ def export_json(categoria: Optional[str] = Query(None, description="Filtra por e
     nombre = f"prospectos_{categoria or 'todos'}.json"
     return Response(json.dumps(datos, ensure_ascii=False, indent=2),
                     media_type="application/json; charset=utf-8",
+                    headers={"Content-Disposition": f'attachment; filename="{nombre}"'})
+
+
+def _prospectos_a_markdown(filas: list) -> str:
+    out = ["# Prospectos — hd-prospector", "",
+           f"_Exportado: {ahora_iso()}_ · {len(filas)} prospecto(s)", ""]
+    categoria_actual = None
+    for f in filas:
+        if f["categoria"] != categoria_actual:
+            categoria_actual = f["categoria"]
+            out += [f"## {categoria_actual}", ""]
+        out.append(f"### {f['nombre']}")
+        if f["tipo_discurso"]:
+            out.append(f"- **Tipo de discurso:** {f['tipo_discurso']}")
+        fuente, url = f["fuente_discurso"] or "", f["url_perfil"] or ""
+        if fuente or url:
+            detalle = " · ".join(x for x in (fuente, f"<{url}>" if url else "") if x)
+            out.append(f"- **Fuente:** {detalle}")
+        if f["fecha_captura"]:
+            out.append(f"- **Capturado:** {f['fecha_captura']}")
+        out.append("")
+        disc = (f["discurso_corporativo"] or "").strip()
+        if disc:
+            out += [f"> {linea}" for linea in disc.splitlines()] + [""]
+    return "\n".join(out)
+
+
+@app.get("/prospectos/export.md")
+def export_md(categoria: Optional[str] = Query(None, description="Filtra por ecosistema")) -> Response:
+    """Descarga los prospectos como documento Markdown (agrupado por ecosistema)."""
+    filas = _prospectos_filtrados(categoria)
+    nombre = f"prospectos_{categoria or 'todos'}.md"
+    return Response(_prospectos_a_markdown(filas), media_type="text/markdown; charset=utf-8",
                     headers={"Content-Disposition": f'attachment; filename="{nombre}"'})
 
 
@@ -623,6 +657,7 @@ _ADMIN_HTML = """<!doctype html>
   <div class="hint">Descarga tus prospectos guardados (todos los ecosistemas).</div>
   <div class="row" style="margin-top:.6rem">
     <a class="dl" href="/prospectos/export.csv">⬇️ CSV</a>
+    <a class="dl" href="/prospectos/export.md">⬇️ Markdown</a>
     <a class="dl" href="/prospectos/export.json">⬇️ JSON</a>
   </div>
 </section>

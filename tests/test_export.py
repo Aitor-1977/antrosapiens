@@ -46,8 +46,20 @@ def test_export_filtra_categoria(cli):
     assert "prospectos_VC.csv" in r.headers["content-disposition"]
 
 
+def test_export_markdown(cli):
+    r = cli.get("/prospectos/export.md")
+    assert r.status_code == 200
+    assert r.headers["content-type"].startswith("text/markdown")
+    assert "attachment" in r.headers["content-disposition"]
+    t = r.text
+    assert "# Prospectos — hd-prospector" in t
+    assert "## VC" in t and "### Kaszek" in t
+    assert "> Tesis, LatAm; con coma" in t   # discurso como blockquote
+
+
 def test_export_categoria_invalida_400(cli):
     assert cli.get("/prospectos/export.csv", params={"categoria": "Fondo"}).status_code == 400
+    assert cli.get("/prospectos/export.md", params={"categoria": "Fondo"}).status_code == 400
 
 
 def test_export_no_lo_captura_ruta_id(cli):
