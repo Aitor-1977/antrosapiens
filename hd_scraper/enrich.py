@@ -28,6 +28,29 @@ NO_OFICIALES = (
 )
 
 
+# Pistas de vertical (HD) por palabras clave. Coincidencia estructural (no
+# interpretación profunda): si el texto de la empresa las contiene, se SUGIERE.
+# Orden importa: la vertical más específica se evalúa antes (p. ej. "salud
+# mental" antes que "healthtech", que también contiene "salud").
+VERTICAL_HINTS: dict[str, tuple[str, ...]] = {
+    "fintech": ("fintech", "pagos", "crédito", "banca", "financ", "wallet", "remesas"),
+    "edtech": ("edtech", "educación", "aprendizaje", "cursos", "e-learning", "estudiantes"),
+    "salud mental": ("salud mental", "terapia", "bienestar emocional", "psicolog"),
+    "healthtech": ("healthtech", "salud", "clínic", "pacientes", "telemedicina"),
+    "logística agrícola": ("logística", "agrícola", "agtech", "agro", "cadena de suministro", "campo"),
+    "identidad": ("identidad digital", "kyc", "verificación de identidad", "onboarding de identidad"),
+}
+
+
+def sugerir_vertical(texto: str) -> Optional[str]:
+    """Sugiere una vertical HD si el texto contiene sus palabras clave. Estructural."""
+    t = (texto or "").lower()
+    for vertical, claves in VERTICAL_HINTS.items():
+        if any(c in t for c in claves):
+            return vertical
+    return None
+
+
 def linkedin_search_url(nombre: str) -> str:
     return "https://www.linkedin.com/search/results/companies/?keywords=" + quote_plus(nombre)
 
@@ -89,6 +112,7 @@ def enriquecer(nombre: str, http_get: Callable[[str], str]) -> dict:
         "nombre": nombre,
         "sitio_web": None,
         "discurso": "",
+        "vertical_sugerida": None,
         "linkedin": linkedin_search_url(nombre),
         "google": google_search_url(nombre),
         "fuentes": [],
@@ -103,6 +127,7 @@ def enriquecer(nombre: str, http_get: Callable[[str], str]) -> dict:
             try:
                 html = http_get(sitio)
                 resultado["discurso"] = extraer_discurso(html)
+                resultado["vertical_sugerida"] = sugerir_vertical(resultado["discurso"])
                 resultado["fuentes"].append(sitio)
             except Exception as exc:
                 resultado["notas"].append(f"no se pudo leer el sitio: {exc}")

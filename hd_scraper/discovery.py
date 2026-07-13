@@ -1,41 +1,57 @@
-"""Consultas temáticas por ecosistema y zona geográfica (descubrimiento).
+"""Consultas de descubrimiento alineadas al perfil de prospecto ideal de HD.
+
+Hamaca Digital busca (ver docs/perfil_prospecto_hd.md):
+  - Verticales dependientes de contexto: fintech, edtech, healthtech / salud
+    mental, logística agrícola, identidad.
+  - Fase de escala o estancamiento con señales de fricción cultural: churn alto,
+    baja adopción/retención, fricción "inexplicable por datos".
+  - VCs que necesitan due diligence cualitativo de su portafolio.
 
 Cada consulta se compone de partes DECLARADAS (no inferidas):
 
-    base del ecosistema  +  palabra del tipo de señal   ( +  zona geográfica )
+    base del ecosistema  +  vertical  +  señal (tipo)   ( +  zona geográfica )
 
-La zona geográfica (Región) se añade aparte con el operador OR de Google News,
-de modo que "Toda LATAM" cubre los ocho países en una sola búsqueda:
-México, Colombia, Chile, Perú, Argentina, Brasil, Costa Rica y Panamá.
-
-El motor trae titulares que coinciden y los etiqueta con la categoría; NO decide
-qué empresa menciona cada nota (eso lo hace el operador al curar). Ajustable con
+La zona geográfica se añade aparte (OR de países). El motor trae titulares que
+coinciden y los etiqueta; NO decide qué empresa menciona ni puntúa Deuda
+Cultural (eso es interpretación de HD, no del scraper). Ajustable con
 HD_DISCOVERY_<CATEGORIA> (bases separadas por '|').
 """
 from __future__ import annotations
 
 import os
 
-# Bases por ecosistema, país-neutrales (el CONTEXTO del sector). La zona va aparte.
+# Bases por ecosistema, orientadas al prospecto ideal de HD.
 CATEGORIA_BASE_DEFAULT: dict[str, list[str]] = {
-    "VC": ["venture capital", "fondo de inversión para startups"],
-    "Startup": ["startup", "startup tecnológica"],
+    "VC": ["venture capital", "corporate venture capital",
+           "fondo de inversión due diligence portafolio"],
+    "Startup": ["startup"],  # la especificidad la aporta la vertical + señal
     "Incubadora": ["aceleradora de startups", "incubadora de startups"],
-    "Corporativo": ["corporativo innovación abierta", "corporate venture capital"],
+    "Corporativo": ["corporativo innovación abierta", "corporativo transformación digital"],
 }
 
-# Palabra(s) por tipo de señal (el EVENTO buscado).
+# Verticales dependientes de contexto que le interesan a HD.
+VERTICALES_HD: dict[str, str] = {
+    "todas": "",
+    "fintech": "fintech",
+    "edtech": "edtech educación",
+    "healthtech": "healthtech salud digital",
+    "salud mental": '"salud mental"',
+    "logística agrícola": "logística agrícola agtech",
+    "identidad": "identidad digital",
+}
+
+# Señal (tipo_evento del contrato) → palabras. Se afinan hacia las señales de
+# fricción cultural que busca HD (churn, adopción, retención), sin cambiar el
+# vocabulario literal del contrato.
 TIPO_KEYWORDS: dict[str, str] = {
     "ronda": "ronda de inversión",
-    "contratacion": "contratación nuevo ejecutivo",
-    "despido": "despidos recorte de personal",
+    "contratacion": "contratación nuevo ejecutivo head of research",
+    "despido": "despidos reestructura estancamiento",
     "lanzamiento": "lanzamiento de producto",
-    "queja": "quejas usuarios problema",
-    "cambio_sitio": "nuevo sitio web rebranding",
+    "queja": "churn abandono baja retención fricción usuarios quejas",
+    "cambio_sitio": "rediseño pivote nuevo modelo de producto",
 }
 
-# Zona geográfica: LATAM (los ocho países) o un país concreto. La clave "LATAM"
-# usa OR para cubrir todos en una sola búsqueda.
 PAISES_LATAM = ["México", "Colombia", "Chile", "Perú", "Argentina", "Brasil",
                 "Costa Rica", "Panamá"]
 
@@ -47,10 +63,7 @@ def _comilla_si_espacio(pais: str) -> str:
 
 
 def region_clause(region: str) -> str:
-    """Cláusula de zona para añadir a la búsqueda, p. ej. (México OR Colombia OR …).
-
-    Región desconocida => sin cláusula (búsqueda global).
-    """
+    """Cláusula de zona, p. ej. (México OR Colombia OR …). Vacía si es desconocida."""
     paises = REGIONES.get(region)
     if not paises:
         return ""
@@ -64,11 +77,16 @@ def _bases(categoria: str) -> list[str]:
     return CATEGORIA_BASE_DEFAULT.get(categoria, [])
 
 
-def queries_para(categoria: str, tipo_evento: str) -> list[tuple[str, str]]:
-    """Consultas (texto, tipo_evento) para una categoría y un tipo de señal.
+def queries_para(categoria: str, tipo_evento: str, vertical: str = "todas") -> list[tuple[str, str]]:
+    """Consultas (texto, tipo_evento) para categoría + tipo de señal + vertical.
 
-    Compone base del ecosistema + palabra del tipo. La zona geográfica se añade
-    aparte en el pipeline (vía QuerySpec.terminos) para no ensuciar la etiqueta.
+    Compone base del ecosistema + vertical (HD) + palabra del tipo. La zona
+    geográfica se añade aparte en el pipeline (vía QuerySpec.terminos).
     """
     kw = TIPO_KEYWORDS.get(tipo_evento, "")
-    return [(f"{base} {kw}".strip(), tipo_evento) for base in _bases(categoria)]
+    vkw = VERTICALES_HD.get(vertical, "")
+    salida = []
+    for base in _bases(categoria):
+        texto = " ".join(x for x in (base, vkw, kw) if x).strip()
+        salida.append((texto, tipo_evento))
+    return salida

@@ -104,5 +104,15 @@ def test_scrape_region_invalida_400(cli):
     assert r.status_code == 400
 
 
+def test_scrape_vertical_hd(cli):
+    r = cli.post("/scrape", json={"categoria": "Startup", "vertical": "fintech"}, headers=H)
+    assert r.status_code == 200 and r.json()["vertical"] == "fintech"
+
+
+def test_scrape_vertical_invalida_400(cli):
+    r = cli.post("/scrape", json={"categoria": "Startup", "vertical": "cripto"}, headers=H)
+    assert r.status_code == 400
+
+
 def test_scrape_sin_empresa_ni_categoria_400(cli):
     assert cli.post("/scrape", json={}, headers=H).status_code == 400

@@ -27,7 +27,7 @@ from ..db.database import get_db
 from ..db.models import CATEGORIAS, ESTADO_OK, TIPOS_EVENTO, QuerySpec, ahora_iso
 import httpx
 
-from ..discovery import REGIONES, queries_para, region_clause
+from ..discovery import REGIONES, VERTICALES_HD, queries_para, region_clause
 from ..enrich import enriquecer
 from ..pipeline import run_connector
 from ..prospectos import nuevo_prospecto, upsert_prospecto
@@ -405,6 +405,7 @@ class ScrapeIn(BaseModel):
     empresa: Optional[str] = None
     categoria: Optional[str] = None
     tipo_evento: str = "ronda"
+    vertical: str = "todas"   # vertical HD: fintech, edtech, healthtech, salud mental…
     region: str = "LATAM"     # zona geográfica: LATAM (8 países) o un país
     connectors: list[str] = list(CONECTORES_SCRAPE)
 
@@ -447,14 +448,17 @@ def scrape(payload: ScrapeIn, x_ingest_token: Optional[str] = Header(None)) -> d
             raise HTTPException(400, f"categoria inválida: {payload.categoria}")
         if payload.tipo_evento not in TIPOS_EVENTO:
             raise HTTPException(400, f"tipo_evento inválido: {payload.tipo_evento}")
-        # Descubrimiento: solo Google News (rápido) sobre las consultas del
-        # ecosistema + el tipo de señal, acotado a la zona geográfica (terminos).
-        for termino, tipo in queries_para(payload.categoria, payload.tipo_evento):
+        if payload.vertical not in VERTICALES_HD:
+            raise HTTPException(400, f"vertical inválida: {payload.vertical}")
+        # Descubrimiento: Google News sobre ecosistema + vertical (HD) + señal,
+        # acotado a la zona geográfica (terminos).
+        for termino, tipo in queries_para(payload.categoria, payload.tipo_evento, payload.vertical):
             query = QuerySpec(empresa=termino, tipo_evento=tipo, terminos=zona,
                               categoria=payload.categoria, exact=False)
             resultados += _correr_query(db, query, ["google_news"])
         modo = {"modo": "categoria", "categoria": payload.categoria,
-                "tipo_evento": payload.tipo_evento, "region": payload.region}
+                "tipo_evento": payload.tipo_evento, "vertical": payload.vertical,
+                "region": payload.region}
     elif payload.empresa and payload.empresa.strip():
         if payload.tipo_evento not in TIPOS_EVENTO:
             raise HTTPException(400, f"tipo_evento inválido: {payload.tipo_evento}")
@@ -603,7 +607,7 @@ _ADMIN_HTML = """<!doctype html>
     padding: .7rem; border: 1px solid rgba(128,128,128,.5); border-radius: .5rem; font-weight: 600; }
 </style></head><body>
 <h1>hd-prospector · Radar</h1>
-<p class="sub">① Rastrea por ecosistema (o por nombre) → ② revisa las señales → ③ guarda el prospecto con su discurso. El motor extrae y almacena; no interpreta.</p>
+<p class="sub">Radar de prospección para Hamaca Digital. ① Rastrea candidatos por ecosistema, vertical y señal de fricción → ② revísalos → ③ el expediente se <b>auto-investiga</b> (web, tesis, vertical) y tú lo confirmas. Extrae y almacena hechos públicos; la interpretación (Deuda Cultural™) es de HD, no del motor.</p>
 
 <label class="req">Token de acceso</label>
 <input id="token" type="password" placeholder="HD_INGEST_TOKEN" autocomplete="off">
@@ -625,15 +629,31 @@ _ADMIN_HTML = """<!doctype html>
 <section>
   <h2>① Buscar por ecosistema</h2>
   <div class="hint">Elige el tipo de señal y toca un ecosistema. Rastrea ese sector con ese tipo de evento y etiqueta las señales. Para descubrir sin teclear nombres.</div>
-  <label>Tipo de señal</label>
-  <select id="c_tipo">
-    <option value="ronda">ronda</option>
-    <option value="contratacion">contratación</option>
-    <option value="despido">despido</option>
-    <option value="lanzamiento">lanzamiento</option>
-    <option value="queja">queja</option>
-    <option value="cambio_sitio">cambio_sitio</option>
-  </select>
+  <div class="row">
+    <div>
+      <label>Tipo de señal</label>
+      <select id="c_tipo">
+        <option value="queja">fricción / churn</option>
+        <option value="ronda">ronda</option>
+        <option value="contratacion">contratación</option>
+        <option value="despido">despido / estancamiento</option>
+        <option value="lanzamiento">lanzamiento</option>
+        <option value="cambio_sitio">pivote / rediseño</option>
+      </select>
+    </div>
+    <div>
+      <label>Vertical (HD)</label>
+      <select id="c_vertical">
+        <option value="todas">Todas</option>
+        <option value="fintech">Fintech</option>
+        <option value="edtech">Edtech</option>
+        <option value="healthtech">Healthtech</option>
+        <option value="salud mental">Salud mental</option>
+        <option value="logística agrícola">Logística agrícola</option>
+        <option value="identidad">Identidad</option>
+      </select>
+    </div>
+  </div>
   <div class="cats">
     <button class="cat" data-cat="VC">VC</button>
     <button class="cat" data-cat="Startup">Startup</button>
@@ -670,13 +690,14 @@ _ADMIN_HTML = """<!doctype html>
 </section>
 
 <section>
-  <h2>② Señales encontradas</h2>
-  <div class="hint">Se llena tras buscar. Toca “abrir” para leer la fuente, o “➕ prospecto” para profundizar.</div>
+  <h2>② Candidatos encontrados</h2>
+  <div class="hint">Titulares del ecosistema/vertical. Toca “abrir” para leer la fuente, o “➕ prospecto”: se investiga el perfil automáticamente.</div>
   <div id="evidencias"></div>
 </section>
 
 <section>
-  <h2>③ Alta de prospecto</h2>
+  <h2>③ Expediente del prospecto (auto-investigado)</h2>
+  <div class="hint">Toca <b>Enriquecer</b> (o promueve un candidato) y web, tesis y vertical se llenan solos. Tú revisas y ajustas antes de guardar.</div>
   <label class="req">Nombre</label>
   <input id="nombre" placeholder="p. ej. Kaszek">
   <label class="req">Categoría (ecosistema)</label>
@@ -759,10 +780,10 @@ _ADMIN_HTML = """<!doctype html>
   const region = () => $("region").value;
 
   document.querySelectorAll(".cat").forEach(btn => btn.addEventListener("click", () => {
-    const cat = btn.dataset.cat, tipo = $("c_tipo").value;
+    const cat = btn.dataset.cat, tipo = $("c_tipo").value, vert = $("c_vertical").value;
     if ($("categoria")) $("categoria").value = cat;   // precarga categoría en ③
-    scrapear({ categoria: cat, tipo_evento: tipo, region: region() },
-             `${cat} · ${tipo} · ${region()}`, () => cargarEvidencias({ categoria: cat }));
+    scrapear({ categoria: cat, tipo_evento: tipo, vertical: vert, region: region() },
+             `${cat} · ${tipo} · ${vert} · ${region()}`, () => cargarEvidencias({ categoria: cat }));
   }));
 
   $("s_btn").addEventListener("click", () => {
@@ -789,7 +810,11 @@ _ADMIN_HTML = """<!doctype html>
         </div>`).join("");
     } catch (e) { cont.innerHTML = '<div class="hint">No se pudieron cargar.</div>'; }
   }
-  window.prefill = (nombre) => { $("nombre").value = nombre; $("nombre").scrollIntoView({behavior:"smooth"}); };
+  window.prefill = (nombre) => {
+    $("nombre").value = nombre;
+    $("nombre").scrollIntoView({ behavior: "smooth" });
+    $("enrich_btn").click();   // investiga automáticamente al promover (research-first)
+  };
 
   // ③ Enriquecer: descubre web + tesis y precarga
   $("enrich_btn").addEventListener("click", async () => {
@@ -805,6 +830,7 @@ _ADMIN_HTML = """<!doctype html>
       if (!r.ok) { m.className = "msg err"; m.textContent = "Error: " + (d.detail || r.status); return; }
       if (d.sitio_web) { $("sitio_web").value = d.sitio_web; if (!$("url_perfil").value) $("url_perfil").value = d.sitio_web; }
       if (d.linkedin) $("linkedin").value = d.linkedin;
+      if (d.vertical_sugerida && !$("vertical").value.trim()) $("vertical").value = d.vertical_sugerida;
       if (d.discurso && !$("discurso").value.trim()) { $("discurso").value = d.discurso; $("fuente_discurso").value = "sitio_oficial"; }
       m.className = "msg ok";
       m.textContent = d.sitio_web ? `✓ Web y discurso cargados${(d.notas||[]).length? " ("+d.notas.join("; ")+")":""}.` : `Sin web clara. Usa los enlaces. ${(d.notas||[]).join("; ")}`;

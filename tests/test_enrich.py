@@ -57,6 +57,13 @@ def test_enriquecer_orquesta(monkeypatch):
     assert d["fuentes"] == ["https://kaszek.com/"]
 
 
+def test_sugerir_vertical():
+    from hd_scraper.enrich import sugerir_vertical
+    assert sugerir_vertical("Somos una fintech de pagos") == "fintech"
+    assert sugerir_vertical("plataforma de terapia y salud mental") == "salud mental"
+    assert sugerir_vertical("comida rica") is None
+
+
 def test_enriquecer_nunca_falla():
     def boom(url):
         raise RuntimeError("sin red")

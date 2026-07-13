@@ -91,7 +91,8 @@ def test_admin_sirve_formulario(cli):
     r = cli.get("/admin")
     assert r.status_code == 200
     assert "Buscar por ecosistema" in r.text   # descubrimiento por categoría
-    assert "Alta de prospecto" in r.text        # sección de alta
+    assert "Expediente del prospecto" in r.text  # sección de alta auto-investigada
+    assert "Vertical (HD)" in r.text            # selector de vertical HD
     assert "HD_INGEST_TOKEN" in r.text
     for cat in ("VC", "Startup", "Incubadora", "Corporativo"):
         assert f'data-cat="{cat}"' in r.text
