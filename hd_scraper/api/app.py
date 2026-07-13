@@ -11,10 +11,11 @@ devuelven por los endpoints de evidencia.
 from __future__ import annotations
 
 import hmac
+from pathlib import Path
 from typing import Optional
 
 from fastapi import Body, FastAPI, Header, HTTPException, Query
-from fastapi.responses import HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, Response
 from pydantic import BaseModel
 
 from ..config import settings
@@ -360,9 +361,62 @@ def scrape(payload: ScrapeIn, x_ingest_token: Optional[str] = Header(None)) -> d
     return {**modo, "total_escritos": total, "resultados": resultados}
 
 
+# --- PWA: instalable como app (base para generar el APK con PWABuilder) ---
+
+_STATIC = Path(__file__).resolve().parent / "static"
+
+_MANIFEST = {
+    "name": "hd-prospector · Radar",
+    "short_name": "Radar",
+    "description": "Descubre y cura prospectos de VC, Startup, Incubadora y Corporativo.",
+    "start_url": "/admin",
+    "scope": "/",
+    "display": "standalone",
+    "orientation": "portrait",
+    "background_color": "#0b0c0e",
+    "theme_color": "#2563eb",
+    "icons": [
+        {"src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+        {"src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"},
+    ],
+}
+
+_SW_JS = (
+    "self.addEventListener('install', e => self.skipWaiting());\n"
+    "self.addEventListener('activate', e => self.clients.claim());\n"
+    "self.addEventListener('fetch', e => {});\n"
+)
+
+
+@app.get("/manifest.webmanifest")
+def manifest() -> Response:
+    import json as _json
+    return Response(_json.dumps(_MANIFEST), media_type="application/manifest+json")
+
+
+@app.get("/sw.js")
+def service_worker() -> Response:
+    return Response(_SW_JS, media_type="application/javascript")
+
+
+@app.get("/icon-192.png")
+def icon_192() -> FileResponse:
+    return FileResponse(_STATIC / "icon-192.png", media_type="image/png")
+
+
+@app.get("/icon-512.png")
+def icon_512() -> FileResponse:
+    return FileResponse(_STATIC / "icon-512.png", media_type="image/png")
+
+
+@app.get("/apple-touch-icon.png")
+def apple_icon() -> FileResponse:
+    return FileResponse(_STATIC / "apple-touch-icon.png", media_type="image/png")
+
+
 @app.get("/admin", response_class=HTMLResponse)
 def admin_form() -> str:
-    """Pantalla de descubrimiento (scraping) y alta de prospectos."""
+    """Pantalla de descubrimiento (scraping) y alta de prospectos (PWA instalable)."""
     return _ADMIN_HTML
 
 
@@ -370,6 +424,13 @@ _ADMIN_HTML = """<!doctype html>
 <html lang="es"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>hd-prospector · Radar</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#2563eb">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Radar">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="/icon-192.png">
 <style>
   :root { color-scheme: light dark; }
   * { box-sizing: border-box; }
@@ -567,6 +628,11 @@ _ADMIN_HTML = """<!doctype html>
     } catch (e) { m.className = "msg err"; m.textContent = "Error de red: " + e; }
     finally { $("enviar").disabled = false; }
   });
+
+  // PWA: registra el service worker para que sea instalable como app.
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  }
 </script>
 </body></html>"""
 
