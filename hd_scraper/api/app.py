@@ -220,7 +220,14 @@ def obtener_evidencia(evidencia_id: int) -> dict:
 
 
 def _row_a_corpus(row) -> dict:
-    """Contrato estable del corpus (Motor A → Motor B / RadarHD). Solo hechos."""
+    """Contrato del corpus (Motor A → Motor B / RadarHD). Solo hechos objetivos.
+
+    ``calidad_captura`` es una extensión ADITIVA y retrocompatible del contrato
+    (misma versión ``motor_a.corpus.v1``): una etiqueta OBJETIVA de la captura
+    (Alta|Media|Baja), no una interpretación. Los consumidores previos que no la
+    esperan la ignoran; RadarHD la usa como contexto para reducir falsos
+    positivos. NO se añade Deuda Cultural™, ICP ni hipótesis (eso es Motor B).
+    """
     return {
         "empresa": row["empresa_mencionada"],
         "fuente": row["nombre_medio"],
@@ -229,6 +236,7 @@ def _row_a_corpus(row) -> dict:
         "url": row["url_fuente"],
         "keywords": _keywords(row),
         "confianza": row["confianza"],
+        "calidad_captura": row["calidad_captura"],
         "categoria": row["categoria"],
         "tipo_evento": row["tipo_evento"],
         "hash": row["hash_dedup"],

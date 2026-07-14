@@ -56,7 +56,8 @@ TOKEN = os.getenv("HD_INGEST_TOKEN", "")
 
 CONTRATO = "motor_a.corpus.v1"
 CLAVES_CORPUS = {"empresa", "fuente", "fecha", "texto", "url",
-                 "keywords", "confianza", "categoria", "tipo_evento", "hash"}
+                 "keywords", "confianza", "calidad_captura",
+                 "categoria", "tipo_evento", "hash"}
 # Campos obligatorios del contrato /corpus (no pueden ir vacíos/nulos).
 OBLIGATORIOS_CORPUS = ("empresa", "fuente", "texto", "url", "tipo_evento", "hash")
 

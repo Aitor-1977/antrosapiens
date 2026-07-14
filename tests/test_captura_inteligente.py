@@ -99,7 +99,7 @@ def test_evidencia_lleva_calidad_captura(db):
     assert fila["calidad_captura"] in ("Alta", "Media", "Baja")
 
 
-def test_calidad_en_evidencias_pero_no_en_corpus(db, monkeypatch):
+def test_calidad_en_evidencias_y_en_corpus(db, monkeypatch):
     _run(db)
     api = importlib.import_module("hd_scraper.api.app")
     monkeypatch.setattr(api, "get_db", lambda: db)
@@ -108,7 +108,11 @@ def test_calidad_en_evidencias_pero_no_en_corpus(db, monkeypatch):
     ev = cli.get("/evidencias").json()["items"][0]
     assert "calidad_captura" in ev   # informativo, visible en /evidencias
 
+    # Extensión aditiva del contrato: calidad_captura (objetiva) ahora viaja en
+    # /corpus para que Motor B la use como contexto. Sigue sin filtrar interpretación.
     corpus = cli.get("/corpus").json()["items"][0]
-    assert "calidad_captura" not in corpus   # contrato motor_a.corpus.v1 intacto
+    assert corpus["calidad_captura"] in ("Alta", "Media", "Baja")
     assert set(corpus) == {"empresa", "fuente", "fecha", "texto", "url",
-                           "keywords", "confianza", "categoria", "tipo_evento", "hash"}
+                           "keywords", "confianza", "calidad_captura",
+                           "categoria", "tipo_evento", "hash"}
+    assert "deuda_cultural" not in corpus and "icp" not in corpus

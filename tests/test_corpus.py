@@ -30,9 +30,10 @@ def test_corpus_contrato_solo_hechos(cli):
     assert d["contrato"] == "motor_a.corpus.v1"
     assert d["total"] >= 1
     item = d["items"][0]
-    # Campos del contrato: solo hechos observables.
+    # Campos del contrato: solo hechos observables (calidad_captura es aditivo).
     assert set(item) == {"empresa", "fuente", "fecha", "texto", "url",
-                         "keywords", "confianza", "categoria", "tipo_evento", "hash"}
+                         "keywords", "confianza", "calidad_captura",
+                         "categoria", "tipo_evento", "hash"}
     # NADA de Deuda Cultural / ICP / hipótesis (eso es Motor B).
     assert "deuda_cultural" not in item and "icp" not in item
     assert isinstance(item["keywords"], list)

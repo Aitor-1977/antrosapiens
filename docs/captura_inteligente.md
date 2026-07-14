@@ -86,8 +86,11 @@ confiable (medio nombrado) y ausencia de duplicados (garantizada tras la dedup).
 - Se almacena en la columna `evidencias.calidad_captura` (SQLite + Postgres, con
   migración idempotente `ADD COLUMN IF NOT EXISTS`).
 - Se expone en `GET /evidencias` (y en `/evidencias/{id}`).
-- **NO** aparece en `GET /corpus`: el contrato `motor_a.corpus.v1` queda idéntico.
-- Es **puramente informativo**: no modifica el scoring del Motor B.
+- Se expone también en `GET /corpus` como **extensión aditiva y retrocompatible**
+  del contrato `motor_a.corpus.v1` (misma versión; los consumidores previos la
+  ignoran). RadarHD la usa como contexto objetivo para reducir falsos positivos.
+- Es un **hecho objetivo**, no interpretación: no añade Deuda Cultural™/ICP ni
+  modifica el scoring del Motor B.
 
 ---
 
