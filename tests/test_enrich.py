@@ -1,4 +1,8 @@
-"""Enriquecimiento: descubrir web + extraer discurso (con fixtures, sin red)."""
+"""Resolver de sitio oficial: multi-estrategia + niveles de confianza.
+
+Cubre el arreglo del bug "100% Sin web clara": ahora hay tres desenlaces
+posibles (confirmada / probable / no_confirmada), no un único mensaje.
+"""
 import importlib
 
 import pytest
@@ -6,70 +10,129 @@ from fastapi.testclient import TestClient
 
 from hd_scraper.config import settings
 from hd_scraper.enrich import (
+    CONF_CONFIRMADA,
+    CONF_NO,
+    CONF_PROBABLE,
+    dominios_candidatos,
     elegir_sitio_oficial,
     enriquecer,
-    extraer_discurso,
-    linkedin_search_url,
-    parse_ddg_resultados,
+    parse_resultados_busqueda,
+    resolver_sitio,
+    sugerir_vertical,
 )
 
-DDG_HTML = """
-<div><a class="result__a" href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fwww.linkedin.com%2Fcompany%2Fkaszek">LinkedIn</a></div>
-<div><a class="result__a" href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fkaszek.com%2F">Kaszek — sitio oficial</a></div>
-"""
-
-SITE_HTML = """
-<html><head>
+SITE_KASZEK = """<html><head><title>Kaszek</title>
 <meta name="description" content="Kaszek es un fondo de venture capital para founders en América Latina.">
-</head><body>
-<h1>Invertimos en los mejores founders de LatAm</h1>
-<p>Respaldamos compañías de tecnología en etapas tempranas con tesis de largo plazo.</p>
-<p>corto</p>
-</body></html>
-"""
+</head><body><h1>Invertimos en los mejores founders de LatAm</h1>
+<p>Respaldamos compañías de tecnología en etapas tempranas con tesis de largo plazo.</p></body></html>"""
+
+SITE_GENERICO = """<html><head><title>Bienvenido</title>
+<meta name="description" content="Sitio en construcción."></head><body><p>Hola mundo.</p></body></html>"""
+
+LITE_KASZEK = """<html><body><table>
+<tr><td><a rel="nofollow" href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fwww.linkedin.com%2Fcompany%2Fkaszek">LinkedIn</a></td></tr>
+<tr><td><a rel="nofollow" href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fkaszek.com%2F">Kaszek</a></td></tr>
+</table></body></html>"""
+
+LITE_NO_MATCH = """<html><body><table>
+<tr><td><a rel="nofollow" href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fexample.org%2Facme">Acme en Example</a></td></tr>
+</table></body></html>"""
 
 
-def test_parse_ddg_decodifica_uddg():
-    urls = parse_ddg_resultados(DDG_HTML)
-    assert "https://www.linkedin.com/company/kaszek" in urls
+# ── piezas ──────────────────────────────────────────────────────────────────
+
+def test_parse_resultados_decodifica_uddg_y_omite_ddg():
+    urls = parse_resultados_busqueda(LITE_KASZEK)
     assert "https://kaszek.com/" in urls
+    assert "https://www.linkedin.com/company/kaszek" in urls
+    assert not any("duckduckgo.com" in u for u in urls)
 
 
 def test_elegir_sitio_ignora_redes():
-    urls = ["https://www.linkedin.com/company/x", "https://kaszek.com/"]
-    assert elegir_sitio_oficial(urls) == "https://kaszek.com/"
+    assert elegir_sitio_oficial(
+        ["https://www.linkedin.com/company/x", "https://kaszek.com/"]) == "https://kaszek.com/"
 
 
-def test_extraer_discurso_incluye_meta_y_parrafos():
-    t = extraer_discurso(SITE_HTML)
-    assert "venture capital" in t
-    assert "mejores founders" in t
-    assert "corto" not in t  # descarta fragmentos muy cortos
-
-
-def test_enriquecer_orquesta(monkeypatch):
-    def fake_get(url):
-        return DDG_HTML if "duckduckgo" in url else SITE_HTML
-    d = enriquecer("Kaszek", fake_get)
-    assert d["sitio_web"] == "https://kaszek.com/"
-    assert "venture capital" in d["discurso"]
-    assert d["linkedin"] == linkedin_search_url("Kaszek")
-    assert d["fuentes"] == ["https://kaszek.com/"]
+def test_dominios_candidatos():
+    cands = dominios_candidatos("Kaszek Ventures")
+    assert "https://kaszek.com" in cands  # token principal + .com
+    assert any(c.endswith(".com.mx") for c in cands)
 
 
 def test_sugerir_vertical():
-    from hd_scraper.enrich import sugerir_vertical
     assert sugerir_vertical("Somos una fintech de pagos") == "fintech"
     assert sugerir_vertical("plataforma de terapia y salud mental") == "salud mental"
     assert sugerir_vertical("comida rica") is None
 
 
-def test_enriquecer_nunca_falla():
-    def boom(url):
-        raise RuntimeError("sin red")
-    d = enriquecer("X", boom)
-    assert d["sitio_web"] is None and d["linkedin"].startswith("https://www.linkedin.com")
-    assert d["notas"]  # registró la falla, no lanzó
+# ── resolver: los tres niveles de confianza ──────────────────────────────────
+
+def test_resolver_confirmada_por_dominio():
+    # El dominio adivinado responde y menciona el nombre -> confirmada.
+    def get(url):
+        if url == "https://kaszek.com":
+            return SITE_KASZEK
+        raise RuntimeError("404")
+    sitio, conf, _ = resolver_sitio("Kaszek", get)
+    assert conf == CONF_CONFIRMADA and sitio == "https://kaszek.com"
+
+
+def test_resolver_confirmada_por_busqueda():
+    # Adivinar falla; la búsqueda devuelve un host que coincide -> confirmada.
+    def get(url):
+        if "lite.duckduckgo.com" in url:
+            return LITE_KASZEK
+        raise RuntimeError("sin dominio")
+    sitio, conf, _ = resolver_sitio("Kaszek", get)
+    assert conf == CONF_CONFIRMADA and "kaszek.com" in sitio
+
+
+def test_resolver_probable_por_busqueda_sin_coincidencia():
+    # La búsqueda trae un resultado cuyo host NO coincide con el nombre -> probable.
+    def get(url):
+        if "lite.duckduckgo.com" in url:
+            return LITE_NO_MATCH
+        raise RuntimeError("sin dominio")
+    sitio, conf, _ = resolver_sitio("Acme", get)
+    assert conf == CONF_PROBABLE and sitio == "https://example.org/acme"
+
+
+def test_resolver_probable_por_dominio_sin_mencion():
+    # El dominio responde 200 pero no menciona el nombre, y no hay búsqueda -> probable.
+    def get(url):
+        if url == "https://acme.com":
+            return SITE_GENERICO
+        raise RuntimeError("nada")
+    sitio, conf, _ = resolver_sitio("Acme", get)
+    assert conf == CONF_PROBABLE and sitio == "https://acme.com"
+
+
+def test_resolver_no_confirmada():
+    def get(url):
+        raise RuntimeError("todo falla")
+    sitio, conf, notas = resolver_sitio("Empresa Rara", get)
+    assert sitio is None and conf == CONF_NO and notas
+
+
+def test_no_todos_devuelven_lo_mismo():
+    # Evidencia directa del arreglo: distintos insumos -> distintos niveles.
+    confirmada = resolver_sitio("Kaszek", lambda u: SITE_KASZEK if u == "https://kaszek.com" else (_ for _ in ()).throw(RuntimeError()))[1]
+    nula = resolver_sitio("Zzz", lambda u: (_ for _ in ()).throw(RuntimeError()))[1]
+    assert confirmada != nula
+    assert {confirmada, nula} == {CONF_CONFIRMADA, CONF_NO}
+
+
+# ── orquestación / endpoint ───────────────────────────────────────────────────
+
+def test_enriquecer_incluye_confianza_y_no_lanza():
+    d = enriquecer("Kaszek", lambda u: SITE_KASZEK if u == "https://kaszek.com" else (_ for _ in ()).throw(RuntimeError()))
+    assert d["sitio_web"] == "https://kaszek.com"
+    assert d["sitio_confianza"] == CONF_CONFIRMADA
+    assert "venture capital" in d["discurso"]
+
+    d2 = enriquecer("Empresa Inexistente XYZ", lambda u: (_ for _ in ()).throw(RuntimeError()))
+    assert d2["sitio_web"] is None and d2["sitio_confianza"] == CONF_NO
+    assert d2["linkedin"].startswith("https://www.linkedin.com")
 
 
 def test_endpoint_enrich_requiere_token(db, monkeypatch):

@@ -907,8 +907,11 @@ _ADMIN_HTML = """<!doctype html>
       if (d.vertical_sugerida && !$("vertical").value.trim()) $("vertical").value = d.vertical_sugerida;
       if (d.discurso && !$("discurso").value.trim()) { $("discurso").value = d.discurso; $("fuente_discurso").value = "sitio_oficial"; }
       const vsug = d.vertical_sugerida ? ` · vertical sugerida: ${d.vertical_sugerida} (confírmala)` : "";
-      m.className = "msg ok";
-      m.textContent = (d.sitio_web ? `✓ Web y discurso cargados${(d.notas||[]).length? " ("+d.notas.join("; ")+")":""}.` : `Sin web clara. Usa los enlaces. ${(d.notas||[]).join("; ")}`) + vsug;
+      // Nivel de confianza del sitio resuelto (evita un único mensaje para todos).
+      const TIER = { confirmada: "🟢 Web oficial confirmada", probable: "🟡 Dominio probable (confírmalo)", no_confirmada: "🟠 No se pudo confirmar; usa los enlaces" };
+      const etiqueta = TIER[d.sitio_confianza] || TIER.no_confirmada;
+      m.className = (d.sitio_confianza === "no_confirmada") ? "msg" : "msg ok"; m.style.display = "block";
+      m.textContent = `${etiqueta}${d.sitio_web ? ": " + d.sitio_web : ""}${vsug}`;
       $("e_links").innerHTML =
         `<a href="${esc(safeUrl(d.linkedin))}" target="_blank" rel="noopener">LinkedIn ↗</a> · ` +
         `<a href="${esc(safeUrl(d.google))}" target="_blank" rel="noopener">Google ↗</a>` +
