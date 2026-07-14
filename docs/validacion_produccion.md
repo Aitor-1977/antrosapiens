@@ -1,62 +1,91 @@
-# Validación final en producción (datos reales)
+# Validación final en producción (datos reales, auditable y reproducible)
 
-Esta validación se ejecuta contra la app **desplegada en Vercel**, que consulta
-**Google News real**. No usa simulaciones ni datos controlados. El script
-`scripts/validar_produccion.py` dispara capturas reales, lee el corpus real y
-mide/verifica todo lo pedido, dejando evidencia verificable en
-`docs/evidencia_produccion.json` y `docs/evidencia_produccion.md`.
+Proceso **automatizado, determinista y auditable** para validar el Motor A
+desplegado en Vercel (que consulta Google News real). No usa simulaciones,
+mocks, fixtures ni datos generados artificialmente. Toda la evidencia proviene
+del sistema en producción.
 
-> **Por qué no lo corre el asistente:** el entorno sandbox del asistente tiene la
-> salida de red bloqueada por política del proxy (todo `CONNECT` externo responde
-> `403`, incluidos `hd-prospector.vercel.app` y `news.google.com`). Por eso la
-> evidencia de producción la generas tú al correr el script desde una máquina con
-> Internet. El asistente no inventa resultados.
+Entregable ejecutable: `scripts/validar_produccion.py` (+ envoltorio
+`scripts/validar_produccion.sh`). Deja la evidencia en
+`docs/evidencia_produccion.json` y `docs/evidencia_produccion.md`, suficiente para
+**auditar la corrida sin leer el código fuente**.
+
+> ⚠️ **Dónde se ejecuta.** El sandbox del asistente NO tiene salida de red: el
+> proxy responde `403` a todo `CONNECT` externo (`hd-prospector.vercel.app` y
+> `news.google.com` incluidos, verificado en vivo). Por eso el asistente **no
+> puede** generar la evidencia y **no la declara completada**. La evidencia la
+> generas tú corriendo el script desde un entorno con Internet. Si el script no
+> alcanza producción, **aborta con error** y no escribe nada (no simula).
 
 ## Requisitos
 
-- Producción al día: confirma en Vercel que el último deploy (`main`) está
-  **Ready** e incluye la Captura Inteligente y la observabilidad de validación.
-- Python 3.9+ y el repo clonado.
-- El **X-Ingest-Token** del despliegue (el mismo valor de la env var de ingesta
-  en Vercel), necesario para `POST /scrape`.
+1. Deploy de `main` en Vercel en estado **Ready** (incluye Captura Inteligente y
+   la observabilidad de validación: `filtrados` en `/scrape`, `rechazos_por_motivo`
+   y `calidad_captura` en `/stats`).
+2. Python 3.9+ y el repositorio clonado (el script importa `hd_scraper.relevance`,
+   `signals` y `db.models` para explicar/verificar con el mismo código objetivo
+   que usó producción; no toca el servidor).
+3. El **X-Ingest-Token** del despliegue (para `POST /scrape`).
 
-## Ejecución
+## Ejecución (comando mínimo)
 
 ```bash
 export MOTOR_A_URL="https://hd-prospector.vercel.app"
-export HD_INGEST_TOKEN="<tu-token-de-ingesta>"
+export HD_INGEST_TOKEN="<token-de-ingesta>"
 
-# Captura real + validación completa (recomendado):
-python -m scripts.validar_produccion
+# Captura real + auditoría completa (determinista con --seed):
+python -m scripts.validar_produccion --seed 0
+#   o:  ./scripts/validar_produccion.sh --seed 0
 
-# Solo validar el corpus ya existente (sin capturar):
+# Auditar el corpus existente sin capturar:
 python -m scripts.validar_produccion --solo-leer
 ```
 
-## Qué valida y de dónde sale la evidencia
+Código de salida: **0** si todas las verificaciones pasan; **1** si el contrato o
+la deduplicación fallan. Ideal para CI/auditoría.
 
-| Requisito | Cómo se obtiene (todo real) |
-|---|---|
-| Ejecutar captura real | `POST /scrape` (empresa y categoría) → Google News real |
-| Artículos capturados / descartados / duplicados | Suma de `escritos` / `filtrados` / `duplicados` de las respuestas reales de `/scrape` |
-| Empresas identificadas | `empresa_mencionada` distintas + detección objetiva sobre el título |
-| Distribución `calidad_captura` | Conteo Alta/Media/Baja de `/evidencias` y `/stats.calidad_captura` |
-| % artículos útiles | `útiles / (útiles + descartados)` |
-| Muestra ≥50 con explicación | `random.sample` de `/evidencias`; cada registro explica su etiqueta recalculando los 3 criterios objetivos con el MISMO código de producción (`hd_scraper.relevance`/`signals`) |
-| Deduplicación | Unicidad de `url` y `hash` en todo `/corpus` + `duplicados>0` en la 2ª consulta que trae el mismo artículo |
-| Contrato `motor_a.corpus.v1` | Se verifica el tag `contrato` y que **cada** item de `/corpus` tenga exactamente las 10 claves del contrato |
+## Qué produce (todo real, todo en la evidencia)
 
-## Observabilidad añadida para esta validación (no es funcionalidad nueva)
+**Métricas obligatorias**
+- Total de artículos capturados (esta corrida) y vistos.
+- Total de artículos descartados / rechazos (corpus, desde `/stats`).
+- Total de duplicados detectados (colapsados al escribir, desde `/scrape`).
+- Total de empresas identificadas (distintas + detectables objetivamente).
+- Porcentaje de artículos útiles = `consumibles / (consumibles + no_fechadas + rechazos)`.
+- Distribución de `calidad_captura` (Alta / Media / Baja).
+- Distribución de motivos de rechazo (`/stats.rechazos_por_motivo`).
 
-Solo se exponen contadores **ya calculados**, para que la evidencia salga de la
-propia app:
+**Validación del contrato** (`motor_a.corpus.v1`), por cada item de `/corpus`:
+- tag de contrato correcto;
+- exactamente las 10 claves del contrato (esquema);
+- campos obligatorios no vacíos (empresa, fuente, texto, url, tipo_evento, hash);
+- `tipo_evento` dentro del vocabulario del contrato;
+- `confianza` numérica en `[0, 1]`; `keywords` es lista; `fecha` ISO 8601;
+- ausencia de duplicados: `url` y `hash` únicos en todo el corpus.
 
-- `POST /scrape` → cada resultado ahora incluye `filtrados` (descartes del filtro
-  de relevancia), junto a `duplicados`, `rechazados`, `escritos`, `vistos`.
-- `GET /stats` → añade `rechazos_por_motivo` (desglose de descartes: dedup /
-  contrato / `relevancia:*`) y `calidad_captura` (distribución Alta/Media/Baja).
+**Muestreo automático** (≥50 registros reales, reproducible con `--seed`), por
+registro: empresa, evento detectado, calidad asignada, **explicación objetiva**
+(recálculo de los 3 criterios con el código de producción), fuente y URL.
 
-## Smoke manual (opcional, con curl)
+## Reproducibilidad
+
+- El muestreo usa `random.Random(seed)`: con la misma `--seed` y el mismo estado
+  del corpus, la muestra es idéntica → **determinista**.
+- Cualquier persona con las 2 variables de entorno y el repo obtiene resultados
+  equivalentes ejecutando el mismo comando.
+
+## Observabilidad añadida (solo exposición de datos ya calculados)
+
+Para que las métricas salgan de la propia app (no de inferencias del cliente):
+
+- `POST /scrape` → cada resultado incluye `filtrados` (descartes por relevancia).
+- `GET /stats` → `rechazos_por_motivo` (dedup/contrato/`relevancia:*`) y
+  `calidad_captura` (distribución Alta/Media/Baja).
+
+Son campos **aditivos y retrocompatibles**; no cambian el contrato
+`motor_a.corpus.v1` ni el comportamiento existente.
+
+## Smoke manual (opcional)
 
 ```bash
 curl -s "$MOTOR_A_URL/health"

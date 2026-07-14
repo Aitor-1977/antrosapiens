@@ -1,0 +1,8 @@
+{
+  "estado": "PENDIENTE",
+  "evidencia_presente": false,
+  "origen_requerido": "produccion (Vercel + Google News real)",
+  "nota": "Marcador. Se sobrescribe automaticamente al ejecutar 'python -m scripts.validar_produccion' desde un entorno con acceso a Internet y a produccion. No contiene datos simulados ni estimados.",
+  "motivo_no_generado": "El sandbox del asistente bloquea la salida de red (proxy responde 403 a todo CONNECT externo). La evidencia real debe generarse desde un entorno con red.",
+  "como_generar": "export MOTOR_A_URL=... ; export HD_INGEST_TOKEN=... ; python -m scripts.validar_produccion"
+}
