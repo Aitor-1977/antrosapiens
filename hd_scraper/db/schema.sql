@@ -30,6 +30,10 @@ CREATE TABLE IF NOT EXISTS evidencias (
     categoria           TEXT,                   -- ecosistema si viene de descubrimiento por categoría
     keywords            TEXT,                   -- JSON: etiquetas de señal Nivel 1 (objetivas)
     confianza           REAL NOT NULL DEFAULT 0, -- calidad objetiva de la extracción 0–1
+    -- Captura Inteligente (dedup robusto + calidad informativa)
+    clave_contenido     TEXT,                   -- identidad de contenido (url:/txt:) para dedup robusto
+    hash_contenido      TEXT,                   -- sha256 del título normalizado (dedup entre URLs distintas)
+    calidad_captura     TEXT,                   -- Alta | Media | Baja (informativa; no altera el scoring)
     creado_en           TEXT NOT NULL
 );
 
@@ -38,6 +42,8 @@ CREATE INDEX IF NOT EXISTS idx_evidencias_tipo    ON evidencias (tipo_evento);
 CREATE INDEX IF NOT EXISTS idx_evidencias_estado  ON evidencias (estado);
 CREATE INDEX IF NOT EXISTS idx_evidencias_fpub    ON evidencias (fecha_publicacion);
 CREATE INDEX IF NOT EXISTS idx_evidencias_categoria ON evidencias (categoria);
+CREATE INDEX IF NOT EXISTS idx_evidencias_clave  ON evidencias (clave_contenido);
+CREATE INDEX IF NOT EXISTS idx_evidencias_hashc  ON evidencias (hash_contenido);
 
 -- Rechazos: todo registro que no pasa el validador, con su motivo. Auditable.
 CREATE TABLE IF NOT EXISTS rechazos (

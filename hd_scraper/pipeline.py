@@ -18,9 +18,17 @@ from dataclasses import dataclass, field
 from .config import settings
 from .connectors.base import Connector
 from .db.database import Database
-from .db.models import ESTADO_NO_FECHADO, EvidenceRecord, QuerySpec, ahora_iso
+from .db.models import (
+    ESTADO_NO_FECHADO,
+    EvidenceRecord,
+    QuerySpec,
+    ahora_iso,
+    clave_contenido,
+    hash_contenido,
+)
 from .governance.health import registrar_corrida
-from .signals import calcular_confianza, detectar_keywords
+from .relevance import calcular_calidad, detectar_empresa, evaluar_relevancia
+from .signals import calcular_confianza, detectar_keywords, fuente_confiable
 from .storage.raw_store import guardar_crudo
 
 log = logging.getLogger("hd_scraper.pipeline")
@@ -36,6 +44,7 @@ class RunResult:
     no_fechados: int = 0
     duplicados: int = 0
     rechazados: int = 0
+    filtrados: int = 0          # descartados por el filtro de relevancia (Captura Inteligente)
     errores: list[str] = field(default_factory=list)
 
     def resumen(self) -> str:
@@ -43,7 +52,8 @@ class RunResult:
             f"{self.connector}[{self.empresa}/{self.tipo_evento}] "
             f"vistos={self.vistos} escritos={self.escritos} "
             f"no_fechados={self.no_fechados} duplicados={self.duplicados} "
-            f"rechazados={self.rechazados} errores={len(self.errores)}"
+            f"rechazados={self.rechazados} filtrados={self.filtrados} "
+            f"errores={len(self.errores)}"
         )
 
 
@@ -55,8 +65,9 @@ def _escribir_evidencia(db: Database, record: EvidenceRecord) -> bool:
             cita_textual, fecha_extraccion, url_fuente, nombre_medio,
             empresa_mencionada, tipo_evento, origen_declaracion, hash_dedup,
             fecha_publicacion, persona_citada, cargo,
-            connector, estado, raw_hash, categoria, keywords, confianza, creado_en
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            connector, estado, raw_hash, categoria, keywords, confianza,
+            clave_contenido, hash_contenido, calidad_captura, creado_en
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT (hash_dedup) DO NOTHING
         """,
         (
@@ -66,10 +77,37 @@ def _escribir_evidencia(db: Database, record: EvidenceRecord) -> bool:
             record.persona_citada, record.cargo, record.connector, record.estado,
             record.raw_hash, record.categoria,
             json.dumps(record.keywords, ensure_ascii=False), record.confianza,
+            record.clave_contenido, record.hash_contenido, record.calidad_captura,
             record.creado_en,
         ),
     )
     return cur.rowcount > 0
+
+
+def _es_duplicado_contenido(db: Database, record: EvidenceRecord) -> bool:
+    """Dedup robusto: ¿ya existe una evidencia con la misma identidad de contenido?
+
+    Compara por ``clave_contenido`` (URL canónica/normalizada) O por
+    ``hash_contenido`` (título normalizado). El segundo colapsa el mismo artículo
+    republicado en URLs distintas. Independiente de ``empresa_mencionada``, por lo
+    que un artículo capturado por varias consultas de descubrimiento se guarda
+    UNA sola vez.
+    """
+    condiciones = []
+    params: list = []
+    if record.clave_contenido:
+        condiciones.append("clave_contenido = ?")
+        params.append(record.clave_contenido)
+    if record.hash_contenido:
+        condiciones.append("hash_contenido = ?")
+        params.append(record.hash_contenido)
+    if not condiciones:
+        return False
+    fila = db.fetch_one(
+        f"SELECT 1 AS x FROM evidencias WHERE {' OR '.join(condiciones)} LIMIT 1",
+        params,
+    )
+    return fila is not None
 
 
 def _drenar_salud_subfuentes(db: Database, connector: Connector) -> None:
@@ -111,6 +149,26 @@ def run_connector(db: Database, connector: Connector, query: QuerySpec) -> RunRe
             record.keywords = detectar_keywords(record.cita_textual)
             record.confianza = calcular_confianza(
                 record.fecha_publicacion, record.nombre_medio, record.keywords)
+
+            # --- Captura Inteligente: criterios objetivos (sin IA) ---
+            titulo = record.cita_textual
+            # Empresa identificable: en consulta dirigida (exact) la empresa la
+            # declara el operador; en descubrimiento se detecta un nombre propio.
+            empresa_ok = bool(query.exact) or bool(detectar_empresa(titulo))
+            evento_ok = bool(record.keywords)
+            fuente_ok = fuente_confiable(record.nombre_medio)
+
+            # Filtro de relevancia: SOLO en descubrimiento amplio (not exact), que
+            # es donde entra el ruido (op-eds, tendencias, notas sin empresa). Las
+            # consultas dirigidas por nombre de empresa no se filtran.
+            if not query.exact:
+                relevante, motivo = evaluar_relevancia(titulo, record.keywords, empresa_ok)
+                if not relevante:
+                    _escribir_rechazo(db, connector.name, motivo,
+                                      {"meta": raw.meta, "url": raw.url})
+                    res.filtrados += 1
+                    continue
+
             veredicto = connector.validate(record)
 
             if not veredicto.ok:
@@ -120,6 +178,17 @@ def run_connector(db: Database, connector: Connector, query: QuerySpec) -> RunRe
                 continue
 
             record.estado = veredicto.estado
+
+            # Dedup robusto por identidad de contenido (independiente de empresa).
+            record.clave_contenido = clave_contenido(record.url_fuente, raw.meta, titulo)
+            record.hash_contenido = hash_contenido(titulo)
+            if _es_duplicado_contenido(db, record):
+                res.duplicados += 1
+                continue
+
+            # Calidad de captura (informativa; no altera el scoring del Motor B).
+            record.calidad_captura = calcular_calidad(empresa_ok, evento_ok, fuente_ok)
+
             # Retención del crudo comprimido, vinculado por hash antes de escribir.
             # Se omite si el disco es efímero (p. ej. Vercel): HD_RAW_ENABLED=0.
             if settings.raw_enabled:
@@ -131,7 +200,7 @@ def run_connector(db: Database, connector: Connector, query: QuerySpec) -> RunRe
                 if veredicto.estado == ESTADO_NO_FECHADO:
                     res.no_fechados += 1
             else:
-                res.duplicados += 1  # ya existía por hash_dedup
+                res.duplicados += 1  # ya existía por hash_dedup (última barrera)
         except Exception as exc:
             corrida_ok = False
             log.exception("[%s] error procesando item", connector.name)

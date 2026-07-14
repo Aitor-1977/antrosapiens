@@ -24,6 +24,9 @@ CREATE TABLE IF NOT EXISTS evidencias (
     categoria           TEXT,
     keywords            TEXT,
     confianza           DOUBLE PRECISION NOT NULL DEFAULT 0,
+    clave_contenido     TEXT,
+    hash_contenido      TEXT,
+    calidad_captura     TEXT,
     creado_en           TEXT NOT NULL
 );
 
@@ -36,8 +39,14 @@ CREATE INDEX IF NOT EXISTS idx_evidencias_fpub    ON evidencias (fecha_publicaci
 ALTER TABLE evidencias ADD COLUMN IF NOT EXISTS categoria TEXT;
 ALTER TABLE evidencias ADD COLUMN IF NOT EXISTS keywords  TEXT;
 ALTER TABLE evidencias ADD COLUMN IF NOT EXISTS confianza DOUBLE PRECISION NOT NULL DEFAULT 0;
+-- Captura Inteligente: dedup robusto (clave/hash de contenido) + calidad informativa.
+ALTER TABLE evidencias ADD COLUMN IF NOT EXISTS clave_contenido TEXT;
+ALTER TABLE evidencias ADD COLUMN IF NOT EXISTS hash_contenido  TEXT;
+ALTER TABLE evidencias ADD COLUMN IF NOT EXISTS calidad_captura TEXT;
 
 CREATE INDEX IF NOT EXISTS idx_evidencias_categoria ON evidencias (categoria);
+CREATE INDEX IF NOT EXISTS idx_evidencias_clave  ON evidencias (clave_contenido);
+CREATE INDEX IF NOT EXISTS idx_evidencias_hashc  ON evidencias (hash_contenido);
 
 CREATE TABLE IF NOT EXISTS rechazos (
     id            BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,

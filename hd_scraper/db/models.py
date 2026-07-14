@@ -12,6 +12,8 @@ de la fuente (ver docstring de cada conector). Radar es quien interpreta.
 from __future__ import annotations
 
 import hashlib
+import re
+import unicodedata
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Optional
@@ -63,6 +65,63 @@ def normalizar_url(url: str) -> str:
 def normalizar_empresa(empresa: str) -> str:
     """Nombre de empresa normalizado para deduplicación (minúsculas, sin bordes)."""
     return " ".join((empresa or "").lower().split())
+
+
+# --- Deduplicación robusta de contenido (Captura Inteligente) -------------
+#
+# El hash_dedup del contrato es sha256(empresa + url). En descubrimiento por
+# categoría la "empresa" es el TÉRMINO de la consulta (no una compañía real),
+# así que el MISMO artículo capturado por dos consultas distintas obtenía dos
+# hash_dedup distintos y se guardaba repetido. Para evitarlo se añade una
+# identidad de contenido independiente de la empresa, con esta cascada de
+# prioridad (la primera disponible gana), tal como se pidió:
+#
+#   1) URL canónica declarada por la fuente (rel=canonical / og:url), normalizada.
+#   2) URL normalizada (host en minúsculas, sin query -> descarta UTM y demás
+#      parámetros de rastreo- ni fragmento, sin slash final).
+#   3) hash del contenido (título normalizado) como respaldo, para colapsar el
+#      MISMO artículo publicado en URLs distintas.
+#
+# Es 100% determinista (sin IA): misma nota -> misma clave.
+
+def _sin_acentos(texto: str) -> str:
+    nfkd = unicodedata.normalize("NFKD", texto or "")
+    return "".join(c for c in nfkd if not unicodedata.combining(c))
+
+
+def normalizar_titulo(titulo: str) -> str:
+    """Título normalizado para el hash de contenido.
+
+    Quita el sufijo " - Medio" que añade Google News, los acentos y la
+    puntuación, baja a minúsculas y colapsa espacios. Determinista.
+    """
+    t = (titulo or "").strip()
+    sin_medio = re.sub(r"\s+[-–|]\s+[^-–|]+$", "", t).strip()
+    t = sin_medio or t
+    t = _sin_acentos(t).lower()
+    t = re.sub(r"[^a-z0-9]+", " ", t)
+    return " ".join(t.split())
+
+
+def hash_contenido(titulo: str) -> str:
+    """sha256 del título normalizado. Cadena vacía si no hay título utilizable."""
+    norm = normalizar_titulo(titulo)
+    return hashlib.sha256(norm.encode("utf-8")).hexdigest() if norm else ""
+
+
+def clave_contenido(url: str, meta: Optional[dict] = None, titulo: str = "") -> str:
+    """Clave de identidad de contenido para dedup robusto (ver cascada arriba)."""
+    meta = meta or {}
+    canonica = meta.get("canonical") or meta.get("og_url") or meta.get("url_canonica")
+    if canonica:
+        n = normalizar_url(canonica)
+        if n:
+            return f"url:{n}"
+    n = normalizar_url(url)
+    if n:
+        return f"url:{n}"
+    h = hash_contenido(titulo)
+    return f"txt:{h}" if h else ""
 
 
 def calcular_hash_dedup(empresa: str, url_fuente: str) -> str:
@@ -155,6 +214,11 @@ class EvidenceRecord:
     # --- Extracción objetiva Nivel 1 (Motor A) ---
     keywords: list = field(default_factory=list)   # etiquetas de señal genéricas
     confianza: float = 0.0                          # calidad objetiva de la extracción 0–1
+
+    # --- Captura Inteligente (objetiva, informativa; NO altera el scoring del Motor B) ---
+    clave_contenido: str = ""        # identidad de contenido para dedup robusto (url:/txt:)
+    hash_contenido: str = ""         # sha256 del título normalizado (dedup entre URLs distintas)
+    calidad_captura: Optional[str] = None  # Alta | Media | Baja (criterios objetivos)
 
     # --- Metadatos internos (no forman parte del contrato público) ---
     connector: str = ""

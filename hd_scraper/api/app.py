@@ -109,6 +109,7 @@ def _row_a_evidencia(row) -> dict:
         "categoria": row["categoria"],
         "keywords": _keywords(row),
         "confianza": row["confianza"],
+        "calidad_captura": row["calidad_captura"],  # informativa (Captura Inteligente)
         "hash_dedup": row["hash_dedup"],
     }
 

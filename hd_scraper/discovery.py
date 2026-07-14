@@ -40,16 +40,52 @@ VERTICALES_HD: dict[str, str] = {
     "identidad": "identidad digital",
 }
 
-# Señal (tipo_evento del contrato) → palabras. Se afinan hacia las señales de
-# fricción cultural que busca HD (churn, adopción, retención), sin cambiar el
-# vocabulario literal del contrato.
-TIPO_KEYWORDS: dict[str, str] = {
-    "ronda": "ronda de inversión",
-    "contratacion": "contratación nuevo ejecutivo head of research",
-    "despido": "despidos reestructura estancamiento",
-    "lanzamiento": "lanzamiento de producto",
-    "queja": "churn abandono baja retención fricción usuarios quejas",
-    "cambio_sitio": "rediseño pivote nuevo modelo de producto",
+# Señal (tipo_evento del contrato) → VARIANTES de consulta. Cada variante es una
+# frase temática que se combina con base+vertical para formar UNA consulta
+# independiente. Usar varias frases cortas (en vez de una sola frase larga)
+# amplía el descubrimiento: Google News trata los términos como conjunción, así
+# que una frase larga estrecha demasiado. El vocabulario literal del contrato
+# (las claves) NO cambia; solo se enriquecen las frases de búsqueda.
+#
+# Cambio principal de Captura Inteligente: el tipo "queja" (bucket de fricción)
+# deja de ser un único término y pasa a cubrir explícitamente pérdida de
+# clientes, despidos, conflictos regulatorios, caídas de crecimiento,
+# cancelación de servicios, demandas, reestructuración y crisis operativas.
+TIPO_KEYWORDS: dict[str, list[str]] = {
+    "ronda": [
+        "ronda de inversión",
+        "levanta capital serie A",
+        "recauda financiamiento",
+    ],
+    "contratacion": [
+        "contratación masiva de personal",
+        "nuevo ejecutivo head of",
+        "plan de contratación empleos",
+    ],
+    "despido": [
+        "despidos masivos",
+        "reestructuración recorte de personal",
+        "cierre de operaciones",
+    ],
+    "lanzamiento": [
+        "lanzamiento de producto",
+        "nueva plataforma estrena",
+    ],
+    # Bucket de fricción — ampliado (mejora #4). Cada línea es una consulta.
+    "queja": [
+        "pérdida de clientes fuga de usuarios",
+        "quejas churn baja retención",
+        "cancelación de servicio cancelaciones",
+        "demanda colectiva denuncia",
+        "conflicto regulatorio multa sanción",
+        "caída de crecimiento desaceleración",
+        "reestructuración crisis operativa",
+        "despidos cierre de operaciones",
+    ],
+    "cambio_sitio": [
+        "rediseño de marca pivote",
+        "nuevo modelo de negocio relanzamiento",
+    ],
 }
 
 PAISES_LATAM = ["México", "Colombia", "Chile", "Perú", "Argentina", "Brasil",
@@ -80,13 +116,19 @@ def _bases(categoria: str) -> list[str]:
 def queries_para(categoria: str, tipo_evento: str, vertical: str = "todas") -> list[tuple[str, str]]:
     """Consultas (texto, tipo_evento) para categoría + tipo de señal + vertical.
 
-    Compone base del ecosistema + vertical (HD) + palabra del tipo. La zona
-    geográfica se añade aparte en el pipeline (vía QuerySpec.terminos).
+    Compone base del ecosistema + vertical (HD) + cada VARIANTE del tipo. Se
+    emite una consulta por variante para ampliar el descubrimiento (sobre todo
+    en el bucket de fricción "queja"). Las consultas duplicadas se colapsan
+    conservando el orden. La zona geográfica se añade aparte en el pipeline.
     """
-    kw = TIPO_KEYWORDS.get(tipo_evento, "")
+    variantes = TIPO_KEYWORDS.get(tipo_evento) or [""]
     vkw = VERTICALES_HD.get(vertical, "")
-    salida = []
+    salida: list[tuple[str, str]] = []
+    vistos: set[str] = set()
     for base in _bases(categoria):
-        texto = " ".join(x for x in (base, vkw, kw) if x).strip()
-        salida.append((texto, tipo_evento))
+        for kw in variantes:
+            texto = " ".join(x for x in (base, vkw, kw) if x).strip()
+            if texto and texto not in vistos:
+                vistos.add(texto)
+                salida.append((texto, tipo_evento))
     return salida
