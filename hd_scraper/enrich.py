@@ -149,6 +149,26 @@ def elegir_sitio_oficial(urls: list[str]) -> Optional[str]:
     return None
 
 
+def extraer_snippets_busqueda(html: str, limite: int = 800) -> str:
+    """Extrae el texto DESCRIPTIVO (snippets) de una página de resultados.
+
+    Camino 1 del auto-investiga: muchos sitios modernos se arman con JavaScript y
+    NO exponen texto al servidor, así que leer su HTML da vacío. Los snippets del
+    buscador sí traen una descripción utilizable de la empresa. Determinista.
+    """
+    soup = BeautifulSoup(html, "html.parser")
+    partes: list[str] = []
+    celdas = soup.find_all("td", class_="result-snippet") or soup.find_all("td")
+    for td in celdas:
+        t = td.get_text(" ", strip=True)
+        if len(t) >= 40 and "duckduckgo" not in t.lower():
+            partes.append(t)
+        if sum(len(x) for x in partes) > limite:
+            break
+    texto = "\n".join(dict.fromkeys(partes))
+    return texto[:limite].strip()
+
+
 # ── Resolver (núcleo del arreglo) ───────────────────────────────────────────
 
 def resolver_sitio(nombre: str, http_get: Callable[[str], str]) -> tuple[Optional[str], str, list[str]]:
@@ -262,6 +282,28 @@ def enriquecer(nombre: str, http_get: Callable[[str], str]) -> dict:
         except Exception as exc:
             resultado["notas"].append(f"no se pudo leer el sitio: {exc}")
             log.debug("enrich: no se pudo leer %s: %s", sitio, exc)
+
+    # Camino 1: si no se logró discurso del sitio (web armada en JavaScript que
+    # no expone texto al servidor, o sin sitio confirmado), usar la DESCRIPCIÓN
+    # de los resultados de búsqueda. Sigue siendo captura objetiva: guardamos el
+    # texto que el buscador ya muestra, sin interpretarlo.
+    if not resultado["discurso"]:
+        try:
+            html = http_get(_ddg_lite_url(f"{nombre} empresa"))
+            snip = extraer_snippets_busqueda(html)
+            if snip:
+                resultado["discurso"] = snip
+                resultado["fuentes"].append("búsqueda")
+                if not resultado["vertical_sugerida"]:
+                    sug = sugerir_vertical(snip)
+                    resultado["vertical_sugerida"] = sug
+                    resultado["vertical_confianza"] = 0.4 if sug else 0.0
+                resultado["notas"].append(
+                    "descripción tomada de resultados de búsqueda "
+                    "(la web no expone texto al servidor)")
+        except Exception as exc:
+            resultado["notas"].append(f"búsqueda de descripción falló: {exc}")
+            log.debug("enrich: búsqueda de descripción falló: %s", exc)
 
     log.debug("enrich: nombre=%r -> sitio=%r confianza=%s", nombre, sitio, confianza)
     return resultado

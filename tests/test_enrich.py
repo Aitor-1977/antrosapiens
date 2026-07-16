@@ -16,6 +16,7 @@ from hd_scraper.enrich import (
     dominios_candidatos,
     elegir_sitio_oficial,
     enriquecer,
+    extraer_snippets_busqueda,
     parse_resultados_busqueda,
     resolver_sitio,
     sugerir_vertical,
@@ -36,6 +37,12 @@ LITE_KASZEK = """<html><body><table>
 
 LITE_NO_MATCH = """<html><body><table>
 <tr><td><a rel="nofollow" href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fexample.org%2Facme">Acme en Example</a></td></tr>
+</table></body></html>"""
+
+# Página de resultados con snippets descriptivos (columna result-snippet de DDG lite).
+LITE_SNIPPETS = """<html><body><table>
+<tr><td class="result-link"><a href="//duckduckgo.com/l/?uddg=https%3A%2F%2Fpolo.com%2F">Polo</a></td></tr>
+<tr><td class="result-snippet">Polo es una fintech de pagos que ofrece una plataforma de crédito para pymes en México y la región.</td></tr>
 </table></body></html>"""
 
 
@@ -133,6 +140,32 @@ def test_enriquecer_incluye_confianza_y_no_lanza():
     d2 = enriquecer("Empresa Inexistente XYZ", lambda u: (_ for _ in ()).throw(RuntimeError()))
     assert d2["sitio_web"] is None and d2["sitio_confianza"] == CONF_NO
     assert d2["linkedin"].startswith("https://www.linkedin.com")
+
+
+# ── camino 1: descripción desde snippets de búsqueda ──────────────────────────
+
+def test_extraer_snippets_busqueda():
+    texto = extraer_snippets_busqueda(LITE_SNIPPETS)
+    assert "fintech de pagos" in texto
+    assert "duckduckgo" not in texto.lower()
+
+
+def test_enriquecer_usa_snippets_cuando_el_sitio_no_da_discurso():
+    # Sitio confirmado por dominio pero SIN texto legible (web en JavaScript):
+    # el discurso debe venir de los snippets de búsqueda (camino 1).
+    SITE_VACIO = "<html><head><title>Polo</title></head><body><div id=root></div></body></html>"
+
+    def get(url):
+        if url == "https://polo.com":
+            return SITE_VACIO
+        if "lite.duckduckgo.com" in url:
+            return LITE_SNIPPETS
+        raise RuntimeError("sin dominio")
+
+    d = enriquecer("Polo", get)
+    assert "fintech de pagos" in d["discurso"]
+    assert "búsqueda" in d["fuentes"]
+    assert d["vertical_sugerida"] == "fintech"
 
 
 def test_endpoint_enrich_requiere_token(db, monkeypatch):
