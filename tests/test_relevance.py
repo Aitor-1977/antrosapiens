@@ -113,6 +113,31 @@ def test_relevancia_conserva_empresa_mexicana_real():
     assert ok and motivo == ""
 
 
+def test_relevancia_descarta_gigantes_geo_y_sucesos():
+    from hd_scraper.relevance import (
+        MOTIVO_GIGANTE, MOTIVO_NO_EMPRESA, MOTIVO_NO_LATAM,
+    )
+    # Marca gigante (no es ICP de HD), aunque traiga un evento (multa=regulación).
+    ok, m = evaluar_relevancia(
+        "Google investigado en Suiza: multa de 4.000M por Android", ["regulacion"], True)
+    assert not ok and m in (MOTIVO_NO_LATAM, MOTIVO_GIGANTE)
+    # Wendy's (comida rápida global): fuera.
+    ok2, m2 = evaluar_relevancia(
+        "Wendy's abre su primera sucursal en Jalisco", ["expansion"], True)
+    assert not ok2 and m2 == MOTIVO_GIGANTE
+    # Nota roja / suceso: no es una empresa.
+    ok3, m3 = evaluar_relevancia(
+        "Muerte de Marie Claire González: violencia de género", ["reduccion_personal"], True)
+    assert not ok3 and m3 == MOTIVO_NO_EMPRESA
+
+
+def test_relevancia_conserva_startup_latam_pese_a_filtros_nuevos():
+    # Una startup real LATAM con evento sigue pasando (no la afectan los filtros).
+    ok, m = evaluar_relevancia(
+        "Clip lanza una nueva terminal de pago en México", ["lanzamiento"], True)
+    assert ok and m == ""
+
+
 # ── calidad de captura (informativa) ─────────────────────────────────────────
 
 def test_calidad_alta_media_baja():

@@ -154,6 +154,22 @@ NO_LATAM: tuple[str, ...] = (
     "estados unidos", "ee.uu", "eeuu", "reino unido", "inglaterra", "francia",
     "frances", "alemania", "aleman", "italia", "portugal", "china", "india",
     "japon", "canada",
+    # Europa y otras regiones fuera de LATAM (se colaban por eventos regulatorios).
+    "suiza", "suizo", "europa", "europea", "europeo", "union europea", "bruselas",
+    "suecia", "noruega", "dinamarca", "finlandia", "holanda", "paises bajos",
+    "belgica", "irlanda", "austria", "grecia", "polonia", "rusia", "ucrania",
+    "australia", "corea", "singapur", "hong kong", "dubai", "emiratos", "israel",
+)
+
+# Marcas GIGANTES (tecnología global, comida rápida, consumo masivo). No son
+# prospectos de HD (empresas en fase de escala con deuda cultural); su aparición
+# en un titular casi siempre es ruido internacional, no un candidato LATAM.
+GIGANTES: tuple[str, ...] = (
+    "google", "alphabet", "amazon", "meta", "facebook", "instagram", "whatsapp",
+    "apple", "microsoft", "netflix", "tesla", "samsung", "huawei", "tiktok",
+    "nvidia", "intel", "spotify", "sony", "disney", "nike", "adidas",
+    "wendy", "mcdonald", "burger king", "starbucks", "walmart", "coca-cola",
+    "coca cola", "pepsi", "nestle", "unilever",
 )
 
 # Términos que indican que NO es una empresa prospecto: gobierno, premios,
@@ -169,6 +185,12 @@ NO_EMPRESA: tuple[str, ...] = (
     "resumen del ano", "reporte anual", "informe anual", "state of",
     "de cada 10", "de cada diez", "siete de cada", "record en", "ranking",
     "radiografia",
+    # Sucesos / nota roja / interés humano: no son una empresa prospecto.
+    "muerte de", "muere ", "murio", "fallece", "fallecio", "asesinat",
+    "asesinan", "homicidio", "feminicidio", "femicidio", "violencia de genero",
+    "violencia de genero", "accidente", "detienen a", "detenido", "detenida",
+    "narco", "secuestro", "balacera", "sismo", "terremoto", "huracan",
+    "elecciones", "candidato", "candidata", "partido politico",
 )
 
 # Título de reporte: un tema seguido de "AÑO:" (p. ej. "Venture Capital LATAM
@@ -187,7 +209,8 @@ MOTIVO_OPINION = "relevancia:opinion"          # opinión / tendencia / listícu
 MOTIVO_SIN_EMPRESA = "relevancia:sin_empresa"  # no menciona empresa concreta
 MOTIVO_SIN_EVENTO = "relevancia:sin_evento"    # no describe evento verificable
 MOTIVO_NO_LATAM = "relevancia:no_latam"        # geografía fuera de LATAM
-MOTIVO_NO_EMPRESA = "relevancia:no_empresa"    # gobierno/premios/academia/reporte
+MOTIVO_NO_EMPRESA = "relevancia:no_empresa"    # gobierno/premios/academia/reporte/suceso
+MOTIVO_GIGANTE = "relevancia:gigante"          # marca gigante (no es ICP de HD)
 
 
 def evaluar_relevancia(
@@ -220,6 +243,8 @@ def evaluar_relevancia(
         return False, MOTIVO_NO_LATAM
     if _contiene(t, NO_EMPRESA) or _RE_REPORTE.search(t):
         return False, MOTIVO_NO_EMPRESA
+    if _contiene(t, GIGANTES):
+        return False, MOTIVO_GIGANTE
     if not empresa_identificada:
         return False, MOTIVO_SIN_EMPRESA
     if exigir_evento and not keywords:
