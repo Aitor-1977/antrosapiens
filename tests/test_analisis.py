@@ -34,11 +34,28 @@ def test_sin_senal_da_c_y_sin_deuda():
 
 
 def test_senal_dominante_prioriza_dolor_sobre_cambio():
-    # Con ronda (cambio) Y despidos (dolor), domina el dolor -> A / Deuda Moral.
+    # Con ronda (cambio) Y despidos (dolor), el scoring sigue siendo A (dolor).
+    # La deuda ahora la afina la COMBINACIÓN (ver test siguiente).
     r = analizar(["ronda_inversion", "reduccion_personal"], vertical="healthtech",
                  confianza=0.9, calidad="Alta")
     assert r["scoring"] == "A"
-    assert r["tipo_deuda"] == "Deuda Moral"
+
+
+def test_combinacion_recorte_tras_ronda():
+    # Recorte + ronda => hipótesis de combinación más precisa que cada señal sola.
+    r = analizar(["ronda_inversion", "reduccion_personal"], vertical="", confianza=0.9)
+    assert r["tipo_deuda"] == "Deuda de Escalamiento mal gestionado"
+    assert r["angulo_conversacion"]  # trae un ángulo de conversación
+
+
+def test_combinacion_friccion_con_crecimiento():
+    r = analizar(["crecimiento", "friccion_retencion"], vertical="fintech", confianza=0.8)
+    assert r["tipo_deuda"] == "Deuda de Experiencia en escala"
+
+
+def test_matiz_vertical_enriquece_razon():
+    r = analizar(["friccion_retencion"], vertical="salud mental", confianza=0.7)
+    assert "salud mental" in r["deuda_razon"]
 
 
 def test_vertical_no_hd_no_suma_bonus():
@@ -64,7 +81,9 @@ def test_intensidad_baja_sin_dolor_ni_cambio():
 
 
 def test_deuda_secundaria_cuando_hay_dos_senales_distintas():
-    # Recorte (Deuda Moral, dominante) + ronda (Deuda de Escalamiento, secundaria).
-    r = analizar(["reduccion_personal", "ronda_inversion"])
+    # Recorte (Deuda Moral) + regulación (Deuda de Gobernanza): sin combinación
+    # declarada para ese par, domina la señal única (recorte) y la otra queda
+    # como secundaria.
+    r = analizar(["reduccion_personal", "regulacion"])
     assert r["tipo_deuda"] == "Deuda Moral"
-    assert r["deuda_secundaria"] == "Deuda de Escalamiento"
+    assert r["deuda_secundaria"] == "Deuda de Gobernanza"

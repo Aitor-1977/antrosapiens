@@ -68,6 +68,72 @@ DEUDA_POR_SENAL: dict[str, tuple[str, str]] = {
                     "lanzamiento: el reto pasa a que el mercado adopte y retenga"),
 }
 
+# Hipótesis de COMBINACIÓN: dos señales juntas dicen algo más preciso que cada
+# una por separado. Se evalúan EN ORDEN; la primera cuyos tags estén todos
+# presentes gana como deuda PRINCIPAL (antes que la de señal única). Esto afina
+# el diagnóstico: no es lo mismo "recorte" que "recorte justo después de levantar
+# capital". Sigue siendo determinista y declarado.
+COMBINACIONES: tuple[tuple[frozenset, str, str], ...] = (
+    (frozenset({"reduccion_personal", "ronda_inversion"}),
+     "Deuda de Escalamiento mal gestionado",
+     "levantó capital y aun así recorta: la expectativa de crecer choca con una operación que no la sostiene"),
+    (frozenset({"friccion_retencion", "crecimiento"}),
+     "Deuda de Experiencia en escala",
+     "crece en números pero pierde clientes: el crecimiento tapa una experiencia que no retiene"),
+    (frozenset({"friccion_retencion", "expansion"}),
+     "Deuda de Experiencia en escala",
+     "se expande mientras sube la fricción: la operación crece más rápido que la cultura de cliente"),
+    (frozenset({"cambio_liderazgo", "reduccion_personal"}),
+     "Deuda de Liderazgo en crisis",
+     "rotación en la cúpula junto a recortes: la organización queda sin brújula y con miedo"),
+    (frozenset({"regulacion", "lanzamiento"}),
+     "Deuda de Gobernanza en producto",
+     "lanza producto bajo presión regulatoria: el cumplimiento va detrás de la ambición de producto"),
+    (frozenset({"adquisicion", "reduccion_personal"}),
+     "Deuda de Integración con recortes",
+     "adquisición con recortes: dos culturas que además deben integrarse perdiendo gente"),
+    (frozenset({"contratacion_masiva", "friccion_retencion"}),
+     "Deuda de Onboarding y experiencia",
+     "contrata rápido mientras pierde clientes: crece el equipo pero no la calidad de la relación"),
+    (frozenset({"cierre_operaciones", "expansion"}),
+     "Deuda Estructural de expansión",
+     "cierra en un frente mientras abre en otro: la expansión no se sostiene en la base"),
+    (frozenset({"regulacion", "friccion_retencion"}),
+     "Deuda de Confianza",
+     "fricción de clientes con ruido regulatorio: la confianza se erosiona por fuera y por dentro"),
+)
+
+# Ángulo de conversación sugerido por tipo de deuda: cómo abrir la charla
+# comercial con HD. Accionable, no es un juicio del contenido.
+ANGULO_POR_DEUDA: dict[str, str] = {
+    "Deuda Relacional": "abrir por la experiencia del cliente: ¿qué se rompió en la relación antes del churn?",
+    "Deuda Moral": "abrir por el clima interno: ¿qué narrativa quedó en el equipo tras los recortes?",
+    "Deuda Estructural": "abrir por el modelo operativo: ¿qué promesa dejó de sostener la operación?",
+    "Deuda de Gobernanza": "abrir por el cumplimiento: ¿cómo alinear cultura y regulación sin frenar el negocio?",
+    "Deuda de Liderazgo": "abrir por la transición: ¿qué relato necesita la nueva dirección para alinear?",
+    "Deuda de Onboarding": "abrir por la incorporación: ¿cómo transmitir cultura al ritmo de la contratación?",
+    "Deuda de Escalamiento": "abrir por la presión de crecer: ¿qué se está estirando más allá de su límite sano?",
+    "Deuda de Integración": "abrir por la fusión de culturas: ¿qué identidad común hace falta construir?",
+    "Deuda de Adopción": "abrir por la adopción: ¿qué historia hace que el mercado use y retenga el producto?",
+    "Deuda de Escalamiento mal gestionado": "abrir por el desajuste crecer/recortar: ¿qué expectativa quedó sin respaldo operativo?",
+    "Deuda de Experiencia en escala": "abrir por el crecimiento hueco: ¿por qué crece el número y no la retención?",
+    "Deuda de Liderazgo en crisis": "abrir por la brújula: ¿qué dirección y contención necesita el equipo ahora?",
+    "Deuda de Gobernanza en producto": "abrir por producto vs. cumplimiento: ¿cómo lanzar sin deuda regulatoria?",
+    "Deuda de Integración con recortes": "abrir por la integración dolorosa: ¿qué cultura sobrevive a la fusión con recortes?",
+    "Deuda de Onboarding y experiencia": "abrir por el doble frente: crecer el equipo sin perder la relación con el cliente",
+    "Deuda Estructural de expansión": "abrir por los cimientos: ¿qué base falta antes de seguir expandiendo?",
+    "Deuda de Confianza": "abrir por la confianza: ¿cómo se reconstruye por dentro y por fuera a la vez?",
+}
+
+# Matiz por vertical sensible: añade contexto a la razón de la deuda.
+MATIZ_VERTICAL: dict[str, str] = {
+    "fintech": "en fintech, la confianza y el cumplimiento pesan doble",
+    "salud mental": "en salud mental, la experiencia es especialmente sensible y personal",
+    "healthtech": "en healthtech, el error erosiona la confianza clínica",
+    "edtech": "en edtech, la retención depende de resultados percibidos",
+    "identidad": "en identidad, un fallo golpea directo la confianza y el cumplimiento",
+}
+
 # Rol de decisor probable a buscar, según la señal dominante. Es una PISTA de a
 # quién contactar, no un contacto verificado.
 DECISOR_POR_SENAL: dict[str, str] = {
@@ -121,6 +187,18 @@ def _intensidad(keywords: list[str], confianza: float) -> str:
     return INTENSIDAD_BAJA
 
 
+def _deuda_principal(keywords: list[str]) -> tuple[str, str]:
+    """Deuda principal: primero por COMBINACIÓN de señales, luego por señal única."""
+    ks = set(keywords or [])
+    for tags, label, razon in COMBINACIONES:
+        if tags <= ks:
+            return label, razon
+    dom = _senal_dominante(keywords)
+    if dom and dom in DEUDA_POR_SENAL:
+        return DEUDA_POR_SENAL[dom]
+    return "", "sin señal de negocio clara para inferir deuda"
+
+
 def _deuda_secundaria(keywords: list[str], deuda_principal: str) -> str:
     """Segunda hipótesis de deuda (si otra señal apunta a una deuda distinta)."""
     for tag in _senales_ordenadas(keywords):
@@ -159,15 +237,17 @@ def analizar(
     else:
         scoring = "C"
 
-    # Deuda Cultural™ (hipótesis) + rol de decisor, por señal dominante.
-    if dominante and dominante in DEUDA_POR_SENAL:
-        tipo_deuda, deuda_razon = DEUDA_POR_SENAL[dominante]
-    else:
-        tipo_deuda, deuda_razon = "", "sin señal de negocio clara para inferir deuda"
+    # Deuda Cultural™ (hipótesis): combinación de señales > señal única. Rol de
+    # decisor por la señal dominante.
+    tipo_deuda, deuda_razon = _deuda_principal(keywords)
+    # Matiz por vertical sensible (fintech, salud mental…): enriquece la razón.
+    vert = _norm_vertical(vertical)
+    if tipo_deuda and vert in MATIZ_VERTICAL:
+        deuda_razon = f"{deuda_razon}; {MATIZ_VERTICAL[vert]}"
     decisor = DECISOR_POR_SENAL.get(dominante or "", "CEO / Fundador/a")
+    angulo = ANGULO_POR_DEUDA.get(tipo_deuda, "")
 
     # Score ICP 0–100 (ajuste al perfil ideal de HD), por criterios objetivos.
-    vert = _norm_vertical(vertical)
     icp = 25
     if vert in VERTICALES_HD_SET:
         icp += 25                       # vertical dependiente de contexto (HD)
@@ -200,6 +280,7 @@ def analizar(
         "intensidad": _intensidad(keywords, confianza),
         "score_icp": score_icp,
         "decisor_sugerido": decisor,
+        "angulo_conversacion": angulo,
         "senal_dominante": dominante or "",
         "razon": razon,
     }

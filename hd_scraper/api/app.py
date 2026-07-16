@@ -793,6 +793,8 @@ def _informe_a_markdown(inf: dict) -> str:
         if t.get("tipo_deuda"):
             sec = f" (secundaria: {t['deuda_secundaria']})" if t.get("deuda_secundaria") else ""
             lineas.append(f"- Deuda Cultural™: **{t['tipo_deuda']}**{sec} — {t.get('deuda_razon','')}")
+        if t.get("angulo_conversacion"):
+            lineas.append(f"- Ángulo de conversación: {t['angulo_conversacion']}")
         lineas.append(f"- Decisor sugerido: **{t['decisor_sugerido']}**")
         if c.get("email_sugerido"):
             lineas.append(f"- Correo candidato (sin verificar): `{c['email_sugerido']}`")
@@ -826,17 +828,18 @@ def informe_csv(
     buf = io.StringIO()
     w = csv.writer(buf)
     w.writerow(["empresa", "scoring", "score_icp", "intensidad", "tipo_deuda",
-                "deuda_secundaria", "decisor_sugerido", "email_candidato",
-                "email_verificado", "vertical", "categoria", "titulo",
-                "fecha_publicacion", "fuente", "url_fuente"])
+                "deuda_secundaria", "angulo_conversacion", "decisor_sugerido",
+                "email_candidato", "email_verificado", "vertical", "categoria",
+                "titulo", "fecha_publicacion", "fuente", "url_fuente"])
     for t in inf["prospectos"]:
         c = t.get("contacto") or {}
         w.writerow([
             t.get("empresa",""), t.get("scoring",""), t.get("score_icp",""),
             t.get("intensidad",""), t.get("tipo_deuda",""), t.get("deuda_secundaria",""),
-            t.get("decisor_sugerido",""), c.get("email_sugerido",""),
-            "no", t.get("vertical",""), t.get("categoria",""), t.get("titulo",""),
-            t.get("fecha_publicacion",""), t.get("nombre_medio",""), t.get("url_fuente",""),
+            t.get("angulo_conversacion",""), t.get("decisor_sugerido",""),
+            c.get("email_sugerido",""), "no", t.get("vertical",""), t.get("categoria",""),
+            t.get("titulo",""), t.get("fecha_publicacion",""), t.get("nombre_medio",""),
+            t.get("url_fuente",""),
         ])
     return Response(buf.getvalue(), media_type="text/csv; charset=utf-8",
                     headers={"Content-Disposition": 'attachment; filename="informe-hd.csv"'})
@@ -1239,6 +1242,7 @@ _ADMIN_HTML = """<!doctype html>
           <div><b>${esc(t.empresa || "(sin nombre)")}</b> <span class="chip">${esc(t.scoring)}</span> <span class="chip">ICP ${t.score_icp}</span> <span class="chip">intensidad ${esc(t.intensidad||"")}</span>${t.tipo_deuda ? ' <span class="chip">' + esc(t.tipo_deuda) + '</span>' : ''}</div>
           <div>${esc(t.titulo)}</div>
           <div class="meta">${t.tipo_deuda ? "🧩 " + esc(t.tipo_deuda) + " — " + esc(t.deuda_razon) + (t.deuda_secundaria ? " · secundaria: " + esc(t.deuda_secundaria) : "") + "<br>" : ""}
+            ${t.angulo_conversacion ? "💬 Ángulo: " + esc(t.angulo_conversacion) + "<br>" : ""}
             🎯 Decisor sugerido: <b>${esc(t.decisor_sugerido)}</b>${email}<br>📌 ${esc(t.razon)}</div>
           <div class="meta">${esc(t.nombre_medio||"")}${t.vertical ? " · " + esc(t.vertical) : ""}${t.categoria ? " · " + esc(t.categoria) : ""}${t.fecha_publicacion ? " · " + esc(t.fecha_publicacion) : ""}
             ${t.url_fuente ? ' · <a href="' + esc(safeUrl(t.url_fuente)) + '" target="_blank" rel="noopener">fuente ↗</a>' : ""}
