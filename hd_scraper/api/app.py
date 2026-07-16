@@ -29,7 +29,7 @@ from ..db.database import get_db
 from ..db.models import CATEGORIAS, ESTADO_OK, TIPOS_EVENTO, QuerySpec, ahora_iso
 import httpx
 
-from .. import hunter
+from .. import directorio, hunter
 from ..analisis import analizar
 from ..contacto import dominio_de, rutas_contacto
 from ..discovery import REGIONES, VERTICALES_HD, queries_para, region_clause
@@ -149,6 +149,7 @@ def raiz() -> dict:
             "GET /informe.csv": "descarga el informe profundo en CSV (filtro: categoria)",
             "POST /analizar": "análisis profundo determinista de un título o señales (scoring/Deuda/ICP/decisor)",
             "POST /verificar-contacto": "verifica el correo del decisor con Hunter (requiere X-Ingest-Token y HUNTER_API_KEY)",
+            "POST /directorio": "trae empresas reales de Wikidata (base pública) y las guarda como prospectos (requiere X-Ingest-Token)",
             "GET /admin": "panel web: buscar señales, revisar y dar de alta prospectos",
             "GET /salud-fuentes": "salud por fuente/conector",
             "GET /stats": "contadores agregados",
@@ -709,6 +710,31 @@ def _analizar_evidencia(row, sitios: Optional[dict] = None) -> dict:
     }
 
 
+def _analizar_prospecto(row) -> dict:
+    """Analiza un prospecto guardado (p. ej. del directorio): empresa real sin
+    evento de prensa. Deriva señales de su descripción; ICP por vertical; contacto
+    por su sitio. Scoring típico C (sin dolor), pero es una empresa REAL con datos."""
+    nombre = (row["nombre"] or "").strip()
+    discurso = row["discurso_corporativo"] or ""
+    vertical = (row["vertical"] or "") or (sugerir_vertical(f"{nombre} {discurso}") or "")
+    kws = detectar_keywords(discurso)
+    a = analizar(kws, vertical=vertical, confianza=0.4, calidad="Baja")
+    sitio = row["sitio_web"] or ""
+    contacto = rutas_contacto(sitio, "") if sitio else {
+        "dominio": "", "emails_candidatos": [], "email_sugerido": "",
+        "verificado": False, "nota": "sin sitio; enriquece el prospecto"}
+    return {
+        "empresa": nombre, "categoria": row["categoria"], "vertical": vertical,
+        "titulo": (discurso[:140] or f"{nombre} — empresa del directorio"),
+        "url_fuente": sitio, "nombre_medio": (row["fuente_discurso"] or "directorio"),
+        "fecha_publicacion": (row["fecha_captura"] or "")[:10],
+        "keywords": kws, "confianza": 0.4, "calidad_captura": "Baja",
+        **a, "contacto": contacto,
+        "linkedin": linkedin_search_url(nombre) if nombre else "",
+        "google": google_search_url(nombre) if nombre else "",
+    }
+
+
 def _construir_informe(categoria: Optional[str], limite: int) -> dict:
     """Calcula el informe profundo (compartido por /informe y las exportaciones)."""
     db = get_db()
@@ -739,6 +765,22 @@ def _construir_informe(categoria: Optional[str], limite: int) -> dict:
             (_ORDEN_SCORING.get(t["scoring"], 9), -t["score_icp"])
             < (_ORDEN_SCORING.get(prev["scoring"], 9), -prev["score_icp"])
         ):
+            mejor[clave] = t
+
+    # Empresas del DIRECTORIO (prospectos sin noticia): dan volumen real. Se
+    # añaden si no aparecieron ya por una noticia (esas tienen prioridad, traen evento).
+    pparams: list = []
+    pclaus = "1=1"
+    if categoria:
+        pclaus = "categoria = ?"
+        pparams.append(categoria)
+    for p in db.fetch_all(
+        f"SELECT * FROM prospectos WHERE {pclaus} ORDER BY creado_en DESC LIMIT 500",
+        tuple(pparams),
+    ):
+        t = _analizar_prospecto(p)
+        clave = (t["empresa"] or t["titulo"]).lower()
+        if clave not in mejor:
             mejor[clave] = t
 
     tarjetas = sorted(
@@ -914,6 +956,69 @@ def verificar_contacto(payload: VerificarContactoIn,
     return {"modo": "hunter", **res, "hipotesis": hipotesis}
 
 
+class DirectorioIn(BaseModel):
+    region: str = "México"       # país (un QID de Wikidata; LATAM no aplica aquí)
+    categoria: str = "Startup"   # ecosistema al que se asignan (VC|Startup|…)
+    vertical: str = "todas"
+    limite: int = 40
+
+
+@app.post("/directorio")
+def directorio_endpoint(payload: DirectorioIn,
+                        x_ingest_token: Optional[str] = Header(None)) -> dict:
+    """Trae EMPRESAS REALES de Wikidata (base pública, gratis) y las guarda como
+    prospectos. Da VOLUMEN sin depender de que haya una noticia fresca.
+
+    Autenticado (escribe prospectos). Cada empresa entra con su vertical sugerida,
+    sitio web y descripción; se deduplica por nombre+categoría. Zona = un país.
+    """
+    _exigir_token(x_ingest_token)
+    if payload.region not in directorio.PAIS_QID:
+        raise HTTPException(400, f"region debe ser un país: {sorted(directorio.PAIS_QID)}")
+    if payload.categoria not in CATEGORIAS:
+        raise HTTPException(400, f"categoria inválida: {payload.categoria}")
+    if payload.vertical not in VERTICALES_HD:
+        raise HTTPException(400, f"vertical inválida: {payload.vertical}")
+
+    limite = max(1, min(int(payload.limite or 40), 100))
+    with httpx.Client(timeout=settings.request_timeout_s,
+                      headers={"User-Agent": settings.user_agent,
+                               "Accept": "application/sparql-results+json"},
+                      follow_redirects=True) as client:
+        def http_get_json(url: str) -> dict:
+            r = client.get(url)
+            r.raise_for_status()
+            return r.json()
+        empresas = directorio.buscar_empresas(
+            payload.region, payload.vertical, http_get_json, limite)
+
+    db = get_db()
+    nuevos = actualizados = 0
+    for e in empresas:
+        rec = nuevo_prospecto(
+            e["nombre"], payload.categoria,
+            vertical=e.get("vertical_sugerida") or (payload.vertical if payload.vertical != "todas" else None),
+            sitio_web=e.get("sitio_web") or None,
+            discurso_corporativo=e.get("descripcion") or None,
+            fuente_discurso="directorio:wikidata",
+            fecha_captura=ahora_iso(),
+        )
+        r = upsert_prospecto(db, rec)
+        if r.get("accion") == "insertado":
+            nuevos += 1
+        elif r.get("accion") == "actualizado":
+            actualizados += 1
+
+    return {
+        "region": payload.region, "categoria": payload.categoria,
+        "vertical": payload.vertical, "fuente": "Wikidata",
+        "encontradas": len(empresas), "nuevos": nuevos, "actualizados": actualizados,
+        "nota": ("0 empresas: Wikidata no devolvió resultados para esa zona/vertical "
+                 "(o bloqueo temporal). Prueba otro país o 'Todas' las verticales.")
+                if not empresas else "",
+    }
+
+
 @app.get("/admin", response_class=HTMLResponse)
 def admin_form() -> str:
     """Pantalla de descubrimiento (scraping) y alta de prospectos (PWA instalable)."""
@@ -965,6 +1070,7 @@ _ADMIN_HTML = """<!doctype html>
   .row > * { flex: 1; }
   .cats { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; margin-top: .6rem; }
   .cat { margin-top: 0; background: transparent; color: inherit; border: 1px solid #2563eb; font-weight: 600; }
+  .dir { margin-top: 0; background: transparent; color: inherit; border: 1px solid #16a34a; font-weight: 600; }
   .dl { display: block; text-align: center; text-decoration: none; color: inherit;
     padding: .7rem; border: 1px solid rgba(128,128,128,.5); border-radius: .5rem; font-weight: 600; }
 </style></head><body>
@@ -1023,6 +1129,15 @@ _ADMIN_HTML = """<!doctype html>
     <button class="cat" data-cat="Corporativo">Corporativo</button>
   </div>
   <div class="msg" id="s_msg"></div>
+
+  <div class="hint" style="margin-top:1rem">¿Pocas noticias? Trae <b>empresas reales</b> de una base pública (Wikidata) para tener volumen sin depender de la prensa. Elige un <b>país</b> (arriba), la vertical y el ecosistema al que se asignan.</div>
+  <div class="cats">
+    <button class="dir" data-cat="VC">🏢 Empresas → VC</button>
+    <button class="dir" data-cat="Startup">🏢 Empresas → Startup</button>
+    <button class="dir" data-cat="Incubadora">🏢 Empresas → Incubadora</button>
+    <button class="dir" data-cat="Corporativo">🏢 Empresas → Corporativo</button>
+  </div>
+  <div class="msg" id="d_msg"></div>
 
   <h2 style="margin-top:1.4rem">…o buscar por nombre</h2>
   <label>Empresa</label>
@@ -1187,6 +1302,26 @@ _ADMIN_HTML = """<!doctype html>
     if ($("categoria")) $("categoria").value = cat;   // precarga categoría en ③
     scrapear({ categoria: cat, tipo_evento: tipo, vertical: vert, region: region() },
              `${cat} · ${tipo} · ${vert} · ${region()}`, () => cargarEvidencias({ categoria: cat }));
+  }));
+
+  // Directorio: trae empresas reales (Wikidata) como prospectos (volumen).
+  document.querySelectorAll(".dir").forEach(btn => btn.addEventListener("click", async () => {
+    const cat = btn.dataset.cat, vert = $("c_vertical").value, m = $("d_msg"), token = tok();
+    if (!token) { m.className = "msg err"; m.style.display = "block"; m.textContent = "Falta el token."; return; }
+    document.querySelectorAll("button").forEach(b => b.disabled = true);
+    m.className = "msg"; m.style.display = "block"; m.textContent = `Trayendo empresas reales de ${region()} (${cat})…`;
+    try {
+      const r = await fetch("/directorio", { method: "POST",
+        headers: { "Content-Type": "application/json", "X-Ingest-Token": token },
+        body: JSON.stringify({ region: region(), categoria: cat, vertical: vert, limite: 40 }) });
+      const out = await leerJson(r);
+      if (!out.ok) { m.className = "msg err"; m.textContent = "Error: " + (out.error || (out.data && out.data.detail) || r.status); return; }
+      const d = out.data;
+      if (d.encontradas === 0) { m.className = "msg err"; m.textContent = "⚠️ " + (d.nota || "Sin empresas para esa zona/vertical."); }
+      else { m.className = "msg ok"; m.textContent = `✓ ${d.nuevos} nuevas · ${d.actualizados} actualizadas · ${d.encontradas} de ${d.fuente} — ${cat} · ${region()}. Míralas en el Informe profundo.`; }
+      refrescarConteo();
+    } catch (e) { m.className = "msg err"; m.textContent = "Error de red: " + e; }
+    finally { document.querySelectorAll("button").forEach(b => b.disabled = false); }
   }));
 
   $("s_btn").addEventListener("click", () => {
