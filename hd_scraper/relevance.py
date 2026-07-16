@@ -191,7 +191,8 @@ MOTIVO_NO_EMPRESA = "relevancia:no_empresa"    # gobierno/premios/academia/repor
 
 
 def evaluar_relevancia(
-    titulo: str, keywords: list, empresa_identificada: bool
+    titulo: str, keywords: list, empresa_identificada: bool,
+    exigir_evento: bool = True,
 ) -> tuple[bool, str]:
     """Decide si un titular de descubrimiento es relevante. Determinista.
 
@@ -200,7 +201,15 @@ def evaluar_relevancia(
       R2  No es geografía fuera de LATAM (España, EE.UU., …).
       R3  No es "no-empresa" (gobierno, premios, academia, reporte de mercado).
       R4  Hay una empresa identificable (nombre propio o consulta dirigida).
-      R5  Hay un evento verificable (al menos una señal genérica en ``keywords``).
+      R5  (solo si ``exigir_evento``) Hay un evento verificable en ``keywords``.
+
+    ``exigir_evento``: histórico True (solo entra la empresa CON un evento de
+    negocio). En descubrimiento por ecosistema se pasa False: una empresa real
+    en la zona correcta, que ya superó los filtros de geografía / no-empresa /
+    opinión, SE CONSERVA aunque su titular no traiga una señal fuerte. El evento
+    deja de ser un portero (mataba prospectos reales) y pasa a ser un impulsor de
+    calidad y scoring. Así el radar entrega empresas reales, no solo las que
+    justo tienen una noticia caliente.
 
     Devuelve ``(relevante, motivo)``. ``motivo`` vacío si es relevante.
     """
@@ -213,7 +222,7 @@ def evaluar_relevancia(
         return False, MOTIVO_NO_EMPRESA
     if not empresa_identificada:
         return False, MOTIVO_SIN_EMPRESA
-    if not keywords:
+    if exigir_evento and not keywords:
         return False, MOTIVO_SIN_EVENTO
     return True, ""
 

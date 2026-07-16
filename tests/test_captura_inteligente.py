@@ -71,26 +71,31 @@ def _run(db, termino="startup fintech"):
 def test_filtro_relevancia_descarta_ruido(db):
     res = _run(db)
     assert res.vistos == 5
-    # Se conserva 1 (evento con empresa) + su republicación se deduplica.
-    assert res.escritos == 1
+    # Descubrimiento por ECOSISTEMA (categoria): ya NO se exige un evento en el
+    # titular. Se conservan 2 empresas reales (el evento con empresa + la nota
+    # "Nubank celebra su aniversario", empresa real sin señal fuerte); la
+    # republicación del evento se deduplica.
+    assert res.escritos == 2
     assert res.duplicados == 1          # la republicación (mismo título) colapsa
-    assert res.filtrados == 3           # opinión + tendencia sin empresa + sin evento
+    # Se descartan la opinión y la tendencia sin empresa (los filtros de
+    # geografía / no-empresa / opinión SIGUEN activos).
+    assert res.filtrados == 2
     total = db.fetch_one("SELECT COUNT(*) AS n FROM evidencias")["n"]
-    assert total == 1
+    assert total == 2
     # Los descartes quedan auditados con motivo de relevancia.
     motivos = {r["motivo"] for r in db.fetch_all("SELECT motivo FROM rechazos")}
     assert any(m.startswith("relevancia:") for m in motivos)
 
 
 def test_dedup_contenido_entre_consultas_distintas(db):
-    # Dos consultas de descubrimiento DISTINTAS traen el mismo feed: el artículo
-    # bueno NO debe guardarse dos veces (aunque la "empresa" del query difiera).
+    # Dos consultas de descubrimiento DISTINTAS traen el mismo feed: los artículos
+    # NO deben guardarse dos veces (aunque la "empresa" del query difiera).
     _run(db, termino="startup fintech")
     res2 = _run(db, termino="fintech adquisición")
     assert res2.escritos == 0
     assert res2.duplicados >= 1
     total = db.fetch_one("SELECT COUNT(*) AS n FROM evidencias")["n"]
-    assert total == 1
+    assert total == 2
 
 
 def test_evidencia_lleva_calidad_captura(db):

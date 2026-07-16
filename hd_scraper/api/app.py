@@ -1166,10 +1166,15 @@ _ADMIN_HTML = """<!doctype html>
       const d = res.data;
       const vistas = (d.resultados||[]).reduce((a,x)=>a+(x.vistos||0),0);
       const dup = (d.resultados||[]).reduce((a,x)=>a+(x.duplicados||0),0);
+      const fil = (d.resultados||[]).reduce((a,x)=>a+(x.filtrados||0),0);
       const err = (d.resultados||[]).reduce((a,x)=>a+(x.errores||0)+(x.error?1:0),0);
       const nota = d.parcial ? " (parcial: se agotó el tiempo; toca de nuevo para seguir)" : "";
       m.className = "msg ok";
-      m.textContent = `✓ ${d.total_escritos} nuevas · ${vistas} vistas · ${dup} repetidas · ${err} errores — ${etiqueta}${nota}.`;
+      m.textContent = `✓ ${d.total_escritos} nuevas · ${vistas} titulares de Google News · ${dup} repetidas · ${fil} descartadas por filtro · ${err} errores — ${etiqueta}${nota}.`;
+      if (vistas === 0) {
+        m.className = "msg err";
+        m.textContent = `⚠️ Google News no devolvió titulares para esta búsqueda${nota}. Puede ser bloqueo temporal desde el servidor o que no haya noticias de «${etiqueta}» ahora. Prueba otra señal, otra vertical, o un solo país.`;
+      }
       cargar();
     } catch (e) { m.className = "msg err"; m.textContent = "Error de red: " + e; }
     finally { document.querySelectorAll("button").forEach(b => b.disabled = false); }

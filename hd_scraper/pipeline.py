@@ -161,8 +161,16 @@ def run_connector(db: Database, connector: Connector, query: QuerySpec) -> RunRe
             # Filtro de relevancia: SOLO en descubrimiento amplio (not exact), que
             # es donde entra el ruido (op-eds, tendencias, notas sin empresa). Las
             # consultas dirigidas por nombre de empresa no se filtran.
+            #
+            # En descubrimiento por ECOSISTEMA (query.categoria) no exigimos un
+            # evento en el titular: basta con una empresa real en la zona correcta
+            # que pase los filtros de geografía / no-empresa / opinión. Así el
+            # radar devuelve empresas reales y no se queda en cero por falta de una
+            # noticia "caliente". El evento sigue elevando calidad y scoring.
             if not query.exact:
-                relevante, motivo = evaluar_relevancia(titulo, record.keywords, empresa_ok)
+                exigir_evento = not bool(query.categoria)
+                relevante, motivo = evaluar_relevancia(
+                    titulo, record.keywords, empresa_ok, exigir_evento=exigir_evento)
                 if not relevante:
                     _escribir_rechazo(db, connector.name, motivo,
                                       {"meta": raw.meta, "url": raw.url})

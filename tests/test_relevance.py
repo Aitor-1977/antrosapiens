@@ -73,6 +73,20 @@ def test_relevancia_descarta_sin_evento():
     assert not ok and motivo == MOTIVO_SIN_EVENTO
 
 
+def test_relevancia_conserva_empresa_sin_evento_en_ecosistema():
+    # Descubrimiento por ecosistema (exigir_evento=False): una empresa real que
+    # pasa geo/no-empresa/opinión SE CONSERVA aunque no traiga señal fuerte.
+    ok, motivo = evaluar_relevancia(
+        "Klar presenta su nueva tarjeta en México", [], empresa_identificada=True,
+        exigir_evento=False)
+    assert ok and motivo == ""
+    # Pero los otros filtros SIGUEN activos aun sin exigir evento.
+    no_ok, _ = evaluar_relevancia(
+        "El Gobierno de España lanza un plan", [], empresa_identificada=True,
+        exigir_evento=False)
+    assert not no_ok
+
+
 def test_relevancia_descarta_espana_y_no_empresa():
     from hd_scraper.relevance import MOTIVO_NO_EMPRESA, MOTIVO_NO_LATAM
     # Geografía fuera de LATAM (España / Girona / Castilla).
