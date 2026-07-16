@@ -87,6 +87,11 @@ class Settings:
     # vacío, la escritura queda DESHABILITADA (la API sigue siendo solo lectura).
     ingest_token: str = os.getenv("HD_INGEST_TOKEN", "")
 
+    # Clave de Hunter.io para VERIFICAR correos del decisor (opcional). Si está
+    # vacía, la verificación queda deshabilitada y el motor usa solo hipótesis
+    # deterministas (correos candidatos sin verificar). Se agrega en Vercel.
+    hunter_api_key: str = os.getenv("HUNTER_API_KEY", "")
+
     # User-Agent identificable para las fuentes.
     user_agent: str = os.getenv(
         "HD_USER_AGENT",

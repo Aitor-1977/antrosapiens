@@ -29,8 +29,9 @@ from ..db.database import get_db
 from ..db.models import CATEGORIAS, ESTADO_OK, TIPOS_EVENTO, QuerySpec, ahora_iso
 import httpx
 
+from .. import hunter
 from ..analisis import analizar
-from ..contacto import rutas_contacto
+from ..contacto import dominio_de, rutas_contacto
 from ..discovery import REGIONES, VERTICALES_HD, queries_para, region_clause
 from ..enrich import enriquecer, google_search_url, linkedin_search_url, sugerir_vertical
 from ..pipeline import run_connector
@@ -147,6 +148,7 @@ def raiz() -> dict:
             "GET /informe.md": "descarga el informe profundo en Markdown (filtro: categoria)",
             "GET /informe.csv": "descarga el informe profundo en CSV (filtro: categoria)",
             "POST /analizar": "análisis profundo determinista de un título o señales (scoring/Deuda/ICP/decisor)",
+            "POST /verificar-contacto": "verifica el correo del decisor con Hunter (requiere X-Ingest-Token y HUNTER_API_KEY)",
             "GET /admin": "panel web: buscar señales, revisar y dar de alta prospectos",
             "GET /salud-fuentes": "salud por fuente/conector",
             "GET /stats": "contadores agregados",
@@ -872,6 +874,43 @@ def analizar_endpoint(payload: AnalizarIn) -> dict:
     return salida
 
 
+class VerificarContactoIn(BaseModel):
+    dominio: str = ""
+    sitio_web: str = ""          # alternativa: se deriva el dominio del sitio
+    nombre_decisor: str = ""
+
+
+@app.post("/verificar-contacto")
+def verificar_contacto(payload: VerificarContactoIn,
+                       x_ingest_token: Optional[str] = Header(None)) -> dict:
+    """Verifica el correo del decisor con Hunter (BAJO DEMANDA, consume cuota).
+
+    Autenticado (X-Ingest-Token) porque gasta cuota de pago. Devuelve el correo
+    verificado si Hunter lo confirma; si no hay clave o falla, cae a la HIPÓTESIS
+    determinista (correos candidatos sin verificar) para no dejar al operador sin
+    nada. Nunca lanza por fallos de Hunter.
+    """
+    _exigir_token(x_ingest_token)
+    dominio = dominio_de(payload.dominio or payload.sitio_web) or (payload.dominio or "").strip().lower()
+    hipotesis = rutas_contacto(dominio, payload.nombre_decisor)
+
+    if not hunter.disponible(settings.hunter_api_key):
+        return {"verificado": False, "modo": "hipotesis",
+                "nota": "verificación no configurada (falta HUNTER_API_KEY); se muestran candidatos sin verificar)",
+                "hipotesis": hipotesis}
+
+    with httpx.Client(timeout=settings.request_timeout_s,
+                      headers={"User-Agent": settings.user_agent},
+                      follow_redirects=True) as client:
+        def http_get_json(url: str) -> dict:
+            r = client.get(url)
+            r.raise_for_status()
+            return r.json()
+        res = hunter.enriquecer_contacto(dominio, payload.nombre_decisor,
+                                         settings.hunter_api_key, http_get_json)
+    return {"modo": "hunter", **res, "hipotesis": hipotesis}
+
+
 @app.get("/admin", response_class=HTMLResponse)
 def admin_form() -> str:
     """Pantalla de descubrimiento (scraping) y alta de prospectos (PWA instalable)."""
@@ -1205,9 +1244,35 @@ _ADMIN_HTML = """<!doctype html>
             ${t.url_fuente ? ' · <a href="' + esc(safeUrl(t.url_fuente)) + '" target="_blank" rel="noopener">fuente ↗</a>' : ""}
             ${t.linkedin ? ' · <a href="' + esc(safeUrl(t.linkedin)) + '" target="_blank" rel="noopener">LinkedIn ↗</a>' : ""}</div>
           <button class="sec" onclick="prefill(this.dataset.n)" data-n="${esc(t.empresa)}">➕ Guardar y auto-investigar</button>
+          ${c.dominio ? '<button class="sec" onclick="verificarCorreo(this)" data-dom="' + esc(c.dominio) + '">✓ Verificar correo (Hunter)</button> <span class="vres"></span>' : ""}
         </div>`; }).join("");
     } catch (e) { res.className = "msg err"; res.textContent = "Error de red: " + e; }
   });
+
+  // Verificar correo del decisor con Hunter (bajo demanda, consume cuota).
+  window.verificarCorreo = async (btn) => {
+    const dom = btn.dataset.dom, out = btn.nextElementSibling, token = tok();
+    if (!token) { out.textContent = " Falta el token."; return; }
+    btn.disabled = true; out.textContent = " Verificando con Hunter…";
+    try {
+      const r = await fetch("/verificar-contacto", { method: "POST",
+        headers: { "Content-Type": "application/json", "X-Ingest-Token": token },
+        body: JSON.stringify({ dominio: dom }) });
+      const o = await leerJson(r);
+      if (!o.ok) { out.textContent = " Error: " + (o.error || r.status); return; }
+      const d = o.data;
+      if (d.modo === "hipotesis" || d.verificado === false && d.status === "sin_clave") {
+        const h = d.hipotesis || {};
+        out.innerHTML = " ⚠️ Sin HUNTER_API_KEY. Candidato: <b>" + esc(h.email_sugerido||"—") + "</b> (sin verificar).";
+      } else if (d.verificado) {
+        out.innerHTML = " ✅ <b>" + esc(d.email_verificado) + "</b> — verificado por Hunter.";
+      } else {
+        const h = d.hipotesis || {};
+        out.innerHTML = " 🟠 " + esc(d.nota || "no verificado") + (h.email_sugerido ? " · candidato: " + esc(h.email_sugerido) : "");
+      }
+    } catch (e) { out.textContent = " Error de red: " + e; }
+    finally { btn.disabled = false; }
+  };
 
   // ③ Enriquecer: descubre web + tesis y precarga
   $("enrich_btn").addEventListener("click", async () => {
