@@ -76,3 +76,22 @@ def test_informe_tarjeta_incluye_intensidad_y_contacto(cli):
     if d["prospectos"]:
         t = d["prospectos"][0]
         assert "intensidad" in t and "deuda_secundaria" in t and "contacto" in t
+
+
+def test_informe_export_markdown(cli):
+    cli.post("/scrape", json={"empresa": "Nubank", "tipo_evento": "ronda",
+                              "connectors": ["google_news"]}, headers=H)
+    r = cli.get("/informe.md")
+    assert r.status_code == 200
+    assert "text/markdown" in r.headers["content-type"]
+    assert "attachment" in r.headers["content-disposition"]
+    assert "# Informe profundo" in r.text
+
+
+def test_informe_export_csv(cli):
+    cli.post("/scrape", json={"empresa": "Nubank", "tipo_evento": "ronda",
+                              "connectors": ["google_news"]}, headers=H)
+    r = cli.get("/informe.csv")
+    assert r.status_code == 200
+    assert "text/csv" in r.headers["content-type"]
+    assert r.text.splitlines()[0].startswith("empresa,scoring,score_icp")

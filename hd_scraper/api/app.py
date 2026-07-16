@@ -144,6 +144,8 @@ def raiz() -> dict:
             "POST /scrape": "rastreo bajo demanda de una empresa (requiere X-Ingest-Token)",
             "POST /enrich": "descubre web + discurso + enlaces de un nombre (requiere X-Ingest-Token)",
             "GET /informe": "informe profundo: prioriza empresas por scoring + Deuda Cultural™ + ICP (filtro: categoria)",
+            "GET /informe.md": "descarga el informe profundo en Markdown (filtro: categoria)",
+            "GET /informe.csv": "descarga el informe profundo en CSV (filtro: categoria)",
             "POST /analizar": "análisis profundo determinista de un título o señales (scoring/Deuda/ICP/decisor)",
             "GET /admin": "panel web: buscar señales, revisar y dar de alta prospectos",
             "GET /salud-fuentes": "salud por fuente/conector",
@@ -705,17 +707,8 @@ def _analizar_evidencia(row, sitios: Optional[dict] = None) -> dict:
     }
 
 
-@app.get("/informe")
-def informe(
-    categoria: Optional[str] = Query(None, description="Filtra por ecosistema (VC|Startup|Incubadora|Corporativo)"),
-    limite: int = Query(50, ge=1, le=200),
-) -> dict:
-    """Informe profundo: prioriza las empresas capturadas por scoring + Deuda + ICP.
-
-    Interpreta (de forma determinista) la evidencia consumible: una tarjeta por
-    empresa (la señal más fuerte gana), ordenada A→B→C y por Score ICP. Es la
-    lectura 'accionable' de lo que el radar capturó.
-    """
+def _construir_informe(categoria: Optional[str], limite: int) -> dict:
+    """Calcula el informe profundo (compartido por /informe y las exportaciones)."""
     db = get_db()
     params: list = [ESTADO_OK]
     clausula = "estado = ?"
@@ -761,6 +754,90 @@ def informe(
         "resumen_scoring": resumen,
         "prospectos": tarjetas,
     }
+
+
+@app.get("/informe")
+def informe(
+    categoria: Optional[str] = Query(None, description="Filtra por ecosistema (VC|Startup|Incubadora|Corporativo)"),
+    limite: int = Query(50, ge=1, le=200),
+) -> dict:
+    """Informe profundo: prioriza las empresas capturadas por scoring + Deuda + ICP.
+
+    Interpreta (de forma determinista) la evidencia consumible: una tarjeta por
+    empresa (la señal más fuerte gana), ordenada A→B→C y por Score ICP. Es la
+    lectura 'accionable' de lo que el radar capturó.
+    """
+    return _construir_informe(categoria, limite)
+
+
+def _informe_a_markdown(inf: dict) -> str:
+    s = inf["resumen_scoring"]
+    lineas = [
+        "# Informe profundo — hd-prospector",
+        "",
+        f"- Ecosistema: **{inf['categoria'] or 'Todos'}**",
+        f"- Empresas: **{inf['total']}**  ·  A: {s.get('A',0)}  ·  B: {s.get('B',0)}  ·  C: {s.get('C',0)}",
+        "",
+        "> Análisis determinista sobre hechos capturados. Los correos son "
+        "hipótesis **sin verificar**.",
+        "",
+    ]
+    for i, t in enumerate(inf["prospectos"], 1):
+        c = t.get("contacto") or {}
+        lineas += [
+            f"## {i}. {t['empresa'] or '(sin nombre)'} · {t['scoring']} · ICP {t['score_icp']} · intensidad {t.get('intensidad','')}",
+            f"- Titular: {t['titulo']}",
+        ]
+        if t.get("tipo_deuda"):
+            sec = f" (secundaria: {t['deuda_secundaria']})" if t.get("deuda_secundaria") else ""
+            lineas.append(f"- Deuda Cultural™: **{t['tipo_deuda']}**{sec} — {t.get('deuda_razon','')}")
+        lineas.append(f"- Decisor sugerido: **{t['decisor_sugerido']}**")
+        if c.get("email_sugerido"):
+            lineas.append(f"- Correo candidato (sin verificar): `{c['email_sugerido']}`")
+        meta = " · ".join(x for x in (t.get("nombre_medio",""), t.get("vertical",""), t.get("categoria",""), t.get("fecha_publicacion","")) if x)
+        if meta:
+            lineas.append(f"- {meta}")
+        if t.get("url_fuente"):
+            lineas.append(f"- Fuente: {t['url_fuente']}")
+        lineas.append("")
+    return "\n".join(lineas)
+
+
+@app.get("/informe.md")
+def informe_md(
+    categoria: Optional[str] = Query(None),
+    limite: int = Query(50, ge=1, le=200),
+) -> Response:
+    """Descarga el informe profundo como Markdown."""
+    md = _informe_a_markdown(_construir_informe(categoria, limite))
+    return Response(md, media_type="text/markdown; charset=utf-8",
+                    headers={"Content-Disposition": 'attachment; filename="informe-hd.md"'})
+
+
+@app.get("/informe.csv")
+def informe_csv(
+    categoria: Optional[str] = Query(None),
+    limite: int = Query(50, ge=1, le=200),
+) -> Response:
+    """Descarga el informe profundo como CSV."""
+    inf = _construir_informe(categoria, limite)
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["empresa", "scoring", "score_icp", "intensidad", "tipo_deuda",
+                "deuda_secundaria", "decisor_sugerido", "email_candidato",
+                "email_verificado", "vertical", "categoria", "titulo",
+                "fecha_publicacion", "fuente", "url_fuente"])
+    for t in inf["prospectos"]:
+        c = t.get("contacto") or {}
+        w.writerow([
+            t.get("empresa",""), t.get("scoring",""), t.get("score_icp",""),
+            t.get("intensidad",""), t.get("tipo_deuda",""), t.get("deuda_secundaria",""),
+            t.get("decisor_sugerido",""), c.get("email_sugerido",""),
+            "no", t.get("vertical",""), t.get("categoria",""), t.get("titulo",""),
+            t.get("fecha_publicacion",""), t.get("nombre_medio",""), t.get("url_fuente",""),
+        ])
+    return Response(buf.getvalue(), media_type="text/csv; charset=utf-8",
+                    headers={"Content-Disposition": 'attachment; filename="informe-hd.csv"'})
 
 
 class AnalizarIn(BaseModel):
@@ -950,6 +1027,8 @@ _ADMIN_HTML = """<!doctype html>
       <option value="Corporativo">Corporativo</option>
     </select>
     <button id="inf_btn" class="sec">📊 Generar informe</button>
+    <a id="inf_md" class="sec" href="#" style="display:none">⬇︎ Markdown</a>
+    <a id="inf_csv" class="sec" href="#" style="display:none">⬇︎ CSV</a>
   </div>
   <div id="inf_resumen" class="hint"></div>
   <div id="informe"></div>
@@ -1099,6 +1178,9 @@ _ADMIN_HTML = """<!doctype html>
     const cont = $("informe"), res = $("inf_resumen");
     const cat = $("inf_categoria").value;
     res.textContent = "Analizando lo capturado…"; cont.innerHTML = "";
+    const qsExport = cat ? "?categoria=" + encodeURIComponent(cat) : "";
+    $("inf_md").href = "/informe.md" + qsExport; $("inf_md").style.display = "inline-block";
+    $("inf_csv").href = "/informe.csv" + qsExport; $("inf_csv").style.display = "inline-block";
     try {
       const qs = new URLSearchParams(cat ? { categoria: cat } : {});
       const r = await fetch("/informe?" + qs);
