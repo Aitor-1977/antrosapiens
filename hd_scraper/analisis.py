@@ -94,13 +94,40 @@ _PRIORIDAD = (
 
 CALIDAD_PESO = {"Alta": 10, "Media": 5, "Baja": 0}
 
+INTENSIDAD_ALTA = "Alta"
+INTENSIDAD_MEDIA = "Media"
+INTENSIDAD_BAJA = "Baja"
+
+
+def _senales_ordenadas(keywords: list[str]) -> list[str]:
+    """Señales presentes, en orden de prioridad (la primera es la dominante)."""
+    ks = set(keywords or [])
+    return [tag for tag in _PRIORIDAD if tag in ks]
+
 
 def _senal_dominante(keywords: list[str]) -> Optional[str]:
+    orden = _senales_ordenadas(keywords)
+    return orden[0] if orden else None
+
+
+def _intensidad(keywords: list[str], confianza: float) -> str:
+    """Qué tan fuerte es la señal (Alta|Media|Baja), por cantidad de dolor + confianza."""
     ks = set(keywords or [])
-    for tag in _PRIORIDAD:
-        if tag in ks:
-            return tag
-    return None
+    n_dolor = len(ks & SENALES_DOLOR)
+    if n_dolor >= 2 or (n_dolor >= 1 and confianza >= 0.8):
+        return INTENSIDAD_ALTA
+    if n_dolor >= 1 or (ks & SENALES_CAMBIO and confianza >= 0.7):
+        return INTENSIDAD_MEDIA
+    return INTENSIDAD_BAJA
+
+
+def _deuda_secundaria(keywords: list[str], deuda_principal: str) -> str:
+    """Segunda hipótesis de deuda (si otra señal apunta a una deuda distinta)."""
+    for tag in _senales_ordenadas(keywords):
+        etiqueta = DEUDA_POR_SENAL.get(tag, ("", ""))[0]
+        if etiqueta and etiqueta != deuda_principal:
+            return etiqueta
+    return ""
 
 
 def _norm_vertical(vertical: str) -> str:
@@ -169,6 +196,8 @@ def analizar(
         "scoring": scoring,
         "tipo_deuda": tipo_deuda,
         "deuda_razon": deuda_razon,
+        "deuda_secundaria": _deuda_secundaria(keywords, tipo_deuda),
+        "intensidad": _intensidad(keywords, confianza),
         "score_icp": score_icp,
         "decisor_sugerido": decisor,
         "senal_dominante": dominante or "",

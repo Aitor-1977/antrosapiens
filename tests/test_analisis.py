@@ -51,3 +51,20 @@ def test_icp_acotado_0_100():
     r = analizar(["friccion_retencion", "reduccion_personal"], vertical="fintech",
                  confianza=1.0, calidad="Alta")
     assert 0 <= r["score_icp"] <= 100
+
+
+def test_intensidad_alta_con_dos_dolores():
+    r = analizar(["friccion_retencion", "reduccion_personal"], confianza=0.5)
+    assert r["intensidad"] == "Alta"
+
+
+def test_intensidad_baja_sin_dolor_ni_cambio():
+    r = analizar([], confianza=0.3)
+    assert r["intensidad"] == "Baja"
+
+
+def test_deuda_secundaria_cuando_hay_dos_senales_distintas():
+    # Recorte (Deuda Moral, dominante) + ronda (Deuda de Escalamiento, secundaria).
+    r = analizar(["reduccion_personal", "ronda_inversion"])
+    assert r["tipo_deuda"] == "Deuda Moral"
+    assert r["deuda_secundaria"] == "Deuda de Escalamiento"

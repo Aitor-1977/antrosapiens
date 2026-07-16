@@ -30,6 +30,7 @@ from ..db.models import CATEGORIAS, ESTADO_OK, TIPOS_EVENTO, QuerySpec, ahora_is
 import httpx
 
 from ..analisis import analizar
+from ..contacto import rutas_contacto
 from ..discovery import REGIONES, VERTICALES_HD, queries_para, region_clause
 from ..enrich import enriquecer, google_search_url, linkedin_search_url, sugerir_vertical
 from ..pipeline import run_connector
@@ -665,8 +666,12 @@ def enrich(payload: EnrichIn, x_ingest_token: Optional[str] = Header(None)) -> d
 _ORDEN_SCORING = {"A": 0, "B": 1, "C": 2}
 
 
-def _analizar_evidencia(row) -> dict:
-    """Aplica el análisis profundo a una fila de evidencia y arma la tarjeta."""
+def _analizar_evidencia(row, sitios: Optional[dict] = None) -> dict:
+    """Aplica el análisis profundo a una fila de evidencia y arma la tarjeta.
+
+    ``sitios`` (opcional): mapa {empresa_lower: sitio_web} de prospectos ya
+    guardados, para derivar dominio y rutas de contacto (hipótesis).
+    """
     kws = _keywords(row)
     titulo = row["cita_textual"] or ""
     empresa = (row["empresa_mencionada"] or "").strip() or (detectar_empresa(titulo) or "")
@@ -675,6 +680,13 @@ def _analizar_evidencia(row) -> dict:
         kws, vertical=vertical, confianza=row["confianza"] or 0.0,
         calidad=row["calidad_captura"] or "Baja", categoria=row["categoria"] or "",
     )
+    # Rutas de contacto (hipótesis): si tenemos el sitio del prospecto, usamos su
+    # dominio; el nombre del decisor no se conoce aún, así que van buzones genéricos.
+    sitio = (sitios or {}).get(empresa.lower(), "") if empresa else ""
+    contacto = rutas_contacto(sitio, "") if sitio else {
+        "dominio": "", "emails_candidatos": [], "email_sugerido": "",
+        "verificado": False, "nota": "sin sitio confirmado; usa LinkedIn/Google o enriquece el prospecto",
+    }
     return {
         "empresa": empresa,
         "categoria": row["categoria"],
@@ -687,6 +699,7 @@ def _analizar_evidencia(row) -> dict:
         "confianza": row["confianza"],
         "calidad_captura": row["calidad_captura"],
         **a,
+        "contacto": contacto,
         "linkedin": linkedin_search_url(empresa) if empresa else "",
         "google": google_search_url(empresa) if empresa else "",
     }
@@ -716,10 +729,15 @@ def informe(
         tuple(params),
     )
 
+    # Sitios web de prospectos ya guardados (para derivar dominio/contacto).
+    sitios: dict[str, str] = {}
+    for p in db.fetch_all("SELECT nombre, sitio_web FROM prospectos WHERE sitio_web IS NOT NULL AND sitio_web <> ''"):
+        sitios[(p["nombre"] or "").strip().lower()] = p["sitio_web"]
+
     # Una tarjeta por empresa: nos quedamos con la de mejor scoring y luego ICP.
     mejor: dict[str, dict] = {}
     for row in filas:
-        t = _analizar_evidencia(row)
+        t = _analizar_evidencia(row, sitios)
         clave = (t["empresa"] or t["titulo"]).lower()
         prev = mejor.get(clave)
         if prev is None or (
@@ -752,6 +770,8 @@ class AnalizarIn(BaseModel):
     confianza: float = 0.0
     calidad: str = "Baja"
     categoria: str = ""
+    dominio: str = ""            # opcional: para rutas de contacto (hipótesis)
+    nombre_decisor: str = ""     # opcional: afina los patrones de correo
 
 
 @app.post("/analizar")
@@ -760,7 +780,8 @@ def analizar_endpoint(payload: AnalizarIn) -> dict:
 
     Público (solo interpreta datos que se le pasan; no escribe ni raspa). Si se
     da ``titulo`` y no ``keywords``, deriva las señales del título de forma
-    determinista. Devuelve scoring, Deuda Cultural™ (hipótesis), ICP y decisor.
+    determinista. Devuelve scoring, Deuda Cultural™ (hipótesis), ICP, decisor y,
+    si se da ``dominio``, correos candidatos (sin verificar).
     """
     kws = payload.keywords
     if kws is None:
@@ -768,7 +789,10 @@ def analizar_endpoint(payload: AnalizarIn) -> dict:
     vertical = payload.vertical or (sugerir_vertical(payload.titulo or "") or "")
     a = analizar(kws, vertical=vertical, confianza=payload.confianza,
                  calidad=payload.calidad, categoria=payload.categoria)
-    return {"keywords": kws, "vertical": vertical, **a}
+    salida = {"keywords": kws, "vertical": vertical, **a}
+    if payload.dominio:
+        salida["contacto"] = rutas_contacto(payload.dominio, payload.nombre_decisor)
+    return salida
 
 
 @app.get("/admin", response_class=HTMLResponse)
@@ -1084,17 +1108,22 @@ _ADMIN_HTML = """<!doctype html>
       res.className = "hint";
       res.textContent = `${d.total} empresa(s) — A: ${s.A||0} · B: ${s.B||0} · C: ${s.C||0} (A = atacar primero).`;
       if (!d.prospectos.length) { cont.innerHTML = '<div class="hint">Aún no hay nada capturado para analizar. Haz una búsqueda por ecosistema arriba.</div>'; return; }
-      cont.innerHTML = d.prospectos.map(t => `
+      cont.innerHTML = d.prospectos.map(t => {
+        const c = t.contacto || {};
+        const email = c.email_sugerido
+          ? ` · ✉️ <b>${esc(c.email_sugerido)}</b> <span class="chip">sin verificar</span>`
+          : "";
+        return `
         <div class="card">
-          <div><b>${esc(t.empresa || "(sin nombre)")}</b> <span class="chip">${esc(t.scoring)}</span> <span class="chip">ICP ${t.score_icp}</span>${t.tipo_deuda ? ' <span class="chip">' + esc(t.tipo_deuda) + '</span>' : ''}</div>
+          <div><b>${esc(t.empresa || "(sin nombre)")}</b> <span class="chip">${esc(t.scoring)}</span> <span class="chip">ICP ${t.score_icp}</span> <span class="chip">intensidad ${esc(t.intensidad||"")}</span>${t.tipo_deuda ? ' <span class="chip">' + esc(t.tipo_deuda) + '</span>' : ''}</div>
           <div>${esc(t.titulo)}</div>
-          <div class="meta">${t.tipo_deuda ? "🧩 " + esc(t.tipo_deuda) + " — " + esc(t.deuda_razon) + "<br>" : ""}
-            🎯 Decisor sugerido: <b>${esc(t.decisor_sugerido)}</b> · 📌 ${esc(t.razon)}</div>
+          <div class="meta">${t.tipo_deuda ? "🧩 " + esc(t.tipo_deuda) + " — " + esc(t.deuda_razon) + (t.deuda_secundaria ? " · secundaria: " + esc(t.deuda_secundaria) : "") + "<br>" : ""}
+            🎯 Decisor sugerido: <b>${esc(t.decisor_sugerido)}</b>${email}<br>📌 ${esc(t.razon)}</div>
           <div class="meta">${esc(t.nombre_medio||"")}${t.vertical ? " · " + esc(t.vertical) : ""}${t.categoria ? " · " + esc(t.categoria) : ""}${t.fecha_publicacion ? " · " + esc(t.fecha_publicacion) : ""}
             ${t.url_fuente ? ' · <a href="' + esc(safeUrl(t.url_fuente)) + '" target="_blank" rel="noopener">fuente ↗</a>' : ""}
             ${t.linkedin ? ' · <a href="' + esc(safeUrl(t.linkedin)) + '" target="_blank" rel="noopener">LinkedIn ↗</a>' : ""}</div>
           <button class="sec" onclick="prefill(this.dataset.n)" data-n="${esc(t.empresa)}">➕ Guardar y auto-investigar</button>
-        </div>`).join("");
+        </div>`; }).join("");
     } catch (e) { res.className = "msg err"; res.textContent = "Error de red: " + e; }
   });
 

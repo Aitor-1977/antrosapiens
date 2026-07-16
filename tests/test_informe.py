@@ -56,3 +56,23 @@ def test_informe_prioriza_y_resume(cli):
 
 def test_informe_categoria_invalida_400(cli):
     assert cli.get("/informe", params={"categoria": "Fondo"}).status_code == 400
+
+
+def test_analizar_con_dominio_devuelve_contacto(cli):
+    r = cli.post("/analizar", json={
+        "titulo": "Clara enfrenta despidos y reestructuración",
+        "dominio": "clara.com", "nombre_decisor": "Ana Ruiz",
+    })
+    assert r.status_code == 200
+    c = r.json()["contacto"]
+    assert c["email_sugerido"] == "ana.ruiz@clara.com"
+    assert c["verificado"] is False
+
+
+def test_informe_tarjeta_incluye_intensidad_y_contacto(cli):
+    cli.post("/scrape", json={"empresa": "Nubank", "tipo_evento": "ronda",
+                              "connectors": ["google_news"]}, headers=H)
+    d = cli.get("/informe").json()
+    if d["prospectos"]:
+        t = d["prospectos"][0]
+        assert "intensidad" in t and "deuda_secundaria" in t and "contacto" in t
