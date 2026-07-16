@@ -29,9 +29,12 @@ from ..db.database import get_db
 from ..db.models import CATEGORIAS, ESTADO_OK, TIPOS_EVENTO, QuerySpec, ahora_iso
 import httpx
 
+from ..analisis import analizar
 from ..discovery import REGIONES, VERTICALES_HD, queries_para, region_clause
-from ..enrich import enriquecer
+from ..enrich import enriquecer, google_search_url, linkedin_search_url, sugerir_vertical
 from ..pipeline import run_connector
+from ..relevance import detectar_empresa
+from ..signals import detectar_keywords
 from ..prospectos import nuevo_prospecto, upsert_prospecto
 from ..validation.validator import validate_prospecto
 
@@ -139,6 +142,8 @@ def raiz() -> dict:
             "POST /prospectos": "alta de prospecto (requiere X-Ingest-Token)",
             "POST /scrape": "rastreo bajo demanda de una empresa (requiere X-Ingest-Token)",
             "POST /enrich": "descubre web + discurso + enlaces de un nombre (requiere X-Ingest-Token)",
+            "GET /informe": "informe profundo: prioriza empresas por scoring + Deuda Cultural™ + ICP (filtro: categoria)",
+            "POST /analizar": "análisis profundo determinista de un título o señales (scoring/Deuda/ICP/decisor)",
             "GET /admin": "panel web: buscar señales, revisar y dar de alta prospectos",
             "GET /salud-fuentes": "salud por fuente/conector",
             "GET /stats": "contadores agregados",
@@ -651,6 +656,121 @@ def enrich(payload: EnrichIn, x_ingest_token: Optional[str] = Header(None)) -> d
         return enriquecer(payload.nombre.strip(), http_get)
 
 
+# --- Análisis profundo (INTERPRETACIÓN determinista, sin IA ni red) --------
+#
+# El operador pidió que hd-prospector, además de capturar, entregue análisis
+# profundo (scoring A/B/C, Deuda Cultural™, ICP, decisor). Se hace de forma
+# determinista sobre las señales YA capturadas (ver hd_scraper/analisis.py).
+
+_ORDEN_SCORING = {"A": 0, "B": 1, "C": 2}
+
+
+def _analizar_evidencia(row) -> dict:
+    """Aplica el análisis profundo a una fila de evidencia y arma la tarjeta."""
+    kws = _keywords(row)
+    titulo = row["cita_textual"] or ""
+    empresa = (row["empresa_mencionada"] or "").strip() or (detectar_empresa(titulo) or "")
+    vertical = sugerir_vertical(titulo) or ""
+    a = analizar(
+        kws, vertical=vertical, confianza=row["confianza"] or 0.0,
+        calidad=row["calidad_captura"] or "Baja", categoria=row["categoria"] or "",
+    )
+    return {
+        "empresa": empresa,
+        "categoria": row["categoria"],
+        "vertical": vertical,
+        "titulo": titulo,
+        "url_fuente": row["url_fuente"],
+        "nombre_medio": row["nombre_medio"],
+        "fecha_publicacion": (row["fecha_publicacion"] or "")[:10],
+        "keywords": kws,
+        "confianza": row["confianza"],
+        "calidad_captura": row["calidad_captura"],
+        **a,
+        "linkedin": linkedin_search_url(empresa) if empresa else "",
+        "google": google_search_url(empresa) if empresa else "",
+    }
+
+
+@app.get("/informe")
+def informe(
+    categoria: Optional[str] = Query(None, description="Filtra por ecosistema (VC|Startup|Incubadora|Corporativo)"),
+    limite: int = Query(50, ge=1, le=200),
+) -> dict:
+    """Informe profundo: prioriza las empresas capturadas por scoring + Deuda + ICP.
+
+    Interpreta (de forma determinista) la evidencia consumible: una tarjeta por
+    empresa (la señal más fuerte gana), ordenada A→B→C y por Score ICP. Es la
+    lectura 'accionable' de lo que el radar capturó.
+    """
+    db = get_db()
+    params: list = [ESTADO_OK]
+    clausula = "estado = ?"
+    if categoria:
+        if categoria not in CATEGORIAS:
+            raise HTTPException(400, f"categoria inválida: {categoria}")
+        clausula += " AND categoria = ?"
+        params.append(categoria)
+    filas = db.fetch_all(
+        f"SELECT * FROM evidencias WHERE {clausula} ORDER BY creado_en DESC LIMIT 500",
+        tuple(params),
+    )
+
+    # Una tarjeta por empresa: nos quedamos con la de mejor scoring y luego ICP.
+    mejor: dict[str, dict] = {}
+    for row in filas:
+        t = _analizar_evidencia(row)
+        clave = (t["empresa"] or t["titulo"]).lower()
+        prev = mejor.get(clave)
+        if prev is None or (
+            (_ORDEN_SCORING.get(t["scoring"], 9), -t["score_icp"])
+            < (_ORDEN_SCORING.get(prev["scoring"], 9), -prev["score_icp"])
+        ):
+            mejor[clave] = t
+
+    tarjetas = sorted(
+        mejor.values(),
+        key=lambda x: (_ORDEN_SCORING.get(x["scoring"], 9), -x["score_icp"]),
+    )[:limite]
+
+    resumen = {"A": 0, "B": 0, "C": 0}
+    for t in tarjetas:
+        resumen[t["scoring"]] = resumen.get(t["scoring"], 0) + 1
+
+    return {
+        "categoria": categoria,
+        "total": len(tarjetas),
+        "resumen_scoring": resumen,
+        "prospectos": tarjetas,
+    }
+
+
+class AnalizarIn(BaseModel):
+    titulo: Optional[str] = None
+    keywords: Optional[list[str]] = None
+    vertical: str = ""
+    confianza: float = 0.0
+    calidad: str = "Baja"
+    categoria: str = ""
+
+
+@app.post("/analizar")
+def analizar_endpoint(payload: AnalizarIn) -> dict:
+    """Análisis profundo bajo demanda de un título o de señales dadas.
+
+    Público (solo interpreta datos que se le pasan; no escribe ni raspa). Si se
+    da ``titulo`` y no ``keywords``, deriva las señales del título de forma
+    determinista. Devuelve scoring, Deuda Cultural™ (hipótesis), ICP y decisor.
+    """
+    kws = payload.keywords
+    if kws is None:
+        kws = detectar_keywords(payload.titulo or "")
+    vertical = payload.vertical or (sugerir_vertical(payload.titulo or "") or "")
+    a = analizar(kws, vertical=vertical, confianza=payload.confianza,
+                 calidad=payload.calidad, categoria=payload.categoria)
+    return {"keywords": kws, "vertical": vertical, **a}
+
+
 @app.get("/admin", response_class=HTMLResponse)
 def admin_form() -> str:
     """Pantalla de descubrimiento (scraping) y alta de prospectos (PWA instalable)."""
@@ -795,6 +915,23 @@ _ADMIN_HTML = """<!doctype html>
 </section>
 
 <section>
+  <h2>②·⁵ Informe profundo (análisis)</h2>
+  <div class="hint">Lee lo capturado y lo <b>prioriza</b>: para cada empresa calcula scoring A/B/C, hipótesis de <b>Deuda Cultural™</b>, Score ICP y a qué <b>decisor</b> contactar. Determinista (sin IA): mismos hechos, mismo resultado.</div>
+  <div class="row">
+    <select id="inf_categoria">
+      <option value="">Todos los ecosistemas</option>
+      <option value="VC">VC</option>
+      <option value="Startup">Startup</option>
+      <option value="Incubadora">Incubadora</option>
+      <option value="Corporativo">Corporativo</option>
+    </select>
+    <button id="inf_btn" class="sec">📊 Generar informe</button>
+  </div>
+  <div id="inf_resumen" class="hint"></div>
+  <div id="informe"></div>
+</section>
+
+<section>
   <h2>③ Expediente del prospecto (auto-investigado)</h2>
   <div class="hint">Toca <b>Enriquecer</b> (o promueve un candidato) y web, tesis y vertical se llenan solos. Tú revisas y ajustas antes de guardar.</div>
   <label class="req">Nombre</label>
@@ -931,6 +1068,35 @@ _ADMIN_HTML = """<!doctype html>
     $("nombre").scrollIntoView({ behavior: "smooth" });
     $("enrich_btn").click();   // investiga automáticamente al promover (research-first)
   };
+
+  // ②·⁵ Informe profundo: análisis determinista de lo capturado.
+  const SCLASE = { A: "msg ok", B: "msg", C: "msg" };
+  $("inf_btn").addEventListener("click", async () => {
+    const cont = $("informe"), res = $("inf_resumen");
+    const cat = $("inf_categoria").value;
+    res.textContent = "Analizando lo capturado…"; cont.innerHTML = "";
+    try {
+      const qs = new URLSearchParams(cat ? { categoria: cat } : {});
+      const r = await fetch("/informe?" + qs);
+      const out = await leerJson(r);
+      if (!out.ok) { res.className = "msg err"; res.textContent = "Error: " + (out.error || r.status); return; }
+      const d = out.data, s = d.resumen_scoring || {};
+      res.className = "hint";
+      res.textContent = `${d.total} empresa(s) — A: ${s.A||0} · B: ${s.B||0} · C: ${s.C||0} (A = atacar primero).`;
+      if (!d.prospectos.length) { cont.innerHTML = '<div class="hint">Aún no hay nada capturado para analizar. Haz una búsqueda por ecosistema arriba.</div>'; return; }
+      cont.innerHTML = d.prospectos.map(t => `
+        <div class="card">
+          <div><b>${esc(t.empresa || "(sin nombre)")}</b> <span class="chip">${esc(t.scoring)}</span> <span class="chip">ICP ${t.score_icp}</span>${t.tipo_deuda ? ' <span class="chip">' + esc(t.tipo_deuda) + '</span>' : ''}</div>
+          <div>${esc(t.titulo)}</div>
+          <div class="meta">${t.tipo_deuda ? "🧩 " + esc(t.tipo_deuda) + " — " + esc(t.deuda_razon) + "<br>" : ""}
+            🎯 Decisor sugerido: <b>${esc(t.decisor_sugerido)}</b> · 📌 ${esc(t.razon)}</div>
+          <div class="meta">${esc(t.nombre_medio||"")}${t.vertical ? " · " + esc(t.vertical) : ""}${t.categoria ? " · " + esc(t.categoria) : ""}${t.fecha_publicacion ? " · " + esc(t.fecha_publicacion) : ""}
+            ${t.url_fuente ? ' · <a href="' + esc(safeUrl(t.url_fuente)) + '" target="_blank" rel="noopener">fuente ↗</a>' : ""}
+            ${t.linkedin ? ' · <a href="' + esc(safeUrl(t.linkedin)) + '" target="_blank" rel="noopener">LinkedIn ↗</a>' : ""}</div>
+          <button class="sec" onclick="prefill(this.dataset.n)" data-n="${esc(t.empresa)}">➕ Guardar y auto-investigar</button>
+        </div>`).join("");
+    } catch (e) { res.className = "msg err"; res.textContent = "Error de red: " + e; }
+  });
 
   // ③ Enriquecer: descubre web + tesis y precarga
   $("enrich_btn").addEventListener("click", async () => {

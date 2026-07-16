@@ -1,0 +1,176 @@
+"""Análisis profundo de prospecto — capa de INTERPRETACIÓN determinista.
+
+IMPORTANTE (cambio de alcance pedido por el operador): históricamente el Motor A
+(hd-prospector) solo CAPTURABA hechos y dejaba la interpretación (scoring, Deuda
+Cultural™, decisor) al Motor B (RadarHD). El operador pidió explícitamente que
+hd-prospector TAMBIÉN entregue análisis profundo. Este módulo lo hace de forma
+100% DETERMINISTA (sin IA ni red): traduce las señales objetivas ya capturadas
+(``keywords`` de ``signals.SENALES``, vertical, confianza, calidad) a:
+
+  - ``scoring``      A | B | C  (prioridad comercial)
+  - ``tipo_deuda``   hipótesis de Deuda Cultural™ (etiqueta legible)
+  - ``score_icp``    0–100 (ajuste al perfil de prospecto ideal de HD)
+  - ``decisor``      rol de decisor probable a buscar (no un dato verificado)
+  - ``razon``        explicación auditable de la clasificación
+
+Es una HIPÓTESIS reproducible a partir de hechos, no un juicio de IA. Al ser
+determinista, el mismo insumo da siempre el mismo resultado y es testeable
+offline. Si en el futuro se quiere calidad tipo-LLM, este módulo es el respaldo.
+"""
+from __future__ import annotations
+
+from typing import Optional
+
+# Verticales dependientes de contexto que le interesan a HD (perfil ideal).
+VERTICALES_HD_SET = {
+    "fintech", "edtech", "healthtech", "salud mental", "logística agrícola",
+    "identidad",
+}
+
+# Señales que implican DOLOR organizacional explícito (máxima prioridad: hay
+# necesidad). Determinan el scoring A.
+SENALES_DOLOR = {
+    "friccion_retencion", "reduccion_personal", "cierre_operaciones", "regulacion",
+}
+
+# Señales de crecimiento / cambio (oportunidad, prioridad media -> B).
+SENALES_CAMBIO = {
+    "ronda_inversion", "expansion", "crecimiento", "contratacion_masiva",
+    "cambio_liderazgo", "adquisicion", "alianza",
+}
+
+# Hipótesis de Deuda Cultural™ por señal (la más fuerte gana, en este orden).
+# Etiqueta legible + una nota corta de por qué. Es interpretación DECLARADA.
+DEUDA_POR_SENAL: dict[str, tuple[str, str]] = {
+    "friccion_retencion": ("Deuda Relacional",
+                           "fricción/churn: la relación con el cliente se desgasta más rápido de lo que el dato explica"),
+    "reduccion_personal": ("Deuda Moral",
+                           "recortes/reestructura: tensión interna y pérdida de confianza del equipo"),
+    "cierre_operaciones": ("Deuda Estructural",
+                           "cierre/quiebra parcial: el modelo operativo no sostiene la promesa"),
+    "regulacion": ("Deuda de Gobernanza",
+                   "presión regulatoria: la cultura de cumplimiento va detrás del negocio"),
+    "cambio_liderazgo": ("Deuda de Liderazgo",
+                         "rotación en la cúpula: la narrativa y la dirección quedan en transición"),
+    "contratacion_masiva": ("Deuda de Onboarding",
+                            "crecimiento de plantilla: la cultura no escala al ritmo de la contratación"),
+    "ronda_inversion": ("Deuda de Escalamiento",
+                        "capital nuevo: presión por crecer más rápido de lo que la organización asimila"),
+    "expansion": ("Deuda de Escalamiento",
+                  "nuevos mercados: la operación se estira antes de estar lista"),
+    "crecimiento": ("Deuda de Escalamiento",
+                    "crecimiento acelerado: procesos y cultura corren detrás del negocio"),
+    "adquisicion": ("Deuda de Integración",
+                    "fusión/adquisición: dos culturas que deben integrarse"),
+    "alianza": ("Deuda de Integración",
+                "alianza estratégica: coordinación entre organizaciones distintas"),
+    "lanzamiento": ("Deuda de Adopción",
+                    "lanzamiento: el reto pasa a que el mercado adopte y retenga"),
+}
+
+# Rol de decisor probable a buscar, según la señal dominante. Es una PISTA de a
+# quién contactar, no un contacto verificado.
+DECISOR_POR_SENAL: dict[str, str] = {
+    "friccion_retencion": "Head of Customer Success / CX",
+    "reduccion_personal": "Director/a de RRHH / People",
+    "cierre_operaciones": "COO / Director/a de Operaciones",
+    "regulacion": "Compliance / Dirección Legal",
+    "cambio_liderazgo": "CEO / Fundador/a",
+    "contratacion_masiva": "Director/a de RRHH / People",
+    "ronda_inversion": "CEO / Fundador/a",
+    "expansion": "Director/a General / Country Manager",
+    "crecimiento": "CEO / Fundador/a",
+    "adquisicion": "CEO / Corporate Development",
+    "alianza": "Director/a de Alianzas / BD",
+    "lanzamiento": "CPO / Head of Product",
+}
+
+# Orden de prioridad para elegir la señal DOMINANTE cuando hay varias.
+_PRIORIDAD = (
+    "friccion_retencion", "reduccion_personal", "cierre_operaciones", "regulacion",
+    "cambio_liderazgo", "ronda_inversion", "adquisicion", "expansion",
+    "crecimiento", "contratacion_masiva", "alianza", "lanzamiento",
+)
+
+CALIDAD_PESO = {"Alta": 10, "Media": 5, "Baja": 0}
+
+
+def _senal_dominante(keywords: list[str]) -> Optional[str]:
+    ks = set(keywords or [])
+    for tag in _PRIORIDAD:
+        if tag in ks:
+            return tag
+    return None
+
+
+def _norm_vertical(vertical: str) -> str:
+    return (vertical or "").strip().lower()
+
+
+def analizar(
+    keywords: list[str],
+    vertical: str = "",
+    confianza: float = 0.0,
+    calidad: str = "Baja",
+    categoria: str = "",
+) -> dict:
+    """Convierte señales capturadas en análisis profundo (determinista).
+
+    Devuelve dict con scoring, tipo_deuda, deuda_razon, score_icp, decisor y
+    razon. No hace red ni IA: es una hipótesis reproducible a partir de hechos.
+    """
+    ks = set(keywords or [])
+    hay_dolor = bool(ks & SENALES_DOLOR)
+    hay_cambio = bool(ks & SENALES_CAMBIO)
+    dominante = _senal_dominante(keywords)
+
+    # Scoring A/B/C: dolor = A (hay necesidad), cambio/crecimiento = B, resto C.
+    if hay_dolor:
+        scoring = "A"
+    elif hay_cambio or dominante == "lanzamiento":
+        scoring = "B"
+    else:
+        scoring = "C"
+
+    # Deuda Cultural™ (hipótesis) + rol de decisor, por señal dominante.
+    if dominante and dominante in DEUDA_POR_SENAL:
+        tipo_deuda, deuda_razon = DEUDA_POR_SENAL[dominante]
+    else:
+        tipo_deuda, deuda_razon = "", "sin señal de negocio clara para inferir deuda"
+    decisor = DECISOR_POR_SENAL.get(dominante or "", "CEO / Fundador/a")
+
+    # Score ICP 0–100 (ajuste al perfil ideal de HD), por criterios objetivos.
+    vert = _norm_vertical(vertical)
+    icp = 25
+    if vert in VERTICALES_HD_SET:
+        icp += 25                       # vertical dependiente de contexto (HD)
+    if hay_dolor:
+        icp += 25                       # dolor explícito = necesidad
+    elif hay_cambio:
+        icp += 12                       # cambio = ventana de oportunidad
+    icp += int(round(max(0.0, min(confianza, 1.0)) * 15))  # calidad de captura
+    icp += CALIDAD_PESO.get((calidad or "").strip(), 0)
+    score_icp = max(0, min(icp, 100))
+
+    # Razón auditable.
+    partes = []
+    if hay_dolor:
+        partes.append("señal de dolor (fricción/recorte/cierre/regulación)")
+    elif hay_cambio:
+        partes.append("señal de crecimiento/cambio")
+    else:
+        partes.append("sin señal disparadora fuerte")
+    if vert in VERTICALES_HD_SET:
+        partes.append(f"vertical HD «{vert}»")
+    partes.append(f"confianza captura {confianza:.2f}")
+    razon = "; ".join(partes) + "."
+
+    return {
+        "scoring": scoring,
+        "tipo_deuda": tipo_deuda,
+        "deuda_razon": deuda_razon,
+        "score_icp": score_icp,
+        "decisor_sugerido": decisor,
+        "senal_dominante": dominante or "",
+        "razon": razon,
+    }
