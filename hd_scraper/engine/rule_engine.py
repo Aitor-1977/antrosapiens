@@ -25,10 +25,26 @@ REGLAS_DEFAULT: dict[str, list[str]] = {
     "Operativa": ["vacante senior", "growth", "retention", "head of"],
     "Discursiva": ["educar al mercado", "evangelizar", "tropicalizar"],
     "Rescate": ["bridge round", "expansión lenta", "pivote estético", "down round"],
+    # Evento observable en PRENSA (titulares): disparadores de negocio. Señal más
+    # débil que el lenguaje de founder, pero es lo que aparece en las noticias, así
+    # que "Ingerir noticias" deja de dar 0 resultados.
+    "Evento": [
+        "ronda de inversión", "ronda de inversion", "levanta capital", "recauda",
+        "serie a", "serie b", "serie c", "financiamiento", "capital semilla",
+        "despidos", "despido masivo", "recorte de personal", "layoffs",
+        "reestructura", "reestructuración", "reestructuracion",
+        "pivote", "pivota", "cambia de modelo", "relanza",
+        "adquisición", "adquisicion", "adquiere", "fusión", "fusion", "se fusiona",
+        "cierre de operaciones", "cierra operaciones", "quiebra", "cesa operaciones",
+        "churn", "cancelaciones", "fuga de usuarios", "pérdida de clientes",
+        "demanda colectiva", "expansión", "nuevos mercados", "nuevo ceo", "nuevo cto",
+    ],
 }
 
 # Pesos para el scoring (a mayor peso, mayor evidencia de Deuda).
-PESOS_DEFAULT: dict[str, float] = {"Operativa": 1.5, "Discursiva": 2.0, "Rescate": 3.0}
+PESOS_DEFAULT: dict[str, float] = {
+    "Operativa": 1.5, "Discursiva": 2.0, "Rescate": 3.0, "Evento": 1.0,
+}
 
 UMBRAL_CRITICO_DEFAULT = 5.0
 

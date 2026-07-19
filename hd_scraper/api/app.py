@@ -1162,6 +1162,10 @@ def ingesta_noticias(payload: IngestaNoticiasIn,
     db = get_db()
 
     def procesar(p: dict) -> dict:
+        # Descarta ruido/gigantes/geo antes de la Capa 0 (calidad de la señal).
+        ok, _ = evaluar_relevancia(p.get("texto", ""), [], True, exigir_evento=False)
+        if not ok:
+            return {"senales_detectadas": 0}
         return _procesar_capa0(db, p.get("texto", ""), p.get("url", ""),
                                None, None, p.get("org_name"))
 

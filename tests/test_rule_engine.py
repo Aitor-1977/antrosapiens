@@ -51,6 +51,18 @@ def test_alerta_normal_bajo_umbral():
     assert alerta == "Normal"
 
 
+def test_evento_de_prensa_detecta_titulares():
+    eng = RuleEngine()
+    for titular in (
+        "Kavak levanta capital en una ronda Serie C",
+        "Clip anuncia despidos y reestructuración",
+        "Bitso adquiere una startup y pivota su modelo",
+    ):
+        s = eng.evaluar(titular, "https://n")
+        assert any(x.tipo_señal == "Evento" for x in s), titular
+        assert all(x.score_deuda == 1.0 for x in s if x.tipo_señal == "Evento")
+
+
 # ── endpoint /webhook/ingesta + /senales-capa0 ───────────────────────────────
 
 @pytest.fixture()
@@ -123,3 +135,22 @@ def test_ingesta_noticias_corre_en_la_app(cli, monkeypatch):
 def test_ingesta_noticias_requiere_token_y_query(cli):
     assert cli.post("/ingesta/noticias", json={"query": "x"}).status_code == 401
     assert cli.post("/ingesta/noticias", json={}, headers=H).status_code == 400
+
+
+_RSS_MIXTO = """<?xml version="1.0"?>
+<rss version="2.0"><channel>
+  <item><title>Kavak levanta capital en una ronda Serie C - Bloomberg</title>
+    <link>https://n/kavak</link><source url="x">Bloomberg</source></item>
+  <item><title>Google recauda miles de millones en Suiza - Reuters</title>
+    <link>https://n/google</link><source url="x">Reuters</source></item>
+</channel></rss>"""
+
+
+def test_ingesta_noticias_capta_evento_y_descarta_gigante(cli, monkeypatch):
+    apimod = importlib.import_module("hd_scraper.api.app")
+    monkeypatch.setattr(apimod._noticias, "_http_get", lambda url: _RSS_MIXTO)
+    r = cli.post("/ingesta/noticias", json={"query": "fintech"}, headers=H)
+    assert r.status_code == 200 and r.json()["senales_detectadas"] >= 1
+    # Kavak (Evento: ronda) entra; Google (gigante + Suiza) se descarta.
+    orgs = {i["org_nombre"] for i in cli.get("/senales-capa0").json()["items"]}
+    assert not any("google" in (o or "").lower() for o in orgs)
