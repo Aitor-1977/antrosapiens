@@ -58,6 +58,39 @@ def test_informe_categoria_invalida_400(cli):
     assert cli.get("/informe", params={"categoria": "Fondo"}).status_code == 400
 
 
+def test_informe_acepta_varias_categorias(cli):
+    r = cli.get("/informe", params={"categorias": "VC,Startup"})
+    assert r.status_code == 200
+    assert set(r.json()["categorias"]) == {"VC", "Startup"}
+    # Categoría inválida dentro de la lista -> 400.
+    assert cli.get("/informe", params={"categorias": "VC,Fondo"}).status_code == 400
+
+
+def test_guardar_listar_y_descargar_investigacion(cli):
+    # Sembramos algo de evidencia para que el informe tenga cuerpo.
+    cli.post("/scrape", json={"empresa": "Nubank", "tipo_evento": "ronda",
+                              "connectors": ["google_news"]}, headers=H)
+    # Requiere token.
+    assert cli.post("/informe/guardar", json={"categorias": ""}).status_code == 401
+    g = cli.post("/informe/guardar", json={"categorias": ""}, headers=H)
+    assert g.status_code == 200
+    rid = g.json()["id"]
+    # Aparece en la lista.
+    lista = cli.get("/informes").json()
+    assert any(i["id"] == rid for i in lista["items"])
+    # Se descarga su Markdown.
+    md = cli.get(f"/informes/{rid}.md")
+    assert md.status_code == 200 and "# Informe profundo" in md.text
+    assert "text/markdown" in md.headers["content-type"]
+    # Un id inexistente -> 404.
+    assert cli.get("/informes/999999.md").status_code == 404
+
+
+def test_export_md_por_varias_categorias(cli):
+    r = cli.get("/informe.md", params={"categorias": "VC,Startup"})
+    assert r.status_code == 200 and "Ecosistema(s)" in r.text
+
+
 def test_analizar_con_dominio_devuelve_contacto(cli):
     r = cli.post("/analizar", json={
         "titulo": "Clara enfrenta despidos y reestructuración",

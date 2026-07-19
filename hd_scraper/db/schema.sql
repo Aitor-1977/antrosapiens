@@ -149,3 +149,14 @@ CREATE TABLE IF NOT EXISTS senales_capa0 (
 
 CREATE INDEX IF NOT EXISTS idx_capa0_org    ON senales_capa0 (org_nombre);
 CREATE INDEX IF NOT EXISTS idx_capa0_alerta ON senales_capa0 (nivel_alerta);
+
+-- Investigaciones (informes) guardadas: snapshot con su Markdown y resumen.
+CREATE TABLE IF NOT EXISTS informes_guardados (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    titulo        TEXT,
+    categorias    TEXT,          -- ecosistemas incluidos (coma-separados)
+    total         INTEGER,
+    resumen_json  TEXT,          -- {A,B,C}
+    markdown      TEXT,
+    creado_en     TEXT NOT NULL
+);

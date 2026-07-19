@@ -148,8 +148,11 @@ def raiz() -> dict:
             "POST /scrape": "rastreo bajo demanda de una empresa (requiere X-Ingest-Token)",
             "POST /enrich": "descubre web + discurso + enlaces de un nombre (requiere X-Ingest-Token)",
             "GET /informe": "informe profundo: prioriza empresas por scoring + Deuda Cultural™ + ICP (filtro: categoria)",
-            "GET /informe.md": "descarga el informe profundo en Markdown (filtro: categoria)",
-            "GET /informe.csv": "descarga el informe profundo en CSV (filtro: categoria)",
+            "GET /informe.md": "descarga el informe profundo en Markdown (filtros: categoria|categorias)",
+            "GET /informe.csv": "descarga el informe profundo en CSV (filtros: categoria|categorias)",
+            "POST /informe/guardar": "genera y GUARDA la investigación de las categorías elegidas (requiere X-Ingest-Token)",
+            "GET /informes": "lista las investigaciones guardadas",
+            "GET /informes/{id}.md": "descarga una investigación guardada (Markdown)",
             "POST /analizar": "análisis profundo determinista de un título o señales (scoring/Deuda/ICP/decisor)",
             "POST /verificar-contacto": "verifica el correo del decisor con Hunter (requiere X-Ingest-Token y HUNTER_API_KEY)",
             "POST /directorio": "trae empresas reales de Wikidata (base pública) y las guarda como prospectos (requiere X-Ingest-Token)",
@@ -758,16 +761,34 @@ def _analizar_prospecto(row) -> dict:
     }
 
 
-def _construir_informe(categoria: Optional[str], limite: int) -> dict:
-    """Calcula el informe profundo (compartido por /informe y las exportaciones)."""
+def _cats_validas(categoria: Optional[str], categorias: Optional[str]) -> list[str]:
+    """Lista de ecosistemas pedidos (una, varias por coma, o todas si vacío). Valida."""
+    crudas: list[str] = []
+    if categorias:
+        crudas = [c.strip() for c in categorias.split(",") if c.strip()]
+    elif categoria:
+        crudas = [categoria]
+    for c in crudas:
+        if c not in CATEGORIAS:
+            raise HTTPException(400, f"categoria inválida: {c}")
+    # dedup preservando orden
+    return list(dict.fromkeys(crudas))
+
+
+def _construir_informe(categorias: Optional[list[str]], limite: int) -> dict:
+    """Calcula el informe profundo (compartido por /informe y las exportaciones).
+
+    ``categorias`` vacío/None = todos los ecosistemas; si trae varios, filtra por
+    todos ellos (IN).
+    """
     db = get_db()
-    params: list = [ESTADO_OK]
-    clausula = "estado = ?"
-    if categoria:
-        if categoria not in CATEGORIAS:
-            raise HTTPException(400, f"categoria inválida: {categoria}")
-        clausula += " AND categoria = ?"
-        params.append(categoria)
+    cats = list(categorias or [])
+    if cats:
+        marc = ",".join("?" for _ in cats)
+        clausula = f"estado = ? AND categoria IN ({marc})"
+        params: list = [ESTADO_OK, *cats]
+    else:
+        clausula, params = "estado = ?", [ESTADO_OK]
     filas = db.fetch_all(
         f"SELECT * FROM evidencias WHERE {clausula} ORDER BY creado_en DESC LIMIT 500",
         tuple(params),
@@ -792,11 +813,11 @@ def _construir_informe(categoria: Optional[str], limite: int) -> dict:
 
     # Empresas del DIRECTORIO (prospectos sin noticia): dan volumen real. Se
     # añaden si no aparecieron ya por una noticia (esas tienen prioridad, traen evento).
-    pparams: list = []
-    pclaus = "1=1"
-    if categoria:
-        pclaus = "categoria = ?"
-        pparams.append(categoria)
+    if cats:
+        marc = ",".join("?" for _ in cats)
+        pclaus, pparams = f"categoria IN ({marc})", list(cats)
+    else:
+        pclaus, pparams = "1=1", []
     for p in db.fetch_all(
         f"SELECT * FROM prospectos WHERE {pclaus} ORDER BY creado_en DESC LIMIT 500",
         tuple(pparams),
@@ -816,7 +837,8 @@ def _construir_informe(categoria: Optional[str], limite: int) -> dict:
         resumen[t["scoring"]] = resumen.get(t["scoring"], 0) + 1
 
     return {
-        "categoria": categoria,
+        "categorias": cats or sorted(CATEGORIAS),
+        "categoria": ", ".join(cats) if cats else "Todas",
         "total": len(tarjetas),
         "resumen_scoring": resumen,
         "prospectos": tarjetas,
@@ -825,16 +847,17 @@ def _construir_informe(categoria: Optional[str], limite: int) -> dict:
 
 @app.get("/informe")
 def informe(
-    categoria: Optional[str] = Query(None, description="Filtra por ecosistema (VC|Startup|Incubadora|Corporativo)"),
+    categoria: Optional[str] = Query(None, description="Un ecosistema (VC|Startup|Incubadora|Corporativo)"),
+    categorias: Optional[str] = Query(None, description="Varios ecosistemas separados por coma"),
     limite: int = Query(50, ge=1, le=200),
 ) -> dict:
     """Informe profundo: prioriza las empresas capturadas por scoring + Deuda + ICP.
 
     Interpreta (de forma determinista) la evidencia consumible: una tarjeta por
-    empresa (la señal más fuerte gana), ordenada A→B→C y por Score ICP. Es la
-    lectura 'accionable' de lo que el radar capturó.
+    empresa (la señal más fuerte gana), ordenada A→B→C y por Score ICP. Acepta una
+    o varias categorías (o todas si no se indica).
     """
-    return _construir_informe(categoria, limite)
+    return _construir_informe(_cats_validas(categoria, categorias), limite)
 
 
 def _informe_a_markdown(inf: dict) -> str:
@@ -842,7 +865,7 @@ def _informe_a_markdown(inf: dict) -> str:
     lineas = [
         "# Informe profundo — hd-prospector",
         "",
-        f"- Ecosistema: **{inf['categoria'] or 'Todos'}**",
+        f"- Ecosistema(s): **{inf.get('categoria') or 'Todas'}**",
         f"- Empresas: **{inf['total']}**  ·  A: {s.get('A',0)}  ·  B: {s.get('B',0)}  ·  C: {s.get('C',0)}",
         "",
         "> Análisis determinista sobre hechos capturados. Los correos son "
@@ -875,10 +898,11 @@ def _informe_a_markdown(inf: dict) -> str:
 @app.get("/informe.md")
 def informe_md(
     categoria: Optional[str] = Query(None),
+    categorias: Optional[str] = Query(None),
     limite: int = Query(50, ge=1, le=200),
 ) -> Response:
     """Descarga el informe profundo como Markdown."""
-    md = _informe_a_markdown(_construir_informe(categoria, limite))
+    md = _informe_a_markdown(_construir_informe(_cats_validas(categoria, categorias), limite))
     return Response(md, media_type="text/markdown; charset=utf-8",
                     headers={"Content-Disposition": 'attachment; filename="informe-hd.md"'})
 
@@ -886,10 +910,11 @@ def informe_md(
 @app.get("/informe.csv")
 def informe_csv(
     categoria: Optional[str] = Query(None),
+    categorias: Optional[str] = Query(None),
     limite: int = Query(50, ge=1, le=200),
 ) -> Response:
     """Descarga el informe profundo como CSV."""
-    inf = _construir_informe(categoria, limite)
+    inf = _construir_informe(_cats_validas(categoria, categorias), limite)
     buf = io.StringIO()
     w = csv.writer(buf)
     w.writerow(["empresa", "scoring", "score_icp", "intensidad", "tipo_deuda",
@@ -908,6 +933,62 @@ def informe_csv(
         ])
     return Response(buf.getvalue(), media_type="text/csv; charset=utf-8",
                     headers={"Content-Disposition": 'attachment; filename="informe-hd.csv"'})
+
+
+class GuardarInformeIn(BaseModel):
+    categorias: Optional[str] = None   # coma-separadas; vacío = todas
+    limite: int = 50
+
+
+@app.post("/informe/guardar")
+def guardar_informe(payload: GuardarInformeIn,
+                    x_ingest_token: Optional[str] = Header(None)) -> dict:
+    """Genera el informe de las categorías pedidas y lo GUARDA (snapshot con su
+    Markdown). Autenticado (escribe). Devuelve el id para recuperarlo/descargarlo."""
+    _exigir_token(x_ingest_token)
+    cats = _cats_validas(None, payload.categorias)
+    inf = _construir_informe(cats, payload.limite)
+    md = _informe_a_markdown(inf)
+    titulo = f"Investigación · {inf['categoria']} · {inf['total']} empresas"
+    db = get_db()
+    rid = db.insert_returning_id(
+        """INSERT INTO informes_guardados
+             (titulo, categorias, total, resumen_json, markdown, creado_en)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        (titulo, ", ".join(inf["categorias"]), inf["total"],
+         json.dumps(inf["resumen_scoring"]), md, ahora_iso()),
+    )
+    return {"id": rid, "titulo": titulo, "total": inf["total"],
+            "resumen_scoring": inf["resumen_scoring"]}
+
+
+@app.get("/informes")
+def listar_informes(limite: int = Query(50, ge=1, le=200)) -> dict:
+    """Lista las investigaciones guardadas (sin el cuerpo Markdown)."""
+    db = get_db()
+    filas = db.fetch_all(
+        "SELECT id, titulo, categorias, total, resumen_json, creado_en "
+        "FROM informes_guardados ORDER BY id DESC LIMIT ?", (limite,))
+    items = []
+    for f in filas:
+        d = dict(f)
+        try:
+            d["resumen_scoring"] = json.loads(d.pop("resumen_json") or "{}")
+        except (ValueError, TypeError):
+            d["resumen_scoring"] = {}
+        items.append(d)
+    return {"total": len(items), "items": items}
+
+
+@app.get("/informes/{informe_id}.md")
+def descargar_informe_guardado(informe_id: int) -> Response:
+    """Descarga el Markdown de una investigación guardada."""
+    row = get_db().fetch_one(
+        "SELECT markdown FROM informes_guardados WHERE id = ?", (informe_id,))
+    if not row:
+        raise HTTPException(404, "investigación no encontrada")
+    return Response(row["markdown"] or "", media_type="text/markdown; charset=utf-8",
+                    headers={"Content-Disposition": f'attachment; filename="investigacion-{informe_id}.md"'})
 
 
 class AnalizarIn(BaseModel):
@@ -1247,6 +1328,8 @@ _ADMIN_HTML = """<!doctype html>
   .cat { margin-top: 0; background: transparent; color: inherit; border: 1px solid #2563eb; font-weight: 600; }
   .dir { margin-top: 0; background: transparent; color: inherit; border: 1px solid #16a34a; font-weight: 600; }
   .org { font-size: 1.05rem; margin-bottom: .25rem; }
+  .chips-sel { display: flex; flex-wrap: wrap; gap: .8rem; margin: .6rem 0; }
+  .chips-sel label { display: inline-flex; align-items: center; gap: .3rem; font-size: .95rem; }
   .dl { display: block; text-align: center; text-decoration: none; color: inherit;
     padding: .7rem; border: 1px solid rgba(128,128,128,.5); border-radius: .5rem; font-weight: 600; }
 </style></head><body>
@@ -1351,20 +1434,24 @@ _ADMIN_HTML = """<!doctype html>
 <section>
   <h2>②·⁵ Informe profundo (análisis)</h2>
   <div class="hint">Lee lo capturado y lo <b>prioriza</b>: para cada empresa calcula scoring A/B/C, hipótesis de <b>Deuda Cultural™</b>, Score ICP y a qué <b>decisor</b> contactar. Determinista (sin IA): mismos hechos, mismo resultado.</div>
+  <div class="hint" style="margin-top:.4rem">Elige <b>categorías</b> (todas o las que quieras) y luego <b>genera</b>, <b>guarda</b> o <b>exporta</b> la investigación.</div>
+  <div class="chips-sel" id="inf_cats">
+    <label><input type="checkbox" id="inf_todas" checked> Todas</label>
+    <label><input type="checkbox" class="inf-cat" value="VC"> VC</label>
+    <label><input type="checkbox" class="inf-cat" value="Startup"> Startup</label>
+    <label><input type="checkbox" class="inf-cat" value="Incubadora"> Incubadora</label>
+    <label><input type="checkbox" class="inf-cat" value="Corporativo"> Corporativo</label>
+  </div>
   <div class="row">
-    <select id="inf_categoria">
-      <option value="">Todos los ecosistemas</option>
-      <option value="VC">VC</option>
-      <option value="Startup">Startup</option>
-      <option value="Incubadora">Incubadora</option>
-      <option value="Corporativo">Corporativo</option>
-    </select>
-    <button id="inf_btn" class="sec">📊 Generar informe</button>
+    <button id="inf_btn" class="sec">📊 Generar</button>
+    <button id="inf_guardar" class="sec">💾 Guardar</button>
     <a id="inf_md" class="sec" href="#" style="display:none">⬇︎ Markdown</a>
     <a id="inf_csv" class="sec" href="#" style="display:none">⬇︎ CSV</a>
   </div>
   <div id="inf_resumen" class="hint"></div>
   <div id="informe"></div>
+  <div class="hint" style="margin-top:.8rem"><b>Investigaciones guardadas</b> <button id="inf_ver_guardadas" class="sec">🔄 Actualizar</button></div>
+  <div id="inf_guardadas"></div>
 </section>
 
 <section>
@@ -1573,16 +1660,29 @@ _ADMIN_HTML = """<!doctype html>
 
   // ②·⁵ Informe profundo: análisis determinista de lo capturado.
   const SCLASE = { A: "msg ok", B: "msg", C: "msg" };
+  // "Todas" y las casillas por categoría se excluyen entre sí.
+  $("inf_todas").addEventListener("change", () => {
+    if ($("inf_todas").checked) document.querySelectorAll(".inf-cat").forEach(c => c.checked = false);
+  });
+  document.querySelectorAll(".inf-cat").forEach(c => c.addEventListener("change", () => {
+    if (document.querySelector(".inf-cat:checked")) $("inf_todas").checked = false;
+    else $("inf_todas").checked = true;
+  }));
+  function catsSeleccionadas() {
+    return [...document.querySelectorAll(".inf-cat:checked")].map(c => c.value);
+  }
+  function qsCats() {
+    const cats = catsSeleccionadas();
+    return cats.length ? "?categorias=" + encodeURIComponent(cats.join(",")) : "";
+  }
   $("inf_btn").addEventListener("click", async () => {
     const cont = $("informe"), res = $("inf_resumen");
-    const cat = $("inf_categoria").value;
     res.textContent = "Analizando lo capturado…"; cont.innerHTML = "";
-    const qsExport = cat ? "?categoria=" + encodeURIComponent(cat) : "";
-    $("inf_md").href = "/informe.md" + qsExport; $("inf_md").style.display = "inline-block";
-    $("inf_csv").href = "/informe.csv" + qsExport; $("inf_csv").style.display = "inline-block";
+    const q = qsCats();
+    $("inf_md").href = "/informe.md" + q; $("inf_md").style.display = "inline-block";
+    $("inf_csv").href = "/informe.csv" + q; $("inf_csv").style.display = "inline-block";
     try {
-      const qs = new URLSearchParams(cat ? { categoria: cat } : {});
-      const r = await fetch("/informe?" + qs);
+      const r = await fetch("/informe" + q);
       const out = await leerJson(r);
       if (!out.ok) { res.className = "msg err"; res.textContent = "Error: " + (out.error || r.status); return; }
       const d = out.data, s = d.resumen_scoring || {};
@@ -1609,6 +1709,39 @@ _ADMIN_HTML = """<!doctype html>
         </div>`; }).join("");
     } catch (e) { res.className = "msg err"; res.textContent = "Error de red: " + e; }
   });
+
+  // Guardar la investigación (snapshot) de las categorías elegidas.
+  $("inf_guardar").addEventListener("click", async () => {
+    const res = $("inf_resumen"), token = tok();
+    if (!token) { res.className = "msg err"; res.style.display = "block"; res.textContent = "Falta el token para guardar."; return; }
+    const cats = catsSeleccionadas();
+    res.className = "hint"; res.textContent = "Guardando investigación…";
+    try {
+      const r = await fetch("/informe/guardar", { method: "POST",
+        headers: { "Content-Type": "application/json", "X-Ingest-Token": token },
+        body: JSON.stringify({ categorias: cats.join(",") }) });
+      const o = await leerJson(r);
+      if (!o.ok) { res.className = "msg err"; res.textContent = "Error: " + (o.error || (o.data && o.data.detail) || r.status); return; }
+      res.className = "msg ok"; res.textContent = `✓ Guardada: ${o.data.titulo}.`;
+      verGuardadas();
+    } catch (e) { res.className = "msg err"; res.textContent = "Error de red: " + e; }
+  });
+
+  async function verGuardadas() {
+    const cont = $("inf_guardadas");
+    try {
+      const d = await (await fetch("/informes")).json();
+      if (!d.items.length) { cont.innerHTML = '<div class="hint">Aún no hay investigaciones guardadas.</div>'; return; }
+      cont.innerHTML = d.items.map(g => {
+        const s = g.resumen_scoring || {};
+        return `<div class="card">
+          <div><b>${esc(g.titulo || "Investigación")}</b></div>
+          <div class="meta">${esc(g.categorias || "Todas")} · ${g.total} empresas · A:${s.A||0} B:${s.B||0} C:${s.C||0} · ${(g.creado_en||"").slice(0,16).replace("T"," ")}</div>
+          <a class="sec" href="/informes/${g.id}.md" target="_blank" rel="noopener">⬇︎ Descargar</a>
+        </div>`; }).join("");
+    } catch (e) { cont.innerHTML = '<div class="hint">No se pudieron cargar.</div>'; }
+  }
+  $("inf_ver_guardadas").addEventListener("click", verGuardadas);
 
   // Verificar correo del decisor con Hunter (bajo demanda, consume cuota).
   window.verificarCorreo = async (btn) => {
