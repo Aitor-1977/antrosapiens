@@ -153,6 +153,7 @@ def raiz() -> dict:
             "POST /informe/guardar": "genera y GUARDA la investigación de las categorías elegidas (requiere X-Ingest-Token)",
             "GET /informes": "lista las investigaciones guardadas",
             "GET /informes/{id}.md": "descarga una investigación guardada (Markdown)",
+            "DELETE /informes/{id}": "borra una investigación guardada (requiere X-Ingest-Token)",
             "POST /analizar": "análisis profundo determinista de un título o señales (scoring/Deuda/ICP/decisor)",
             "POST /verificar-contacto": "verifica el correo del decisor con Hunter (requiere X-Ingest-Token y HUNTER_API_KEY)",
             "POST /directorio": "trae empresas reales de Wikidata (base pública) y las guarda como prospectos (requiere X-Ingest-Token)",
@@ -991,6 +992,18 @@ def descargar_informe_guardado(informe_id: int) -> Response:
                     headers={"Content-Disposition": f'attachment; filename="investigacion-{informe_id}.md"'})
 
 
+@app.delete("/informes/{informe_id}")
+def borrar_informe_guardado(informe_id: int,
+                            x_ingest_token: Optional[str] = Header(None)) -> dict:
+    """Borra una investigación guardada. Autenticado (escribe)."""
+    _exigir_token(x_ingest_token)
+    db = get_db()
+    if not db.fetch_one("SELECT id FROM informes_guardados WHERE id = ?", (informe_id,)):
+        raise HTTPException(404, "investigación no encontrada")
+    db.execute("DELETE FROM informes_guardados WHERE id = ?", (informe_id,))
+    return {"ok": True, "id": informe_id}
+
+
 class AnalizarIn(BaseModel):
     titulo: Optional[str] = None
     keywords: Optional[list[str]] = None
@@ -1738,10 +1751,24 @@ _ADMIN_HTML = """<!doctype html>
           <div><b>${esc(g.titulo || "Investigación")}</b></div>
           <div class="meta">${esc(g.categorias || "Todas")} · ${g.total} empresas · A:${s.A||0} B:${s.B||0} C:${s.C||0} · ${(g.creado_en||"").slice(0,16).replace("T"," ")}</div>
           <a class="sec" href="/informes/${g.id}.md" target="_blank" rel="noopener">⬇︎ Descargar</a>
+          <button class="sec" onclick="borrarInvestigacion(${g.id})">🗑 Borrar</button>
         </div>`; }).join("");
     } catch (e) { cont.innerHTML = '<div class="hint">No se pudieron cargar.</div>'; }
   }
   $("inf_ver_guardadas").addEventListener("click", verGuardadas);
+  window.borrarInvestigacion = async (id) => {
+    const res = $("inf_resumen"), token = tok();
+    if (!token) { res.className = "msg err"; res.style.display = "block"; res.textContent = "Falta el token para borrar."; return; }
+    if (!confirm("¿Borrar esta investigación guardada?")) return;
+    try {
+      const r = await fetch("/informes/" + id, { method: "DELETE",
+        headers: { "X-Ingest-Token": token } });
+      const o = await leerJson(r);
+      if (!o.ok) { res.className = "msg err"; res.style.display = "block"; res.textContent = "Error al borrar: " + (o.error || (o.data && o.data.detail) || r.status); return; }
+      res.className = "msg ok"; res.style.display = "block"; res.textContent = "🗑 Investigación borrada.";
+      verGuardadas();
+    } catch (e) { res.className = "msg err"; res.style.display = "block"; res.textContent = "Error de red: " + e; }
+  };
 
   // Verificar correo del decisor con Hunter (bajo demanda, consume cuota).
   window.verificarCorreo = async (btn) => {

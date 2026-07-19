@@ -84,6 +84,11 @@ def test_guardar_listar_y_descargar_investigacion(cli):
     assert "text/markdown" in md.headers["content-type"]
     # Un id inexistente -> 404.
     assert cli.get("/informes/999999.md").status_code == 404
+    # Borrar: requiere token; borra; y luego ya no está.
+    assert cli.delete(f"/informes/{rid}").status_code == 401
+    assert cli.delete(f"/informes/{rid}", headers=H).status_code == 200
+    assert cli.delete(f"/informes/{rid}", headers=H).status_code == 404
+    assert not any(i["id"] == rid for i in cli.get("/informes").json()["items"])
 
 
 def test_export_md_por_varias_categorias(cli):
