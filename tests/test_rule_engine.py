@@ -95,3 +95,31 @@ def test_ingesta_dedup_por_id(cli):
 def test_ingesta_sin_match_no_persiste(cli):
     r = cli.post("/webhook/ingesta", json={"texto": "nota de rutina", "url": "https://x/9"}, headers=H)
     assert r.json()["senales_detectadas"] == 0
+
+
+# ── ingesta de noticias EN LA APP (servidor lee el RSS) ──────────────────────
+
+_RSS_CAP0 = """<?xml version="1.0"?>
+<rss version="2.0"><channel>
+  <item>
+    <title>Startup busca head of growth y admite un down round - Medio</title>
+    <link>https://n/1</link>
+    <source url="https://medio.com">Medio</source>
+  </item>
+</channel></rss>"""
+
+
+def test_ingesta_noticias_corre_en_la_app(cli, monkeypatch):
+    apimod = importlib.import_module("hd_scraper.api.app")
+    # El servidor "lee" el RSS (inyectado) y procesa cada nota con la Capa 0.
+    monkeypatch.setattr(apimod._noticias, "_http_get", lambda url: _RSS_CAP0)
+    r = cli.post("/ingesta/noticias", json={"query": "startup"}, headers=H)
+    assert r.status_code == 200
+    d = r.json()
+    assert d["items"] == 1 and d["senales_detectadas"] >= 1  # head of / growth / down round
+    assert cli.get("/senales-capa0").json()["total"] >= 1
+
+
+def test_ingesta_noticias_requiere_token_y_query(cli):
+    assert cli.post("/ingesta/noticias", json={"query": "x"}).status_code == 401
+    assert cli.post("/ingesta/noticias", json={}, headers=H).status_code == 400

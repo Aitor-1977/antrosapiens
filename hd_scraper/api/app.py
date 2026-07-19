@@ -33,6 +33,7 @@ from .. import directorio, hunter
 from ..analisis import analizar
 from ..engine.rule_engine import RuleEngine
 from ..engine.schemas import Prospecto, SeñalCapa0
+from ..ingesta import noticias as _noticias
 from ..contacto import dominio_de, rutas_contacto
 from ..discovery import REGIONES, VERTICALES_HD, queries_para, region_clause
 from ..enrich import enriquecer, google_search_url, linkedin_search_url, sugerir_vertical
@@ -153,6 +154,7 @@ def raiz() -> dict:
             "POST /verificar-contacto": "verifica el correo del decisor con Hunter (requiere X-Ingest-Token y HUNTER_API_KEY)",
             "POST /directorio": "trae empresas reales de Wikidata (base pública) y las guarda como prospectos (requiere X-Ingest-Token)",
             "POST /webhook/ingesta": "Capa 0: evalúa texto con el motor de reglas determinista y persiste señales (requiere X-Ingest-Token)",
+            "POST /ingesta/noticias": "Capa 0 EN LA APP: lee RSS (Google News o feed) y procesa cada nota (requiere X-Ingest-Token)",
             "GET /senales-capa0": "lista las señales de Capa 0 registradas (filtro: nivel_alerta)",
             "GET /admin": "panel web: buscar señales, revisar y dar de alta prospectos",
             "GET /salud-fuentes": "salud por fuente/conector",
@@ -1103,6 +1105,30 @@ def _guardar_senales_capa0(db, prospecto: Prospecto) -> int:
     return nuevas
 
 
+def _procesar_capa0(db, texto: str, url: str = "", timestamp: Optional[str] = None,
+                    org_id: Optional[str] = None, org_name: Optional[str] = None) -> dict:
+    """Núcleo Capa 0 (compartido): evalúa reglas, puntúa y persiste. Sin red."""
+    limpio = normalizar_texto(texto)
+    if not limpio:
+        return {"senales_detectadas": 0, "senales_nuevas": 0, "score_total": 0.0,
+                "nivel_alerta": "Normal", "senales": []}
+    señales: list[SeñalCapa0] = _rule_engine.evaluar(limpio, url, timestamp)
+    score, alerta = _rule_engine.calcular_alerta(señales)
+    nuevas = 0
+    if señales:
+        prospecto = Prospecto(
+            id=org_id or (url or limpio[:40]),
+            nombre_organizacion=org_name or "(organización sin nombre)",
+            señales=señales, score_total=score, nivel_alerta=alerta,
+        )
+        nuevas = _guardar_senales_capa0(db, prospecto)
+    return {
+        "senales_detectadas": len(señales), "senales_nuevas": nuevas,
+        "score_total": score, "nivel_alerta": alerta,
+        "senales": [s.model_dump(mode="json") for s in señales],
+    }
+
+
 @app.post("/webhook/ingesta")
 def ingesta_capa0(payload: IngestaIn, x_ingest_token: Optional[str] = Header(None)) -> dict:
     """Ingesta de texto para la Capa 0: evalúa reglas, puntúa y persiste señales.
@@ -1111,30 +1137,40 @@ def ingesta_capa0(payload: IngestaIn, x_ingest_token: Optional[str] = Header(Non
     match, no persiste nada. Devuelve el resumen y las señales detectadas.
     """
     _exigir_token(x_ingest_token)
-    texto = normalizar_texto(payload.texto)
-    if not texto:
+    if not normalizar_texto(payload.texto):
         raise HTTPException(400, "texto vacío")
+    return {"status": "procesado", **_procesar_capa0(
+        get_db(), payload.texto, payload.url, payload.timestamp,
+        payload.org_id, payload.org_name)}
 
-    señales: list[SeñalCapa0] = _rule_engine.evaluar(texto, payload.url, payload.timestamp)
-    score, alerta = _rule_engine.calcular_alerta(señales)
 
-    nuevas = 0
-    if señales:
-        prospecto = Prospecto(
-            id=payload.org_id or (payload.url or texto[:40]),
-            nombre_organizacion=payload.org_name or "(organización sin nombre)",
-            señales=señales, score_total=score, nivel_alerta=alerta,
-        )
-        nuevas = _guardar_senales_capa0(get_db(), prospecto)
+class IngestaNoticiasIn(BaseModel):
+    query: Optional[str] = None
+    feed: Optional[str] = None
+    limite: int = 25
 
-    return {
-        "status": "procesado",
-        "senales_detectadas": len(señales),
-        "senales_nuevas": nuevas,
-        "score_total": score,
-        "nivel_alerta": alerta,
-        "senales": [s.model_dump(mode="json") for s in señales],
-    }
+
+@app.post("/ingesta/noticias")
+def ingesta_noticias(payload: IngestaNoticiasIn,
+                     x_ingest_token: Optional[str] = Header(None)) -> dict:
+    """Ingesta de noticias EN LA APP: el servidor lee el RSS (Google News gratis o
+    un feed) y procesa cada nota con la Capa 0. Sin depender de scripts externos.
+    """
+    _exigir_token(x_ingest_token)
+    if not (payload.query or payload.feed):
+        raise HTTPException(400, "indica 'query' (Google News) o 'feed' (URL de RSS)")
+    db = get_db()
+
+    def procesar(p: dict) -> dict:
+        return _procesar_capa0(db, p.get("texto", ""), p.get("url", ""),
+                               None, None, p.get("org_name"))
+
+    try:
+        res = _noticias.correr(query=payload.query, feed_url=payload.feed,
+                               limite=payload.limite, enviar_fn=procesar)
+    except Exception as exc:
+        raise HTTPException(502, f"no se pudo leer el feed: {exc}")
+    return res
 
 
 @app.get("/senales-capa0")
@@ -1325,6 +1361,24 @@ _ADMIN_HTML = """<!doctype html>
   </div>
   <div id="inf_resumen" class="hint"></div>
   <div id="informe"></div>
+</section>
+
+<section>
+  <h2>②·⁷ Capa 0 — Señales de Deuda (en la app)</h2>
+  <div class="hint">Corre <b>dentro de la app</b>: el servidor lee noticias (RSS gratis) o analiza el texto que pegues, con el motor de reglas determinista (Operativa/Discursiva/Rescate). No necesitas terminal.</div>
+  <div class="row">
+    <input id="cap_query" placeholder="Ej. fintech México ronda">
+    <button id="cap_noticias" class="sec">📡 Ingerir noticias</button>
+  </div>
+  <label style="margin-top:.6rem">…o pega un texto / transcripción</label>
+  <textarea id="cap_texto" placeholder="Pega aquí una transcripción de video, un post o cualquier texto…"></textarea>
+  <div class="row">
+    <input id="cap_org" placeholder="Organización (opcional)">
+    <button id="cap_analizar" class="sec">🔬 Analizar texto</button>
+    <button id="cap_ver" class="sec">👁️ Ver señales</button>
+  </div>
+  <div id="cap_msg" class="msg"></div>
+  <div id="cap_lista"></div>
 </section>
 
 <section>
@@ -1576,6 +1630,60 @@ _ADMIN_HTML = """<!doctype html>
     } catch (e) { out.textContent = " Error de red: " + e; }
     finally { btn.disabled = false; }
   };
+
+  // ②·⁷ Capa 0: ingesta de noticias y análisis de texto EN LA APP.
+  function pintarSenales(items) {
+    const cont = $("cap_lista");
+    if (!items || !items.length) { cont.innerHTML = '<div class="hint">Aún no hay señales de Capa 0.</div>'; return; }
+    cont.innerHTML = items.map(s => `
+      <div class="card">
+        <div><b>${esc(s.org_nombre || "(sin org)")}</b> <span class="chip">${esc(s.tipo_senal||"")}</span> <span class="chip">${esc(s.nivel_alerta||"")}</span> <span class="chip">score ${s.score_deuda}</span></div>
+        <div class="meta">${esc(s.motivo_match||"")}</div>
+        <div class="meta">${esc((s.fragmento_literal||"").slice(0,160))}${s.url ? ' · <a href="'+esc(safeUrl(s.url))+'" target="_blank" rel="noopener">fuente ↗</a>' : ""}${s.timestamp_video ? " · ⏱ "+esc(s.timestamp_video) : ""}</div>
+      </div>`).join("");
+  }
+  async function verSenales() {
+    try { const d = await (await fetch("/senales-capa0?limite=50")).json(); pintarSenales(d.items); }
+    catch (e) { $("cap_lista").innerHTML = '<div class="hint">No se pudieron cargar.</div>'; }
+  }
+  $("cap_ver").addEventListener("click", verSenales);
+  $("cap_noticias").addEventListener("click", async () => {
+    const m = $("cap_msg"), token = tok(), query = $("cap_query").value.trim();
+    if (!token) { m.className = "msg err"; m.style.display = "block"; m.textContent = "Falta el token."; return; }
+    if (!query) { m.className = "msg err"; m.style.display = "block"; m.textContent = "Escribe una búsqueda."; return; }
+    document.querySelectorAll("button").forEach(b => b.disabled = true);
+    m.className = "msg"; m.style.display = "block"; m.textContent = "Leyendo noticias y analizando…";
+    try {
+      const r = await fetch("/ingesta/noticias", { method: "POST",
+        headers: { "Content-Type": "application/json", "X-Ingest-Token": token },
+        body: JSON.stringify({ query, limite: 25 }) });
+      const o = await leerJson(r);
+      if (!o.ok) { m.className = "msg err"; m.textContent = "Error: " + (o.error || (o.data && o.data.detail) || r.status); return; }
+      const d = o.data;
+      m.className = "msg ok";
+      m.textContent = `✓ ${d.items} notas leídas · ${d.senales_detectadas} señal(es) de Capa 0 detectada(s).` + (d.senales_detectadas === 0 ? " (Las reglas buscan lenguaje de founder/operación; una noticia rara vez las dispara.)" : "");
+      verSenales();
+    } catch (e) { m.className = "msg err"; m.textContent = "Error de red: " + e; }
+    finally { document.querySelectorAll("button").forEach(b => b.disabled = false); }
+  });
+  $("cap_analizar").addEventListener("click", async () => {
+    const m = $("cap_msg"), token = tok(), texto = $("cap_texto").value.trim();
+    if (!token) { m.className = "msg err"; m.style.display = "block"; m.textContent = "Falta el token."; return; }
+    if (!texto) { m.className = "msg err"; m.style.display = "block"; m.textContent = "Pega un texto primero."; return; }
+    $("cap_analizar").disabled = true; m.className = "msg"; m.style.display = "block"; m.textContent = "Analizando…";
+    try {
+      const r = await fetch("/webhook/ingesta", { method: "POST",
+        headers: { "Content-Type": "application/json", "X-Ingest-Token": token },
+        body: JSON.stringify({ texto, org_name: $("cap_org").value.trim() || null }) });
+      const o = await leerJson(r);
+      if (!o.ok) { m.className = "msg err"; m.textContent = "Error: " + (o.error || (o.data && o.data.detail) || r.status); return; }
+      const d = o.data;
+      m.className = "msg ok";
+      m.textContent = `✓ ${d.senales_detectadas} señal(es) · alerta ${d.nivel_alerta} · score ${d.score_total}.`;
+      verSenales();
+    } catch (e) { m.className = "msg err"; m.textContent = "Error de red: " + e; }
+    finally { $("cap_analizar").disabled = false; }
+  });
 
   // ③ Enriquecer: descubre web + tesis y precarga
   $("enrich_btn").addEventListener("click", async () => {
