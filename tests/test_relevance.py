@@ -138,6 +138,19 @@ def test_relevancia_conserva_startup_latam_pese_a_filtros_nuevos():
     assert ok and m == ""
 
 
+def test_relevancia_descarta_ruido_mediatico():
+    from hd_scraper.relevance import MOTIVO_RUIDO
+    for titulo, kw in (
+        ("El futbol define al campeón de la Liga MX", ["lanzamiento"]),
+        ("Farándula: la cantante estrena romance", ["lanzamiento"]),
+        ("Ola de calor golpea al norte del país", ["expansion"]),
+        ("Tienda inaugura nueva sucursal en el centro", ["expansion"]),
+        ("Promoción 2x1 por tiempo limitado", ["lanzamiento"]),
+    ):
+        ok, m = evaluar_relevancia(titulo, kw, True)
+        assert not ok and m == MOTIVO_RUIDO, titulo
+
+
 # ── calidad de captura (informativa) ─────────────────────────────────────────
 
 def test_calidad_alta_media_baja():

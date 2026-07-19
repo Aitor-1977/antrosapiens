@@ -193,6 +193,27 @@ NO_EMPRESA: tuple[str, ...] = (
     "elecciones", "candidato", "candidata", "partido politico",
 )
 
+# Ruido mediático que NO es inteligencia de organización: deportes, espectáculos,
+# clima, promociones y aperturas rutinarias. Estas notas nunca son un prospecto
+# ni una señal estratégica; se descartan de la evidencia antes de mostrarse.
+RUIDO_MEDIATICO: tuple[str, ...] = (
+    # Deportes
+    "futbol", "liga mx", "mundial", "champions", "nba", "nfl", "beisbol",
+    "boxeo", "seleccion nacional", "gol de", "goles de", "partido de",
+    # Espectáculos / entretenimiento / farándula
+    "farandula", "espectaculos", "celebridad", "telenovela", "reality show",
+    "alfombra roja", "concierto de", "estreno de la pelicula", "cantante",
+    # Clima / desastres naturales
+    "ola de calor", "frente frio", "granizada", "deslave", "inundacion",
+    "tormenta tropical", "lluvias",
+    # Promociones / ofertas / patrocinado
+    "promocion", "descuento", "cupon", "oferta especial", "2x1", "rebajas",
+    "contenido patrocinado", "nota patrocinada", "publirreportaje",
+    # Aperturas rutinarias / obituarios
+    "abre sucursal", "abre su sucursal", "nueva sucursal", "inaugura",
+    "inauguracion", "franquicia", "obituario", "esquela",
+)
+
 # Título de reporte: un tema seguido de "AÑO:" (p. ej. "Venture Capital LATAM
 # 2025:"). Señal fuerte de informe, casi nunca una empresa.
 _RE_REPORTE = re.compile(r"\b20\d\d\s*:")
@@ -211,6 +232,7 @@ MOTIVO_SIN_EVENTO = "relevancia:sin_evento"    # no describe evento verificable
 MOTIVO_NO_LATAM = "relevancia:no_latam"        # geografía fuera de LATAM
 MOTIVO_NO_EMPRESA = "relevancia:no_empresa"    # gobierno/premios/academia/reporte/suceso
 MOTIVO_GIGANTE = "relevancia:gigante"          # marca gigante (no es ICP de HD)
+MOTIVO_RUIDO = "relevancia:ruido_mediatico"    # deportes/espectáculos/clima/promos/aperturas
 
 
 def evaluar_relevancia(
@@ -243,6 +265,8 @@ def evaluar_relevancia(
         return False, MOTIVO_NO_LATAM
     if _contiene(t, NO_EMPRESA) or _RE_REPORTE.search(t):
         return False, MOTIVO_NO_EMPRESA
+    if _contiene(t, RUIDO_MEDIATICO):
+        return False, MOTIVO_RUIDO
     if _contiene(t, GIGANTES):
         return False, MOTIVO_GIGANTE
     if not empresa_identificada:

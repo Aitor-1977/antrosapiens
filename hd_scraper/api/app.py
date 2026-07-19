@@ -1093,6 +1093,7 @@ _ADMIN_HTML = """<!doctype html>
   .cats { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; margin-top: .6rem; }
   .cat { margin-top: 0; background: transparent; color: inherit; border: 1px solid #2563eb; font-weight: 600; }
   .dir { margin-top: 0; background: transparent; color: inherit; border: 1px solid #16a34a; font-weight: 600; }
+  .org { font-size: 1.05rem; margin-bottom: .25rem; }
   .dl { display: block; text-align: center; text-decoration: none; color: inherit;
     padding: .7rem; border: 1px solid rgba(128,128,128,.5); border-radius: .5rem; font-weight: 600; }
 </style></head><body>
@@ -1189,8 +1190,8 @@ _ADMIN_HTML = """<!doctype html>
 </section>
 
 <section>
-  <h2>② Candidatos encontrados</h2>
-  <div class="hint">Titulares del ecosistema/vertical. Toca “abrir” para leer la fuente, o “➕ prospecto”: se investiga el perfil automáticamente.</div>
+  <h2>② Organizaciones detectadas</h2>
+  <div class="hint">Cada tarjeta es una <b>organización</b> detectada a partir de una <b>señal</b> (evidencia cruda de prensa). La noticia es evidencia, no el sujeto. Toca “abrir evidencia” para leer la fuente, o “🔬 Iniciar observación” para marcar la organización.</div>
   <div id="evidencias"></div>
 </section>
 
@@ -1360,20 +1361,43 @@ _ADMIN_HTML = """<!doctype html>
     const qs = new URLSearchParams({ limite: "25", ...filtro });
     try {
       const d = await (await fetch("/evidencias?" + qs)).json();
-      if (!d.items.length) { cont.innerHTML = '<div class="hint">Sin señales fechadas todavía. Prueba otra categoría o revisa /stats.</div>'; return; }
-      cont.innerHTML = d.items.map(e => `
+      if (!d.items.length) { cont.innerHTML = '<div class="hint">Sin organizaciones detectadas todavía. Prueba otra categoría o revisa /stats.</div>'; return; }
+      cont.innerHTML = d.items.map(e => {
+        // Jerarquía de laboratorio: el SUJETO es la organización; la noticia es
+        // solo EVIDENCIA (señal observada), no un prospecto que se "guarda".
+        const org = esc(e.empresa_mencionada) || "(organización no identificada)";
+        const tipo = e.categoria ? esc(e.categoria) : "sin clasificar";
+        const fecha = (e.fecha_publicacion || "").slice(0, 10);
+        return `
         <div class="card">
-          <div>${esc(e.cita_textual)}</div>
-          <div class="meta">${esc(e.nombre_medio)} · ${esc(e.tipo_evento)}${e.categoria ? " · " + esc(e.categoria) : ""} · ${(e.fecha_publicacion||"").slice(0,10)}
-            · <a href="${esc(safeUrl(e.url_fuente))}" target="_blank" rel="noopener">abrir ↗</a></div>
-          <button class="sec" onclick="prefill(this.dataset.n)" data-n="${esc(e.empresa_mencionada)}">➕ Guardar como prospecto</button>
-        </div>`).join("");
+          <div class="org">🏢 <b>${org}</b> <span class="chip">${tipo}</span></div>
+          <div class="meta"><span class="chip">Señal observada</span> ${esc(e.cita_textual)}${e.tipo_evento ? " · <b>" + esc(e.tipo_evento) + "</b>" : ""}</div>
+          <div class="meta">Fuente: ${esc(e.nombre_medio)}${fecha ? " · " + fecha : ""}
+            · <a href="${esc(safeUrl(e.url_fuente))}" target="_blank" rel="noopener">abrir evidencia ↗</a></div>
+          <button class="sec" onclick="iniciarObservacion(this)" data-org="${org}">🔬 Iniciar observación</button>
+        </div>`; }).join("");
     } catch (e) { cont.innerHTML = '<div class="hint">No se pudieron cargar.</div>'; }
   }
   window.prefill = (nombre) => {
     $("nombre").value = nombre;
     $("nombre").scrollIntoView({ behavior: "smooth" });
     $("enrich_btn").click();   // investiga automáticamente al promover (research-first)
+  };
+
+  // Iniciar observación (PLACEHOLDER). No crea prospecto ni escribe en tablas
+  // comerciales: marca la organización para futura observación. En el futuro esto
+  // detonará el Concentrador de Evidencia (RadarHD); hoy solo registra la intención.
+  window.iniciarObservacion = (btn) => {
+    const org = btn.dataset.org || "";
+    console.log("[observación] iniciar para organización:", org);  // evento interno (demo)
+    if (btn.dataset.hecho) return;
+    btn.dataset.hecho = "1";
+    btn.textContent = "🔬 En observación";
+    btn.disabled = true;
+    const nota = document.createElement("div");
+    nota.className = "hint";
+    nota.textContent = "Observación registrada (demo). Se conectará al Concentrador de Evidencia de RadarHD.";
+    btn.after(nota);
   };
 
   // ②·⁵ Informe profundo: análisis determinista de lo capturado.
