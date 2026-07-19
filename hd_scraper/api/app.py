@@ -31,6 +31,8 @@ import httpx
 
 from .. import directorio, hunter
 from ..analisis import analizar
+from ..engine.rule_engine import RuleEngine
+from ..engine.schemas import Prospecto, SeñalCapa0
 from ..contacto import dominio_de, rutas_contacto
 from ..discovery import REGIONES, VERTICALES_HD, queries_para, region_clause
 from ..enrich import enriquecer, google_search_url, linkedin_search_url, sugerir_vertical
@@ -150,6 +152,8 @@ def raiz() -> dict:
             "POST /analizar": "análisis profundo determinista de un título o señales (scoring/Deuda/ICP/decisor)",
             "POST /verificar-contacto": "verifica el correo del decisor con Hunter (requiere X-Ingest-Token y HUNTER_API_KEY)",
             "POST /directorio": "trae empresas reales de Wikidata (base pública) y las guarda como prospectos (requiere X-Ingest-Token)",
+            "POST /webhook/ingesta": "Capa 0: evalúa texto con el motor de reglas determinista y persiste señales (requiere X-Ingest-Token)",
+            "GET /senales-capa0": "lista las señales de Capa 0 registradas (filtro: nivel_alerta)",
             "GET /admin": "panel web: buscar señales, revisar y dar de alta prospectos",
             "GET /salud-fuentes": "salud por fuente/conector",
             "GET /stats": "contadores agregados",
@@ -1056,6 +1060,98 @@ def directorio_endpoint(payload: DirectorioIn,
         "ampliado": bool(res.get("ampliado")), "nivel": res.get("nivel", ""),
         "cache": bool(res.get("cache")), "nota": nota,
     }
+
+
+# --- Capa 0: motor de reglas determinista sobre texto (ingesta) ------------
+#
+# Punto de entrada para señales de texto/transcripción (los conectores de
+# Apify/yt-dlp postearán aquí). Evalúa con RuleEngine, puntúa y persiste. No
+# interpreta cualitativamente (eso es Motor B): solo registra matches auditables.
+
+_rule_engine = RuleEngine()
+
+
+def normalizar_texto(texto: str) -> str:
+    """Normalización mínima para el match determinista (minúsculas, sin bordes)."""
+    return " ".join((texto or "").lower().split())
+
+
+class IngestaIn(BaseModel):
+    texto: str
+    url: str = ""
+    timestamp: Optional[str] = None
+    org_id: Optional[str] = None
+    org_name: Optional[str] = None
+
+
+def _guardar_senales_capa0(db, prospecto: Prospecto) -> int:
+    """Persiste las señales de un prospecto (dedup por id determinista). Devuelve nuevas."""
+    nuevas = 0
+    for s in prospecto.señales:
+        cur = db.execute(
+            """INSERT INTO senales_capa0
+                 (id, url, timestamp_video, fragmento_literal, tipo_senal, score_deuda,
+                  motivo_match, org_id, org_nombre, score_total, nivel_alerta, creado_en)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+               ON CONFLICT (id) DO NOTHING""",
+            (s.id, s.url, s.timestamp_video, s.fragmento_literal, s.tipo_señal,
+             s.score_deuda, s.motivo_match, prospecto.id, prospecto.nombre_organizacion,
+             prospecto.score_total, prospecto.nivel_alerta, s.creado_en.isoformat()),
+        )
+        if getattr(cur, "rowcount", 0):
+            nuevas += 1
+    return nuevas
+
+
+@app.post("/webhook/ingesta")
+def ingesta_capa0(payload: IngestaIn, x_ingest_token: Optional[str] = Header(None)) -> dict:
+    """Ingesta de texto para la Capa 0: evalúa reglas, puntúa y persiste señales.
+
+    Autenticado (escribe). Determinista: mismo texto → mismas señales. Si no hay
+    match, no persiste nada. Devuelve el resumen y las señales detectadas.
+    """
+    _exigir_token(x_ingest_token)
+    texto = normalizar_texto(payload.texto)
+    if not texto:
+        raise HTTPException(400, "texto vacío")
+
+    señales: list[SeñalCapa0] = _rule_engine.evaluar(texto, payload.url, payload.timestamp)
+    score, alerta = _rule_engine.calcular_alerta(señales)
+
+    nuevas = 0
+    if señales:
+        prospecto = Prospecto(
+            id=payload.org_id or (payload.url or texto[:40]),
+            nombre_organizacion=payload.org_name or "(organización sin nombre)",
+            señales=señales, score_total=score, nivel_alerta=alerta,
+        )
+        nuevas = _guardar_senales_capa0(get_db(), prospecto)
+
+    return {
+        "status": "procesado",
+        "senales_detectadas": len(señales),
+        "senales_nuevas": nuevas,
+        "score_total": score,
+        "nivel_alerta": alerta,
+        "senales": [s.model_dump(mode="json") for s in señales],
+    }
+
+
+@app.get("/senales-capa0")
+def listar_senales_capa0(
+    nivel_alerta: Optional[str] = Query(None, description="Filtra por Normal|Crítica"),
+    limite: int = Query(50, ge=1, le=500),
+) -> dict:
+    """Lista las señales de Capa 0 registradas (lectura pública)."""
+    db = get_db()
+    where, params = "1=1", []
+    if nivel_alerta:
+        where, params = "nivel_alerta = ?", [nivel_alerta]
+    filas = db.fetch_all(
+        f"SELECT * FROM senales_capa0 WHERE {where} ORDER BY creado_en DESC LIMIT ?",
+        params + [limite],
+    )
+    return {"total": len(filas), "items": [dict(f) for f in filas]}
 
 
 @app.get("/admin", response_class=HTMLResponse)

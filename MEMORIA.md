@@ -28,6 +28,9 @@ profundidad** (scoring, Deuda Cultural, ICP, decisor), de forma **determinista**
 - `hunter.py` — verificación de correo del decisor (Hunter.io, opcional, bajo demanda).
 - `directorio.py` — **directorio de empresas reales (Wikidata)** para volumen.
 - `enrich.py` — auto-investiga (sitio, discurso, vertical; fallback a snippets de búsqueda).
+- `engine/rule_engine.py` + `engine/schemas.py` — **Capa 0**: motor de reglas
+  determinista (Operativa/Discursiva/Rescate) que puntúa texto/transcripciones y
+  emite señales auditables (tabla `senales_capa0`, endpoint `POST /webhook/ingesta`).
 - `api/app.py` — API + panel `/admin` (PWA).
 
 ## Fuentes de prospectos

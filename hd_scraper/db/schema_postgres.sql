@@ -127,3 +127,22 @@ CREATE TABLE IF NOT EXISTS directorio_cache (
     data_json   TEXT NOT NULL,
     creado_en   TEXT NOT NULL
 );
+
+-- Señales de la Capa 0 (motor de reglas determinista sobre texto/video).
+CREATE TABLE IF NOT EXISTS senales_capa0 (
+    id                TEXT PRIMARY KEY,
+    url               TEXT,
+    timestamp_video   TEXT,
+    fragmento_literal TEXT,
+    tipo_senal        TEXT,
+    score_deuda       REAL,
+    motivo_match      TEXT,
+    org_id            TEXT,
+    org_nombre        TEXT,
+    score_total       REAL,
+    nivel_alerta      TEXT,
+    creado_en         TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_capa0_org    ON senales_capa0 (org_nombre);
+CREATE INDEX IF NOT EXISTS idx_capa0_alerta ON senales_capa0 (nivel_alerta);

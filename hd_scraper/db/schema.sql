@@ -129,3 +129,23 @@ CREATE TABLE IF NOT EXISTS directorio_cache (
     data_json   TEXT NOT NULL,      -- respuesta cruda de Wikidata (JSON)
     creado_en   TEXT NOT NULL       -- ISO 8601
 );
+
+-- Señales de la Capa 0: matches deterministas del motor de reglas sobre texto
+-- (titulares, descripciones o transcripciones de video). id determinista => dedup.
+CREATE TABLE IF NOT EXISTS senales_capa0 (
+    id                TEXT PRIMARY KEY,   -- sha1(url|tipo|kw)
+    url               TEXT,
+    timestamp_video   TEXT,
+    fragmento_literal TEXT,
+    tipo_senal        TEXT,               -- Operativa | Discursiva | Rescate
+    score_deuda       REAL,
+    motivo_match      TEXT,
+    org_id            TEXT,
+    org_nombre        TEXT,
+    score_total       REAL,
+    nivel_alerta      TEXT,               -- Normal | Crítica
+    creado_en         TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_capa0_org    ON senales_capa0 (org_nombre);
+CREATE INDEX IF NOT EXISTS idx_capa0_alerta ON senales_capa0 (nivel_alerta);
