@@ -130,5 +130,13 @@ pytest -q                                                # tests
 
 ## Errores recurrentes
 
-_(Vacío por ahora. Registrar aquí cualquier error que se repita dos veces, con
-causa y solución, antes de seguir intentando.)_
+1. **Feeds parseados desde `resp.text` en vez de bytes (2 ocurrencias).**
+   `connectors/google_news.py:72-73` y `connectors/rss_fijos.py:76-77` pasan a
+   `feedparser.parse()` el texto ya decodificado por httpx (charset adivinado por
+   cabecera HTTP), lo que anula la detección de encoding del prólogo XML del
+   feed. Riesgo: mojibake en `cita_textual` cuando el charset real difiere de la
+   cabecera. **Causa:** `_get()` devuelve `resp.text` por comodidad. **Solución
+   (cuando se toque ese código):** pasar `resp.content` (bytes) a feedparser y
+   dejar que él resuelva el encoding. Detectado en auditoría 2026-07-22 (ver
+   `AUDITORIA_MOTORES.md`, hallazgo 4). No corregido aún: la auditoría fue de
+   solo lectura.
