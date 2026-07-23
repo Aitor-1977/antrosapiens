@@ -90,7 +90,7 @@ def test_intake_deshabilitada_si_no_hay_token(db, monkeypatch):
 def test_admin_sirve_formulario(cli):
     r = cli.get("/admin")
     assert r.status_code == 200
-    assert "Buscar por ecosistema" in r.text   # descubrimiento por categoría
+    assert "Investigación Automática" in r.text  # investigación de un clic
     assert "Expediente del prospecto" in r.text  # sección de alta auto-investigada
     assert "Vertical (HD)" in r.text            # selector de vertical HD
     assert "HD_INGEST_TOKEN" in r.text

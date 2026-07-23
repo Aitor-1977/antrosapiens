@@ -615,6 +615,143 @@ def scrape(payload: ScrapeIn, x_ingest_token: Optional[str] = Header(None)) -> d
     return {**modo, "total_escritos": total, "resultados": resultados}
 
 
+# --- Investigación Automática (un solo clic = ciclo completo) ---------------
+
+ALL_CATEGORIAS = ("VC", "Startup", "Incubadora", "Corporativo")
+ALL_TIPOS_SCRAPE = ("queja", "ronda", "contratacion", "despido", "lanzamiento", "cambio_sitio")
+
+
+class InvestigacionIn(BaseModel):
+    query: str
+    region: str = "LATAM"
+    vertical: str = "todas"
+    presupuesto_s: float = 55.0
+
+
+@app.post("/investigacion")
+def investigacion_automatica(payload: InvestigacionIn,
+                             x_ingest_token: Optional[str] = Header(None)) -> dict:
+    """Investigación Automática: un clic = ciclo completo de inteligencia.
+
+    1. Recorre las 4 categorías (VC, Startup, Incubadora, Corporativo)
+    2. Ejecuta todos los tipos de señal en cada categoría
+    3. Ingiere noticias via RSS/Google News
+    4. Consolida, deduplica, construye Expedientes Vivos
+    5. Ejecuta scoring, Dolor Cultural, pipeline
+    6. Devuelve informe consolidado
+
+    El usuario solo escribe un territorio de búsqueda (ej: "fintech México")
+    y presiona un botón. El sistema hace el resto.
+    """
+    _exigir_token(x_ingest_token)
+    query_text = payload.query.strip()
+    if not query_text:
+        raise HTTPException(400, "query vacía")
+    if payload.region not in REGIONES:
+        raise HTTPException(400, f"region inválida: {payload.region}")
+
+    detected_vertical = payload.vertical
+    if detected_vertical == "todas":
+        qt = query_text.lower()
+        for v_key, v_clause in VERTICALES_HD.items():
+            if v_key != "todas" and v_key in qt:
+                detected_vertical = v_key
+                break
+
+    zona = region_clause(payload.region)
+    db = get_db()
+    presupuesto = min(max(payload.presupuesto_s, 10.0), 120.0)
+    t0 = time.monotonic()
+    parcial = False
+
+    etapas: list[dict] = []
+    total_escritos = 0
+    total_vistos = 0
+
+    # ── Paso 1: Scrape todas las categorías × todos los tipos de señal ──
+    for cat in ALL_CATEGORIAS:
+        if parcial:
+            break
+        cat_escritos = 0
+        cat_vistos = 0
+        for tipo in ALL_TIPOS_SCRAPE:
+            if time.monotonic() - t0 > presupuesto:
+                parcial = True
+                break
+            consultas = queries_para(cat, tipo, detected_vertical)
+            for i, (termino, tipo_ev) in enumerate(consultas):
+                if i > 0 and time.monotonic() - t0 > presupuesto:
+                    parcial = True
+                    break
+                q = QuerySpec(empresa=termino, tipo_evento=tipo_ev,
+                              terminos=zona, categoria=cat, exact=False)
+                resultados = _correr_query(db, q, ["google_news"])
+                for r in resultados:
+                    cat_escritos += r.get("escritos", 0)
+                    cat_vistos += r.get("vistos", 0)
+        total_escritos += cat_escritos
+        total_vistos += cat_vistos
+        etapas.append({"etapa": f"scrape_{cat}", "escritos": cat_escritos,
+                       "vistos": cat_vistos})
+
+    # ── Paso 2: Búsqueda directa por nombre (el query como empresa) ──
+    if not parcial and time.monotonic() - t0 < presupuesto:
+        q_nombre = QuerySpec(empresa=query_text, tipo_evento="queja",
+                             terminos=zona)
+        res_nombre = _correr_query(db, q_nombre, list(CONECTORES_SCRAPE))
+        nombre_escritos = sum(r.get("escritos", 0) for r in res_nombre)
+        nombre_vistos = sum(r.get("vistos", 0) for r in res_nombre)
+        total_escritos += nombre_escritos
+        total_vistos += nombre_vistos
+        etapas.append({"etapa": "scrape_nombre", "escritos": nombre_escritos,
+                       "vistos": nombre_vistos})
+
+    # ── Paso 3: Ingesta de noticias (RSS / Google News vía Capa 0) ──
+    noticias_senales = 0
+    if not parcial and time.monotonic() - t0 < presupuesto:
+        try:
+            def _procesar_noticia(p: dict) -> dict:
+                ok, _ = evaluar_relevancia(p.get("texto", ""), [], True,
+                                           exigir_evento=False)
+                if not ok:
+                    return {"senales_detectadas": 0}
+                return _procesar_capa0(db, p.get("texto", ""), p.get("url", ""),
+                                       None, None, p.get("org_name"))
+            res_noticias = _noticias.correr(query=query_text, limite=25,
+                                             enviar_fn=_procesar_noticia)
+            noticias_senales = res_noticias.get("senales_detectadas", 0)
+        except Exception:
+            noticias_senales = 0
+        etapas.append({"etapa": "noticias_capa0", "senales": noticias_senales})
+
+    # ── Paso 4: Construir Expedientes Vivos consolidados ──
+    exp_data = _construir_expedientes(None, limite=50)
+    expedientes = exp_data.get("expedientes", [])
+    etapas.append({"etapa": "expedientes", "total": len(expedientes)})
+
+    # ── Paso 5: Resumen de Centro de Inteligencia (scoring, pipeline) ──
+    scoring_a = sum(1 for e in expedientes if e["scoring"] == "A")
+    scoring_b = sum(1 for e in expedientes if e["scoring"] == "B")
+    scoring_c = sum(1 for e in expedientes if e["scoring"] == "C")
+
+    return {
+        "query": query_text,
+        "vertical_detectada": detected_vertical,
+        "region": payload.region,
+        "parcial": parcial,
+        "tiempo_s": round(time.monotonic() - t0, 1),
+        "total_escritos": total_escritos,
+        "total_vistos": total_vistos,
+        "noticias_senales": noticias_senales,
+        "expedientes": {
+            "total": len(expedientes),
+            "scoring": {"A": scoring_a, "B": scoring_b, "C": scoring_c},
+            "items": expedientes[:30],
+        },
+        "etapas": etapas,
+    }
+
+
 # --- Corpus: población sistemática de 5 verticales LATAM -------------------
 
 CORPUS_VERTICALES = ("fintech", "healthtech", "hrtech", "saas_b2b", "climatetech")
@@ -1991,9 +2128,24 @@ _ADMIN_HTML = """<!doctype html>
   .resumen-bar .chip { font-weight: 700; }
   /* Drift timeline */
   #drift_timeline h3 { color: #7c3aed; }
+  /* Investigación Automática — progress */
+  .inv-btn { background: #16a34a !important; font-size: 1.1rem !important; padding: 1rem !important; }
+  .inv-btn:disabled { background: #16a34a !important; }
+  .progress-container { margin: .8rem 0; display: none; }
+  .progress-bar { height: .6rem; background: rgba(128,128,128,.15); border-radius: .3rem; overflow: hidden; }
+  .progress-fill { height: 100%; background: #2563eb; border-radius: .3rem; transition: width .4s ease; width: 0; }
+  .progress-stages { display: flex; flex-direction: column; gap: .25rem; margin-top: .5rem; }
+  .stage { display: flex; align-items: center; gap: .4rem; font-size: .82rem; opacity: .4; transition: opacity .3s; }
+  .stage.active { opacity: 1; font-weight: 600; color: #2563eb; }
+  .stage.done { opacity: .75; }
+  .stage .dot { width: .45rem; height: .45rem; border-radius: 50%; background: rgba(128,128,128,.4); flex-shrink: 0; }
+  .stage.active .dot { background: #2563eb; animation: pulse 1s infinite; }
+  .stage.done .dot { background: #16a34a; }
+  @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.5); } }
+  .inv-resumen { border: 1px solid rgba(22,163,74,.3); border-left: 4px solid #16a34a; border-radius: .5rem; padding: .7rem .8rem; margin-top: .6rem; }
 </style></head><body>
 <h1>hd-prospector · Radar de Inteligencia Antropológica</h1>
-<p class="sub">① Rastrea señales por ecosistema → ② <b>Expedientes Vivos</b>: evidencia agrupada por organización con <b>patrones</b>, <b>Dolor Cultural™</b> (hipótesis determinista) y <b>scoring A/B/C</b> → ③ auto-investiga y guarda el prospecto. Internet → Evidencia → Patrón → Dolor → Prospecto.</p>
+<p class="sub">① Un clic = investigación completa (4 ecosistemas × 6 señales × noticias) → ② <b>Expedientes Vivos</b> con <b>patrones</b>, <b>Dolor Cultural™</b> y <b>scoring A/B/C</b> → ③ auto-investiga y guarda prospecto. Internet → Evidencia → Patrón → Dolor → Prospecto.</p>
 
 <label class="req">Token de acceso</label>
 <input id="token" type="password" placeholder="HD_INGEST_TOKEN" autocomplete="off">
@@ -2025,54 +2177,34 @@ _ADMIN_HTML = """<!doctype html>
 </section>
 
 <section>
-  <h2>① Buscar por ecosistema</h2>
-  <div class="hint">Elige el tipo de señal y toca un ecosistema. Rastrea ese sector con ese tipo de evento y etiqueta las señales. Para descubrir sin teclear nombres.</div>
+  <h2>① Investigación Automática</h2>
+  <div class="hint">Escribe qué quieres investigar y el sistema recorre <b>los 4 ecosistemas</b> (VC, Startup, Incubadora, Corporativo) × <b>6 tipos de señal</b> (fricción, rondas, contratación, despidos, lanzamientos, pivotes), ingiere noticias RSS, construye <b>Expedientes Vivos</b> y calcula <b>Dolor Cultural™</b>. Un clic = investigación completa.</div>
+  <label class="req">Territorio de búsqueda</label>
   <div class="row">
-    <div>
-      <label>Tipo de señal</label>
-      <select id="c_tipo">
-        <option value="queja">fricción / churn</option>
-        <option value="ronda">ronda</option>
-        <option value="contratacion">contratación</option>
-        <option value="despido">despido / estancamiento</option>
-        <option value="lanzamiento">lanzamiento</option>
-        <option value="cambio_sitio">pivote / rediseño</option>
-      </select>
-    </div>
-    <div>
-      <label>Vertical (HD)</label>
-      <select id="c_vertical">
-        <option value="todas">Todas</option>
-        <option value="fintech">Fintech</option>
-        <option value="healthtech">Healthtech</option>
-        <option value="hrtech">HRTech</option>
-        <option value="saas_b2b">SaaS B2B</option>
-        <option value="climatetech">ClimateTech</option>
-        <option value="edtech">Edtech</option>
-        <option value="salud mental">Salud mental</option>
-        <option value="logística agrícola">Logística agrícola</option>
-        <option value="identidad">Identidad</option>
-      </select>
-    </div>
+    <input id="inv_query" placeholder="Ej: fintech México, Nubank, healthtech Chile" style="flex:2">
+    <select id="inv_vertical" style="flex:1">
+      <option value="todas">Auto-detectar vertical</option>
+      <option value="fintech">Fintech</option>
+      <option value="healthtech">Healthtech</option>
+      <option value="hrtech">HRTech</option>
+      <option value="saas_b2b">SaaS B2B</option>
+      <option value="climatetech">ClimateTech</option>
+      <option value="edtech">Edtech</option>
+      <option value="salud mental">Salud mental</option>
+      <option value="logística agrícola">Logística agrícola</option>
+      <option value="identidad">Identidad</option>
+    </select>
   </div>
-  <div class="cats">
-    <button class="cat" data-cat="VC">VC</button>
-    <button class="cat" data-cat="Startup">Startup</button>
-    <button class="cat" data-cat="Incubadora">Incubadora</button>
-    <button class="cat" data-cat="Corporativo">Corporativo</button>
+  <button id="inv_btn" class="inv-btn">🚀 Investigación Automática</button>
+  <div class="progress-container" id="inv_progress">
+    <div class="progress-bar"><div class="progress-fill" id="inv_fill"></div></div>
+    <div class="progress-stages" id="inv_stages"></div>
   </div>
-  <div class="msg" id="s_msg"></div>
+  <div class="msg" id="inv_msg"></div>
+  <div id="inv_resultado"></div>
 
-  <div class="hint" style="margin-top:1rem">¿Pocas noticias? Trae <b>empresas reales</b> de una base pública (Wikidata) para tener volumen sin depender de la prensa. Elige un <b>país</b> (arriba), la vertical y el ecosistema al que se asignan.</div>
-  <div class="cats">
-    <button class="dir" data-cat="VC">🏢 Empresas → VC</button>
-    <button class="dir" data-cat="Startup">🏢 Empresas → Startup</button>
-    <button class="dir" data-cat="Incubadora">🏢 Empresas → Incubadora</button>
-    <button class="dir" data-cat="Corporativo">🏢 Empresas → Corporativo</button>
-  </div>
-  <div class="msg" id="d_msg"></div>
-
-  <h2 style="margin-top:1.4rem">…o buscar por nombre</h2>
+  <h2 style="margin-top:1.4rem">…o buscar por nombre (individual)</h2>
+  <div class="hint">Busca una empresa específica sin recorrer todos los ecosistemas.</div>
   <label>Empresa</label>
   <input id="s_empresa" placeholder="p. ej. Nubank">
   <div class="row">
@@ -2097,11 +2229,46 @@ _ADMIN_HTML = """<!doctype html>
     </div>
   </div>
   <button id="s_btn">🔎 Buscar por nombre</button>
+  <div class="msg" id="s_msg"></div>
+
+  <div class="hint" style="margin-top:1rem">¿Pocas noticias? Trae <b>empresas reales</b> de una base pública (Wikidata) para tener volumen.</div>
+  <div class="row">
+    <div>
+      <label>Vertical (HD)</label>
+      <select id="c_vertical">
+        <option value="todas">Todas</option>
+        <option value="fintech">Fintech</option>
+        <option value="healthtech">Healthtech</option>
+        <option value="hrtech">HRTech</option>
+        <option value="saas_b2b">SaaS B2B</option>
+        <option value="climatetech">ClimateTech</option>
+        <option value="edtech">Edtech</option>
+        <option value="salud mental">Salud mental</option>
+        <option value="logística agrícola">Logística agrícola</option>
+        <option value="identidad">Identidad</option>
+      </select>
+    </div>
+  </div>
+  <div class="cats">
+    <button class="dir" data-cat="VC">🏢 Empresas → VC</button>
+    <button class="dir" data-cat="Startup">🏢 Empresas → Startup</button>
+    <button class="dir" data-cat="Incubadora">🏢 Empresas → Incubadora</button>
+    <button class="dir" data-cat="Corporativo">🏢 Empresas → Corporativo</button>
+  </div>
+  <div class="msg" id="d_msg"></div>
 </section>
 
 <section>
   <h2>② Expedientes Vivos</h2>
   <div class=”hint”>Cada tarjeta es un <b>expediente de organización</b> construido a partir de <b>múltiples evidencias</b>. Las señales se combinan para detectar <b>patrones</b> y generar una <b>hipótesis de Dolor Cultural™</b> (tipo + intensidad + razonamiento). Scoring A = atacar · B = observar · C = archivo.</div>
+  <div class=”chips-sel” id=”exp_filtros” style=”align-items:center”>
+    <label style=”font-size:.82rem;font-weight:600;margin:0”>Filtrar:</label>
+    <label><input type=”checkbox” class=”exp-cat” value=”VC” checked> VC</label>
+    <label><input type=”checkbox” class=”exp-cat” value=”Startup” checked> Startup</label>
+    <label><input type=”checkbox” class=”exp-cat” value=”Incubadora” checked> Incubadora</label>
+    <label><input type=”checkbox” class=”exp-cat” value=”Corporativo” checked> Corporativo</label>
+    <button class=”sec” id=”exp_cargar” style=”margin-top:0;width:auto;padding:.35rem .7rem;font-size:.82rem”>🔄 Cargar expedientes</button>
+  </div>
   <div class=”resumen-bar” id=”exp_resumen”></div>
   <div id=”expedientes”></div>
 </section>
@@ -2299,7 +2466,83 @@ _ADMIN_HTML = """<!doctype html>
   }
   refrescarConteo();
 
-  // ① Descubrimiento por ecosistema
+  const region = () => $("region").value;
+
+  // ① Investigación Automática — un clic = ciclo completo
+  const INV_STAGES = [
+    "Buscando organizaciones en VC…",
+    "Buscando organizaciones en Startup…",
+    "Buscando organizaciones en Incubadora…",
+    "Buscando organizaciones en Corporativo…",
+    "Ingiriendo noticias RSS…",
+    "Concentrando evidencia…",
+    "Generando Expedientes Vivos…",
+    "Calculando Dolor Cultural™…",
+    "Actualizando Pipeline…",
+    "Finalizado ✓"
+  ];
+  function mostrarProgreso(idx) {
+    const cont = $("inv_progress"), fill = $("inv_fill"), stages = $("inv_stages");
+    cont.style.display = "block";
+    fill.style.width = Math.min(Math.round(((idx + 1) / INV_STAGES.length) * 100), 100) + "%";
+    stages.innerHTML = INV_STAGES.map((s, i) => {
+      const cls = i < idx ? "stage done" : i === idx ? "stage active" : "stage";
+      const ic = i < idx ? "✓" : i === idx ? "⏳" : "○";
+      return '<div class="' + cls + '"><span class="dot"></span> ' + ic + ' ' + esc(s) + '</div>';
+    }).join("");
+  }
+  $("inv_btn").addEventListener("click", async () => {
+    const query = $("inv_query").value.trim();
+    const m = $("inv_msg"), token = tok(), resultado = $("inv_resultado");
+    if (!token) { m.className = "msg err"; m.style.display = "block"; m.textContent = "Falta el token."; return; }
+    if (!query) { m.className = "msg err"; m.style.display = "block"; m.textContent = "Escribe qué quieres investigar."; return; }
+    document.querySelectorAll("button").forEach(b => b.disabled = true);
+    m.className = "msg"; m.style.display = "block"; m.textContent = "Investigación en curso… esto puede tardar hasta 1 minuto.";
+    resultado.innerHTML = "";
+    let cur = 0;
+    mostrarProgreso(0);
+    const si = setInterval(() => { if (cur < INV_STAGES.length - 2) { cur++; mostrarProgreso(cur); } }, 6000);
+    try {
+      const r = await fetch("/investigacion", { method: "POST",
+        headers: { "Content-Type": "application/json", "X-Ingest-Token": token },
+        body: JSON.stringify({ query, vertical: $("inv_vertical").value, region: region() }) });
+      clearInterval(si);
+      const res = await leerJson(r);
+      if (!res.ok) {
+        mostrarProgreso(INV_STAGES.length - 1);
+        m.className = "msg err"; m.textContent = "Error: " + (res.error || (res.data && res.data.detail) || r.status);
+        return;
+      }
+      mostrarProgreso(INV_STAGES.length - 1);
+      const d = res.data;
+      const nota = d.parcial ? " (parcial: se agotó el presupuesto de tiempo)" : "";
+      m.className = "msg ok";
+      m.textContent = "✓ Investigación completa en " + d.tiempo_s + "s · " + d.total_escritos + " evidencias nuevas · " + d.total_vistos + " titulares · " + d.noticias_senales + " señales RSS" + nota;
+      const exp = d.expedientes || {};
+      const sc = exp.scoring || {};
+      let html = '<div class="inv-resumen">';
+      html += '<div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">';
+      html += '<b>🚀 Resultado</b>';
+      html += '<span class="chip">' + (exp.total || 0) + ' organizaciones</span>';
+      if (sc.A) html += '<span class="badge badge-a">A: ' + sc.A + '</span>';
+      if (sc.B) html += '<span class="badge badge-b">B: ' + sc.B + '</span>';
+      if (sc.C) html += '<span class="badge badge-c">C: ' + sc.C + '</span>';
+      html += '<span class="chip">' + esc(d.vertical_detectada) + '</span>';
+      html += '<span class="chip">' + esc(d.region) + '</span>';
+      html += '</div>';
+      if (d.etapas && d.etapas.length) {
+        html += '<details style="margin:.4rem 0 0"><summary style="cursor:pointer;font-size:.82rem;opacity:.7">Detalle por etapa</summary>';
+        html += d.etapas.map(function(e) { return '<div class="hint">' + esc(e.etapa) + ': ' + (e.escritos !== undefined ? e.escritos + ' escritos, ' + e.vistos + ' vistos' : e.senales !== undefined ? e.senales + ' señales' : e.total !== undefined ? e.total + ' expedientes' : '') + '</div>'; }).join("");
+        html += '</details>';
+      }
+      html += '</div>';
+      resultado.innerHTML = html;
+      cargarExpedientes({});
+    } catch (e) { clearInterval(si); m.className = "msg err"; m.textContent = "Error de red: " + e; }
+    finally { document.querySelectorAll("button").forEach(b => b.disabled = false); }
+  });
+
+  // Búsqueda individual por nombre (secundaria)
   async function scrapear(body, etiqueta, cargar) {
     const m = $("s_msg"), token = tok();
     if (!token) { m.className = "msg err"; m.textContent = "Falta el token."; return; }
@@ -2314,28 +2557,14 @@ _ADMIN_HTML = """<!doctype html>
       const d = res.data;
       const vistas = (d.resultados||[]).reduce((a,x)=>a+(x.vistos||0),0);
       const dup = (d.resultados||[]).reduce((a,x)=>a+(x.duplicados||0),0);
-      const fil = (d.resultados||[]).reduce((a,x)=>a+(x.filtrados||0),0);
-      const err = (d.resultados||[]).reduce((a,x)=>a+(x.errores||0)+(x.error?1:0),0);
-      const nota = d.parcial ? " (parcial: se agotó el tiempo; toca de nuevo para seguir)" : "";
+      const nota = d.parcial ? " (parcial: se agotó el tiempo)" : "";
       m.className = "msg ok";
-      m.textContent = `✓ ${d.total_escritos} nuevas · ${vistas} titulares de Google News · ${dup} repetidas · ${fil} descartadas por filtro · ${err} errores — ${etiqueta}${nota}.`;
-      if (vistas === 0) {
-        m.className = "msg err";
-        m.textContent = `⚠️ Google News no devolvió titulares para esta búsqueda${nota}. Puede ser bloqueo temporal desde el servidor o que no haya noticias de «${etiqueta}» ahora. Prueba otra señal, otra vertical, o un solo país.`;
-      }
+      m.textContent = "✓ " + d.total_escritos + " nuevas · " + vistas + " titulares · " + dup + " repetidas — " + etiqueta + nota + ".";
+      if (vistas === 0) { m.className = "msg err"; m.textContent = "⚠️ Sin titulares para «" + etiqueta + "»" + nota + ". Prueba otra señal o país."; }
       cargar();
     } catch (e) { m.className = "msg err"; m.textContent = "Error de red: " + e; }
     finally { document.querySelectorAll("button").forEach(b => b.disabled = false); }
   }
-
-  const region = () => $("region").value;
-
-  document.querySelectorAll(".cat").forEach(btn => btn.addEventListener("click", () => {
-    const cat = btn.dataset.cat, tipo = $("c_tipo").value, vert = $("c_vertical").value;
-    if ($("categoria")) $("categoria").value = cat;   // precarga categoría en ③
-    scrapear({ categoria: cat, tipo_evento: tipo, vertical: vert, region: region() },
-             `${cat} · ${tipo} · ${vert} · ${region()}`, () => cargarExpedientes({ categoria: cat }));
-  }));
 
   // Directorio: trae empresas reales (Wikidata) como prospectos (volumen).
   document.querySelectorAll(".dir").forEach(btn => btn.addEventListener("click", async () => {
@@ -2445,6 +2674,13 @@ _ADMIN_HTML = """<!doctype html>
         </div>`; }).join("");
     } catch (e) { cont.innerHTML = '<div class="hint">Error al cargar expedientes: ' + esc(String(e)) + '</div>'; }
   }
+
+  // Filtro de categorías para expedientes (post-filtro)
+  function expCatsFiltro() {
+    const sel = [...document.querySelectorAll(".exp-cat:checked")].map(c => c.value);
+    return sel.length && sel.length < 4 ? { categoria: sel.join(",") } : {};
+  }
+  $("exp_cargar").addEventListener("click", () => cargarExpedientes(expCatsFiltro()));
 
   window.prefill = (nombre) => {
     $("nombre").value = nombre;

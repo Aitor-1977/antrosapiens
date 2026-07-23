@@ -192,3 +192,78 @@ def test_corpus_constantes():
     from hd_scraper.api.app import CORPUS_VERTICALES, CORPUS_TIPOS
     assert set(CORPUS_VERTICALES) == {"fintech", "healthtech", "hrtech", "saas_b2b", "climatetech"}
     assert len(CORPUS_TIPOS) == 5
+
+
+# ── POST /investigacion ────────────────────────────────────────────────────
+
+def test_investigacion_requiere_token(client):
+    r = client.post("/investigacion", json={"query": "fintech México"})
+    assert r.status_code == 401
+
+
+def test_investigacion_query_vacia(client):
+    r = client.post("/investigacion",
+                    json={"query": ""},
+                    headers={"X-Ingest-Token": "test-tok"})
+    assert r.status_code == 400
+
+
+def test_investigacion_region_invalida(client):
+    r = client.post("/investigacion",
+                    json={"query": "fintech", "region": "Europa"},
+                    headers={"X-Ingest-Token": "test-tok"})
+    assert r.status_code == 400
+
+
+def test_investigacion_estructura_respuesta(client, monkeypatch):
+    api_mod = importlib.import_module("hd_scraper.api.app")
+    monkeypatch.setattr(api_mod, "_correr_query", lambda *a, **kw: [])
+    monkeypatch.setattr(api_mod, "_construir_expedientes", lambda *a, **kw: {"expedientes": []})
+    r = client.post("/investigacion",
+                    json={"query": "fintech México", "presupuesto_s": 10},
+                    headers={"X-Ingest-Token": "test-tok"})
+    assert r.status_code == 200
+    d = r.json()
+    assert d["query"] == "fintech México"
+    assert d["region"] == "LATAM"
+    assert "vertical_detectada" in d
+    assert "parcial" in d
+    assert "tiempo_s" in d
+    assert "total_escritos" in d
+    assert "total_vistos" in d
+    assert "noticias_senales" in d
+    assert "expedientes" in d
+    assert "total" in d["expedientes"]
+    assert "scoring" in d["expedientes"]
+    assert "items" in d["expedientes"]
+    assert "etapas" in d
+
+
+def test_investigacion_detecta_vertical(client, monkeypatch):
+    api_mod = importlib.import_module("hd_scraper.api.app")
+    monkeypatch.setattr(api_mod, "_correr_query", lambda *a, **kw: [])
+    monkeypatch.setattr(api_mod, "_construir_expedientes", lambda *a, **kw: {"expedientes": []})
+    r = client.post("/investigacion",
+                    json={"query": "fintech México", "presupuesto_s": 10},
+                    headers={"X-Ingest-Token": "test-tok"})
+    d = r.json()
+    assert d["vertical_detectada"] == "fintech"
+
+
+def test_investigacion_constantes():
+    from hd_scraper.api.app import ALL_CATEGORIAS, ALL_TIPOS_SCRAPE
+    assert set(ALL_CATEGORIAS) == {"VC", "Startup", "Incubadora", "Corporativo"}
+    assert len(ALL_TIPOS_SCRAPE) == 6
+
+
+def test_investigacion_con_evidencias(client, db, monkeypatch):
+    api_mod = importlib.import_module("hd_scraper.api.app")
+    _insertar_evidencia(db)
+    monkeypatch.setattr(api_mod, "_correr_query", lambda *a, **kw: [{"escritos": 1, "vistos": 5}])
+    r = client.post("/investigacion",
+                    json={"query": "Acme Corp", "presupuesto_s": 10},
+                    headers={"X-Ingest-Token": "test-tok"})
+    d = r.json()
+    assert d["total_escritos"] >= 1
+    assert d["total_vistos"] >= 1
+    assert d["expedientes"]["total"] >= 0
