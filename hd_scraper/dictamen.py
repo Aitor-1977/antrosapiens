@@ -286,9 +286,9 @@ def _explicar_ranking(e: dict) -> list[str]:
     motivos = []
     s = e.get("scoring", "C")
     if s == "A":
-        motivos.append("Scoring A: dolor explícito, prioridad comercial máxima")
+        motivos.append("Scoring A: señal de dolor explícito, mayor interés analítico")
     elif s == "B":
-        motivos.append("Scoring B: señal de crecimiento/cambio, oportunidad activa")
+        motivos.append("Scoring B: señal de crecimiento/cambio, observación activa")
 
     n_ev = e.get("total_evidencias", 0)
     if n_ev >= 5:
@@ -297,7 +297,7 @@ def _explicar_ranking(e: dict) -> list[str]:
         motivos.append(f"{n_ev} evidencias capturadas")
 
     if e.get("tipo_deuda"):
-        motivos.append(f"Dolor Cultural: {e['tipo_deuda']}")
+        motivos.append(f"Hipótesis: {e['tipo_deuda']}")
 
     if e.get("intensidad") == "Alta":
         motivos.append("Intensidad Alta: múltiples señales de dolor convergentes")
@@ -308,9 +308,9 @@ def _explicar_ranking(e: dict) -> list[str]:
 
     icp = e.get("score_icp", 0)
     if icp >= 70:
-        motivos.append(f"Score ICP {icp}: ajuste alto al perfil ideal HD")
+        motivos.append(f"Interés Analítico {icp}: ajuste alto al perfil ideal HD")
     elif icp >= 50:
-        motivos.append(f"Score ICP {icp}: ajuste medio-alto")
+        motivos.append(f"Interés Analítico {icp}: ajuste medio-alto")
 
     return motivos
 
@@ -345,13 +345,13 @@ def _generar_alertas(expedientes: list[dict]) -> list[dict]:
 
 
 def _accion_sugerida(e: dict) -> str:
-    """Sugiere la siguiente acción comercial para la organización."""
+    """Sugiere la siguiente acción analítica para la organización."""
     s = e.get("scoring", "C")
     icp = e.get("score_icp", 0)
     if s == "A" and icp >= 50:
-        return "Candidata a DolorMap Sprint: programar contacto con decisor"
+        return "Candidata a DolorMap Sprint: profundizar con convergencia operativa"
     if s == "A":
-        return "Candidata a Peritaje Cualitativo: profundizar observación"
+        return "Candidata a Peritaje Cualitativo: corroborar hipótesis con observación directa"
     if s == "B" and icp >= 40:
-        return "Mover a Vigilancia activa: capturar drift y onlife"
-    return "Mantener en observación: acumular más evidencia"
+        return "Mover a Vigilancia activa: capturar drift narrativo y señales onlife"
+    return "Mantener en observación: acumular más evidencia antes de hipótesis"

@@ -1230,12 +1230,12 @@ def _informe_a_markdown(inf: dict) -> str:
     for i, t in enumerate(inf["prospectos"], 1):
         c = t.get("contacto") or {}
         lineas += [
-            f"## {i}. {t['empresa'] or '(sin nombre)'} · {t['scoring']} · ICP {t['score_icp']} · intensidad {t.get('intensidad','')}",
+            f"## {i}. {t['empresa'] or '(sin nombre)'} · {t['scoring']} · Interés {t['score_icp']} · intensidad {t.get('intensidad','')}",
             f"- Titular: {t['titulo']}",
         ]
         if t.get("tipo_deuda"):
             sec = f" (secundaria: {t['deuda_secundaria']})" if t.get("deuda_secundaria") else ""
-            lineas.append(f"- Deuda Cultural™: **{t['tipo_deuda']}**{sec} — {t.get('deuda_razon','')}")
+            lineas.append(f"- Hipótesis de Deuda Cultural™: **{t['tipo_deuda']}**{sec} — {t.get('deuda_razon','')}")
         if t.get("angulo_conversacion"):
             lineas.append(f"- Ángulo de conversación: {t['angulo_conversacion']}")
         lineas.append(f"- Decisor sugerido: **{t['decisor_sugerido']}**")
@@ -2029,7 +2029,7 @@ def dossier_org(org_nombre: str) -> HTMLResponse:
   .badge-a {{ background: #dc2626; color: #fff; }}
   .badge-b {{ background: #f59e0b; color: #000; }}
   .badge-c {{ background: #6b7280; color: #fff; }}
-  .badge-icp {{ background: #dbeafe; color: #2563eb; }}
+  .badge-interes {{ background: #dbeafe; color: #2563eb; }}
   .meta {{ font-size: .82rem; opacity: .7; }}
   .section {{ border: 1px solid #e5e7eb; border-radius: .5rem; padding: .8rem; margin: .6rem 0; }}
   .section-purple {{ border-left: 4px solid #7c3aed; }}
@@ -2048,7 +2048,7 @@ def dossier_org(org_nombre: str) -> HTMLResponse:
 
 <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin-bottom:1rem">
   <span class="badge badge-{a['scoring'].lower()}">{a['scoring']}</span>
-  <span class="badge badge-icp">ICP {a['score_icp']}</span>
+  <span class="badge" style="background:#dbeafe;color:#2563eb">Interés {a['score_icp']}</span>
   <span class="badge" style="background:#f3e8ff;color:#7c3aed">{_esc(a['intensidad'])}</span>
   {('<span class="badge" style="background:#f0fdf4;color:#16a34a">' + _esc(a['pipeline']['etapa_label']) + '</span>') if a['pipeline'].get('etapa_label') else ''}
 </div>
@@ -2057,8 +2057,8 @@ def dossier_org(org_nombre: str) -> HTMLResponse:
     # Dolor Cultural
     if a.get("tipo_deuda"):
         html += f"""<div class="section section-purple">
-<h2>Dolor Cultural™</h2>
-<h3>{_esc(a['tipo_deuda'])}</h3>
+<h2>Hipótesis de Dolor Cultural™</h2>
+<h3>Hipótesis: {_esc(a['tipo_deuda'])}</h3>
 <p>{_esc(a['deuda_razon'])}</p>
 {('<p class="meta">Deuda secundaria: ' + _esc(a['deuda_secundaria']) + '</p>') if a.get('deuda_secundaria') else ''}
 <p><b>Ángulo de conversación:</b> {_esc(a['angulo_conversacion'])}</p>
@@ -2330,7 +2330,7 @@ _ADMIN_HTML = """<!doctype html>
   .badge-a { background: #dc2626; color: #fff; }
   .badge-b { background: #f59e0b; color: #000; }
   .badge-c { background: #6b7280; color: #fff; }
-  .badge-icp { background: rgba(37,99,235,.15); color: #2563eb; border: 1px solid rgba(37,99,235,.3); }
+  .badge-interes { background: rgba(37,99,235,.15); color: #2563eb; border: 1px solid rgba(37,99,235,.3); }
   .badge-int { background: rgba(128,128,128,.12); }
   .badge-deuda { background: rgba(168,85,247,.12); color: #7c3aed; border: 1px solid rgba(168,85,247,.3); }
   .deuda-box { background: rgba(168,85,247,.06); border: 1px solid rgba(168,85,247,.2); border-radius: .5rem; padding: .5rem .6rem; margin: .4rem 0; }
@@ -2503,7 +2503,7 @@ _ADMIN_HTML = """<!doctype html>
 
 <section>
   <h2>② Expedientes Vivos</h2>
-  <div class=”hint”>Cada tarjeta es un <b>expediente de organización</b> construido a partir de <b>múltiples evidencias</b>. Las señales se combinan para detectar <b>patrones</b> y generar una <b>hipótesis de Dolor Cultural™</b> (tipo + intensidad + razonamiento). Scoring A = atacar · B = observar · C = archivo.</div>
+  <div class=”hint”>Cada tarjeta es un <b>expediente de organización</b> construido a partir de <b>múltiples evidencias</b>. Las señales se combinan para detectar <b>patrones</b> y generar una <b>hipótesis de Dolor Cultural™</b> (tipo + intensidad + razonamiento). A = Mayor Interés Analítico · B = Observación activa · C = Archivo.</div>
   <div class=”chips-sel” id=”exp_filtros” style=”align-items:center”>
     <label style=”font-size:.82rem;font-weight:600;margin:0”>Filtrar:</label>
     <label><input type=”checkbox” class=”exp-cat” value=”VC” checked> VC</label>
@@ -2595,7 +2595,7 @@ _ADMIN_HTML = """<!doctype html>
 
 <section>
   <h2>②·⁵ Informe profundo (análisis)</h2>
-  <div class="hint">Lee lo capturado y lo <b>prioriza</b>: para cada empresa calcula scoring A/B/C, hipótesis de <b>Deuda Cultural™</b>, Score ICP y a qué <b>decisor</b> contactar. Determinista (sin IA): mismos hechos, mismo resultado.</div>
+  <div class="hint">Lee lo capturado y lo <b>prioriza</b>: para cada empresa calcula scoring A/B/C, hipótesis de <b>Deuda Cultural™</b>, Interés Analítico y a qué <b>decisor</b> contactar. Determinista (sin IA): mismos hechos, mismo resultado.</div>
   <div class="hint" style="margin-top:.4rem">Elige <b>categorías</b> (todas o las que quieras) y luego <b>genera</b>, <b>guarda</b> o <b>exporta</b> la investigación.</div>
   <div class="chips-sel" id="inf_cats">
     <label><input type="checkbox" id="inf_todas" checked> Todas</label>
@@ -2762,7 +2762,7 @@ _ADMIN_HTML = """<!doctype html>
       h += '<div class="dictamen-seccion dictamen-hipotesis">';
       h += '<h3>Hipótesis Central <span class="confianza ' + ccls + '">' + esc(hip.confianza || '') + '</span></h3>';
       h += '<div style="font-size:.9rem;margin-bottom:.3rem">' + esc(hip.texto) + '</div>';
-      if (hip.deuda_dominante) h += '<div style="font-size:.82rem;opacity:.7">Deuda dominante: <b>' + esc(hip.deuda_dominante) + '</b></div>';
+      if (hip.deuda_dominante) h += '<div style="font-size:.82rem;opacity:.7">Hipótesis dominante: <b>' + esc(hip.deuda_dominante) + '</b></div>';
       if (hip.angulo) h += '<div class="angulo" style="margin-top:.3rem">💬 ' + esc(hip.angulo) + '</div>';
       if (hip.distribucion) {
         const dd = Object.entries(hip.distribucion);
@@ -2794,8 +2794,8 @@ _ADMIN_HTML = """<!doctype html>
           '<div class="ranking-body">' +
             '<div><span class="org-name">' + esc(r.nombre) + '</span> ' +
               '<span class="badge ' + bcls + '">' + r.scoring + '</span> ' +
-              '<span class="badge badge-icp">ICP ' + r.score_icp + '</span>' +
-              (r.tipo_deuda ? ' <span class="badge badge-deuda">' + esc(r.tipo_deuda) + '</span>' : '') +
+              '<span class="badge badge-interes">Interés ' + r.score_icp + '</span>' +
+              (r.tipo_deuda ? ' <span class="badge badge-deuda">Hipótesis: ' + esc(r.tipo_deuda) + '</span>' : '') +
               ' <a class="dossier-link" href="/dossier/' + encodeURIComponent(r.nombre) + '" target="_blank">Dossier ↗</a>' +
             '</div>' +
             (r.motivos && r.motivos.length ? '<div class="ranking-motivos">' + r.motivos.map(function(m){return esc(m);}).join(' · ') + '</div>' : '') +
@@ -2813,7 +2813,7 @@ _ADMIN_HTML = """<!doctype html>
       h += alertas.map(function(a) {
         return '<div class="alerta-item"><b>' + esc(a.nombre) + '</b> ' +
           '<span class="badge badge-' + (a.scoring||'c').toLowerCase() + '">' + esc(a.scoring||'') + '</span> ' +
-          (a.tipo_deuda ? '<span class="badge badge-deuda">' + esc(a.tipo_deuda) + '</span> ' : '') +
+          (a.tipo_deuda ? '<span class="badge badge-deuda">Hipótesis: ' + esc(a.tipo_deuda) + '</span> ' : '') +
           '<div class="hint">' + (a.razones||[]).map(function(r){return esc(r);}).join(' · ') + '</div>' +
           '<div style="font-size:.78rem;color:#2563eb">' + esc(a.accion_sugerida||'') + '</div>' +
         '</div>';
@@ -2944,8 +2944,9 @@ _ADMIN_HTML = """<!doctype html>
         let deudaHtml = "";
         if (e.tipo_deuda) {
           deudaHtml = `<div class="deuda-box">
-            <div class="deuda-title">🧩 ${esc(e.tipo_deuda)}${e.deuda_secundaria ? ' <span style="font-weight:400;opacity:.7">+ ' + esc(e.deuda_secundaria) + '</span>' : ''}</div>
+            <div class="deuda-title">🧩 Hipótesis: ${esc(e.tipo_deuda)}${e.deuda_secundaria ? ' <span style="font-weight:400;opacity:.7">+ ' + esc(e.deuda_secundaria) + '</span>' : ''}</div>
             <div class="deuda-reason">${esc(e.deuda_razon)}</div>
+            <div class="hint" style="margin-top:.2rem;font-size:.72rem">Señal narrativa — requiere convergencia operativa para confirmación.</div>
           </div>`;
         }
 
@@ -2974,7 +2975,7 @@ _ADMIN_HTML = """<!doctype html>
           <div class="exp-header">
             <span class="org-name">🏢 ${esc(e.nombre)}</span>
             <span class="badge ${bcls}">${sc}</span>
-            <span class="badge badge-icp">ICP ${e.score_icp}</span>
+            <span class="badge badge-interes">Interés ${e.score_icp}</span>
             <span class="badge badge-int">${esc(e.intensidad||"")}</span>
             ${e.categoria ? '<span class="chip">' + esc(e.categoria) + '</span>' : ""}
             ${e.vertical ? '<span class="chip">' + esc(e.vertical) + '</span>' : ""}
@@ -3181,7 +3182,7 @@ _ADMIN_HTML = """<!doctype html>
       // Dolor Cultural
       if (d.tipo_deuda) {
         html += '<div style="margin:.5rem 0;padding:.5rem;background:var(--bg2,#f3f4f6);border-radius:.375rem">';
-        html += '<div><b>🔴 ' + esc(d.tipo_deuda) + '</b> <span class="chip">' + esc(d.intensidad) + '</span></div>';
+        html += '<div><b>🔴 Hipótesis: ' + esc(d.tipo_deuda) + '</b> <span class="chip">' + esc(d.intensidad) + '</span></div>';
         html += '<div class="meta">' + esc(d.deuda_razon) + '</div>';
         if (d.deuda_secundaria) html += '<div class="meta" style="margin-top:.2rem">↳ ' + esc(d.deuda_secundaria) + '</div>';
         html += '<div class="meta" style="margin-top:.3rem">💬 <b>Ángulo:</b> ' + esc(d.angulo_conversacion) + '</div>';
@@ -3371,7 +3372,7 @@ _ADMIN_HTML = """<!doctype html>
       if (!out.ok) { res.className = "msg err"; res.textContent = "Error: " + (out.error || r.status); return; }
       const d = out.data, s = d.resumen_scoring || {};
       res.className = "hint";
-      res.textContent = `${d.total} empresa(s) — A: ${s.A||0} · B: ${s.B||0} · C: ${s.C||0} (A = atacar primero).`;
+      res.textContent = `${d.total} empresa(s) — A: ${s.A||0} · B: ${s.B||0} · C: ${s.C||0} (A = Mayor Interés Analítico).`;
       if (!d.prospectos.length) { cont.innerHTML = '<div class="hint">Aún no hay nada capturado para analizar. Haz una búsqueda por ecosistema arriba.</div>'; return; }
       cont.innerHTML = d.prospectos.map(t => {
         const c = t.contacto || {};
@@ -3380,9 +3381,9 @@ _ADMIN_HTML = """<!doctype html>
           : "";
         return `
         <div class="card">
-          <div><b>${esc(t.empresa || "(sin nombre)")}</b> <span class="chip">${esc(t.scoring)}</span> <span class="chip">ICP ${t.score_icp}</span> <span class="chip">intensidad ${esc(t.intensidad||"")}</span>${t.tipo_deuda ? ' <span class="chip">' + esc(t.tipo_deuda) + '</span>' : ''}</div>
+          <div><b>${esc(t.empresa || "(sin nombre)")}</b> <span class="chip">${esc(t.scoring)}</span> <span class="chip">Interés ${t.score_icp}</span> <span class="chip">intensidad ${esc(t.intensidad||"")}</span>${t.tipo_deuda ? ' <span class="chip">' + esc(t.tipo_deuda) + '</span>' : ''}</div>
           <div>${esc(t.titulo)}</div>
-          <div class="meta">${t.tipo_deuda ? "🧩 " + esc(t.tipo_deuda) + " — " + esc(t.deuda_razon) + (t.deuda_secundaria ? " · secundaria: " + esc(t.deuda_secundaria) : "") + "<br>" : ""}
+          <div class="meta">${t.tipo_deuda ? "🧩 Hipótesis: " + esc(t.tipo_deuda) + " — " + esc(t.deuda_razon) + (t.deuda_secundaria ? " · secundaria: " + esc(t.deuda_secundaria) : "") + "<br>" : ""}
             ${t.angulo_conversacion ? "💬 Ángulo: " + esc(t.angulo_conversacion) + "<br>" : ""}
             🎯 Decisor sugerido: <b>${esc(t.decisor_sugerido)}</b>${email}<br>📌 ${esc(t.razon)}</div>
           <div class="meta">${esc(t.nombre_medio||"")}${t.vertical ? " · " + esc(t.vertical) : ""}${t.categoria ? " · " + esc(t.categoria) : ""}${t.fecha_publicacion ? " · " + esc(t.fecha_publicacion) : ""}
@@ -3625,9 +3626,9 @@ _ADMIN_HTML = """<!doctype html>
           '<div class="card exp-a" style="padding:.5rem .6rem">' +
           '<div class="exp-header"><span class="org-name">' + esc(o.nombre) + '</span>' +
           '<span class="badge badge-a">A</span>' +
-          '<span class="badge badge-icp">ICP ' + o.score_icp + '</span>' +
+          '<span class="badge badge-interes">Interés ' + o.score_icp + '</span>' +
           '<span class="badge badge-int">' + esc(o.intensidad) + '</span></div>' +
-          (o.tipo_deuda ? '<div class="deuda-title" style="font-size:.82rem">🧩 ' + esc(o.tipo_deuda) + '</div>' : '') +
+          (o.tipo_deuda ? '<div class="deuda-title" style="font-size:.82rem">🧩 Hipótesis: ' + esc(o.tipo_deuda) + '</div>' : '') +
           '<div class="meta">💬 ' + esc(o.angulo_conversacion) + '</div>' +
           '<div class="meta">🎯 ' + esc(o.decisor_sugerido) + '</div>' +
           '<div class="exp-actions"><button class="sec" onclick="verDolorMapDesdeExp(this)" data-org="' + esc(o.nombre) + '">🗺️ DolorMap</button></div>' +
@@ -3642,12 +3643,12 @@ _ADMIN_HTML = """<!doctype html>
         html += d.califican_peritaje.organizaciones.map(o =>
           '<div class="card" style="padding:.4rem .5rem"><b>' + esc(o.nombre) + '</b> ' +
           '<span class="badge badge-' + o.scoring.toLowerCase() + '">' + esc(o.scoring) + '</span> ' +
-          '<span class="badge badge-icp">ICP ' + o.score_icp + '</span>' +
+          '<span class="badge badge-interes">Interés ' + o.score_icp + '</span>' +
           (o.etapa_actual ? ' <span class="chip">' + esc(o.etapa_actual) + '</span>' : ' <span class="chip" style="border-color:#f59e0b">sin pipeline</span>') +
-          (o.tipo_deuda ? '<div class="meta">🧩 ' + esc(o.tipo_deuda) + '</div>' : '') +
+          (o.tipo_deuda ? '<div class="meta">🧩 Hipótesis: ' + esc(o.tipo_deuda) + '</div>' : '') +
           '<div class="exp-actions"><button class="sec" onclick="registrarPipelineDesdeExp(this)" data-org="' + esc(o.nombre) + '">📋 → Peritaje</button></div></div>'
         ).join("");
-      } else { html += '<div class="hint">Ninguna organización califica aún (scoring A/B, ICP ≥ 40, etapa ≤ vigilancia).</div>'; }
+      } else { html += '<div class="hint">Ninguna organización califica aún (scoring A/B, Interés ≥ 40, etapa ≤ vigilancia).</div>'; }
       html += '</details>';
 
       // 5. Califican DolorMap sprint
@@ -3656,12 +3657,12 @@ _ADMIN_HTML = """<!doctype html>
         html += d.califican_dolormap.organizaciones.map(o =>
           '<div class="card" style="padding:.4rem .5rem"><b>' + esc(o.nombre) + '</b> ' +
           '<span class="badge badge-a">A</span> ' +
-          '<span class="badge badge-icp">ICP ' + o.score_icp + '</span>' +
+          '<span class="badge badge-interes">Interés ' + o.score_icp + '</span>' +
           (o.etapa_actual ? ' <span class="chip">' + esc(o.etapa_actual) + '</span>' : ' <span class="chip" style="border-color:#dc2626">sin pipeline</span>') +
-          (o.tipo_deuda ? '<div class="meta">🧩 ' + esc(o.tipo_deuda) + '</div>' : '') +
+          (o.tipo_deuda ? '<div class="meta">🧩 Hipótesis: ' + esc(o.tipo_deuda) + '</div>' : '') +
           '<div class="exp-actions"><button class="sec" onclick="verDolorMapDesdeExp(this)" data-org="' + esc(o.nombre) + '">🗺️ DolorMap Sprint</button></div></div>'
         ).join("");
-      } else { html += '<div class="hint">Ninguna califica aún (scoring A, ICP ≥ 50, etapa ≤ peritaje).</div>'; }
+      } else { html += '<div class="hint">Ninguna califica aún (scoring A, Interés ≥ 50, etapa ≤ peritaje).</div>'; }
       html += '</details>';
 
       // 6. Seguimiento semanal
