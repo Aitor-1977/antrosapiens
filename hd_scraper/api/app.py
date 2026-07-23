@@ -33,6 +33,7 @@ from .. import directorio, hunter
 from .. import drift as _drift
 from .. import drift_compare as _drift_compare
 from .. import onlife as _onlife
+from .. import pipeline_comercial as _pipeline
 from ..analisis import analizar
 from ..engine.rule_engine import RuleEngine
 from ..engine.schemas import Prospecto, SeñalCapa0
@@ -1564,6 +1565,65 @@ def onlife_perfil(org_nombre: str) -> dict:
     return _onlife.obtener_perfil(org_nombre)
 
 
+# --- Capa 9: Pipeline Comercial (endpoints) ----------------------------------
+
+
+class PipelineIn(BaseModel):
+    org_nombre: str
+    etapa: str = "observacion"
+    notas: str = ""
+    resultado: str = ""
+
+
+@app.post("/pipeline/registrar")
+def pipeline_registrar(payload: PipelineIn,
+                       x_ingest_token: Optional[str] = Header(None)) -> dict:
+    """Registra o actualiza una organización en el pipeline comercial. Autenticado."""
+    _exigir_token(x_ingest_token)
+    nombre = payload.org_nombre.strip()
+    if not nombre:
+        raise HTTPException(400, "org_nombre vacío")
+    try:
+        return _pipeline.registrar_org(nombre, payload.etapa, payload.notas)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@app.post("/pipeline/avanzar")
+def pipeline_avanzar(payload: PipelineIn,
+                     x_ingest_token: Optional[str] = Header(None)) -> dict:
+    """Mueve una organización a una nueva etapa del pipeline. Autenticado."""
+    _exigir_token(x_ingest_token)
+    nombre = payload.org_nombre.strip()
+    if not nombre:
+        raise HTTPException(400, "org_nombre vacío")
+    try:
+        return _pipeline.avanzar(nombre, payload.etapa, payload.notas, payload.resultado)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@app.get("/pipeline")
+def pipeline_listar(etapa: str | None = Query(None)) -> dict:
+    """Lista organizaciones en el pipeline comercial. Lectura pública."""
+    return _pipeline.listar_pipeline(etapa)
+
+
+@app.get("/pipeline/funnel")
+def pipeline_funnel() -> dict:
+    """Resumen tipo funnel del pipeline comercial. Lectura pública."""
+    return _pipeline.resumen_funnel()
+
+
+@app.get("/pipeline/{org_nombre}")
+def pipeline_detalle(org_nombre: str) -> dict:
+    """Detalle del pipeline de una organización con historial de transiciones."""
+    result = _pipeline.obtener_pipeline(org_nombre)
+    if not result:
+        raise HTTPException(404, f"Organización '{org_nombre}' no está en el pipeline")
+    return result
+
+
 @app.get("/admin", response_class=HTMLResponse)
 def admin_form() -> str:
     """Pantalla de descubrimiento (scraping) y alta de prospectos (PWA instalable)."""
@@ -1782,6 +1842,39 @@ _ADMIN_HTML = """<!doctype html>
   </div>
   <div class=”msg” id=”onlife_msg”></div>
   <div id=”onlife_perfil”></div>
+</section>
+
+<section>
+  <h2>⑨ Pipeline Comercial</h2>
+  <div class=”hint”>Flujo antropológico: <b>Observación → Vigilancia → Peritaje → DolorMap → Alianza → Cerrado</b>. Cada avance se basa en evidencia acumulada, no en intención de venta.</div>
+  <div class=”row”>
+    <input id=”pipe_org” placeholder=”Nombre de la organización”>
+    <select id=”pipe_etapa”>
+      <option value=”observacion”>Observación</option>
+      <option value=”vigilancia”>Vigilancia</option>
+      <option value=”peritaje”>Peritaje Cualitativo</option>
+      <option value=”dolormap”>DolorMap Sprint</option>
+      <option value=”alianza”>Alianza</option>
+      <option value=”cerrado”>Cerrado</option>
+    </select>
+  </div>
+  <div class=”row” style=”margin-top:.4rem”>
+    <input id=”pipe_notas” placeholder=”Notas / motivo (opcional)” style=”flex:2”>
+    <select id=”pipe_resultado” style=”display:none”>
+      <option value=””>—</option>
+      <option value=”ganado”>Ganado</option>
+      <option value=”descartado”>Descartado</option>
+      <option value=”pausado”>Pausado</option>
+    </select>
+  </div>
+  <div class=”row” style=”margin-top:.4rem”>
+    <button id=”pipe_registrar” class=”sec”>📋 Registrar</button>
+    <button id=”pipe_avanzar” class=”sec”>⏩ Avanzar etapa</button>
+    <button id=”pipe_ver” class=”sec”>👁️ Ver pipeline</button>
+    <button id=”pipe_funnel” class=”sec”>📊 Funnel</button>
+  </div>
+  <div class=”msg” id=”pipe_msg”></div>
+  <div id=”pipe_contenido”></div>
 </section>
 
 <section>
@@ -2038,6 +2131,7 @@ _ADMIN_HTML = """<!doctype html>
             <button class="sec" onclick="prefill(this.dataset.n)" data-n="${esc(e.nombre)}">➕ Guardar y auto-investigar</button>
             <button class="sec" onclick="capturarDriftDesdeExp(this)" data-org="${esc(e.nombre)}">📡 Drift</button>
             <button class="sec" onclick="observarOnlifeDesdeExp(this)" data-org="${esc(e.nombre)}">🔬 Onlife</button>
+            <button class="sec" onclick="registrarPipelineDesdeExp(this)" data-org="${esc(e.nombre)}">📋 Pipeline</button>
             ${e.linkedin ? '<a class="sec" href="' + esc(safeUrl(e.linkedin)) + '" target="_blank" rel="noopener">LinkedIn ↗</a>' : ""}
             ${e.contacto && e.contacto.dominio ? '<button class="sec" onclick="verificarCorreo(this)" data-dom="' + esc(e.contacto.dominio) + '">✓ Verificar correo</button> <span class="vres"></span>' : ""}
           </div>
@@ -2189,6 +2283,106 @@ _ADMIN_HTML = """<!doctype html>
       cont.innerHTML = html;
     } catch (e) { cont.innerHTML = '<div class="hint">Error: ' + esc(String(e)) + '</div>'; }
   }
+
+  // ⑨ Pipeline Comercial
+  window.registrarPipelineDesdeExp = (btn) => {
+    const org = btn.dataset.org || "";
+    $("pipe_org").value = org;
+    $("pipe_org").scrollIntoView({ behavior: "smooth" });
+  };
+
+  $("pipe_etapa").addEventListener("change", () => {
+    $("pipe_resultado").style.display = $("pipe_etapa").value === "cerrado" ? "" : "none";
+  });
+
+  $("pipe_registrar").addEventListener("click", async () => {
+    const m = $("pipe_msg"), token = tok();
+    const org = $("pipe_org").value.trim(), etapa = $("pipe_etapa").value;
+    const notas = $("pipe_notas").value.trim();
+    if (!token) { m.className = "msg err"; m.style.display = "block"; m.textContent = "Falta el token."; return; }
+    if (!org) { m.className = "msg err"; m.style.display = "block"; m.textContent = "Escribe el nombre de la organización."; return; }
+    $("pipe_registrar").disabled = true;
+    m.className = "msg"; m.style.display = "block"; m.textContent = "Registrando…";
+    try {
+      const r = await fetch("/pipeline/registrar", { method: "POST",
+        headers: { "Content-Type": "application/json", "X-Ingest-Token": token },
+        body: JSON.stringify({ org_nombre: org, etapa, notas }) });
+      const o = await leerJson(r);
+      if (!o.ok) { m.className = "msg err"; m.textContent = "Error: " + (o.error || (o.data && o.data.detail) || r.status); return; }
+      m.className = "msg ok";
+      m.textContent = "✓ " + o.data.org_nombre + " — " + o.data.accion + " en etapa " + o.data.etapa;
+    } catch (e) { m.className = "msg err"; m.textContent = "Error de red: " + e; }
+    finally { $("pipe_registrar").disabled = false; }
+  });
+
+  $("pipe_avanzar").addEventListener("click", async () => {
+    const m = $("pipe_msg"), token = tok();
+    const org = $("pipe_org").value.trim(), etapa = $("pipe_etapa").value;
+    const notas = $("pipe_notas").value.trim(), resultado = $("pipe_resultado").value;
+    if (!token) { m.className = "msg err"; m.style.display = "block"; m.textContent = "Falta el token."; return; }
+    if (!org) { m.className = "msg err"; m.style.display = "block"; m.textContent = "Escribe el nombre de la organización."; return; }
+    $("pipe_avanzar").disabled = true;
+    m.className = "msg"; m.style.display = "block"; m.textContent = "Avanzando…";
+    try {
+      const body = { org_nombre: org, etapa, notas };
+      if (resultado) body.resultado = resultado;
+      const r = await fetch("/pipeline/avanzar", { method: "POST",
+        headers: { "Content-Type": "application/json", "X-Ingest-Token": token },
+        body: JSON.stringify(body) });
+      const o = await leerJson(r);
+      if (!o.ok) { m.className = "msg err"; m.textContent = "Error: " + (o.error || (o.data && o.data.detail) || r.status); return; }
+      m.className = "msg ok";
+      m.textContent = "✓ " + o.data.org_nombre + ": " + (o.data.etapa_anterior||"—") + " → " + o.data.etapa;
+    } catch (e) { m.className = "msg err"; m.textContent = "Error de red: " + e; }
+    finally { $("pipe_avanzar").disabled = false; }
+  });
+
+  $("pipe_ver").addEventListener("click", async () => {
+    const cont = $("pipe_contenido");
+    const etapa = $("pipe_etapa").value;
+    cont.innerHTML = '<div class="hint">Cargando…</div>';
+    try {
+      const url = "/pipeline" + (etapa ? "?etapa=" + encodeURIComponent(etapa) : "");
+      const d = await (await fetch(url)).json();
+      if (!d.total) { cont.innerHTML = '<div class="hint">Sin organizaciones en el pipeline.</div>'; return; }
+      const ICONOS_E = {observacion:"👀",vigilancia:"🔍",peritaje:"🔬",dolormap:"🗺️",alianza:"🤝",cerrado:"✅"};
+      let html = '<div style="margin-top:.5rem"><b>' + d.total + '</b> organización(es)</div>';
+      html += d.organizaciones.map(o => {
+        const ic = ICONOS_E[o.etapa] || "📋";
+        return '<div class="card">' +
+          '<div>' + ic + ' <b>' + esc(o.org_nombre) + '</b> <span class="chip">' + esc(o.etapa) + '</span>' +
+          (o.resultado ? ' <span class="chip">' + esc(o.resultado) + '</span>' : '') +
+          ' <span class="meta">' + esc((o.actualizado_en||"").slice(0,16).replace("T"," ")) + '</span></div>' +
+          (o.notas ? '<div class="meta">' + esc(o.notas) + '</div>' : '') +
+        '</div>';
+      }).join("");
+      cont.innerHTML = html;
+    } catch (e) { cont.innerHTML = '<div class="hint">Error: ' + esc(String(e)) + '</div>'; }
+  });
+
+  $("pipe_funnel").addEventListener("click", async () => {
+    const cont = $("pipe_contenido");
+    cont.innerHTML = '<div class="hint">Cargando…</div>';
+    try {
+      const d = await (await fetch("/pipeline/funnel")).json();
+      const ICONOS_E = {observacion:"👀",vigilancia:"🔍",peritaje:"🔬",dolormap:"🗺️",alianza:"🤝",cerrado:"✅"};
+      let html = '<div style="margin-top:.5rem"><b>Funnel Comercial</b> — ' + d.total_organizaciones + ' organización(es)</div>';
+      html += '<div style="margin-top:.5rem">';
+      const maxVal = Math.max(...d.funnel.map(f => f.total), 1);
+      html += d.funnel.map(f => {
+        const pct = Math.round((f.total / maxVal) * 100);
+        const ic = ICONOS_E[f.etapa] || "📋";
+        return '<div style="margin:.3rem 0">' +
+          '<div style="display:flex;align-items:center;gap:.5rem">' +
+          '<span style="min-width:10rem">' + ic + ' ' + esc(f.label) + '</span>' +
+          '<div style="flex:1;background:var(--bg2,#e5e7eb);border-radius:.25rem;height:1.2rem">' +
+          '<div style="width:' + pct + '%;background:var(--accent,#2563eb);height:100%;border-radius:.25rem;min-width:' + (f.total ? '1rem' : '0') + '"></div></div>' +
+          '<b>' + f.total + '</b></div></div>';
+      }).join("");
+      html += '</div>';
+      cont.innerHTML = html;
+    } catch (e) { cont.innerHTML = '<div class="hint">Error: ' + esc(String(e)) + '</div>'; }
+  });
 
   // ②·⁵ Informe profundo: análisis determinista de lo capturado.
   const SCLASE = { A: "msg ok", B: "msg", C: "msg" };

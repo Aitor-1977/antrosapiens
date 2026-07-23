@@ -208,3 +208,31 @@ CREATE TABLE IF NOT EXISTS onlife_signals (
 CREATE INDEX IF NOT EXISTS idx_onlife_org    ON onlife_signals (org_nombre);
 CREATE INDEX IF NOT EXISTS idx_onlife_fuente ON onlife_signals (fuente);
 CREATE INDEX IF NOT EXISTS idx_onlife_tipo   ON onlife_signals (tipo_senal);
+
+-- Capa 9 — Pipeline Comercial
+CREATE TABLE IF NOT EXISTS pipeline_comercial (
+    id               BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    org_nombre       TEXT NOT NULL,
+    etapa            TEXT NOT NULL DEFAULT 'observacion',
+    notas            TEXT NOT NULL DEFAULT '',
+    resultado        TEXT NOT NULL DEFAULT '',
+    hash_dedup       TEXT NOT NULL UNIQUE,
+    creado_en        TEXT NOT NULL,
+    actualizado_en   TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_pipeline_etapa ON pipeline_comercial (etapa);
+CREATE INDEX IF NOT EXISTS idx_pipeline_org   ON pipeline_comercial (org_nombre);
+
+CREATE TABLE IF NOT EXISTS pipeline_transiciones (
+    id              BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    pipeline_id     BIGINT NOT NULL REFERENCES pipeline_comercial(id),
+    org_nombre      TEXT NOT NULL,
+    etapa_desde     TEXT NOT NULL DEFAULT '',
+    etapa_hasta     TEXT NOT NULL,
+    notas           TEXT NOT NULL DEFAULT '',
+    fecha           TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_trans_pipeline ON pipeline_transiciones (pipeline_id);
+CREATE INDEX IF NOT EXISTS idx_trans_fecha    ON pipeline_transiciones (fecha);
