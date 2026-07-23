@@ -35,6 +35,7 @@ from .. import drift_compare as _drift_compare
 from .. import onlife as _onlife
 from .. import pipeline_comercial as _pipeline
 from ..analisis import analizar
+from ..curaduria import curar
 from ..dictamen import generar_dictamen, generar_ranking
 from ..engine.rule_engine import RuleEngine
 from ..engine.schemas import Prospecto, SeñalCapa0
@@ -745,6 +746,17 @@ def investigacion_automatica(payload: InvestigacionIn,
     etapas.append({"etapa": "dictamen", "hallazgos": len(dictamen["hallazgos"]),
                    "alertas": len(dictamen["alertas"])})
 
+    # ── Paso 6: Curaduría Antropológica (Capa 10) ──
+    curaduria = curar(
+        expedientes,
+        query=query_text,
+        region=payload.region,
+        vertical=detected_vertical,
+    )
+    etapas.append({"etapa": "curaduria",
+                   "convergencias": len(curaduria["convergencias"]),
+                   "orgs_curadas": len(curaduria["organizaciones_curadas"])})
+
     scoring_a = sum(1 for e in expedientes if e["scoring"] == "A")
     scoring_b = sum(1 for e in expedientes if e["scoring"] == "B")
     scoring_c = sum(1 for e in expedientes if e["scoring"] == "C")
@@ -758,6 +770,7 @@ def investigacion_automatica(payload: InvestigacionIn,
         "total_escritos": total_escritos,
         "total_vistos": total_vistos,
         "noticias_senales": noticias_senales,
+        "curaduria": curaduria,
         "dictamen": dictamen,
         "expedientes": {
             "total": len(expedientes),
@@ -2368,6 +2381,14 @@ _ADMIN_HTML = """<!doctype html>
   .dictamen { margin-top: 1rem; }
   .dictamen-seccion { border: 1px solid rgba(128,128,128,.2); border-radius: .6rem; padding: .7rem .8rem; margin-top: .7rem; }
   .dictamen-seccion h3 { font-size: .95rem; margin: 0 0 .4rem; }
+  .curaduria-tension { background: linear-gradient(135deg, rgba(255,193,7,.08), rgba(255,87,34,.08)); border-color: rgba(255,152,0,.3); }
+  .curaduria-tension h3 { color: #ff9800; }
+  .curaduria-narrativa { background: rgba(33,150,243,.05); border-color: rgba(33,150,243,.2); }
+  .curaduria-narrativa p { line-height: 1.6; font-size: .92rem; }
+  .curaduria-convergencia { background: rgba(156,39,176,.05); border-color: rgba(156,39,176,.2); }
+  .curaduria-preguntas { background: rgba(0,150,136,.05); border-color: rgba(0,150,136,.2); }
+  .curaduria-preguntas li { margin-bottom: .3rem; }
+  .curaduria-siguiente { background: rgba(76,175,80,.08); border-color: rgba(76,175,80,.3); }
   .dictamen-hipotesis { background: rgba(168,85,247,.06); border-color: rgba(168,85,247,.25); }
   .dictamen-hipotesis .confianza { display: inline-block; padding: .15rem .4rem; border-radius: .3rem; font-size: .75rem; font-weight: 700; }
   .confianza-alta { background: #16a34a; color: #fff; }
@@ -2734,99 +2755,174 @@ _ADMIN_HTML = """<!doctype html>
       return '<div class="' + cls + '"><span class="dot"></span> ' + ic + ' ' + esc(s) + '</div>';
     }).join("");
   }
-  function renderDictamen(d) {
+  function renderCuraduria(d) {
+    const cur = d.curaduria || {};
     const dict = d.dictamen || {};
     const re = dict.resumen_ejecutivo || {};
     const sc = re.scoring || {};
     const exp = d.expedientes || {};
+    const meta = cur.meta || {};
     let h = '<div class="dictamen">';
 
-    // Resumen Ejecutivo
-    h += '<div class="dictamen-seccion inv-resumen">';
-    h += '<h3>Resumen Ejecutivo</h3>';
-    h += '<div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">';
-    h += '<span class="chip">' + (re.organizaciones_analizadas || exp.total || 0) + ' organizaciones</span>';
-    h += '<span class="chip">' + (re.evidencias_procesadas || 0) + ' evidencias</span>';
-    if (sc.A) h += '<span class="badge badge-a">A: ' + sc.A + '</span>';
-    if (sc.B) h += '<span class="badge badge-b">B: ' + sc.B + '</span>';
-    if (sc.C) h += '<span class="badge badge-c">C: ' + sc.C + '</span>';
-    if (re.senales_rss) h += '<span class="chip">' + re.senales_rss + ' RSS</span>';
-    h += '<span class="chip">' + esc(d.vertical_detectada || re.vertical || '') + '</span>';
-    h += '<span class="chip">' + esc(d.region || re.region || '') + '</span>';
-    h += '</div></div>';
+    // ═══ CURADURÍA: conclusiones primero ═══
 
-    // Hipótesis central
-    const hip = dict.hipotesis || {};
-    if (hip.texto) {
-      const ccls = hip.confianza === 'alta' ? 'confianza-alta' : hip.confianza === 'media' ? 'confianza-media' : 'confianza-baja';
+    // Tensión central del ecosistema
+    const tension = cur.tension_central || {};
+    if (tension.titulo) {
+      h += '<div class="dictamen-seccion curaduria-tension">';
+      h += '<h3>' + esc(tension.titulo) + '</h3>';
+      h += '<div style="font-size:.9rem">' + esc(tension.descripcion || '') + '</div>';
+      h += '<div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.4rem">';
+      h += '<span class="chip">' + (meta.total_organizaciones || 0) + ' organizaciones</span>';
+      if (meta.con_dolor) h += '<span class="badge badge-a">' + meta.con_dolor + ' con dolor</span>';
+      if (meta.con_cambio) h += '<span class="badge badge-b">' + meta.con_cambio + ' con cambio</span>';
+      if (meta.con_convergencia) h += '<span class="badge badge-deuda">' + meta.con_convergencia + ' convergentes</span>';
+      h += '</div></div>';
+    }
+
+    // Narrativa ecosistémica
+    if (cur.narrativa) {
+      h += '<div class="dictamen-seccion curaduria-narrativa">';
+      h += '<h3>Lectura del Ecosistema</h3>';
+      h += '<div style="font-size:.9rem;line-height:1.6">' + esc(cur.narrativa) + '</div>';
+      h += '</div>';
+    }
+
+    // Lectura antropológica
+    if (cur.lectura_antropologica) {
       h += '<div class="dictamen-seccion dictamen-hipotesis">';
-      h += '<h3>Hipótesis Central <span class="confianza ' + ccls + '">' + esc(hip.confianza || '') + '</span></h3>';
-      h += '<div style="font-size:.9rem;margin-bottom:.3rem">' + esc(hip.texto) + '</div>';
-      if (hip.deuda_dominante) h += '<div style="font-size:.82rem;opacity:.7">Hipótesis dominante: <b>' + esc(hip.deuda_dominante) + '</b></div>';
-      if (hip.angulo) h += '<div class="angulo" style="margin-top:.3rem">💬 ' + esc(hip.angulo) + '</div>';
-      if (hip.distribucion) {
-        const dd = Object.entries(hip.distribucion);
-        if (dd.length > 1) {
-          h += '<div style="font-size:.78rem;opacity:.6;margin-top:.3rem">Distribución: ' + dd.map(function(x){return esc(x[0]) + ' (' + x[1] + ')';}).join(', ') + '</div>';
-        }
-      }
+      h += '<h3>Lectura Antropológica</h3>';
+      h += '<div style="font-size:.9rem;line-height:1.6">' + esc(cur.lectura_antropologica) + '</div>';
       h += '</div>';
     }
 
-    // Hallazgos
-    const hall = dict.hallazgos || [];
-    if (hall.length) {
-      h += '<div class="dictamen-seccion">';
-      h += '<h3>Hallazgos Ecosistémicos</h3>';
-      h += hall.map(function(x) { return '<div class="hallazgo-item">' + esc(x.hallazgo) + '</div>'; }).join('');
-      h += '</div>';
-    }
-
-    // Ranking TOP 10
-    const rank = dict.ranking || [];
-    if (rank.length) {
+    // Organizaciones curadas (TOP 5 con lectura interpretativa)
+    const orgs = cur.organizaciones_curadas || [];
+    if (orgs.length) {
       h += '<div class="dictamen-seccion dictamen-ranking">';
-      h += '<h3>Ranking TOP ' + rank.length + '</h3>';
-      h += rank.map(function(r) {
-        const bcls = r.scoring === 'A' ? 'badge-a' : r.scoring === 'B' ? 'badge-b' : 'badge-c';
+      h += '<h3>Organizaciones de Mayor Interés (' + orgs.length + ')</h3>';
+      h += orgs.map(function(o, i) {
+        const bcls = o.scoring === 'A' ? 'badge-a' : o.scoring === 'B' ? 'badge-b' : 'badge-c';
         return '<div class="ranking-item">' +
-          '<div class="ranking-pos">' + r.posicion + '</div>' +
+          '<div class="ranking-pos">' + (i + 1) + '</div>' +
           '<div class="ranking-body">' +
-            '<div><span class="org-name">' + esc(r.nombre) + '</span> ' +
-              '<span class="badge ' + bcls + '">' + r.scoring + '</span> ' +
-              '<span class="badge badge-interes">Interés ' + r.score_icp + '</span>' +
-              (r.tipo_deuda ? ' <span class="badge badge-deuda">Hipótesis: ' + esc(r.tipo_deuda) + '</span>' : '') +
-              ' <a class="dossier-link" href="/dossier/' + encodeURIComponent(r.nombre) + '" target="_blank">Dossier ↗</a>' +
+            '<div><span class="org-name">' + esc(o.nombre) + '</span> ' +
+              '<span class="badge ' + bcls + '">' + o.scoring + '</span> ' +
+              '<span class="badge badge-interes">Interés ' + o.interes + '</span>' +
+              (o.hipotesis_deuda ? ' <span class="badge badge-deuda">Hipótesis: ' + esc(o.hipotesis_deuda) + '</span>' : '') +
+              ' <a class="dossier-link" href="/dossier/' + encodeURIComponent(o.nombre) + '" target="_blank">Dossier ↗</a>' +
             '</div>' +
-            (r.motivos && r.motivos.length ? '<div class="ranking-motivos">' + r.motivos.map(function(m){return esc(m);}).join(' · ') + '</div>' : '') +
-            (r.angulo_conversacion ? '<div class="angulo" style="margin-top:.2rem;font-size:.78rem">💬 ' + esc(r.angulo_conversacion) + '</div>' : '') +
+            '<div style="font-size:.85rem;margin-top:.2rem;line-height:1.5">' + esc(o.lectura) + '</div>' +
+            (o.angulo ? '<div class="angulo" style="margin-top:.2rem;font-size:.78rem">💬 ' + esc(o.angulo) + '</div>' : '') +
           '</div></div>';
       }).join('');
       h += '</div>';
     }
 
-    // Alertas
-    const alertas = dict.alertas || [];
-    if (alertas.length) {
-      h += '<div class="dictamen-seccion dictamen-alertas">';
-      h += '<h3>⚠️ Alertas (' + alertas.length + ')</h3>';
-      h += alertas.map(function(a) {
-        return '<div class="alerta-item"><b>' + esc(a.nombre) + '</b> ' +
-          '<span class="badge badge-' + (a.scoring||'c').toLowerCase() + '">' + esc(a.scoring||'') + '</span> ' +
-          (a.tipo_deuda ? '<span class="badge badge-deuda">Hipótesis: ' + esc(a.tipo_deuda) + '</span> ' : '') +
-          '<div class="hint">' + (a.razones||[]).map(function(r){return esc(r);}).join(' · ') + '</div>' +
-          '<div style="font-size:.78rem;color:#2563eb">' + esc(a.accion_sugerida||'') + '</div>' +
+    // Convergencias (dolor + cambio simultáneo)
+    const conv = cur.convergencias || [];
+    if (conv.length) {
+      h += '<div class="dictamen-seccion curaduria-convergencia">';
+      h += '<h3>Convergencias: Dolor + Cambio Simultáneo (' + conv.length + ')</h3>';
+      h += '<div class="hint" style="margin-bottom:.4rem">Organizaciones donde las señales de dolor y crecimiento coexisten — los puntos de inflexión más relevantes.</div>';
+      h += conv.map(function(c) {
+        const bcls = c.scoring === 'A' ? 'badge-a' : c.scoring === 'B' ? 'badge-b' : 'badge-c';
+        return '<div class="hallazgo-item" style="padding:.5rem 0">' +
+          '<div><b>' + esc(c.nombre) + '</b> <span class="badge ' + bcls + '">' + c.scoring + '</span>' +
+          (c.hipotesis_deuda ? ' <span class="badge badge-deuda">Hipótesis: ' + esc(c.hipotesis_deuda) + '</span>' : '') + '</div>' +
+          '<div style="font-size:.85rem;margin-top:.2rem">' + esc(c.lectura) + '</div>' +
         '</div>';
       }).join('');
       h += '</div>';
     }
 
-    // Etapas (colapsado)
-    if (d.etapas && d.etapas.length) {
-      h += '<details style="margin:.6rem 0 0"><summary style="cursor:pointer;font-size:.82rem;opacity:.5">Detalle por etapa</summary>';
-      h += d.etapas.map(function(e) { return '<div class="hint">' + esc(e.etapa) + ': ' + (e.escritos !== undefined ? e.escritos + ' escritos, ' + e.vistos + ' vistos' : e.senales !== undefined ? e.senales + ' señales' : e.total !== undefined ? e.total + ' expedientes' : e.hallazgos !== undefined ? e.hallazgos + ' hallazgos, ' + e.alertas + ' alertas' : '') + '</div>'; }).join('');
+    // Preguntas abiertas
+    const preg = cur.preguntas_abiertas || [];
+    if (preg.length) {
+      h += '<div class="dictamen-seccion curaduria-preguntas">';
+      h += '<h3>Preguntas Abiertas</h3>';
+      h += '<ol style="margin:0;padding-left:1.2rem">';
+      h += preg.map(function(p) { return '<li style="font-size:.85rem;margin:.3rem 0;line-height:1.5">' + esc(p) + '</li>'; }).join('');
+      h += '</ol></div>';
+    }
+
+    // Siguiente paso
+    if (cur.siguiente_paso) {
+      h += '<div class="dictamen-seccion curaduria-siguiente">';
+      h += '<h3>Siguiente Paso</h3>';
+      h += '<div style="font-size:.9rem">' + esc(cur.siguiente_paso) + '</div>';
+      h += '</div>';
+    }
+
+    // ═══ DICTAMEN: detalle técnico (colapsable) ═══
+    const hall = dict.hallazgos || [];
+    const rank = dict.ranking || [];
+    const alertas = dict.alertas || [];
+    const hip = dict.hipotesis || {};
+    const hayDetalle = hall.length || rank.length || alertas.length || hip.texto;
+
+    if (hayDetalle) {
+      h += '<details style="margin:.8rem 0 0"><summary style="cursor:pointer;font-weight:600;font-size:.9rem">Dictamen técnico (hallazgos, ranking, alertas)</summary>';
+
+      if (hip.texto) {
+        const ccls = hip.confianza === 'alta' ? 'confianza-alta' : hip.confianza === 'media' ? 'confianza-media' : 'confianza-baja';
+        h += '<div class="dictamen-seccion dictamen-hipotesis" style="margin-top:.5rem">';
+        h += '<h3>Hipótesis Central <span class="confianza ' + ccls + '">' + esc(hip.confianza || '') + '</span></h3>';
+        h += '<div style="font-size:.9rem">' + esc(hip.texto) + '</div>';
+        if (hip.distribucion) {
+          const dd = Object.entries(hip.distribucion);
+          if (dd.length > 1) h += '<div style="font-size:.78rem;opacity:.6;margin-top:.3rem">Distribución: ' + dd.map(function(x){return esc(x[0]) + ' (' + x[1] + ')';}).join(', ') + '</div>';
+        }
+        h += '</div>';
+      }
+
+      if (hall.length) {
+        h += '<div class="dictamen-seccion"><h3>Hallazgos Ecosistémicos</h3>';
+        h += hall.map(function(x) { return '<div class="hallazgo-item">' + esc(x.hallazgo) + '</div>'; }).join('');
+        h += '</div>';
+      }
+
+      if (rank.length) {
+        h += '<div class="dictamen-seccion dictamen-ranking"><h3>Ranking TOP ' + rank.length + '</h3>';
+        h += rank.map(function(r) {
+          const bcls = r.scoring === 'A' ? 'badge-a' : r.scoring === 'B' ? 'badge-b' : 'badge-c';
+          return '<div class="ranking-item"><div class="ranking-pos">' + r.posicion + '</div><div class="ranking-body">' +
+            '<div><span class="org-name">' + esc(r.nombre) + '</span> <span class="badge ' + bcls + '">' + r.scoring + '</span> <span class="badge badge-interes">Interés ' + r.score_icp + '</span>' +
+            (r.tipo_deuda ? ' <span class="badge badge-deuda">Hipótesis: ' + esc(r.tipo_deuda) + '</span>' : '') +
+            ' <a class="dossier-link" href="/dossier/' + encodeURIComponent(r.nombre) + '" target="_blank">Dossier ↗</a></div>' +
+            (r.motivos && r.motivos.length ? '<div class="ranking-motivos">' + r.motivos.map(function(m){return esc(m);}).join(' · ') + '</div>' : '') +
+          '</div></div>';
+        }).join('');
+        h += '</div>';
+      }
+
+      if (alertas.length) {
+        h += '<div class="dictamen-seccion dictamen-alertas"><h3>Alertas (' + alertas.length + ')</h3>';
+        h += alertas.map(function(a) {
+          return '<div class="alerta-item"><b>' + esc(a.nombre) + '</b> <span class="badge badge-' + (a.scoring||'c').toLowerCase() + '">' + esc(a.scoring||'') + '</span> ' +
+            (a.tipo_deuda ? '<span class="badge badge-deuda">Hipótesis: ' + esc(a.tipo_deuda) + '</span> ' : '') +
+            '<div class="hint">' + (a.razones||[]).map(function(r){return esc(r);}).join(' · ') + '</div>' +
+            '<div style="font-size:.78rem;color:#2563eb">' + esc(a.accion_sugerida||'') + '</div></div>';
+        }).join('');
+        h += '</div>';
+      }
+
       h += '</details>';
     }
+
+    // Cifras y etapas (colapsado)
+    h += '<details style="margin:.4rem 0 0"><summary style="cursor:pointer;font-size:.82rem;opacity:.4">Cifras de captura</summary>';
+    h += '<div class="hint" style="display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.3rem">';
+    h += '<span class="chip">' + (re.organizaciones_analizadas || exp.total || 0) + ' org.</span>';
+    h += '<span class="chip">' + (re.evidencias_procesadas || 0) + ' evidencias</span>';
+    if (sc.A) h += '<span class="badge badge-a">A: ' + sc.A + '</span>';
+    if (sc.B) h += '<span class="badge badge-b">B: ' + sc.B + '</span>';
+    if (sc.C) h += '<span class="badge badge-c">C: ' + sc.C + '</span>';
+    h += '</div>';
+    if (d.etapas && d.etapas.length) {
+      h += d.etapas.map(function(e) { return '<div class="hint">' + esc(e.etapa) + ': ' + (e.escritos !== undefined ? e.escritos + ' escritos, ' + e.vistos + ' vistos' : e.senales !== undefined ? e.senales + ' señales' : e.total !== undefined ? e.total + ' expedientes' : e.hallazgos !== undefined ? e.hallazgos + ' hallazgos, ' + e.alertas + ' alertas' : e.convergencias !== undefined ? e.convergencias + ' convergencias, ' + e.orgs_curadas + ' orgs curadas' : '') + '</div>'; }).join('');
+    }
+    h += '</details>';
 
     h += '</div>';
     return h;
@@ -2859,7 +2955,7 @@ _ADMIN_HTML = """<!doctype html>
       const nota = d.parcial ? " (parcial: se agotó el presupuesto de tiempo)" : "";
       m.className = "msg ok";
       m.textContent = "✓ Investigación completa en " + d.tiempo_s + "s · " + d.total_escritos + " evidencias nuevas · " + d.total_vistos + " titulares · " + d.noticias_senales + " señales RSS" + nota;
-      resultado.innerHTML = renderDictamen(d);
+      resultado.innerHTML = renderCuraduria(d);
       cargarExpedientes({});
     } catch (e) { clearInterval(si); m.className = "msg err"; m.textContent = "Error de red: " + e; }
     finally { document.querySelectorAll("button").forEach(b => b.disabled = false); }

@@ -322,4 +322,4 @@ def test_admin_ui_incluye_dossier(client):
     r = client.get("/admin")
     assert r.status_code == 200
     assert "Dossier" in r.text
-    assert "renderDictamen" in r.text
+    assert "renderCuraduria" in r.text
