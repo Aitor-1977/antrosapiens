@@ -30,6 +30,8 @@ from ..db.models import CATEGORIAS, ESTADO_OK, TIPOS_EVENTO, QuerySpec, ahora_is
 import httpx
 
 from .. import directorio, hunter
+from .. import drift as _drift
+from .. import drift_compare as _drift_compare
 from ..analisis import analizar
 from ..engine.rule_engine import RuleEngine
 from ..engine.schemas import Prospecto, SeñalCapa0
@@ -1438,6 +1440,76 @@ def listar_expedientes(
     return _construir_expedientes(_cats_validas(categoria, categorias), limite)
 
 
+# --- Capa 6: Motor de Drift Narrativo (endpoints) --------------------------
+
+
+class DriftCapturarIn(BaseModel):
+    org_nombre: str
+    sitio_web: str
+
+
+@app.post("/drift/capturar")
+def drift_capturar(payload: DriftCapturarIn,
+                   x_ingest_token: Optional[str] = Header(None)) -> dict:
+    """Captura snapshots del discurso público de una organización.
+
+    Descarga las páginas públicas (homepage, about, misión, propuesta de valor,
+    manifiesto), limpia el HTML y almacena el texto. Si existe un snapshot
+    anterior, compara y genera evidencias narrativas. Autenticado (escribe).
+    """
+    _exigir_token(x_ingest_token)
+    nombre = payload.org_nombre.strip()
+    sitio = payload.sitio_web.strip()
+    if not nombre:
+        raise HTTPException(400, "org_nombre vacío")
+    if not sitio:
+        raise HTTPException(400, "sitio_web vacío")
+
+    with httpx.Client(timeout=settings.request_timeout_s,
+                      headers={"User-Agent": settings.user_agent},
+                      follow_redirects=True) as client:
+        def http_get(url: str) -> str:
+            r = client.get(url)
+            r.raise_for_status()
+            return r.text
+
+        snapshots = _drift.capturar_snapshot(nombre, sitio, http_get)
+
+    total_evidencias = 0
+    for snap in snapshots:
+        if snap.get("estado") != "ok" or not snap.get("id"):
+            continue
+        anterior = _drift.obtener_snapshot_anterior(
+            nombre, snap["tipo_pagina"], snap["id"])
+        if anterior is None:
+            continue
+        actual_row = get_db().fetch_one(
+            "SELECT * FROM drift_snapshots WHERE id = ?", (snap["id"],))
+        if not actual_row:
+            continue
+        evidencias = _drift_compare.comparar(dict(anterior), dict(actual_row))
+        if evidencias:
+            total_evidencias += _drift_compare.persistir_evidencias(evidencias)
+
+    return {
+        "org_nombre": nombre,
+        "sitio_web": sitio,
+        "snapshots": snapshots,
+        "total_snapshots": len(snapshots),
+        "evidencias_nuevas": total_evidencias,
+    }
+
+
+@app.get("/drift/{org_nombre}")
+def drift_timeline(org_nombre: str) -> dict:
+    """Timeline completo del drift narrativo de una organización.
+
+    Devuelve todos los snapshots y evidencias narrativas, ordenados
+    cronológicamente. Lectura pública.
+    """
+    return _drift.obtener_timeline(org_nombre)
+
+
 @app.get("/admin", response_class=HTMLResponse)
 def admin_form() -> str:
     """Pantalla de descubrimiento (scraping) y alta de prospectos (PWA instalable)."""
@@ -1523,6 +1595,8 @@ _ADMIN_HTML = """<!doctype html>
   .exp-actions button, .exp-actions a { font-size: .8rem; padding: .35rem .6rem; margin-top: 0; width: auto; }
   .resumen-bar { display: flex; gap: .6rem; flex-wrap: wrap; align-items: center; margin: .5rem 0; }
   .resumen-bar .chip { font-weight: 700; }
+  /* Drift timeline */
+  #drift_timeline h3 { color: #7c3aed; }
 </style></head><body>
 <h1>hd-prospector · Radar de Inteligencia Antropológica</h1>
 <p class="sub">① Rastrea señales por ecosistema → ② <b>Expedientes Vivos</b>: evidencia agrupada por organización con <b>patrones</b>, <b>Dolor Cultural™</b> (hipótesis determinista) y <b>scoring A/B/C</b> → ③ auto-investiga y guarda el prospecto. Internet → Evidencia → Patrón → Dolor → Prospecto.</p>
@@ -1621,6 +1695,21 @@ _ADMIN_HTML = """<!doctype html>
   <div class=”hint”>Cada tarjeta es un <b>expediente de organización</b> construido a partir de <b>múltiples evidencias</b>. Las señales se combinan para detectar <b>patrones</b> y generar una <b>hipótesis de Dolor Cultural™</b> (tipo + intensidad + razonamiento). Scoring A = atacar · B = observar · C = archivo.</div>
   <div class=”resumen-bar” id=”exp_resumen”></div>
   <div id=”expedientes”></div>
+</section>
+
+<section>
+  <h2>⑤ Drift Narrativo</h2>
+  <div class=”hint”>Observación <b>longitudinal</b>: captura cómo cambia el discurso público de una organización a lo largo del tiempo. Compara snapshots de homepage, about, misión, propuesta de valor y manifiesto. Solo registra cambios objetivos — <b>no interpreta</b>.</div>
+  <div class=”row”>
+    <input id=”drift_org” placeholder=”Nombre de la organización”>
+    <input id=”drift_sitio” placeholder=”https://sitio-web.com”>
+  </div>
+  <div class=”row” style=”margin-top:.4rem”>
+    <button id=”drift_capturar” class=”sec”>📡 Capturar Drift</button>
+    <button id=”drift_ver” class=”sec”>👁️ Ver timeline</button>
+  </div>
+  <div class=”msg” id=”drift_msg”></div>
+  <div id=”drift_timeline”></div>
 </section>
 
 <section>
@@ -1875,6 +1964,7 @@ _ADMIN_HTML = """<!doctype html>
           <div id="${uid}" class="ev-list">${evItems}</div>
           <div class="exp-actions">
             <button class="sec" onclick="prefill(this.dataset.n)" data-n="${esc(e.nombre)}">➕ Guardar y auto-investigar</button>
+            <button class="sec" onclick="capturarDriftDesdeExp(this)" data-org="${esc(e.nombre)}">📡 Drift</button>
             ${e.linkedin ? '<a class="sec" href="' + esc(safeUrl(e.linkedin)) + '" target="_blank" rel="noopener">LinkedIn ↗</a>' : ""}
             ${e.contacto && e.contacto.dominio ? '<button class="sec" onclick="verificarCorreo(this)" data-dom="' + esc(e.contacto.dominio) + '">✓ Verificar correo</button> <span class="vres"></span>' : ""}
           </div>
@@ -1887,6 +1977,81 @@ _ADMIN_HTML = """<!doctype html>
     $("nombre").scrollIntoView({ behavior: "smooth" });
     $("enrich_btn").click();
   };
+
+  // ⑤ Drift Narrativo
+  window.capturarDriftDesdeExp = (btn) => {
+    const org = btn.dataset.org || "";
+    $("drift_org").value = org;
+    $("drift_sitio").value = "";
+    $("drift_sitio").scrollIntoView({ behavior: "smooth" });
+    $("drift_sitio").focus();
+  };
+
+  $("drift_capturar").addEventListener("click", async () => {
+    const m = $("drift_msg"), token = tok();
+    const org = $("drift_org").value.trim(), sitio = $("drift_sitio").value.trim();
+    if (!token) { m.className = "msg err"; m.style.display = "block"; m.textContent = "Falta el token."; return; }
+    if (!org) { m.className = "msg err"; m.style.display = "block"; m.textContent = "Escribe el nombre de la organización."; return; }
+    if (!sitio) { m.className = "msg err"; m.style.display = "block"; m.textContent = "Escribe el sitio web."; return; }
+    $("drift_capturar").disabled = true;
+    m.className = "msg"; m.style.display = "block"; m.textContent = "Capturando snapshots de " + org + "…";
+    try {
+      const r = await fetch("/drift/capturar", { method: "POST",
+        headers: { "Content-Type": "application/json", "X-Ingest-Token": token },
+        body: JSON.stringify({ org_nombre: org, sitio_web: sitio }) });
+      const o = await leerJson(r);
+      if (!o.ok) { m.className = "msg err"; m.textContent = "Error: " + (o.error || (o.data && o.data.detail) || r.status); return; }
+      const d = o.data;
+      const estados = (d.snapshots||[]).map(s => s.estado).join(", ");
+      m.className = "msg ok";
+      m.textContent = "✓ " + d.total_snapshots + " snapshot(s) · " + d.evidencias_nuevas + " evidencia(s) narrativa(s) nuevas. Estados: " + estados;
+      cargarDriftTimeline(org);
+    } catch (e) { m.className = "msg err"; m.textContent = "Error de red: " + e; }
+    finally { $("drift_capturar").disabled = false; }
+  });
+
+  $("drift_ver").addEventListener("click", () => {
+    const org = $("drift_org").value.trim();
+    if (!org) { const m = $("drift_msg"); m.className = "msg err"; m.style.display = "block"; m.textContent = "Escribe el nombre de la organización."; return; }
+    cargarDriftTimeline(org);
+  });
+
+  async function cargarDriftTimeline(org) {
+    const cont = $("drift_timeline");
+    cont.innerHTML = '<div class="hint">Cargando…</div>';
+    try {
+      const d = await (await fetch("/drift/" + encodeURIComponent(org))).json();
+      if (!d.snapshots.length && !d.evidencias.length) {
+        cont.innerHTML = '<div class="hint">Sin snapshots para ' + esc(org) + '. Captura primero.</div>';
+        return;
+      }
+      let html = '<div style="margin-top:.5rem"><b>' + esc(org) + '</b> — ' + d.total_snapshots + ' snapshot(s) · ' + d.total_evidencias + ' evidencia(s)</div>';
+
+      if (d.evidencias.length) {
+        html += '<h3 style="font-size:.95rem;margin:1rem 0 .3rem">Evidencias Narrativas</h3>';
+        html += d.evidencias.map(ev => {
+          const ICONOS = {posicionamiento:"🎯",audiencia:"👥",lenguaje:"✍️",identidad:"🏷️",concepto_nuevo:"🆕",concepto_eliminado:"🗑️",contradiccion:"⚡",cambio_ontologico:"🔄"};
+          const icono = ICONOS[ev.tipo_cambio] || "📋";
+          return '<div class="card">' +
+            '<div>' + icono + ' <b>' + esc(ev.tipo_cambio) + '</b> <span class="chip">' + esc(ev.tipo_pagina) + '</span> <span class="meta">' + esc((ev.detectado_en||"").slice(0,10)) + '</span></div>' +
+            '<div class="meta">' + esc(ev.descripcion) + '</div>' +
+            (ev.fragmento_antes ? '<div class="ev-item" style="border-left-color:#dc2626"><b>Antes:</b> ' + esc(ev.fragmento_antes.slice(0,200)) + '</div>' : '') +
+            (ev.fragmento_despues ? '<div class="ev-item" style="border-left-color:#16a34a"><b>Después:</b> ' + esc(ev.fragmento_despues.slice(0,200)) + '</div>' : '') +
+          '</div>';
+        }).join("");
+      }
+
+      if (d.snapshots.length) {
+        html += '<h3 style="font-size:.95rem;margin:1rem 0 .3rem">Snapshots</h3>';
+        html += d.snapshots.map(s =>
+          '<div class="card"><div><b>' + esc(s.tipo_pagina) + '</b> <span class="chip">' + esc(s.estado_observable) + '</span> <span class="meta">' + esc((s.capturado_en||"").slice(0,16).replace("T"," ")) + '</span></div>' +
+          '<div class="meta">' + esc(s.url) + (s.hash_contenido ? ' · hash: ' + esc(s.hash_contenido.slice(0,12)) + '…' : '') + '</div></div>'
+        ).join("");
+      }
+
+      cont.innerHTML = html;
+    } catch (e) { cont.innerHTML = '<div class="hint">Error: ' + esc(String(e)) + '</div>'; }
+  }
 
   // ②·⁵ Informe profundo: análisis determinista de lo capturado.
   const SCLASE = { A: "msg ok", B: "msg", C: "msg" };

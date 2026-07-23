@@ -157,3 +157,36 @@ CREATE TABLE IF NOT EXISTS informes_guardados (
     markdown      TEXT,
     creado_en     TEXT NOT NULL
 );
+
+-- Capa 6 — Motor de Drift Narrativo
+CREATE TABLE IF NOT EXISTS drift_snapshots (
+    id                  BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    org_nombre          TEXT NOT NULL,
+    tipo_pagina         TEXT NOT NULL,
+    url                 TEXT NOT NULL,
+    texto               TEXT NOT NULL DEFAULT '',
+    hash_contenido      TEXT NOT NULL DEFAULT '',
+    estado_observable   TEXT NOT NULL DEFAULT 'ok',
+    capturado_en        TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_drift_snap_org   ON drift_snapshots (org_nombre);
+CREATE INDEX IF NOT EXISTS idx_drift_snap_tipo  ON drift_snapshots (tipo_pagina);
+CREATE INDEX IF NOT EXISTS idx_drift_snap_hash  ON drift_snapshots (hash_contenido);
+
+CREATE TABLE IF NOT EXISTS drift_evidencias (
+    id                    BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    org_nombre            TEXT NOT NULL,
+    tipo_cambio           TEXT NOT NULL,
+    tipo_pagina           TEXT NOT NULL,
+    fragmento_antes       TEXT,
+    fragmento_despues     TEXT,
+    descripcion           TEXT NOT NULL,
+    snapshot_anterior_id  BIGINT REFERENCES drift_snapshots(id),
+    snapshot_actual_id    BIGINT REFERENCES drift_snapshots(id),
+    hash_dedup            TEXT NOT NULL UNIQUE,
+    detectado_en          TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_drift_ev_org  ON drift_evidencias (org_nombre);
+CREATE INDEX IF NOT EXISTS idx_drift_ev_tipo ON drift_evidencias (tipo_cambio);
