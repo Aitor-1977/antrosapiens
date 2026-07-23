@@ -1565,6 +1565,89 @@ def onlife_perfil(org_nombre: str) -> dict:
     return _onlife.obtener_perfil(org_nombre)
 
 
+# --- Fase 4: DolorMap Visual (vista consolidada por organización) -------------
+
+
+@app.get("/dolormap/{org_nombre}")
+def dolormap(org_nombre: str) -> dict:
+    """DolorMap: vista consolidada de todas las capas para una organización.
+
+    Integra evidencias, drift narrativo, señales onlife, pipeline comercial
+    y análisis determinista en un solo expediente completo. Lectura pública.
+    """
+    db = get_db()
+    nombre = org_nombre.strip()
+
+    evidencias = db.fetch_all(
+        "SELECT * FROM evidencias WHERE empresa_mencionada = ? AND estado = ? "
+        "ORDER BY creado_en DESC LIMIT 50",
+        (nombre, ESTADO_OK),
+    )
+    ev_list = [dict(e) for e in evidencias]
+
+    all_kws: list[str] = []
+    for ev in ev_list:
+        all_kws.extend(_keywords(ev))
+    all_kws = sorted(set(all_kws))
+
+    a = analizar(all_kws, vertical="", confianza=0.5)
+    patrones = _detectar_patrones(all_kws)
+
+    drift_data = _drift.obtener_timeline(nombre)
+
+    onlife_data = _onlife.obtener_perfil(nombre)
+
+    pipeline_data = _pipeline.obtener_pipeline(nombre)
+
+    contacto = None
+    if ev_list:
+        primer_url = ev_list[0].get("url_fuente", "")
+        dom = dominio_de(primer_url) if primer_url else None
+        if dom:
+            contacto = {
+                "dominio": dom,
+                "rutas": rutas_contacto(dom),
+            }
+
+    return {
+        "org_nombre": nombre,
+        "scoring": a["scoring"],
+        "score_icp": a["score_icp"],
+        "tipo_deuda": a["tipo_deuda"],
+        "deuda_razon": a["deuda_razon"],
+        "deuda_secundaria": a.get("deuda_secundaria", ""),
+        "intensidad": a["intensidad"],
+        "angulo_conversacion": a["angulo_conversacion"],
+        "decisor_sugerido": a["decisor_sugerido"],
+        "senal_dominante": a.get("senal_dominante", ""),
+        "keywords": all_kws,
+        "patrones": patrones,
+        "evidencias": {
+            "total": len(ev_list),
+            "items": ev_list[:20],
+        },
+        "drift": {
+            "total_snapshots": drift_data["total_snapshots"],
+            "total_evidencias": drift_data["total_evidencias"],
+            "evidencias": drift_data["evidencias"][:10],
+            "snapshots": drift_data["snapshots"][:10],
+        },
+        "onlife": {
+            "total_señales": onlife_data["total_señales"],
+            "por_fuente": onlife_data["por_fuente"],
+            "señales": onlife_data["señales"][:10],
+        },
+        "pipeline": {
+            "etapa": pipeline_data["etapa"] if pipeline_data else None,
+            "etapa_label": pipeline_data["etapa_label"] if pipeline_data else None,
+            "transiciones": pipeline_data["transiciones"][:5] if pipeline_data else [],
+        },
+        "contacto": contacto,
+        "linkedin": linkedin_search_url(nombre),
+        "google": google_search_url(nombre),
+    }
+
+
 # --- Capa 9: Pipeline Comercial (endpoints) ----------------------------------
 
 
@@ -1878,6 +1961,17 @@ _ADMIN_HTML = """<!doctype html>
 </section>
 
 <section>
+  <h2>🗺️ DolorMap Visual</h2>
+  <div class=”hint”>Vista <b>consolidada</b> de una organización: integra evidencias, drift narrativo, señales onlife, pipeline comercial y análisis de Dolor Cultural™ en un solo expediente.</div>
+  <div class=”row”>
+    <input id=”dm_org” placeholder=”Nombre de la organización”>
+    <button id=”dm_ver” class=”sec”>🗺️ Ver DolorMap</button>
+  </div>
+  <div class=”msg” id=”dm_msg”></div>
+  <div id=”dm_contenido”></div>
+</section>
+
+<section>
   <h2>②·⁵ Informe profundo (análisis)</h2>
   <div class="hint">Lee lo capturado y lo <b>prioriza</b>: para cada empresa calcula scoring A/B/C, hipótesis de <b>Deuda Cultural™</b>, Score ICP y a qué <b>decisor</b> contactar. Determinista (sin IA): mismos hechos, mismo resultado.</div>
   <div class="hint" style="margin-top:.4rem">Elige <b>categorías</b> (todas o las que quieras) y luego <b>genera</b>, <b>guarda</b> o <b>exporta</b> la investigación.</div>
@@ -2132,6 +2226,7 @@ _ADMIN_HTML = """<!doctype html>
             <button class="sec" onclick="capturarDriftDesdeExp(this)" data-org="${esc(e.nombre)}">📡 Drift</button>
             <button class="sec" onclick="observarOnlifeDesdeExp(this)" data-org="${esc(e.nombre)}">🔬 Onlife</button>
             <button class="sec" onclick="registrarPipelineDesdeExp(this)" data-org="${esc(e.nombre)}">📋 Pipeline</button>
+            <button class="sec" onclick="verDolorMapDesdeExp(this)" data-org="${esc(e.nombre)}">🗺️ DolorMap</button>
             ${e.linkedin ? '<a class="sec" href="' + esc(safeUrl(e.linkedin)) + '" target="_blank" rel="noopener">LinkedIn ↗</a>' : ""}
             ${e.contacto && e.contacto.dominio ? '<button class="sec" onclick="verificarCorreo(this)" data-dom="' + esc(e.contacto.dominio) + '">✓ Verificar correo</button> <span class="vres"></span>' : ""}
           </div>
@@ -2283,6 +2378,97 @@ _ADMIN_HTML = """<!doctype html>
       cont.innerHTML = html;
     } catch (e) { cont.innerHTML = '<div class="hint">Error: ' + esc(String(e)) + '</div>'; }
   }
+
+  // 🗺️ DolorMap Visual
+  window.verDolorMapDesdeExp = (btn) => {
+    const org = btn.dataset.org || "";
+    $("dm_org").value = org;
+    $("dm_ver").click();
+  };
+
+  $("dm_ver").addEventListener("click", async () => {
+    const m = $("dm_msg"), cont = $("dm_contenido");
+    const org = $("dm_org").value.trim();
+    if (!org) { m.className = "msg err"; m.style.display = "block"; m.textContent = "Escribe el nombre de la organización."; return; }
+    m.className = "msg"; m.style.display = "block"; m.textContent = "Cargando DolorMap de " + org + "…";
+    cont.innerHTML = "";
+    try {
+      const d = await (await fetch("/dolormap/" + encodeURIComponent(org))).json();
+      if (d.detail) { m.className = "msg err"; m.textContent = d.detail; return; }
+      m.style.display = "none";
+
+      const SCLASE_DM = { A: "msg ok", B: "msg", C: "msg" };
+      const sc = d.scoring || "C";
+      const bcls = sc === "A" ? "badge-a" : sc === "B" ? "badge-b" : "badge-c";
+
+      let html = '<div class="card" style="border-left:4px solid ' + (sc==="A"?"#16a34a":sc==="B"?"#ca8a04":"#6b7280") + '">';
+      html += '<div style="display:flex;justify-content:space-between;align-items:center">';
+      html += '<h3 style="margin:0;font-size:1.1rem">🗺️ ' + esc(d.org_nombre) + '</h3>';
+      html += '<span class="badge ' + bcls + '">' + sc + '</span></div>';
+
+      // Dolor Cultural
+      if (d.tipo_deuda) {
+        html += '<div style="margin:.5rem 0;padding:.5rem;background:var(--bg2,#f3f4f6);border-radius:.375rem">';
+        html += '<div><b>🔴 ' + esc(d.tipo_deuda) + '</b> <span class="chip">' + esc(d.intensidad) + '</span></div>';
+        html += '<div class="meta">' + esc(d.deuda_razon) + '</div>';
+        if (d.deuda_secundaria) html += '<div class="meta" style="margin-top:.2rem">↳ ' + esc(d.deuda_secundaria) + '</div>';
+        html += '<div class="meta" style="margin-top:.3rem">💬 <b>Ángulo:</b> ' + esc(d.angulo_conversacion) + '</div>';
+        html += '<div class="meta">🎯 <b>Decisor:</b> ' + esc(d.decisor_sugerido) + '</div>';
+        html += '</div>';
+      }
+
+      // Patrones
+      if (d.patrones && d.patrones.length) {
+        html += '<div style="margin:.4rem 0"><b>Patrones detectados:</b></div>';
+        html += d.patrones.map(p => '<div class="ev-item" style="border-left-color:#7c3aed"><b>' + esc(p.patron) + '</b><br><span class="meta">' + esc(p.razonamiento) + '</span></div>').join("");
+      }
+
+      // Keywords
+      if (d.keywords && d.keywords.length) {
+        html += '<div style="margin:.4rem 0">' + d.keywords.map(k => '<span class="chip">' + esc(k) + '</span>').join(" ") + '</div>';
+      }
+
+      // Pipeline
+      if (d.pipeline && d.pipeline.etapa) {
+        const ICONOS_E = {observacion:"👀",vigilancia:"🔍",peritaje:"🔬",dolormap:"🗺️",alianza:"🤝",cerrado:"✅"};
+        html += '<div style="margin:.5rem 0;padding:.4rem;background:var(--bg2,#f3f4f6);border-radius:.375rem">';
+        html += '<b>📋 Pipeline:</b> ' + (ICONOS_E[d.pipeline.etapa]||"") + ' ' + esc(d.pipeline.etapa_label);
+        html += '</div>';
+      }
+
+      // Evidencias
+      html += '<details style="margin:.5rem 0"><summary style="cursor:pointer;font-weight:600">📰 Evidencias (' + d.evidencias.total + ')</summary>';
+      if (d.evidencias.items.length) {
+        html += d.evidencias.items.map(ev => '<div class="ev-item"><a href="' + esc(safeUrl(ev.url_fuente)) + '" target="_blank" rel="noopener">' + esc((ev.cita_textual||"").slice(0,120)) + '</a> <span class="meta">' + esc(ev.nombre_medio) + ' · ' + esc((ev.creado_en||"").slice(0,10)) + '</span></div>').join("");
+      } else { html += '<div class="hint">Sin evidencias capturadas.</div>'; }
+      html += '</details>';
+
+      // Drift
+      html += '<details style="margin:.5rem 0"><summary style="cursor:pointer;font-weight:600">📡 Drift Narrativo (' + d.drift.total_evidencias + ' cambios, ' + d.drift.total_snapshots + ' snapshots)</summary>';
+      if (d.drift.evidencias.length) {
+        const DI = {posicionamiento:"🎯",audiencia:"👥",lenguaje:"✍️",identidad:"🏷️",concepto_nuevo:"🆕",concepto_eliminado:"🗑️",contradiccion:"⚡",cambio_ontologico:"🔄"};
+        html += d.drift.evidencias.map(ev => '<div class="ev-item">' + (DI[ev.tipo_cambio]||"📋") + ' <b>' + esc(ev.tipo_cambio) + '</b> <span class="chip">' + esc(ev.tipo_pagina) + '</span><br><span class="meta">' + esc(ev.descripcion) + '</span></div>').join("");
+      } else { html += '<div class="hint">Sin cambios narrativos registrados.</div>'; }
+      html += '</details>';
+
+      // Onlife
+      html += '<details style="margin:.5rem 0"><summary style="cursor:pointer;font-weight:600">🔬 Señales Onlife (' + d.onlife.total_señales + ')</summary>';
+      if (d.onlife.señales.length) {
+        const OI = {actividad_tech:"⚙️",lanzamiento:"🚀",comunidad:"💬",contratacion:"👔",presencia:"📢"};
+        html += d.onlife.señales.map(s => '<div class="ev-item">' + (OI[s.tipo_senal]||"📋") + ' <b>' + esc(s.tipo_senal) + '</b> <span class="chip">' + esc(s.fuente) + '</span><br><span class="meta">' + esc(s.descripcion) + '</span>' + (s.url ? '<br><a href="' + esc(safeUrl(s.url)) + '" target="_blank" rel="noopener" class="meta">' + esc(s.url.slice(0,60)) + '</a>' : '') + '</div>').join("");
+      } else { html += '<div class="hint">Sin señales onlife. Usa el Motor Onlife para observar.</div>'; }
+      html += '</details>';
+
+      // Links
+      html += '<div style="margin-top:.5rem">';
+      if (d.linkedin) html += '<a class="sec" href="' + esc(safeUrl(d.linkedin)) + '" target="_blank" rel="noopener">LinkedIn ↗</a> ';
+      if (d.google) html += '<a class="sec" href="' + esc(safeUrl(d.google)) + '" target="_blank" rel="noopener">Google ↗</a>';
+      html += '</div>';
+
+      html += '</div>';
+      cont.innerHTML = html;
+    } catch (e) { m.className = "msg err"; m.textContent = "Error: " + e; }
+  });
 
   // ⑨ Pipeline Comercial
   window.registrarPipelineDesdeExp = (btn) => {
