@@ -52,7 +52,7 @@ def test_export_markdown(cli):
     assert r.headers["content-type"].startswith("text/markdown")
     assert "attachment" in r.headers["content-disposition"]
     t = r.text
-    assert "# Prospectos — hd-prospector" in t
+    assert "# Organizaciones — hd-prospector" in t
     assert "## VC" in t and "### Kaszek" in t
     assert "> Tesis, LatAm; con coma" in t   # discurso como blockquote
 

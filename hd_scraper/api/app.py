@@ -52,8 +52,8 @@ from ..validation.validator import validate_prospecto
 app = FastAPI(
     title="hd-prospector API",
     description=(
-        "Capa de evidencia + prospectos de los cuatro ecosistemas. Extrae y "
-        "almacena; no interpreta. Evidencia: solo lectura. Prospectos: lectura "
+        "Capa de evidencia + organizaciones de los cuatro ecosistemas. Extrae y "
+        "almacena; no interpreta. Evidencia: solo lectura. Organizaciones: lectura "
         "pública + intake autenticada del operador."
     ),
     version="0.2.0",
@@ -153,14 +153,14 @@ def raiz() -> dict:
             "POST /prospectos": "alta de prospecto (requiere X-Ingest-Token)",
             "POST /scrape": "rastreo bajo demanda de una empresa (requiere X-Ingest-Token)",
             "POST /enrich": "descubre web + discurso + enlaces de un nombre (requiere X-Ingest-Token)",
-            "GET /informe": "informe profundo: prioriza empresas por scoring + Deuda Cultural™ + ICP (filtro: categoria)",
+            "GET /informe": "informe profundo: prioriza empresas por scoring + Deuda Cultural™ + Interés Analítico (filtro: categoria)",
             "GET /informe.md": "descarga el informe profundo en Markdown (filtros: categoria|categorias)",
             "GET /informe.csv": "descarga el informe profundo en CSV (filtros: categoria|categorias)",
             "POST /informe/guardar": "genera y GUARDA la investigación de las categorías elegidas (requiere X-Ingest-Token)",
             "GET /informes": "lista las investigaciones guardadas",
             "GET /informes/{id}.md": "descarga una investigación guardada (Markdown)",
             "DELETE /informes/{id}": "borra una investigación guardada (requiere X-Ingest-Token)",
-            "POST /analizar": "análisis profundo determinista de un título o señales (scoring/Deuda/ICP/decisor)",
+            "POST /analizar": "análisis profundo determinista de un título o señales (scoring/Deuda/Interés/decisor)",
             "POST /verificar-contacto": "verifica el correo del decisor con Hunter (requiere X-Ingest-Token y HUNTER_API_KEY)",
             "POST /directorio": "trae empresas reales de Wikidata (base pública) y las guarda como prospectos (requiere X-Ingest-Token)",
             "POST /webhook/ingesta": "Capa 0: evalúa texto con el motor de reglas determinista y persiste señales (requiere X-Ingest-Token)",
@@ -272,7 +272,7 @@ def _row_a_corpus(row) -> dict:
     (misma versión ``motor_a.corpus.v1``): una etiqueta OBJETIVA de la captura
     (Alta|Media|Baja), no una interpretación. Los consumidores previos que no la
     esperan la ignoran; RadarHD la usa como contexto para reducir falsos
-    positivos. NO se añade Deuda Cultural™, ICP ni hipótesis (eso es Motor B).
+    positivos. NO se añade Deuda Cultural™, Interés ni hipótesis (eso es Motor B).
     """
     return {
         "empresa": row["empresa_mencionada"],
@@ -303,7 +303,7 @@ def corpus(
     """Corpus de evidencia verificable (Motor A). Contrato estable para RadarHD.
 
     Solo hechos observables: empresa, fuente, fecha, texto, url, keywords
-    (señales Nivel 1 objetivas) y confianza. NO incluye Deuda Cultural™, ICP ni
+    (señales Nivel 1 objetivas) y confianza. NO incluye Deuda Cultural™, Interés ni
     hipótesis: eso lo aplica el Motor B (RadarHD) al consumir este corpus.
     """
     if categoria is not None and categoria not in CATEGORIAS:
@@ -450,8 +450,8 @@ def export_json(categoria: Optional[str] = Query(None, description="Filtra por e
 
 
 def _prospectos_a_markdown(filas: list) -> str:
-    out = ["# Prospectos — hd-prospector", "",
-           f"_Exportado: {ahora_iso()}_ · {len(filas)} prospecto(s)", ""]
+    out = ["# Organizaciones — hd-prospector", "",
+           f"_Exportado: {ahora_iso()}_ · {len(filas)} organización(es)", ""]
     categoria_actual = None
     for f in filas:
         if f["categoria"] != categoria_actual:
@@ -985,7 +985,7 @@ _STATIC = Path(__file__).resolve().parent / "static"
 _MANIFEST = {
     "name": "hd-prospector · Radar",
     "short_name": "Radar",
-    "description": "Descubre y cura prospectos de VC, Startup, Incubadora y Corporativo.",
+    "description": "Descubre y cura organizaciones de VC, Startup, Incubadora y Corporativo.",
     "start_url": "/admin",
     "scope": "/",
     "display": "standalone",
@@ -1106,7 +1106,7 @@ def _analizar_evidencia(row, sitios: Optional[dict] = None) -> dict:
 
 def _analizar_prospecto(row) -> dict:
     """Analiza un prospecto guardado (p. ej. del directorio): empresa real sin
-    evento de prensa. Deriva señales de su descripción; ICP por vertical; contacto
+    evento de prensa. Deriva señales de su descripción; Interés por vertical; contacto
     por su sitio. Scoring típico C (sin dolor), pero es una empresa REAL con datos."""
     nombre = (row["nombre"] or "").strip()
     discurso = row["discurso_corporativo"] or ""
@@ -1222,7 +1222,7 @@ def informe(
     """Informe profundo: prioriza las empresas capturadas por scoring + Deuda + ICP.
 
     Interpreta (de forma determinista) la evidencia consumible: una tarjeta por
-    empresa (la señal más fuerte gana), ordenada A→B→C y por Score ICP. Acepta una
+    empresa (la señal más fuerte gana), ordenada A→B→C y por Interés Analítico. Acepta una
     o varias categorías (o todas si no se indica).
     """
     return _construir_informe(_cats_validas(categoria, categorias), limite)
@@ -1388,7 +1388,7 @@ def analizar_endpoint(payload: AnalizarIn) -> dict:
 
     Público (solo interpreta datos que se le pasan; no escribe ni raspa). Si se
     da ``titulo`` y no ``keywords``, deriva las señales del título de forma
-    determinista. Devuelve scoring, Deuda Cultural™ (hipótesis), ICP, decisor y,
+    determinista. Devuelve scoring, Deuda Cultural™ (hipótesis), Interés Analítico, decisor y,
     si se da ``dominio``, correos candidatos (sin verificar).
     """
     kws = payload.keywords
@@ -1802,7 +1802,7 @@ def listar_expedientes(
     """Expedientes Vivos: evidencia agrupada por organización + análisis completo.
 
     Cada expediente incluye todas las evidencias de esa organización, patrones
-    detectados, hipótesis de Dolor Cultural, scoring, ICP y decisor sugerido.
+    detectados, hipótesis de Dolor Cultural, scoring, Interés Analítico y decisor sugerido.
     """
     return _construir_expedientes(_cats_validas(categoria, categorias), limite)
 
@@ -2411,7 +2411,7 @@ _ADMIN_HTML = """<!doctype html>
   .dossier-link { text-decoration: none; color: #7c3aed; font-weight: 600; font-size: .8rem; }
 </style></head><body>
 <h1>hd-prospector · Radar de Inteligencia Antropológica</h1>
-<p class="sub">① Un clic = investigación completa (4 ecosistemas × 6 señales × noticias) → ② <b>Expedientes Vivos</b> con <b>patrones</b>, <b>Dolor Cultural™</b> y <b>scoring A/B/C</b> → ③ auto-investiga y guarda prospecto. Internet → Evidencia → Patrón → Dolor → Prospecto.</p>
+<p class="sub">① Un clic = investigación completa (4 ecosistemas × 6 señales × noticias) → ② <b>Expedientes Vivos</b> con <b>patrones</b>, <b>Dolor Cultural™</b> y <b>scoring A/B/C</b> → ③ auto-investiga y guarda Organización. Internet → Evidencia → Patrón → Dolor → Organización.</p>
 
 <label class="req">Token de acceso</label>
 <input id="token" type="password" placeholder="HD_INGEST_TOKEN" autocomplete="off">
@@ -2658,8 +2658,8 @@ _ADMIN_HTML = """<!doctype html>
 </section>
 
 <section>
-  <h2>③ Expediente del prospecto (auto-investigado)</h2>
-  <div class="hint">Toca <b>Enriquecer</b> (o promueve un candidato) y web, tesis y vertical se llenan solos. Tú revisas y ajustas antes de guardar.</div>
+  <h2>③ Expediente de la Organización (auto-investigado)</h2>
+  <div class="hint">Toca <b>Enriquecer</b> (o promueve una observación) y web, tesis y vertical se llenan solos. Tú revisas y ajustas antes de guardar.</div>
   <label class="req">Nombre</label>
   <input id="nombre" placeholder="p. ej. Kaszek">
   <label class="req">Categoría (ecosistema)</label>
@@ -2689,11 +2689,11 @@ _ADMIN_HTML = """<!doctype html>
   <input id="url_perfil" placeholder="https://…">
   <label>Fuente del discurso</label>
   <input id="fuente_discurso" placeholder="sitio_oficial, linkedin, prensa…">
-  <button id="enviar">Guardar prospecto</button>
+  <button id="enviar">Guardar Organización</button>
   <div class="msg" id="msg"></div>
 
   <h2 style="margin-top:1.3rem">Exportar</h2>
-  <div class="hint">Descarga tus prospectos guardados (todos los ecosistemas).</div>
+  <div class="hint">Descarga tus organizaciones guardadas (todos los ecosistemas).</div>
   <div class="row" style="margin-top:.6rem">
     <a class="dl" href="/prospectos/export.csv">⬇️ CSV</a>
     <a class="dl" href="/prospectos/export.md">⬇️ Markdown</a>
