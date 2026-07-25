@@ -18,7 +18,7 @@ ejecuta IA para producir inteligencia científica.
 
 ## Contexto (por qué se toma ahora)
 
-La auditoría del ecosistema (2026-07-25, ver `ARQUITECTURA_ECOSISTEMA.md`)
+La auditoría del ecosistema (2026-07-25, ver `../ARQUITECTURA_ECOSISTEMA.md`)
 encontró que **RadarHD hoy duplica la función de inferencia** de Motor A:
 - Tiene 13 *engines* propios (`inference`, `scoring`, `dictamenPericial`,
   `contradiction`, `ecosistema`, `onlife`, `priorizacion`, `recomendacion`, …).
@@ -111,7 +111,7 @@ laboratorio y del cliente.
 - **Motor A**: sin cambios de responsabilidad; puede necesitar **exponer en JSON**
   algunas vistas que hoy solo sirve como HTML (p. ej. `/dossier`) o agregados que
   RadarHD calculaba (clusters/outliers/oportunidades) — ver
-  `ROADMAP_ARQUITECTONICO.md` (brechas de contrato).
+  `../ROADMAP_ARQUITECTONICO.md` (brechas de contrato).
 - **RadarHD**: se eliminan engines de inferencia, servicios LLM de clasificación y
   el cálculo local de Dolor/Drift/Onlife/Ecosistema/Dictamen; sus rutas `/api/*`
   de inteligencia pasan a ser **proxies** al gateway oficial de Motor A. Se
@@ -133,6 +133,6 @@ laboratorio y del cliente.
 - [x] Decisión oficializada y documentada (este ADR + docs del ecosistema).
 
 ## Referencias
-- `ARQUITECTURA_ECOSISTEMA.md` · `FRONTERAS_MOTORES.md` · `CONTRATOS_API.md` ·
-  `ROADMAP_ARQUITECTONICO.md` · `DOCUMENTACION_MAESTRA.md` §24 ·
+- `../ARQUITECTURA_ECOSISTEMA.md` · `../FRONTERAS_MOTORES.md` · `../CONTRATOS_API.md` ·
+  `../ROADMAP_ARQUITECTONICO.md` · `../DOCUMENTACION_MAESTRA.md` §24 ·
   RadarHD: `MIGRACION_ARQUITECTURA_1_0.md`, `src/lib/motor-a.gateway.ts`.

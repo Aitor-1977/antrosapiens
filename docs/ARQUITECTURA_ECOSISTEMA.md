@@ -2,7 +2,7 @@
 
 > **ARQUITECTURA 1.0 (oficial, ADR-0001):** *Motor A piensa. Motor B muestra.
 > Motor C vende.* Un único Motor de Inferencia (A); RadarHD solo representa y
-> vende, consumiendo la inteligencia de Motor A. Ver `ADR_0001_ARQUITECTURA_1_0.md`.
+> vende, consumiendo la inteligencia de Motor A. Ver `ADR/ADR_0001_ARQUITECTURA_1_0.md`.
 >
 > Este documento describe el estado **verificado del código** (2026-07-25) — que
 > incluye deuda a eliminar (RadarHD aún infiere con IA). Los diagramas §1–§6

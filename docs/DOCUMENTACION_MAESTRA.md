@@ -44,7 +44,7 @@
 > muestra. Motor C vende. Sin excepción.* Un único Motor de Inferencia (Motor A);
 > RadarHD solo representa y vende, consumiendo la inteligencia de Motor A. La
 > inferencia con IA que RadarHD aún contiene es **deuda a eliminar** (cutover en
-> `ROADMAP_ARQUITECTONICO.md`). Decisión completa: `ADR_0001_ARQUITECTURA_1_0.md`.
+> `ROADMAP_ARQUITECTONICO.md`). Decisión completa: `ADR/ADR_0001_ARQUITECTURA_1_0.md`.
 
 **Hamaca Digital (HD)** es un laboratorio de antropología de la innovación. Su
 ecosistema técnico se organiza en tres motores con responsabilidad única (SRP):

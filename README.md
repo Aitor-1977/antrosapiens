@@ -6,6 +6,18 @@ clasifica culturalmente, no interpreta.**
 
 > Proyecto autónomo. No depende de ningún otro repositorio.
 
+## 📚 Documentación técnica
+
+Toda la documentación vive en **[`docs/`](./docs/README.md)** (ADR-0004),
+versionada y verificada contra el código. Puntos de entrada:
+[README técnico](./docs/README_TECNICO.md) ·
+[Reconstrucción total](./docs/GUIA_RECONSTRUCCION_TOTAL.md) ·
+[Documentación maestra](./docs/DOCUMENTACION_MAESTRA.md) ·
+[Arquitectura del ecosistema](./docs/ARQUITECTURA_ECOSISTEMA.md) ·
+[ADR](./docs/ADR/) · [Capas 0–18](./docs/CAPAS/) ·
+[Diagramas](./docs/DIAGRAMAS/) · [Changelog](./docs/CHANGELOG.md) ·
+[Inconsistencias](./docs/INCONSISTENCIAS.md).
+
 ## Frontera Motor A / Motor B (arquitectura)
 
 Este repo es el **Motor A (objetivo)**: scraping, limpieza, extracción,

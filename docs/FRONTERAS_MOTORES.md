@@ -4,7 +4,7 @@
 > muestra. Motor C vende. Sin excepción.* Este documento describe el estado
 > **verificado** del código (2026-07-25) y marca la brecha respecto a la
 > Arquitectura 1.0 como **deuda arquitectónica a eliminar**. La decisión tiene
-> precedencia sobre cualquier implementación anterior — ver `ADR_0001_ARQUITECTURA_1_0.md`.
+> precedencia sobre cualquier implementación anterior — ver `ADR/ADR_0001_ARQUITECTURA_1_0.md`.
 
 ## Responsabilidad definitiva de cada motor
 
