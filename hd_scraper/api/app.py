@@ -1679,6 +1679,13 @@ from ..comparador import (
     comparar_periodos,
     generar_matriz,
 )
+from ..predictivo import (
+    calcular_tendencia,
+    calcular_volatilidad,
+    emitir_proyeccion,
+    proyectar_escenarios,
+    serie_temporal,
+)
 
 
 def _detectar_patrones(keywords: list[str]) -> list[dict]:
@@ -2061,6 +2068,33 @@ def periodos(org: str = Query(..., description="Organización"),
     """Compara la evidencia de una organización antes y después de una fecha."""
     exp = _expediente_para_validacion(org)
     return comparar_periodos(exp, corte)
+
+
+# --- Capa 15: Motor Predictivo Antropológico ---------------------------------
+#
+# Trayectorias culturales futuras por reglas deterministas sobre evidencia
+# histórica. Sin IA, sin modelos opacos, sin aleatoriedad.
+
+@app.get("/proyeccion/{org_nombre}")
+def proyeccion_org(org_nombre: str) -> dict:
+    """Proyección antropológica: tendencia, estabilidad, volatilidad, riesgo,
+    madurez, inflexiones y escenarios, a partir de la evidencia histórica."""
+    exp = _expediente_para_validacion(org_nombre)
+    return emitir_proyeccion(exp)
+
+
+@app.get("/escenarios/{org_nombre}")
+def escenarios_org(org_nombre: str) -> dict:
+    """Escenarios (base/optimista/pesimista) del siguiente periodo."""
+    exp = _expediente_para_validacion(org_nombre)
+    serie = serie_temporal(exp)
+    return {
+        "org": exp["nombre"],
+        "serie": serie,
+        "tendencia": calcular_tendencia(serie["valores"]),
+        "volatilidad": calcular_volatilidad(serie["valores"]),
+        "escenarios": proyectar_escenarios(serie["valores"]),
+    }
 
 
 # --- Capa 6: Motor de Drift Narrativo (endpoints) --------------------------
