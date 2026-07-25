@@ -47,16 +47,16 @@ flowchart TB
 - Manifiesto de migración con el mapa de acoplamiento (`engines/scoring` importado
   por 11 archivos, etc.) y el mapeo ruta-RadarHD → endpoint-Motor-A.
 
-### Fase 1 — Brechas de contrato en Motor A `[PENDIENTE — bloqueante]`
-RadarHD calcula localmente cosas que Motor A **no expone aún en JSON consumible**.
-Antes del cutover, Motor A debe exponer:
-- `/dossier/{org}` y `/dolormap/{org}` en **JSON** (hoy dossier es HTML).
-- Agregados ecosistémicos: **clusters, outliers, centinelas, patrones, tendencias**
-  (RadarHD `/api/radar/ecosistema/*`) — mapear a `/latam`, `/vertical`, `/comparar`
-  o añadir endpoints nuevos.
-- **oportunidades, prioridades, recomendaciones** (ranking) — desde `/alertas`,
-  `/expedientes`, `/latam` o endpoint nuevo.
-Extensiones **aditivas** al contrato `motor_a.corpus.v1` o endpoints nuevos.
+### Fase 1 — Brechas de contrato en Motor A `[EJECUTADA — 2026-07-25]`
+Motor A ya expone en JSON toda la inteligencia que RadarHD calculaba localmente:
+- ✅ `GET /dossier/{org}?formato=json` — dossier completo (`motor_a.dossier.v1`);
+  `/dolormap/{org}` ya devolvía JSON.
+- ✅ Agregados ecosistémicos: `GET /ecosistema` (+ `/clusters`, `/outliers`,
+  `/centinelas`, `/riesgos`, `/madurez`) y `GET /calidad-corpus`.
+- ✅ Ranking/oportunidades/prioridades: `GET /ranking`, `/oportunidades`, `/prioridades`.
+Todo determinista, aditivo (no rompe `motor_a.corpus.v1`), OpenAPI regenerado.
+Implementación: `hd_scraper/observatorio.py` (+ `_dossier_json` en `api/app.py`).
+Detalle: `CONTRATOS_API.md §1bis/§1ter`.
 
 ### Fase 2 — Rutas de inteligencia → proxy y borrado de engines `[PENDIENTE]`
 - Reescribir cada ruta de inteligencia de RadarHD como **proxy** al gateway.

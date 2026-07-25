@@ -1,10 +1,20 @@
 # INVENTARIO DE ENDPOINTS — Ecosistema Hamaca Digital
 
-> Verificado (2026-07-25). **Total: 121 endpoints** = 72 (Motor A) + 49 (RadarHD).
+> Verificado (2026-07-25). **Total: 131 endpoints** = 82 (Motor A) + 49 (RadarHD).
 > Fuente A: `antrosapiens/hd_scraper/api/app.py` (decoradores `@app.*`).
 > Fuente B/C: `radarHD/src/app/api/**/route.ts` (Next App Router).
 
-## §A. Motor A — `antrosapiens` (72, FastAPI, solo lectura)
+## §A0. Cutover Arquitectura 1.0 — inteligencia JSON para RadarHD (10 nuevos)
+| Método | Ruta | Devuelve |
+|--------|------|----------|
+| GET | `/dossier/{org}?formato=json` | dossier COMPLETO (`motor_a.dossier.v1`) — ampliación |
+| GET | `/ecosistema` | panorama completo (clusters, outliers, riesgos, ranking, …) |
+| GET | `/ecosistema/clusters` · `/ecosistema/outliers` · `/ecosistema/centinelas` | agrupación/atípicos/centinelas |
+| GET | `/ecosistema/riesgos` · `/ecosistema/madurez` | riesgo/madurez agregados |
+| GET | `/calidad-corpus` | calidad del corpus |
+| GET | `/ranking` · `/oportunidades` · `/prioridades` | ranking HD / oportunidades analíticas / prioridades |
+
+## §A. Motor A — `antrosapiens` (82, FastAPI, solo lectura)
 
 | # | Método | Ruta | Capa |
 |---|--------|------|------|

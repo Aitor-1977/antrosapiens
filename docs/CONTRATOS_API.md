@@ -57,7 +57,45 @@ sequenceDiagram
     R->>R: scoring-llm.ts (LLM) clasifica con ese contexto
 ```
 
-## 2. Superficie API de Motor A (72 endpoints, solo lectura)
+## 1bis. Contrato del dossier JSON: `motor_a.dossier.v1` (Cutover 1.0)
+
+`GET /dossier/{org}?formato=json` — **fuente única** de inteligencia por
+organización para RadarHD (el `formato=html` por defecto se mantiene). Devuelve
+en un solo objeto (todo determinista, sin IA):
+
+`resumen_ejecutivo` · `narrativa_dominante` · `hipotesis_central` ·
+`clasificacion_deuda_cultural` · `nivel_confianza` · `calidad_evidencia` ·
+`profundidad_friccion` · `patrones` · `contradicciones` · `vacios` · `drift` ·
+`onlife` · `dolormap` · `validacion_cientifica` · `gobernanza` (huella +
+integridad + consistencia + certificado) · `auditoria` · `cronologia` ·
+`cadena_evidencia` · `fuentes` · `clusters_relacionados` · `outliers_relacionados`
+· `contexto_ecosistemico` · `ranking` · `prioridad_hd` · `estado_pipeline`.
+
+Se compone reutilizando `dolormap`, `validar_expediente` (C11),
+`auditar_expediente`/`emitir_certificado` (C12), `curar` (C10),
+`ranking_hd`/`contexto_ecosistemico`/`detectar_outliers` (C16). No recalcula nada.
+
+## 1ter. Endpoints ecosistémicos JSON (Cutover 1.0)
+
+Cierran las brechas que RadarHD calculaba localmente. Todos deterministas:
+
+| Endpoint | Devuelve |
+|----------|----------|
+| `GET /ecosistema?limite=` | panorama completo: indicadores, clusters, outliers, centinelas, riesgos_culturales, madurez, calidad_corpus, ranking, oportunidades, prioridades |
+| `GET /ecosistema/clusters` | clusters por (deuda cultural, vertical) |
+| `GET /ecosistema/outliers` | organizaciones atípicas (ICP >1σ, deuda única, profundidad sin volumen) |
+| `GET /ecosistema/centinelas` | dolor profundo emergente (corpus escaso) |
+| `GET /ecosistema/riesgos` | riesgo cultural agregado (reutiliza Predictivo) |
+| `GET /ecosistema/madurez` | madurez agregada del ecosistema |
+| `GET /calidad-corpus` | fechado, fuentes, confianza, cobertura suficiente |
+| `GET /ranking?limite=` | Ranking HD: prioridad, motivo, evidencias, nivel de confianza |
+| `GET /oportunidades?limite=` | oportunidades analíticas: por qué / para quién / evidencia / confianza (SIN recomendación comercial) |
+| `GET /prioridades?limite=` | prioridades (validadas primero) |
+
+**Compatibilidad:** todas son adiciones; no rompen `motor_a.corpus.v1` ni rutas
+existentes. OpenAPI (`/openapi.json`, `/docs`) se regenera automáticamente.
+
+## 2. Superficie API de Motor A (82 endpoints, solo lectura)
 Inventario completo → `INVENTARIO_ENDPOINTS.md` §A. Contrato principal expuesto:
 `/corpus`. El resto (`/expedientes`, `/validacion`, `/certificado`, `/dossier`,
 `/laboratorio`, …) **está disponible pero RadarHD hoy NO lo consume** (solo usa

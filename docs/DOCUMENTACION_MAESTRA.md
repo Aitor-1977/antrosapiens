@@ -18,7 +18,7 @@
 5. [Motor A — Antrosapiens](#5-motor-a--antrosapiens)
 6. [Motor B — RadarHD](#6-motor-b--radarhd)
 7. [Motor C — Prospector HD](#7-motor-c--prospector-hd)
-8. [APIs (72 endpoints)](#8-apis-72-endpoints)
+8. [APIs (82 endpoints)](#8-apis-82-endpoints)
 9. [Base de datos (20 tablas)](#9-base-de-datos-20-tablas)
 10. [Flujo de datos extremo a extremo](#10-flujo-de-datos-extremo-a-extremo)
 11. [Curaduría Antropológica (Capa 10)](#11-curaduría-antropológica-capa-10)
@@ -84,7 +84,7 @@ TABLAS}.md`, `GUIA_RECONSTRUCCION_TOTAL.md`, `ROADMAP_ARQUITECTONICO.md`.
 
 **Estado global (verificado):** paquete `hd_scraper/` con **30 módulos** en la
 raíz (29 funcionales + `__init__`) más subpaquetes,
-**72 endpoints** en `hd_scraper/api/app.py`, **20 tablas**, **42 archivos de
+**82 endpoints** en `hd_scraper/api/app.py`, **20 tablas**, **42 archivos de
 test**, suite `657 passed` y cobertura global **90%** (núcleo científico
 Capas 10–18 al **100%**; lo no cubierto es el *wiring* HTTP/HTML de `app.py` y
 conectores de red no ejecutables en el entorno con proxy). → §16.
@@ -348,7 +348,7 @@ archivos · tests · ejemplo):
 ### 5.1 Árbol de carpetas
 ```
 hd_scraper/
-├── api/app.py            # 72 endpoints FastAPI (solo lectura) — 4436 LOC
+├── api/app.py            # 82 endpoints FastAPI (solo lectura) — 4436 LOC
 ├── analisis.py           # Capa 3 — inferencia determinista (analizar)
 ├── curaduria.py          # Capa 10 — curaduría antropológica
 ├── dictamen.py           # dictamen + ranking (Fase 2)
@@ -484,12 +484,18 @@ vestigiales del monorepo de origen `marito-Aitorhd`. → §24 y `FRONTERAS_MOTOR
 
 ---
 
-## 8. APIs (72 endpoints)
+## 8. APIs (82 endpoints)
 
 Todos en `hd_scraper/api/app.py`. API **solo lectura** salvo POST/DELETE de
 intake/disparo. Errores estándar FastAPI: `404` (no encontrado), `422`
 (validación de parámetros), `503` (intake sin `HD_INGEST_TOKEN`). Motor
 propietario: **A** (todos).
+
+> **Cutover Arquitectura 1.0 · Fase 1 (2026-07-25):** +10 endpoints que exponen
+> en JSON toda la inteligencia que RadarHD calculaba localmente:
+> `/dossier/{org}?formato=json` (dossier completo), `/ecosistema` (+ `/clusters`,
+> `/outliers`, `/centinelas`, `/riesgos`, `/madurez`), `/calidad-corpus`,
+> `/ranking`, `/oportunidades`, `/prioridades`. Detalle: `CONTRATOS_API.md`.
 
 ### 8.1 Núcleo evidencia / corpus
 | Método | Ruta | Uso |
@@ -923,7 +929,7 @@ Repo `Aitor-1977/radarHD` (Next.js 16, npm `prospector`). Reconstrucción comple
 ## 23. Anexos
 
 ### 23.1 Árbol de endpoints por capa
-Ver §8 (72 endpoints agrupados). Fuente: `hd_scraper/api/app.py` (decoradores `@app.*`).
+Ver §8 (82 endpoints agrupados). Fuente: `hd_scraper/api/app.py` (decoradores `@app.*`).
 
 ### 23.2 Árbol de módulos
 Ver §5.1 y §5.2 (30 módulos raíz + subpaquetes `connectors/`, `governance/`,

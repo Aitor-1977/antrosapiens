@@ -72,6 +72,15 @@ evidencia,expedientes,perfil,recomendacion}`, rutas `/api/diag/{gemini,ia}` y el
 cálculo local de Dolor/Drift/Onlife/Ecosistema/Dictamen. Manifiesto exacto y mapa
 de acoplamiento: `radarHD/MIGRACION_ARQUITECTURA_1_0.md`.
 
+> **Fase 1 del Cutover — EJECUTADA (2026-07-25):** Motor A **ya expone en JSON**
+> toda la inteligencia que RadarHD calculaba localmente, cerrando las brechas de
+> contrato: `GET /dossier/{org}?formato=json` (dossier completo,
+> `motor_a.dossier.v1`), `GET /ecosistema` (+ `/clusters`, `/outliers`,
+> `/centinelas`, `/riesgos`, `/madurez`), `GET /calidad-corpus`, `GET /ranking`,
+> `GET /oportunidades`, `GET /prioridades`. Ver `CONTRATOS_API.md §1bis/§1ter`.
+> Con esto, RadarHD ya puede consumir toda la inteligencia por HTTP sin cálculo
+> local; el borrado de sus engines es la Fase 2 (ver `ROADMAP_ARQUITECTONICO.md`).
+
 **SE CONSERVA en RadarHD:** componentes React, layouts, pantallas, gráficos,
 cache, cliente HTTP, gateway/adaptadores, estados, render, lazy loading, UX, y
 **todo el pipeline comercial (Motor C)** — que pasa a consumir inteligencia de

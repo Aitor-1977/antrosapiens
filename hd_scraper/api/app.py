@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Optional
 
 from fastapi import Body, FastAPI, Header, HTTPException, Query
-from fastapi.responses import FileResponse, HTMLResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from pydantic import BaseModel
 
 from ..config import settings
@@ -1686,7 +1686,23 @@ from ..predictivo import (
     proyectar_escenarios,
     serie_temporal,
 )
-from ..observatorio import analizar_vertical, emitir_reporte_regional
+from ..observatorio import (
+    analizar_vertical,
+    calcular_indicadores,
+    calidad_corpus,
+    contexto_ecosistemico,
+    detectar_centinelas,
+    detectar_clusters,
+    detectar_outliers,
+    emitir_reporte_regional,
+    identificar_tensiones,
+    madurez_ecosistema,
+    oportunidades,
+    panorama_ecosistemico,
+    prioridades,
+    ranking_hd,
+    riesgos_culturales,
+)
 from ..relevance import _sin_acentos
 from ..publicador import (
     generar_csv,
@@ -2157,6 +2173,85 @@ def vertical_reporte(nombre: str) -> dict:
     }
 
 
+# --- Cutover Arquitectura 1.0: inteligencia ecosistémica en JSON para RadarHD --
+#
+# Motor A expone toda la inteligencia que RadarHD calculaba localmente. Todo
+# determinista (reutiliza análisis, validación, dictamen, predictivo). Sin IA.
+
+def _todos_expedientes(limite: int = 500) -> list[dict]:
+    return _construir_expedientes(None, limite=limite)["expedientes"]
+
+
+@app.get("/ecosistema")
+def ecosistema(limite: int = Query(10, ge=1, le=100)) -> dict:
+    """Panorama ecosistémico completo (JSON): indicadores, clusters, outliers,
+    centinelas, riesgos culturales, madurez, calidad del corpus, ranking,
+    oportunidades y prioridades. Reemplaza el cálculo local de RadarHD."""
+    return panorama_ecosistemico(_todos_expedientes(), limite)
+
+
+@app.get("/ecosistema/clusters")
+def ecosistema_clusters() -> dict:
+    """Clusters de organizaciones por deuda cultural + vertical (determinista)."""
+    clusters = detectar_clusters(_todos_expedientes())
+    return {"total": len(clusters), "clusters": clusters}
+
+
+@app.get("/ecosistema/outliers")
+def ecosistema_outliers() -> dict:
+    """Organizaciones atípicas del ecosistema (reglas deterministas)."""
+    outliers = detectar_outliers(_todos_expedientes())
+    return {"total": len(outliers), "outliers": outliers}
+
+
+@app.get("/ecosistema/centinelas")
+def ecosistema_centinelas() -> dict:
+    """Organizaciones-centinela: dolor profundo emergente que merece vigilancia."""
+    centinelas = detectar_centinelas(_todos_expedientes())
+    return {"total": len(centinelas), "centinelas": centinelas}
+
+
+@app.get("/ecosistema/riesgos")
+def ecosistema_riesgos(limite: int = Query(10, ge=1, le=100)) -> dict:
+    """Riesgos culturales agregados del ecosistema."""
+    return riesgos_culturales(_todos_expedientes(), limite)
+
+
+@app.get("/ecosistema/madurez")
+def ecosistema_madurez() -> dict:
+    """Madurez agregada del ecosistema."""
+    return madurez_ecosistema(_todos_expedientes())
+
+
+@app.get("/calidad-corpus")
+def endpoint_calidad_corpus() -> dict:
+    """Calidad del corpus agregado (fechado, fuentes, confianza, cobertura)."""
+    return calidad_corpus(_todos_expedientes())
+
+
+@app.get("/ranking")
+def ranking_hd_endpoint(limite: int = Query(10, ge=1, le=100)) -> dict:
+    """Ranking HD reutilizable: TOP organizaciones con prioridad, motivo,
+    evidencias y nivel de confianza. Reutiliza el ranking del Dictamen."""
+    r = ranking_hd(_todos_expedientes(), limite)
+    return {"total": len(r), "ranking": r}
+
+
+@app.get("/oportunidades")
+def oportunidades_endpoint(limite: int = Query(10, ge=1, le=100)) -> dict:
+    """Oportunidades de investigación (analíticas, sin recomendación comercial):
+    por qué, para quién, con qué evidencia y nivel de confianza."""
+    ops = oportunidades(_todos_expedientes(), limite)
+    return {"total": len(ops), "oportunidades": ops}
+
+
+@app.get("/prioridades")
+def prioridades_endpoint(limite: int = Query(10, ge=1, le=100)) -> dict:
+    """Prioridades HD: hipótesis validadas primero, luego por score compuesto."""
+    p = prioridades(_todos_expedientes(), limite)
+    return {"total": len(p), "prioridades": p}
+
+
 # --- Capa 17: Publicador Científico ------------------------------------------
 #
 # Documentación científica (peritaje, informe, PDF) desde evidencia validada.
@@ -2510,13 +2605,92 @@ def dolormap(org_nombre: str) -> dict:
 
 # --- Dossier de Inteligencia (reporte HTML imprimible por organización) --------
 
+def _dossier_json(org_nombre: str) -> dict:
+    """Dossier COMPLETO en JSON — fuente única de inteligencia para RadarHD.
+
+    Compone TODA la inteligencia (determinista) reutilizando dolormap, validación
+    (C11), gobernanza/auditoría (C12), curaduría (C10), dictamen (ranking) y
+    observatorio (clusters/outliers/contexto). No recalcula nada nuevo.
+    """
+    data = dolormap(org_nombre)
+    nombre = data["org_nombre"]
+    exp = _expediente_para_validacion(org_nombre)
+    fecha = ahora_iso()
+    val = validar_expediente(exp)
+    huella = generar_huella_digital(exp, val, fecha)
+    aud = auditar_expediente(exp, val, fecha)
+    cert = emitir_certificado(exp, val, huella, fecha)
+    cur = curar([exp], query=nombre)
+    dic = val["dictamen_cientifico"]
+
+    todos = _todos_expedientes()
+    ranking = ranking_hd(todos, len(todos))
+    pos = next((r for r in ranking if r["nombre"] == nombre), None)
+    contexto = contexto_ecosistemico(nombre, todos)
+    clusters_rel = contexto.get("cluster")
+    outliers_rel = [o for o in detectar_outliers(todos) if o["nombre"] == nombre]
+
+    return {
+        "org": nombre,
+        "contrato": "motor_a.dossier.v1",
+        "resumen_ejecutivo": {
+            "scoring": data["scoring"], "score_icp": data["score_icp"],
+            "veredicto": dic["veredicto"], "nivel_evidencia": dic["nivel_evidencia"],
+            "hipotesis_bloqueada": dic["hipotesis_bloqueada"],
+            "total_evidencias": data["evidencias"]["total"],
+        },
+        "narrativa_dominante": cur.get("narrativa", ""),
+        "hipotesis_central": data["tipo_deuda"],
+        "clasificacion_deuda_cultural": {
+            "tipo_deuda": data["tipo_deuda"], "razon": data["deuda_razon"],
+            "deuda_secundaria": data.get("deuda_secundaria", ""),
+            "senal_dominante": data.get("senal_dominante", ""),
+        },
+        "nivel_confianza": cert["nivel_confianza"],
+        "calidad_evidencia": val["fechado"],
+        "profundidad_friccion": exp.get("profundidad_dolor", 0),
+        "patrones": data["patrones"],
+        "contradicciones": val["contradicciones"],
+        "vacios": val["vacios"],
+        "drift": data["drift"],
+        "onlife": data["onlife"],
+        "dolormap": {
+            "keywords": data["keywords"], "intensidad": data["intensidad"],
+            "angulo_conversacion": data["angulo_conversacion"],
+            "decisor_sugerido": data["decisor_sugerido"],
+        },
+        "validacion_cientifica": val,
+        "gobernanza": {"huella_digital": huella, "integridad": aud["integridad"],
+                       "consistencia": aud["consistencia"], "certificado": cert},
+        "auditoria": aud["resumen"],
+        "cronologia": aud["historial"],
+        "cadena_evidencia": {"trazabilidad": val["trazabilidad"],
+                             "reproducibilidad": val["reproducibilidad"]},
+        "fuentes": sorted({(ev.get("fuente") or "") for ev in exp.get("evidencias", [])} - {""}),
+        "clusters_relacionados": clusters_rel,
+        "outliers_relacionados": outliers_rel,
+        "contexto_ecosistemico": {
+            "indicadores": contexto["indicadores_ecosistema"],
+            "tensiones": contexto["tensiones_ecosistema"],
+            "es_outlier": contexto["es_outlier"],
+            "es_centinela": contexto["es_centinela"],
+        },
+        "ranking": pos,
+        "prioridad_hd": (pos or {}).get("prioridad", ""),
+        "estado_pipeline": data["pipeline"],
+    }
+
+
 @app.get("/dossier/{org_nombre}")
-def dossier_org(org_nombre: str) -> HTMLResponse:
+def dossier_org(org_nombre: str,
+                formato: str = Query("html", description="html|json")) -> Response:
     """Dossier de inteligencia completo para una organización.
 
-    Consolida todas las capas (evidencias, drift, onlife, pipeline, análisis)
-    en un documento HTML imprimible como PDF. Listo para reunión.
+    - `formato=html` (def.): documento HTML imprimible como PDF (compatibilidad).
+    - `formato=json`: dossier COMPLETO en JSON (fuente única para RadarHD).
     """
+    if formato == "json":
+        return JSONResponse(_dossier_json(org_nombre))
     data = dolormap(org_nombre)
     nombre = data["org_nombre"]
     a = data
