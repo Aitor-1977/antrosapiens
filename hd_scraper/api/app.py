@@ -1688,6 +1688,13 @@ from ..predictivo import (
 )
 from ..observatorio import analizar_vertical, emitir_reporte_regional
 from ..relevance import _sin_acentos
+from ..publicador import (
+    generar_csv,
+    generar_html,
+    generar_informe,
+    generar_pdf,
+    generar_peritaje,
+)
 
 
 def _detectar_patrones(keywords: list[str]) -> list[dict]:
@@ -2139,6 +2146,44 @@ def vertical_reporte(nombre: str) -> dict:
         "analisis": analizar_vertical(exps, nombre),
         "reporte": emitir_reporte_regional(filtrados, f"vertical:{nombre}"),
     }
+
+
+# --- Capa 17: Publicador Científico ------------------------------------------
+#
+# Documentación científica (peritaje, informe, PDF) desde evidencia validada.
+# Nunca inventa: cada campo proviene del expediente, su validación y gobernanza.
+
+def _peritaje_de(org_nombre: str) -> dict:
+    exp, val, huella = _paquete_cientifico(org_nombre)
+    certificado = emitir_certificado(exp, val, huella, huella["fecha"])
+    return generar_peritaje(exp, val, huella, certificado)
+
+
+@app.get("/publicar/peritaje/{org_nombre}")
+def publicar_peritaje(org_nombre: str,
+                      formato: str = Query("json", description="json|csv|html")) -> Response:
+    """Peritaje científico firmado (formato json por defecto, o csv/html)."""
+    peritaje = _peritaje_de(org_nombre)
+    if formato == "csv":
+        return Response(generar_csv(peritaje), media_type="text/csv")
+    if formato == "html":
+        return HTMLResponse(generar_html(peritaje))
+    return Response(json.dumps(peritaje, ensure_ascii=False),
+                    media_type="application/json")
+
+
+@app.get("/publicar/informe/{org_nombre}")
+def publicar_informe(org_nombre: str) -> dict:
+    """Informe científico agregado centrado en una organización (firmado)."""
+    exp = _expediente_para_validacion(org_nombre)
+    return generar_informe([exp], titulo=f"Informe · {exp['nombre']}",
+                           vertical=exp.get("vertical", ""))
+
+
+@app.get("/publicar/pdf/{org_nombre}")
+def publicar_pdf(org_nombre: str) -> HTMLResponse:
+    """Peritaje en HTML imprimible como PDF (convención del repo)."""
+    return HTMLResponse(generar_pdf(_peritaje_de(org_nombre)))
 
 
 # --- Capa 6: Motor de Drift Narrativo (endpoints) --------------------------
