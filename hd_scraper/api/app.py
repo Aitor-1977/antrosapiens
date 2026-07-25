@@ -1663,6 +1663,14 @@ def listar_senales_capa0(
 
 from ..analisis import COMBINACIONES, DEUDA_POR_SENAL, ANGULO_POR_DEUDA
 from ..validacion_cientifica import emitir_dictamen_cientifico, validar_expediente
+from ..gobernanza import (
+    auditar_expediente,
+    emitir_certificado,
+    generar_huella_digital,
+    validar_integridad,
+    verificar_consistencia,
+)
+from .. import gobernanza_store
 
 
 def _detectar_patrones(keywords: list[str]) -> list[dict]:
@@ -1783,9 +1791,22 @@ def _construir_expedientes(categorias: list[str] | None, limite: int = 30) -> di
         # Capa 11 — Validación Científica: cada expediente se somete al Dictamen
         # Científico. Si la evidencia es insuficiente, la hipótesis se bloquea
         # automáticamente (Motor A avisa; Motor B decide sobre lo validado).
-        dictamen = emitir_dictamen_cientifico(expediente)
+        val = validar_expediente(expediente)
+        dictamen = val["dictamen_cientifico"]
         expediente["validacion_cientifica"] = dictamen
         expediente["hipotesis_bloqueada"] = dictamen["hipotesis_bloqueada"]
+
+        # Capa 12 — Gobernanza Científica (último paso del pipeline): sella el
+        # expediente con su huella digital reproducible, integridad y
+        # consistencia. No reinterpreta nada: solo lo hace auditable.
+        huella = generar_huella_digital(expediente, val)
+        expediente["gobernanza"] = {
+            "huella_digital": huella,
+            "integridad": validar_integridad(expediente, huella),
+            "consistencia": verificar_consistencia(expediente, val),
+        }
+        expediente["huella"] = huella["hash"]
+        expediente["version"] = huella["version"]
 
         expedientes.append(expediente)
 
@@ -1899,6 +1920,46 @@ def validacion_cientifica_org(org_nombre: str) -> dict:
     """
     expediente = _expediente_para_validacion(org_nombre)
     return validar_expediente(expediente)
+
+
+# --- Capa 12: Gobernanza Científica, Auditoría Total y Reproducibilidad ------
+#
+# Último paso del pipeline. Garantiza que toda conclusión sea auditable,
+# reproducible y explicable. No genera hipótesis ni reinterpreta: envuelve lo
+# ya producido con huella digital, bitácora, auditoría y certificado. La
+# persistencia en las tablas de gobernanza es idempotente y determinista.
+
+@app.get("/auditoria/{org_nombre}")
+def auditoria_org(org_nombre: str) -> dict:
+    """Auditoría total y reproducible del expediente de una organización.
+
+    Devuelve resumen, historial, versionado, bitácora, cambios, huellas
+    digitales, trazabilidad, integridad, consistencia, reproducibilidad y
+    certificado. Persiste el paquete de gobernanza (idempotente por hash).
+    """
+    expediente = _expediente_para_validacion(org_nombre)
+    val = validar_expediente(expediente)
+    auditoria = auditar_expediente(expediente, val, ahora_iso())
+    gobernanza_store.persistir_gobernanza(get_db(), expediente["nombre"], auditoria)
+    return auditoria
+
+
+@app.get("/certificado/{org_nombre}")
+def certificado_org(org_nombre: str) -> dict:
+    """Certificado científico del expediente de una organización.
+
+    Incluye fecha, id, hash, versión, estado, veredicto, nivel de evidencia,
+    nivel de confianza, solidez, suficiencia y firma determinista del Motor.
+    """
+    expediente = _expediente_para_validacion(org_nombre)
+    val = validar_expediente(expediente)
+    fecha = ahora_iso()
+    huella = generar_huella_digital(expediente, val, fecha)
+    certificado = emitir_certificado(expediente, val, huella, fecha)
+    db = get_db()
+    gobernanza_store.persistir_huella(db, expediente["nombre"], huella)
+    gobernanza_store.persistir_certificado(db, expediente["nombre"], certificado)
+    return certificado
 
 
 # --- Capa 6: Motor de Drift Narrativo (endpoints) --------------------------
@@ -2239,7 +2300,8 @@ def dossier_org(org_nombre: str) -> HTMLResponse:
     # Validación Científica (Capa 11): sella el dossier con el veredicto sobre
     # si la evidencia sostiene la hipótesis. Sin este sello, la hipótesis es
     # solo una lectura; con él, es una lectura auditada.
-    val = validar_expediente(_expediente_para_validacion(nombre))
+    exp_val = _expediente_para_validacion(nombre)
+    val = validar_expediente(exp_val)
     dic = val["dictamen_cientifico"]
     _VEREDICTO_COLOR = {
         "VALIDADA": ("#16a34a", "#f0fdf4"),
@@ -2280,6 +2342,56 @@ def dossier_org(org_nombre: str) -> HTMLResponse:
             html += f'<li>{_esc(m)}</li>'
         html += '</ul>'
     html += '</div>'
+
+    # Gobernanza Científica (Capa 12): sella el dossier con su huella digital,
+    # bitácora, auditoría y certificado. Convierte el documento en algo
+    # reconstruible y verificable, no solo legible.
+    aud = auditar_expediente(exp_val, val, ahora_iso())
+    huella = aud["huellas_digitales"][0]
+    cert = aud["certificado"]
+    bit = aud["bitacora"]["resumen"]
+    integ = aud["integridad"]
+    consis = aud["consistencia"]
+    html += f"""<div class="section" style="border-left:4px solid #0891b2">
+<h2>Gobernanza Científica (Capa 12)</h2>
+<h3>Huella Digital</h3>
+<table>
+  <tr><td>ID</td><td><code>{_esc(huella['id'])}</code></td></tr>
+  <tr><td>Hash</td><td><code>{_esc(huella['hash'])}</code></td></tr>
+  <tr><td>Versión gobernanza</td><td>{_esc(huella['version'])}</td></tr>
+  <tr><td>Motor</td><td>{_esc(huella['motor'])}</td></tr>
+  <tr><td>Integridad</td><td>{'íntegra' if integ['integra'] else 'comprometida'}</td></tr>
+  <tr><td>Consistencia</td><td>{'consistente' if consis['consistente'] else 'inconsistente'}</td></tr>
+</table>
+<h3>Versiones</h3>
+<table><tr><th>Componente</th><th>Versión</th></tr>"""
+    for comp, ver in huella["versiones"].items():
+        html += f'<tr><td>{_esc(comp)}</td><td>{_esc(ver)}</td></tr>'
+    html += f"""</table>
+<h3>Bitácora (resumen)</h3>
+<table>
+  <tr><td>Evidencia recibida</td><td>{bit['recibidas']}</td></tr>
+  <tr><td>Evidencia aceptada</td><td>{bit['aceptadas']}</td></tr>
+  <tr><td>Evidencia descartada</td><td>{bit['descartadas']}</td></tr>
+  <tr><td>Reglas ejecutadas</td><td>{bit['reglas_ejecutadas']}</td></tr>
+  <tr><td>Reglas que bloquearon</td><td>{bit['reglas_bloqueo']}</td></tr>
+</table>
+<h3>Auditoría</h3>
+<table>
+  <tr><td>Veredicto</td><td>{_esc(aud['resumen']['veredicto'])}</td></tr>
+  <tr><td>Reproducible</td><td>{'sí' if aud['resumen']['reproducible'] else 'no'}</td></tr>
+  <tr><td>Eventos en historial</td><td>{len(aud['historial'])}</td></tr>
+</table>
+<h3>Certificado Científico</h3>
+<table>
+  <tr><td>Certificado</td><td><code>{_esc(cert['certificado_id'])}</code></td></tr>
+  <tr><td>Estado</td><td>{_esc(cert['estado'])}</td></tr>
+  <tr><td>Nivel de evidencia</td><td>{_esc(cert['nivel_evidencia'])}</td></tr>
+  <tr><td>Nivel de confianza</td><td>{_esc(cert['nivel_confianza'])}</td></tr>
+  <tr><td>Solidez / Suficiencia</td><td>{cert['solidez']} / {cert['suficiencia']}</td></tr>
+  <tr><td>Firma del Motor</td><td><code>{_esc(cert['firma_motor'])}</code></td></tr>
+</table>
+</div>"""
 
     # Footer
     html += f"""

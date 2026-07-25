@@ -236,3 +236,84 @@ CREATE TABLE IF NOT EXISTS pipeline_transiciones (
 
 CREATE INDEX IF NOT EXISTS idx_trans_pipeline ON pipeline_transiciones (pipeline_id);
 CREATE INDEX IF NOT EXISTS idx_trans_fecha    ON pipeline_transiciones (fecha);
+
+-- =========================================================================
+-- Capa 12 — Gobernanza Científica, Auditoría Total y Reproducibilidad
+-- =========================================================================
+
+CREATE TABLE IF NOT EXISTS versionado_modelo (
+    id             BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    componente     TEXT NOT NULL,
+    version        TEXT NOT NULL,
+    hash_contenido TEXT NOT NULL,
+    registrado_en  TEXT NOT NULL,
+    UNIQUE (componente, hash_contenido)
+);
+
+CREATE INDEX IF NOT EXISTS idx_versionado_comp ON versionado_modelo (componente);
+
+CREATE TABLE IF NOT EXISTS huellas_digitales (
+    id             BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    org_nombre     TEXT NOT NULL,
+    huella_id      TEXT NOT NULL,
+    hash           TEXT NOT NULL UNIQUE,
+    version        TEXT NOT NULL,
+    versiones_json TEXT NOT NULL DEFAULT '{}',
+    hashes_json    TEXT NOT NULL DEFAULT '{}',
+    fecha          TEXT NOT NULL,
+    creado_en      TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_huellas_org  ON huellas_digitales (org_nombre);
+CREATE INDEX IF NOT EXISTS idx_huellas_hash ON huellas_digitales (hash);
+
+CREATE TABLE IF NOT EXISTS bitacora_decisiones (
+    id                BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    org_nombre        TEXT NOT NULL,
+    hash_expediente   TEXT NOT NULL,
+    tipo              TEXT NOT NULL,
+    regla             TEXT NOT NULL,
+    resultado         TEXT NOT NULL,
+    detalle           TEXT NOT NULL DEFAULT '',
+    version_algoritmo TEXT NOT NULL,
+    registrado_en     TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_bitacora_org  ON bitacora_decisiones (org_nombre);
+CREATE INDEX IF NOT EXISTS idx_bitacora_hash ON bitacora_decisiones (hash_expediente);
+CREATE INDEX IF NOT EXISTS idx_bitacora_tipo ON bitacora_decisiones (tipo);
+
+CREATE TABLE IF NOT EXISTS auditoria_expedientes (
+    id              BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    org_nombre      TEXT NOT NULL,
+    hash_expediente TEXT NOT NULL UNIQUE,
+    veredicto       TEXT NOT NULL DEFAULT '',
+    integra         INTEGER NOT NULL DEFAULT 0,
+    consistente     INTEGER NOT NULL DEFAULT 0,
+    reproducible    INTEGER NOT NULL DEFAULT 0,
+    auditoria_json  TEXT NOT NULL DEFAULT '{}',
+    creado_en       TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_auditoria_org ON auditoria_expedientes (org_nombre);
+
+CREATE TABLE IF NOT EXISTS certificados (
+    id                BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    org_nombre        TEXT NOT NULL,
+    certificado_id    TEXT NOT NULL UNIQUE,
+    hash              TEXT NOT NULL,
+    version           TEXT NOT NULL,
+    estado            TEXT NOT NULL,
+    veredicto         TEXT NOT NULL,
+    nivel_evidencia   TEXT NOT NULL DEFAULT '',
+    nivel_confianza   TEXT NOT NULL DEFAULT '',
+    solidez           INTEGER NOT NULL DEFAULT 0,
+    suficiencia       INTEGER NOT NULL DEFAULT 0,
+    firma_motor       TEXT NOT NULL,
+    fecha             TEXT NOT NULL,
+    certificado_json  TEXT NOT NULL DEFAULT '{}',
+    creado_en         TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_certificados_org  ON certificados (org_nombre);
+CREATE INDEX IF NOT EXISTS idx_certificados_hash ON certificados (hash);

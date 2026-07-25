@@ -140,6 +140,17 @@ crea el esquema. En Vercel se auto-detecta `DATABASE_URL`/`POSTGRES_URL`.
   (veredicto `VALIDADA | VALIDADA_PARCIAL | NO_VALIDADA | BLOQUEADA |
   SIN_HIPOTESIS`). Integrada en `_construir_expedientes` (bloqueo automático) y
   expuesta en `GET /validacion/{org}` y en el dossier. Determinista, sin red ni IA.
+- **Gobernanza Científica** (`gobernanza.py` + `gobernanza_store.py`, Capa 12):
+  **último paso del pipeline**. NO genera hipótesis ni reinterpreta: hace que
+  toda conclusión sea **auditable, reproducible y explicable**. 14 funciones
+  puras (versionado, huella digital, integridad, consistencia, comparación de
+  versiones, línea de tiempo, bitácora, certificado, auditoría). La huella y el
+  certificado son deterministas: la fecha de emisión es metadato y NO entra en
+  los hashes (mismo insumo ⇒ misma huella/firma). Persistencia idempotente en
+  `versionado_modelo`, `huellas_digitales`, `bitacora_decisiones`,
+  `auditoria_expedientes`, `certificados`. Sella cada expediente en
+  `_construir_expedientes` y se expone en `GET /auditoria/{org}`,
+  `GET /certificado/{org}` y en el dossier.
 
 ## Fase 1 — conectores (SOLO estos)
 
