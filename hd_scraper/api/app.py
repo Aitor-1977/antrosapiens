@@ -1671,6 +1671,8 @@ from ..gobernanza import (
     verificar_consistencia,
 )
 from .. import gobernanza_store
+from .. import memoria_store
+from ..memoria import construir_timeline, emitir_historial
 
 
 def _detectar_patrones(keywords: list[str]) -> list[dict]:
@@ -1910,6 +1912,18 @@ def _expediente_para_validacion(nombre: str) -> dict:
     }
 
 
+def _paquete_cientifico(org_nombre: str, fecha: str | None = None) -> tuple[dict, dict, dict]:
+    """Construye (expediente, validación, huella) de una organización.
+
+    Punto único de reutilización para las capas 13–18: evita reconstruir la
+    misma cadena Inferencia→Validación→Gobernanza en cada endpoint.
+    """
+    expediente = _expediente_para_validacion(org_nombre)
+    val = validar_expediente(expediente)
+    huella = generar_huella_digital(expediente, val, fecha or ahora_iso())
+    return expediente, val, huella
+
+
 @app.get("/validacion/{org_nombre}")
 def validacion_cientifica_org(org_nombre: str) -> dict:
     """Validación Científica completa de la hipótesis de una organización.
@@ -1939,8 +1953,14 @@ def auditoria_org(org_nombre: str) -> dict:
     """
     expediente = _expediente_para_validacion(org_nombre)
     val = validar_expediente(expediente)
-    auditoria = auditar_expediente(expediente, val, ahora_iso())
-    gobernanza_store.persistir_gobernanza(get_db(), expediente["nombre"], auditoria)
+    fecha = ahora_iso()
+    auditoria = auditar_expediente(expediente, val, fecha)
+    db = get_db()
+    gobernanza_store.persistir_gobernanza(db, expediente["nombre"], auditoria)
+    # Capa 13 — Memoria Científica: registra una versión inmutable del estado
+    # (idempotente: solo crea versión si el estado científico cambió).
+    huella = auditoria["huellas_digitales"][0]
+    memoria_store.guardar_version(db, expediente["nombre"], expediente, val, huella)
     return auditoria
 
 
@@ -1960,6 +1980,44 @@ def certificado_org(org_nombre: str) -> dict:
     gobernanza_store.persistir_huella(db, expediente["nombre"], huella)
     gobernanza_store.persistir_certificado(db, expediente["nombre"], certificado)
     return certificado
+
+
+# --- Capa 13: Memoria Científica (historial longitudinal inmutable) ----------
+#
+# Cada expediente conserva TODAS sus versiones históricas (append-only). Los
+# endpoints de lectura aseguran que exista al menos la versión actual (guardado
+# idempotente por hash) antes de servir el historial.
+
+def _asegurar_version(org_nombre: str) -> tuple[str, "Database"]:
+    exp, val, huella = _paquete_cientifico(org_nombre)
+    db = get_db()
+    memoria_store.guardar_version(db, exp["nombre"], exp, val, huella)
+    return exp["nombre"], db
+
+
+@app.get("/historial/{org_nombre}")
+def historial_org(org_nombre: str) -> dict:
+    """Historial científico completo: timeline, evolución, cambios y versiones."""
+    nombre, db = _asegurar_version(org_nombre)
+    versiones = memoria_store.recuperar_historial(db, nombre)
+    return emitir_historial(nombre, versiones)
+
+
+@app.get("/timeline/{org_nombre}")
+def timeline_org(org_nombre: str) -> dict:
+    """Línea temporal científica de una organización (una entrada por versión)."""
+    nombre, db = _asegurar_version(org_nombre)
+    versiones = memoria_store.recuperar_historial(db, nombre)
+    return {"org": nombre, "total": len(versiones),
+            "timeline": construir_timeline(versiones)}
+
+
+@app.get("/versiones/{org_nombre}")
+def versiones_org(org_nombre: str) -> dict:
+    """Todas las versiones históricas inmutables de una organización."""
+    nombre, db = _asegurar_version(org_nombre)
+    versiones = memoria_store.recuperar_historial(db, nombre)
+    return {"org": nombre, "total": len(versiones), "versiones": versiones}
 
 
 # --- Capa 6: Motor de Drift Narrativo (endpoints) --------------------------

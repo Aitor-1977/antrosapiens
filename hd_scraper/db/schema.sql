@@ -347,3 +347,34 @@ CREATE TABLE IF NOT EXISTS certificados (
 
 CREATE INDEX IF NOT EXISTS idx_certificados_org  ON certificados (org_nombre);
 CREATE INDEX IF NOT EXISTS idx_certificados_hash ON certificados (hash);
+
+-- =========================================================================
+-- Capa 13 — Memoria Científica (append-only, inmutable)
+-- Conserva TODAS las versiones históricas de cada expediente. Nunca UPDATE ni
+-- DELETE. version_num monótono por organización; dedup por hash de huella.
+-- =========================================================================
+
+CREATE TABLE IF NOT EXISTS memoria_cientifica (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    org_nombre      TEXT NOT NULL,
+    version_num     INTEGER NOT NULL,
+    hash            TEXT NOT NULL,
+    hash_previo     TEXT NOT NULL DEFAULT '',
+    veredicto       TEXT NOT NULL DEFAULT '',
+    scoring         TEXT NOT NULL DEFAULT '',
+    hipotesis       TEXT NOT NULL DEFAULT '',
+    solidez         INTEGER NOT NULL DEFAULT 0,
+    suficiencia     INTEGER NOT NULL DEFAULT 0,
+    nivel_evidencia TEXT NOT NULL DEFAULT '',
+    nivel_confianza TEXT NOT NULL DEFAULT '',
+    dolor_cultural  TEXT NOT NULL DEFAULT '',
+    snapshot_json   TEXT NOT NULL DEFAULT '{}',
+    motor           TEXT NOT NULL DEFAULT '',
+    pipeline        TEXT NOT NULL DEFAULT '',
+    usuario         TEXT NOT NULL DEFAULT 'sistema',
+    creado_en       TEXT NOT NULL,
+    UNIQUE (org_nombre, version_num)
+);
+
+CREATE INDEX IF NOT EXISTS idx_memoria_org  ON memoria_cientifica (org_nombre);
+CREATE INDEX IF NOT EXISTS idx_memoria_hash ON memoria_cientifica (hash);
