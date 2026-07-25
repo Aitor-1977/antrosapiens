@@ -1,8 +1,10 @@
 # FRONTERAS DE LOS MOTORES — Responsabilidad definitiva
 
-> Verificado contra el código real (2026-07-25). Distingue lo **NORMATIVO**
-> (lo que `CLAUDE.md` de Motor A declara que debe ser) de lo **REAL**
-> (lo que el código de cada repo efectivamente hace).
+> **ARQUITECTURA 1.0 (oficial, ADR-0001, 2026-07-25):** *Motor A piensa. Motor B
+> muestra. Motor C vende. Sin excepción.* Este documento describe el estado
+> **verificado** del código (2026-07-25) y marca la brecha respecto a la
+> Arquitectura 1.0 como **deuda arquitectónica a eliminar**. La decisión tiene
+> precedencia sobre cualquier implementación anterior — ver `ADR_0001_ARQUITECTURA_1_0.md`.
 
 ## Responsabilidad definitiva de cada motor
 
@@ -53,13 +55,27 @@ matutina, **Kill Switch**, notificaciones **Telegram**.
 | "La Deuda Cultural™, score ICP e hipótesis son IP de HD y viven en Motor B" | RadarHD tiene `engines/scoring.ts`, `dictamenPericial.ts`, `inference.ts` | ✅ **Se cumple** (aunque Motor A también calcula un ICP determinista "preliminar", permitido por la Frontera de Interpretación 2026-07-22) |
 | "Motor A no usa IA / es determinista" | `analisis.py` es 100% determinista, sin llamadas LLM | ✅ **Se cumple** |
 
-### Lo que SÍ es la frontera real (síntesis code-backed)
-- **La línea dura y respetada es la de la IA:** *toda* interpretación con LLM está
-  en RadarHD; Motor A es determinista y auditable. Esa frontera **se cumple**.
-- **La línea "B solo renderiza / C separado" es aspiracional, no real:** RadarHD
-  (`prospector`) es una **app única** que combina render (B), inteligencia con IA
-  y pipeline comercial (C). Documentarlo como "tres motores en tres repos" sería
-  **inventar una separación inexistente** (justo lo que el encargo prohíbe).
+### Resolución oficial (Arquitectura 1.0, ADR-0001)
+La brecha "RadarHD también infiere/usa IA" **queda resuelta por decisión
+arquitectónica**: es **deuda a eliminar**, no un estado válido.
+- **Se conserva** la frontera de IA: la inferencia determinista vive en Motor A.
+- **Se elimina** de RadarHD toda inferencia/clasificación/IA científica; sus
+  rutas de inteligencia pasan a **consumir** los endpoints oficiales de Motor A.
+- **Motor B y C siguen siendo la misma app** (`radarHD`); la separación es de
+  **responsabilidad** (B representa, C vende), no de repositorio. Prospector
+  permanece dentro de RadarHD (no se inventa un repo inexistente).
+
+**A ELIMINAR de RadarHD (por ADR-0001):** `engines/{inference,scoring,
+dictamenPericial,contradiction,ecosistema,onlife,priorizacion,recomendacion,
+radar}`, `services/{llm,scoring-llm,scoring-reglas,dictamen*,drift,ecosistema,
+evidencia,expedientes,perfil,recomendacion}`, rutas `/api/diag/{gemini,ia}` y el
+cálculo local de Dolor/Drift/Onlife/Ecosistema/Dictamen. Manifiesto exacto y mapa
+de acoplamiento: `radarHD/MIGRACION_ARQUITECTURA_1_0.md`.
+
+**SE CONSERVA en RadarHD:** componentes React, layouts, pantallas, gráficos,
+cache, cliente HTTP, gateway/adaptadores, estados, render, lazy loading, UX, y
+**todo el pipeline comercial (Motor C)** — que pasa a consumir inteligencia de
+Motor A en vez de calcularla.
 
 ---
 

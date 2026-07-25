@@ -1,9 +1,14 @@
 # ARQUITECTURA DEL ECOSISTEMA — Hamaca Digital
 
-> Documento verificado contra el **código real** de los repositorios existentes
-> (2026-07-25). Nada aquí es supuesto: todo se respalda en archivos inspeccionados.
+> **ARQUITECTURA 1.0 (oficial, ADR-0001):** *Motor A piensa. Motor B muestra.
+> Motor C vende.* Un único Motor de Inferencia (A); RadarHD solo representa y
+> vende, consumiendo la inteligencia de Motor A. Ver `ADR_0001_ARQUITECTURA_1_0.md`.
+>
+> Este documento describe el estado **verificado del código** (2026-07-25) — que
+> incluye deuda a eliminar (RadarHD aún infiere con IA). Los diagramas §1–§6
+> reflejan el estado ACTUAL; el estado OBJETIVO 1.0 está en §7 y en el ADR.
 > Repos auditados: `Aitor-1977/antrosapiens` (Motor A) y `Aitor-1977/radarHD`
-> (Motor B + Motor C). Repos legacy identificados: `Radar-Hd`, `marito-Aitorhd`.
+> (Motor B + Motor C). Repos legacy: `Radar-Hd`, `marito-Aitorhd`.
 
 ## 0. Repositorios reales del ecosistema
 
@@ -188,6 +193,33 @@ flowchart TB
 - **Legacy:** `Radar-Hd` y `marito-Aitorhd` no participan en producción.
 
 ---
+
+## 7. Estado OBJETIVO — Arquitectura 1.0 (ADR-0001)
+
+```mermaid
+flowchart TB
+    subgraph A["MOTOR A · antrosapiens — ÚNICO MOTOR DE INFERENCIA (determinista)"]
+      A1[Captura→…→Inferencia→Validación→Gobernanza] --> A2[[API oficial]]
+    end
+    subgraph R["radarHD — SIN inferencia, SIN IA científica"]
+      direction TB
+      GW[motor-a.gateway.ts · Cliente oficial de Motor A]
+      subgraph B["Motor B · representa"]
+        B1[Componentes React / Dashboard / Dossier / DolorMap / Alertas]
+      end
+      subgraph C["Motor C · vende"]
+        C1[Prospección / Seguimiento / Cadencia / Email / KPIs]
+      end
+      GW --> B1
+      GW --> C1
+    end
+    A2 -->|"/corpus /expedientes /dossier /dolormap /drift /onlife /alertas /centro /validacion /auditoria /certificado"| GW
+```
+
+Diferencia con el estado actual (§1): desaparecen de RadarHD los *engines* de
+inferencia, los servicios LLM y el cálculo local de Dolor/Drift/Onlife/Ecosistema/
+Dictamen. **Todo** dato científico entra por el **gateway** desde Motor A.
+Migración: `radarHD/MIGRACION_ARQUITECTURA_1_0.md`.
 
 ## Referencias
 - Fronteras y responsabilidades definitivas → `FRONTERAS_MOTORES.md`
