@@ -1662,6 +1662,7 @@ def listar_senales_capa0(
 # (COMBINACIONES de señales) y genera la hipótesis de Dolor Cultural.
 
 from ..analisis import COMBINACIONES, DEUDA_POR_SENAL, ANGULO_POR_DEUDA
+from ..validacion_cientifica import emitir_dictamen_cientifico, validar_expediente
 
 
 def _detectar_patrones(keywords: list[str]) -> list[dict]:
@@ -1755,7 +1756,7 @@ def _construir_expedientes(categorias: list[str] | None, limite: int = 30) -> di
         contacto = rutas_contacto(sitio, "") if sitio else {
             "dominio": "", "email_sugerido": "", "verificado": False}
 
-        expedientes.append({
+        expediente = {
             "nombre": data["nombre"],
             "categoria": data["categoria"],
             "vertical": vertical,
@@ -1777,7 +1778,16 @@ def _construir_expedientes(categorias: list[str] | None, limite: int = 30) -> di
             "contacto": contacto,
             "linkedin": linkedin_search_url(data["nombre"]),
             "google": google_search_url(data["nombre"]),
-        })
+        }
+
+        # Capa 11 — Validación Científica: cada expediente se somete al Dictamen
+        # Científico. Si la evidencia es insuficiente, la hipótesis se bloquea
+        # automáticamente (Motor A avisa; Motor B decide sobre lo validado).
+        dictamen = emitir_dictamen_cientifico(expediente)
+        expediente["validacion_cientifica"] = dictamen
+        expediente["hipotesis_bloqueada"] = dictamen["hipotesis_bloqueada"]
+
+        expedientes.append(expediente)
 
     expedientes.sort(
         key=lambda x: (_ORDEN_SCORING.get(x["scoring"], 9), -x["score_icp"]))
@@ -1805,6 +1815,90 @@ def listar_expedientes(
     detectados, hipótesis de Dolor Cultural, scoring, Interés Analítico y decisor sugerido.
     """
     return _construir_expedientes(_cats_validas(categoria, categorias), limite)
+
+
+# --- Capa 11: Validación Científica del Peritaje Antropológico ---------------
+#
+# Somete la hipótesis de Dolor Cultural de una organización a la batería de
+# controles epistémicos deterministas (trazabilidad, suficiencia, solidez,
+# contradicciones, vacíos, reproducibilidad) y emite el Dictamen Científico.
+# Motor A valida; Motor B decide sobre lo validado.
+
+def _expediente_para_validacion(nombre: str) -> dict:
+    """Construye el expediente completo de UNA organización para validarlo.
+
+    Agrupa TODAS sus evidencias OK (sin el recorte de listado) y corre el
+    análisis determinista. Reutiliza la interpretación de ``analizar`` — no la
+    duplica — y deja las evidencias en la forma que espera la Capa 11.
+    """
+    db = get_db()
+    nombre = (nombre or "").strip()
+    filas = db.fetch_all(
+        "SELECT * FROM evidencias WHERE empresa_mencionada = ? AND estado = ? "
+        "ORDER BY creado_en DESC LIMIT 500",
+        (nombre, ESTADO_OK),
+    )
+
+    keywords_set: set[str] = set()
+    mejor_confianza, mejor_calidad = 0.0, "Baja"
+    categoria, vertical = "", ""
+    evidencias: list[dict] = []
+    for row in filas:
+        kws = _keywords(row)
+        keywords_set.update(kws)
+        if not categoria and row["categoria"]:
+            categoria = row["categoria"]
+        if not vertical:
+            v = sugerir_vertical(row["cita_textual"] or "")
+            if v:
+                vertical = v
+        c = row["confianza"] or 0.0
+        if c > mejor_confianza:
+            mejor_confianza = c
+            mejor_calidad = row["calidad_captura"] or "Baja"
+        evidencias.append({
+            "texto": row["cita_textual"],
+            "fuente": row["nombre_medio"],
+            "fecha": (row["fecha_publicacion"] or "")[:10],
+            "url": row["url_fuente"],
+            "tipo_evento": row["tipo_evento"],
+            "confianza": row["confianza"],
+        })
+
+    all_kws = sorted(keywords_set)
+    a = analizar(all_kws, vertical=vertical, confianza=mejor_confianza,
+                 calidad=mejor_calidad, categoria=categoria)
+
+    return {
+        "nombre": nombre,
+        "categoria": categoria,
+        "vertical": vertical,
+        "scoring": a["scoring"],
+        "score_icp": a["score_icp"],
+        "intensidad": a["intensidad"],
+        "profundidad_dolor": a.get("profundidad_dolor", 0),
+        "viabilidad": a.get("viabilidad", ""),
+        "tipo_deuda": a["tipo_deuda"],
+        "deuda_razon": a["deuda_razon"],
+        "deuda_secundaria": a.get("deuda_secundaria", ""),
+        "senal_dominante": a.get("senal_dominante", ""),
+        "evidencias": evidencias,
+        "total_evidencias": len(evidencias),
+        "patrones": _detectar_patrones(all_kws),
+        "keywords": all_kws,
+    }
+
+
+@app.get("/validacion/{org_nombre}")
+def validacion_cientifica_org(org_nombre: str) -> dict:
+    """Validación Científica completa de la hipótesis de una organización.
+
+    Devuelve el informe detallado (trazabilidad, fechado, suficiencia, solidez,
+    contradicciones, vacíos, reproducibilidad, nivel de evidencia, bloqueo) y el
+    Dictamen Científico con su veredicto. Lectura pública, 100% determinista.
+    """
+    expediente = _expediente_para_validacion(org_nombre)
+    return validar_expediente(expediente)
 
 
 # --- Capa 6: Motor de Drift Narrativo (endpoints) --------------------------
@@ -2141,6 +2235,51 @@ def dossier_org(org_nombre: str) -> HTMLResponse:
                 html += f'<tr><td>{_esc(t.get("etapa", ""))}</td><td>{_esc((t.get("fecha", ""))[:16])}</td><td>{_esc(t.get("notas", ""))}</td></tr>'
             html += '</table>'
         html += '</div>'
+
+    # Validación Científica (Capa 11): sella el dossier con el veredicto sobre
+    # si la evidencia sostiene la hipótesis. Sin este sello, la hipótesis es
+    # solo una lectura; con él, es una lectura auditada.
+    val = validar_expediente(_expediente_para_validacion(nombre))
+    dic = val["dictamen_cientifico"]
+    _VEREDICTO_COLOR = {
+        "VALIDADA": ("#16a34a", "#f0fdf4"),
+        "VALIDADA_PARCIAL": ("#f59e0b", "#fffbeb"),
+        "NO_VALIDADA": ("#dc2626", "#fef2f2"),
+        "BLOQUEADA": ("#6b7280", "#f3f4f6"),
+        "SIN_HIPOTESIS": ("#6b7280", "#f3f4f6"),
+    }
+    color, bg = _VEREDICTO_COLOR.get(dic["veredicto"], ("#6b7280", "#f3f4f6"))
+    html += f"""<div class="section" style="border-left:4px solid {color}">
+<h2>Validación Científica (Capa 11)</h2>
+<div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin-bottom:.6rem">
+  <span class="badge" style="background:{bg};color:{color}">{_esc(dic['veredicto'])}</span>
+  <span class="badge badge-interes">Solidez {dic['solidez']}/100</span>
+  <span class="badge badge-interes">Suficiencia {dic['suficiencia']}/100</span>
+  <span class="badge" style="background:#f3e8ff;color:#7c3aed">Evidencia nivel {_esc(val['nivel_evidencia']['nivel'])}</span>
+</div>
+<p>{_esc(dic['resumen'])}</p>
+<p><b>Recomendación metodológica:</b> {_esc(dic['recomendacion'])}</p>
+<table>
+  <tr><th>Control</th><th>Resultado</th></tr>
+  <tr><td>Trazabilidad</td><td>{val['trazabilidad']['trazables']}/{val['trazabilidad']['total']} evidencias trazables</td></tr>
+  <tr><td>Fechado (consumible por API)</td><td>{val['fechado']['fechadas']}/{val['fechado']['total']} fechadas</td></tr>
+  <tr><td>Fuentes independientes</td><td>{val['suficiencia_corpus']['fuentes_independientes']}</td></tr>
+  <tr><td>Contradicciones</td><td>{len(val['contradicciones'])}</td></tr>
+  <tr><td>Vacíos</td><td>{len(val['vacios'])}</td></tr>
+  <tr><td>Reproducibilidad</td><td>{'sí' if val['reproducibilidad']['reproducible'] else 'no'}</td></tr>
+  <tr><td>Hipótesis bloqueada</td><td>{'sí' if dic['hipotesis_bloqueada'] else 'no'}</td></tr>
+</table>"""
+    if dic["limitaciones"]:
+        html += '<h3>Limitaciones declaradas</h3><ul>'
+        for lim in dic["limitaciones"]:
+            html += f'<li>{_esc(lim)}</li>'
+        html += '</ul>'
+    if val["bloqueo"]["motivos"]:
+        html += '<h3>Motivos de bloqueo</h3><ul>'
+        for m in val["bloqueo"]["motivos"]:
+            html += f'<li>{_esc(m)}</li>'
+        html += '</ul>'
+    html += '</div>'
 
     # Footer
     html += f"""

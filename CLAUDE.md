@@ -62,6 +62,14 @@ SOLO sobre datos ya extraídos por este mismo motor; sin IA, sin juicio libre):
 - **Clasificación preliminar de señales de Deuda Cultural™**: hipótesis
   etiquetadas y reproducibles (mismo insumo ⇒ mismo resultado), marcadas siempre
   como preliminares.
+- **Validación científica del peritaje (Capa 11)**: auditoría metodológica
+  determinista de las hipótesis ya producidas por este motor. NO añade
+  interpretación nueva del contenido: mide trazabilidad, suficiencia del corpus,
+  solidez, contradicciones, vacíos y reproducibilidad, y **bloquea** las
+  hipótesis sin evidencia suficiente. Es el guardián de rigor que mantiene las
+  hipótesis marcadas como preliminares hasta que la evidencia las sostenga. El
+  Dictamen Científico recomienda (no ejecuta) escalar a Motor B.
+  Implementación: `hd_scraper/validacion_cientifica.py`.
 
 **Exclusivo de RadarHD (JAMÁS aquí):**
 
@@ -127,6 +135,11 @@ crea el esquema. En Vercel se auto-detecta `DATABASE_URL`/`POSTGRES_URL`.
 - **Cola** (`jobs.py`): tabla `jobs` en SQLite. Sin Redis.
 - **Scheduler** (`scheduler.py`): APScheduler, cada 12 h.
 - **API** (`api/app.py`): FastAPI **solo lectura**. Solo sirve `estado='ok'`.
+- **Validación Científica** (`validacion_cientifica.py`, Capa 11): 14 funciones
+  puras que auditan cada expediente y emiten el **Dictamen Científico**
+  (veredicto `VALIDADA | VALIDADA_PARCIAL | NO_VALIDADA | BLOQUEADA |
+  SIN_HIPOTESIS`). Integrada en `_construir_expedientes` (bloqueo automático) y
+  expuesta en `GET /validacion/{org}` y en el dossier. Determinista, sin red ni IA.
 
 ## Fase 1 — conectores (SOLO estos)
 
