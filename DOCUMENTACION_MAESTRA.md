@@ -45,9 +45,16 @@ ecosistema técnico se organiza en tres motores con responsabilidad única (SRP)
 
 | Motor | Nombre | Rol | Stack | Estado en esta doc |
 |-------|--------|-----|-------|--------------------|
-| **A** | **Antrosapiens** | Extracción de evidencia, inferencia determinista, validación científica y gobernanza | Python 3.11 + FastAPI, SQLite/PostgreSQL | `[IMPLEMENTADO]` — código presente |
-| **B** | **RadarHD** | **Únicamente renderiza** (dashboard/visualización) | Next.js (declarado) | `[NO VERIFICABLE — repo ausente]` |
-| **C** | **Prospector HD** | **Únicamente pipeline comercial** (seguimiento, contacto ejecutado) | (declarado) | `[NO VERIFICABLE — repo ausente]` |
+| **A** | **Antrosapiens** | Extracción de evidencia, inferencia determinista, validación científica y gobernanza | Python 3.11 + FastAPI, SQLite/PostgreSQL | `[IMPLEMENTADO]` — repo `antrosapiens` |
+| **B** | **RadarHD** (render) | Dashboard, visualizaciones, paneles | Next.js 16 + React 19 + TS | `[IMPLEMENTADO]` — repo `radarHD` |
+| **C** | **Prospector HD** (comercial) | Prospección, seguimiento, cadencia, kill-switch, email a decisores | **dentro de** `radarHD` (npm `prospector`) | `[IMPLEMENTADO]` — **NO es repo aparte** |
+
+> **Actualización 2026-07-25 (auditoría del ecosistema):** se verificaron los
+> repositorios reales. Motor B y Motor C **son la misma aplicación** (`radarHD`,
+> npm `"prospector"`); **no existe repo independiente de Motor C**. RadarHD, además
+> de renderizar, hace **inferencia con IA (LLM)** y ejecuta el **pipeline
+> comercial**. Detalle completo en `ARQUITECTURA_ECOSISTEMA.md`,
+> `FRONTERAS_MOTORES.md`, `CONTRATOS_API.md` e inventarios. Ver §6, §7 y §24.
 
 **Problema que resuelve Motor A:** convertir señales públicas dispersas sobre
 organizaciones (prensa, feeds, job boards, actividad onlife) en **evidencia
@@ -58,10 +65,16 @@ auditable**, sin intervención de IA generativa.
 para renderizar; Motor C consume sus conclusiones validadas para el pipeline
 comercial. Motor A **jamás** ejecuta acción comercial ni usa LLM.
 
-**Repositorios en sesión:**
-- `aitor-1977/antrosapiens` → **Motor A** (documentado aquí desde su código).
-- `aitor-1977/marito-aitorhd` → presente en la sesión pero **no analizado**;
-  su correspondencia con Motor B o C **no está verificada** (§6, §7).
+**Repositorios reales del ecosistema (verificados 2026-07-25):**
+- `Aitor-1977/antrosapiens` → **Motor A** (Python/FastAPI) — documentado aquí.
+- `Aitor-1977/radarHD` (npm `prospector`) → **Motor B + Motor C** (Next.js) — §6, §7.
+- `Aitor-1977/Radar-Hd` → prototipo scaffold **LEGACY** (abandonado).
+- `Aitor-1977/marito-Aitorhd` → monorepo de **origen LEGACY** (hd-scraper + front).
+- `Aitor-1977/spec-kit`, `brag` → forks de terceros, **ajenos** al ecosistema.
+
+Ecosistema completo documentado en: `ARQUITECTURA_ECOSISTEMA.md`,
+`FRONTERAS_MOTORES.md`, `CONTRATOS_API.md`, `INVENTARIO_{COMPONENTES,ENDPOINTS,
+TABLAS}.md`, `GUIA_RECONSTRUCCION_TOTAL.md`, `ROADMAP_ARQUITECTONICO.md`.
 
 **Estado global (verificado):** paquete `hd_scraper/` con **30 módulos** en la
 raíz (29 funcionales + `__init__`) más subpaquetes,
@@ -408,40 +421,60 @@ consistencia, Capa 12). Es el insumo de las Capas 14–18 vía el helper
 
 ---
 
-## 6. Motor B — RadarHD
+## 6. Motor B — RadarHD (render)
 
-**Estado: `[NO VERIFICABLE — repo ausente]`.** El repositorio de RadarHD
-(declarado Next.js) **no está en la sesión**; este documento no puede describir
-sus pantallas, componentes, adaptadores, gateway, cliente HTTP, cache ni estados
-sin **inventarlos**, lo cual está prohibido por las reglas del encargo.
+**Estado: `[IMPLEMENTADO]`** — repo `Aitor-1977/radarHD` (auditado 2026-07-25).
+Next.js 16 + React 19 + TypeScript + Capacitor (Android). `package.json` name:
+`"prospector"`.
 
-**Lo único documentable desde Motor A:**
-- **Frontera (contrato):** Motor B **únicamente renderiza** (`CLAUDE.md`).
-- **Superficie que consume:** los 72 endpoints de solo lectura de Motor A; en
-  particular `GET /corpus` (contrato `motor_a.corpus.v1`: empresa·fuente·fecha·
-  texto·keywords·confianza), `GET /expedientes`, `GET /dossier/{org}`,
-  `GET /laboratorio`, `GET /latam`.
+- **Pantallas/componentes (23 `.tsx`):** `Dashboard`, `Sidebar`, `Inteligencia`,
+  `InteligenciaEcosistemica`, `IntelligencePanel`, `DictamenPanel`, `DriftPanel`,
+  `SignalRelations`, `OrganizacionesObservadas`, `SenalesNuevas`, `FondosVC`,
+  `InformesPanel`, `Banners`, `CualificacionLiminalModal`, `TarjetaProspectoHD`
+  (+ los comerciales listados en §7). Página: `src/app/admin/dashboard/page.tsx`.
+- **Cliente HTTP / API base:** `src/lib/api-base.ts` — `fetch(${API_BASE}/api/…)`;
+  `API_BASE = NEXT_PUBLIC_API_BASE` (en APK apunta al backend remoto).
+- **Cola / proxy:** `src/services/queue.service.ts`, `src/proxy.ts`.
+- **Engines de inteligencia (13, `src/lib/engines/`):** `inference`, `scoring`,
+  `dictamenPericial`, `contradiction`, `ecosistema`, `onlife`, `priorizacion`,
+  `recomendacion`, `radar`, `concentrador`, `kpisComerciales`, `ritual`, `tarjeta`.
+- **IA (LLM):** `src/lib/services/llm.ts`, `scoring-llm.ts` — Gemini / NVIDIA /
+  Anthropic / ZenMux. Esta es la "IA generativa" que la frontera reserva a Motor B.
+- **BD propia PostgreSQL** (14 tablas, `src/lib/db.ts`) — separada de Motor A.
+- **Adaptador a Motor A:** `src/lib/sources/motor-a.ts` consume `GET /corpus`
+  (`motor_a.corpus.v1`) como fuente **preferida** (no re-raspa lo ya extraído).
 
-> Para documentar Motor B con rigor, añadir su repositorio a la sesión
-> (`add_repo`) y re-ejecutar el protocolo sobre su código.
+Inventarios completos: `INVENTARIO_COMPONENTES.md §B`, `INVENTARIO_ENDPOINTS.md §B`,
+`INVENTARIO_TABLAS.md §B`. Fronteras: `FRONTERAS_MOTORES.md`.
 
 ---
 
-## 7. Motor C — Prospector HD
+## 7. Motor C — Prospector HD (pipeline comercial)
 
-**Estado: `[NO VERIFICABLE — repo ausente]`** para su implementación propia.
+**Estado: `[IMPLEMENTADO]` — NO es un repositorio independiente.** Vive dentro de
+`radarHD` (por eso el npm name es `"prospector"`). Verificado 2026-07-25.
 
-**Frontera (declarada):** Motor C **únicamente gestiona el pipeline comercial**
-(seguimiento, contacto ejecutado, envíos, decisión de "Expediente Activado").
+- **Prospección/comercial (rutas):** `/api/prospeccion`, `/api/prospectos`,
+  `/api/cadencia`, `/api/seguimiento`, `/api/kill-switch`, `/api/lista-matutina`,
+  `/api/decisores`, **`/api/email-decisor`** (envía email a decisores).
+- **Componentes:** `Prospectos.tsx`, `ProspeccionMasiva.tsx`,
+  `SeguimientoComercial.tsx`, `ListaMatutina.tsx`, `RecomendacionesEstrategicas.tsx`,
+  `KillSwitchModal.tsx`, `KillSwitchHistory.tsx`.
+- **Servicios:** `email-finder.service.ts`, `decisores.service.ts`,
+  `decisor-hunter.service.ts`, `contactos.service.ts`, `telegram.service.ts`.
+- **Tablas (en la BD de RadarHD):** `prospecto`, `seguimiento_comercial`,
+  `cadencia_email`, `kill_switch_log`, `exclusion_permanente`.
+- **KPIs / cadencia / kill switch / Telegram:** `engines/kpisComerciales.ts`,
+  `services/telegram.service.ts`; `TELEGRAM_BOT_TOKEN`, `CRON_SECRET`.
 
-**Ambigüedad real (→ §24):** dentro de **Motor A** existe
-`hd_scraper/pipeline_comercial.py` (+ tablas `pipeline_comercial`,
-`pipeline_transiciones` + endpoints `/pipeline/*`) que **modela** etapas
-comerciales (`registrar_org`, `avanzar`, `resumen_funnel`). Interpretación
-conservadora desde el código: Motor A **modela y persiste el estado** del embudo,
-pero **no ejecuta** contacto (no hay envío de emails ni acción comercial en el
-código). La **ejecución** correspondería a Motor C. Esta separación no está
-documentada explícitamente en el código y debe confirmarla el operador.
+**Confirmación de la hipótesis del operador:** no existe un repo "Prospector HD"
+separado. El Prospector **continúa formando parte de RadarHD**. Esto se documenta
+explícitamente y **no se inventa** ninguna separación inexistente.
+
+**Sobre `pipeline_comercial.py` de Motor A:** modela un embudo pero **no ejecuta**
+contacto (sin envío de emails en el código). El pipeline comercial **real y
+ejecutado** está en RadarHD (Motor C). Las tablas homónimas de Motor A son
+vestigiales del monorepo de origen `marito-Aitorhd`. → §24 y `FRONTERAS_MOTORES.md`.
 
 ---
 
@@ -743,7 +776,9 @@ imprimible/operativo desde FastAPI:
 
 ## 17. Infraestructura
 
-- **GitHub:** repos `aitor-1977/antrosapiens` (Motor A) y `aitor-1977/marito-aitorhd`.
+- **GitHub:** `Aitor-1977/antrosapiens` (Motor A) y `Aitor-1977/radarHD`
+  (Motor B+C). Producción Motor A: `hd-prospector.vercel.app`. Deploy RadarHD:
+  Vercel (web) + APK Android (Capacitor). Detalle en `GUIA_RECONSTRUCCION_TOTAL.md`.
 - **Vercel** (`vercel.json`): build `@vercel/python` sobre `api/index.py`
   (incluye `hd_scraper/**`); ruta comodín → `api/index.py`; env de deploy
   `HD_RAW_DIR=/tmp/hd_raw`, `HD_RAW_ENABLED=0`. Autodetecta `DATABASE_URL`/
@@ -843,10 +878,12 @@ curl localhost:8000/laboratorio
 - **Verificación de reproducibilidad:** `GET /certificado/{org}` dos veces debe
   dar el mismo `hash` y `firma_motor`.
 
-### 21.2 Motor B / Motor C
-`[NO VERIFICABLE — repo ausente]`. Requieren sus propios repositorios. Añadirlos
-a la sesión (`add_repo`) y documentar/recuperar desde su código antes de dar por
-completa la reconstrucción del ecosistema.
+### 21.2 Motor B + Motor C (RadarHD) `[IMPLEMENTADO]`
+Repo `Aitor-1977/radarHD` (Next.js 16, npm `prospector`). Reconstrucción completa
+(clone, `npm install`, `.env.local` con `DATABASE_URL` + claves LLM + `MOTOR_A_URL`,
+`npm run dev`/`build`, `build:apk` para Android) documentada paso a paso en
+**`GUIA_RECONSTRUCCION_TOTAL.md §2`**. Su esquema (14 tablas) lo crea
+`src/lib/db.ts:initSchema`.
 
 ---
 
@@ -928,8 +965,21 @@ Documentadas por el protocolo (el código manda; se reportan las discrepancias):
 7. **Encoding de feeds:** `google_news.py` y `rss_fijos.py` parsean `resp.text`
    en vez de `resp.content` (riesgo de mojibake). Registrado en `CLAUDE.md`
    "Errores recurrentes"; **no corregido**. `[PENDIENTE]`
-8. **Motores B y C:** no presentes en la sesión → sus secciones internas son
-   `[NO VERIFICABLE — repo ausente]`; no se inventaron. `[LIMITACIÓN DE ALCANCE]`
+8. **Motores B y C (auditoría 2026-07-25, repos añadidos):** verificados contra
+   código real. Hallazgos:
+   - **No existe repo independiente de Motor C.** El Prospector vive dentro de
+     `radarHD` (npm `"prospector"`). `[CORREGIDO — hipótesis del operador confirmada]`
+   - **"Motor B únicamente renderiza" (CLAUDE.md) es falso en el código:** RadarHD
+     hace render **y** inferencia con IA (Gemini/…) **y** pipeline comercial.
+     `[INCONSISTENCIA doc↔código]`
+   - **Doble inferencia entre motores:** dictamen/scoring/drift/onlife/ecosistema
+     existen en A (determinista) y en RadarHD (con IA). Paralelismo por diseño,
+     hoy desacoplado. `[NOTA arquitectónica]`
+   - **RadarHD solo consume `GET /corpus` de Motor A;** no usa las Capas 11–18
+     (validación/gobernanza). `[OPORTUNIDAD → ROADMAP_ARQUITECTONICO.md]`
+   - **Repos legacy:** `Radar-Hd` (prototipo AI Studio) y `marito-Aitorhd`
+     (monorepo de origen) están superados; `spec-kit`/`brag` son forks ajenos.
+   Detalle en `ARQUITECTURA_ECOSISTEMA.md`, `FRONTERAS_MOTORES.md`, `CONTRATOS_API.md`.
 
 ---
 
