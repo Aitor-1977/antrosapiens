@@ -1673,6 +1673,12 @@ from ..gobernanza import (
 from .. import gobernanza_store
 from .. import memoria_store
 from ..memoria import construir_timeline, emitir_historial
+from ..comparador import (
+    comparar_ecosistemas,
+    comparar_organizaciones,
+    comparar_periodos,
+    generar_matriz,
+)
 
 
 def _detectar_patrones(keywords: list[str]) -> list[dict]:
@@ -2018,6 +2024,43 @@ def versiones_org(org_nombre: str) -> dict:
     nombre, db = _asegurar_version(org_nombre)
     versiones = memoria_store.recuperar_historial(db, nombre)
     return {"org": nombre, "total": len(versiones), "versiones": versiones}
+
+
+# --- Capa 14: Comparador Temporal y Ecosistémico -----------------------------
+#
+# Compara organizaciones, ecosistemas (verticales), periodos y patrones. Nunca
+# interpreta: solo contrasta estructuras ya producidas.
+
+@app.get("/comparar")
+def comparar(a: str = Query(..., description="Organización A"),
+             b: str = Query(..., description="Organización B")) -> dict:
+    """Compara dos organizaciones campo a campo (más matriz de ambas)."""
+    exp_a = _expediente_para_validacion(a)
+    exp_b = _expediente_para_validacion(b)
+    return {
+        "comparacion": comparar_organizaciones(exp_a, exp_b),
+        "matriz": generar_matriz([exp_a, exp_b]),
+    }
+
+
+@app.get("/ecosistema/comparar")
+def ecosistema_comparar(a: str = Query(..., description="Vertical A"),
+                        b: str = Query(..., description="Vertical B")) -> dict:
+    """Compara dos ecosistemas (verticales) por agregados deterministas."""
+    todos = _construir_expedientes(None, limite=500)["expedientes"]
+    va = (a or "").strip().lower()
+    vb = (b or "").strip().lower()
+    exps_a = [e for e in todos if (e.get("vertical") or "").lower() == va]
+    exps_b = [e for e in todos if (e.get("vertical") or "").lower() == vb]
+    return comparar_ecosistemas(exps_a, exps_b, a, b)
+
+
+@app.get("/periodos")
+def periodos(org: str = Query(..., description="Organización"),
+             corte: str = Query(..., description="Fecha de corte ISO (YYYY-MM-DD)")) -> dict:
+    """Compara la evidencia de una organización antes y después de una fecha."""
+    exp = _expediente_para_validacion(org)
+    return comparar_periodos(exp, corte)
 
 
 # --- Capa 6: Motor de Drift Narrativo (endpoints) --------------------------
