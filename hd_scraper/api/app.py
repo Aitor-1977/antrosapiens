@@ -1686,6 +1686,8 @@ from ..predictivo import (
     proyectar_escenarios,
     serie_temporal,
 )
+from ..observatorio import analizar_vertical, emitir_reporte_regional
+from ..relevance import _sin_acentos
 
 
 def _detectar_patrones(keywords: list[str]) -> list[dict]:
@@ -2094,6 +2096,48 @@ def escenarios_org(org_nombre: str) -> dict:
         "tendencia": calcular_tendencia(serie["valores"]),
         "volatilidad": calcular_volatilidad(serie["valores"]),
         "escenarios": proyectar_escenarios(serie["valores"]),
+    }
+
+
+# --- Capa 16: Observatorio LATAM (inteligencia ecosistémica) -----------------
+#
+# De la organización individual al ecosistema: regiones, verticales, países.
+# Agregación determinista sobre expedientes ya producidos.
+
+def _menciona(exp: dict, termino: str) -> bool:
+    """True si alguna evidencia del expediente menciona el término (sin acentos)."""
+    t = _sin_acentos((termino or "").lower())
+    for ev in exp.get("evidencias", []) or []:
+        texto = ev.get("texto") or ev.get("cita_textual") or ""
+        if t in _sin_acentos(texto.lower()):
+            return True
+    return False
+
+
+@app.get("/latam")
+def latam() -> dict:
+    """Reporte ecosistémico LATAM completo (todas las organizaciones)."""
+    exps = _construir_expedientes(None, limite=500)["expedientes"]
+    return emitir_reporte_regional(exps, "LATAM")
+
+
+@app.get("/latam/{pais}")
+def latam_pais(pais: str) -> dict:
+    """Reporte ecosistémico de un país (evidencia que lo menciona)."""
+    exps = _construir_expedientes(None, limite=500)["expedientes"]
+    filtrados = [e for e in exps if _menciona(e, pais)]
+    return emitir_reporte_regional(filtrados, pais)
+
+
+@app.get("/vertical/{nombre}")
+def vertical_reporte(nombre: str) -> dict:
+    """Análisis ecosistémico de una vertical (fintech, edtech, ...)."""
+    exps = _construir_expedientes(None, limite=500)["expedientes"]
+    v = (nombre or "").strip().lower()
+    filtrados = [e for e in exps if (e.get("vertical") or "").lower() == v]
+    return {
+        "analisis": analizar_vertical(exps, nombre),
+        "reporte": emitir_reporte_regional(filtrados, f"vertical:{nombre}"),
     }
 
 
