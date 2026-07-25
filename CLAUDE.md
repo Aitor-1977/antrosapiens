@@ -152,6 +152,45 @@ crea el esquema. En Vercel se auto-detecta `DATABASE_URL`/`POSTGRES_URL`.
   `_construir_expedientes` y se expone en `GET /auditoria/{org}`,
   `GET /certificado/{org}` y en el dossier.
 
+## Capas 13–18 (inteligencia longitudinal y ecosistémica)
+
+Todas deterministas, reproducibles y sin IA. Reutilizan la cadena
+Inferencia→Validación→Gobernanza vía el helper `_paquete_cientifico`.
+
+- **Capa 13 · Memoria Científica** (`memoria.py` + `memoria_store.py`):
+  historial longitudinal **inmutable** (append-only, nunca sobrescribe). Timeline
+  científica, evolución del dolor cultural, comparación de versiones. Tabla
+  `memoria_cientifica`. Endpoints `GET /historial|/timeline|/versiones/{org}`.
+  `/auditoria` registra una versión (idempotente por hash).
+- **Capa 14 · Comparador Temporal y Ecosistémico** (`comparador.py`): compara
+  organizaciones, ecosistemas, periodos y patrones. **Solo compara, no
+  interpreta.** Endpoints `GET /comparar`, `/ecosistema/comparar`, `/periodos`.
+- **Capa 15 · Motor Predictivo Antropológico** (`predictivo.py`): trayectorias
+  por reglas deterministas sobre evidencia histórica (tendencia, estabilidad,
+  volatilidad, escenarios, riesgo, madurez, inflexiones). Sin modelos opacos.
+  Endpoints `GET /proyeccion/{org}`, `/escenarios/{org}`.
+- **Capa 16 · Observatorio LATAM** (`observatorio.py`): inteligencia
+  ecosistémica (regiones, verticales, países). Ranking, riesgos comunes,
+  patrones compartidos, vacíos sistémicos, tensiones, indicadores. Endpoints
+  `GET /latam`, `/latam/{pais}`, `/vertical/{nombre}`.
+- **Capa 17 · Publicador Científico** (`publicador.py`): documentación (peritaje,
+  informe) en JSON/CSV/HTML/PDF **solo desde evidencia validada**, con firma
+  determinista. Endpoints `GET /publicar/peritaje/{org}` (json|csv|html),
+  `/publicar/informe/{org}`, `/publicar/pdf/{org}`.
+- **Capa 18 · Sistema Operativo del Laboratorio** (`laboratorio.py`): dashboard
+  maestro y estado integral (motores A/B/C, corpus, pipeline, validación,
+  gobernanza, observatorio, 19 capas). Endpoints `GET /laboratorio`, `/estado`,
+  `/dashboard` (HTML).
+
+**Flujo completo:** Captura → Normalización → Evidencia → Inferencia → Curaduría
+→ Validación Científica → Gobernanza → Memoria → Comparación → Predicción →
+Observatorio → Publicación → Sistema Operativo → API. **Motor B** solo renderiza;
+**Motor C** solo gestiona el pipeline comercial.
+
+**Roadmap:** Fase 1 (conectores) ✅ · Capas 0–18 ✅. Próximo: conectar Motor B
+(render) y Motor C (pipeline comercial) como consumidores del corpus y los
+certificados; ampliar cobertura de fuentes reales fuera del entorno con proxy.
+
 ## Fase 1 — conectores (SOLO estos)
 
 1. **Google News RSS** — ✅ implementado y probado de punta a punta.

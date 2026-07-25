@@ -1695,6 +1695,15 @@ from ..publicador import (
     generar_pdf,
     generar_peritaje,
 )
+from ..laboratorio import (
+    estado_capas,
+    estado_corpus,
+    estado_general,
+    estado_gobernanza,
+    estado_observatorio,
+    estado_pipeline,
+    estado_validacion,
+)
 
 
 def _detectar_patrones(keywords: list[str]) -> list[dict]:
@@ -2184,6 +2193,113 @@ def publicar_informe(org_nombre: str) -> dict:
 def publicar_pdf(org_nombre: str) -> HTMLResponse:
     """Peritaje en HTML imprimible como PDF (convención del repo)."""
     return HTMLResponse(generar_pdf(_peritaje_de(org_nombre)))
+
+
+# --- Capa 18: Sistema Operativo del Laboratorio ------------------------------
+#
+# Integra todas las capas en un único flujo operativo: dashboard maestro con el
+# estado de motores, corpus, pipeline, validación, gobernanza y observatorio.
+
+def _count(db, tabla: str, where: str = "") -> int:
+    sql = f"SELECT COUNT(*) AS c FROM {tabla}"
+    if where:
+        sql += f" WHERE {where}"
+    row = db.fetch_one(sql)
+    return int(row["c"]) if row else 0
+
+
+def _conteos_laboratorio(db) -> dict:
+    return {
+        "evidencias_total": _count(db, "evidencias"),
+        "evidencias_ok": _count(db, "evidencias", "estado = 'ok'"),
+        "evidencias_no_fechado": _count(
+            db, "evidencias", "fecha_publicacion IS NULL OR fecha_publicacion = ''"),
+        "rechazos": _count(db, "rechazos"),
+        "prospectos": _count(db, "prospectos"),
+        "jobs": _count(db, "jobs"),
+        "pipeline_comercial": _count(db, "pipeline_comercial"),
+        "huellas": _count(db, "huellas_digitales"),
+        "certificados": _count(db, "certificados"),
+        "auditorias": _count(db, "auditoria_expedientes"),
+        "memoria": _count(db, "memoria_cientifica"),
+        "bitacora": _count(db, "bitacora_decisiones"),
+    }
+
+
+def _laboratorio_completo() -> dict:
+    db = get_db()
+    conteos = _conteos_laboratorio(db)
+    expedientes = _construir_expedientes(None, limite=500)["expedientes"]
+    corpus = estado_corpus(conteos)
+    validacion = estado_validacion(expedientes)
+    gobernanza = estado_gobernanza(conteos)
+    observatorio = estado_observatorio(expedientes)
+    return {
+        "general": estado_general(corpus, validacion, gobernanza, observatorio),
+        "capas": estado_capas(),
+        "corpus": corpus,
+        "pipeline": estado_pipeline(conteos),
+        "validacion": validacion,
+        "gobernanza": gobernanza,
+        "observatorio": observatorio,
+    }
+
+
+@app.get("/laboratorio")
+def laboratorio() -> dict:
+    """Dashboard maestro del laboratorio: estado integral de todas las capas."""
+    return _laboratorio_completo()
+
+
+@app.get("/estado")
+def estado() -> dict:
+    """Estado general del laboratorio (resumen ejecutivo)."""
+    return _laboratorio_completo()["general"]
+
+
+@app.get("/dashboard", response_class=HTMLResponse)
+def dashboard() -> HTMLResponse:
+    """Dashboard maestro en HTML (estado de motores, corpus, capas, validación)."""
+    lab = _laboratorio_completo()
+    g, corpus, val, gob = lab["general"], lab["corpus"], lab["validacion"], lab["gobernanza"]
+    capas_rows = "".join(
+        f"<tr><td>{c['numero']}</td><td>{_esc(c['nombre'])}</td>"
+        f"<td>{_esc(c['estado'])}</td></tr>" for c in lab["capas"]["capas"])
+    ver_rows = "".join(
+        f"<tr><td>{_esc(k)}</td><td>{v}</td></tr>"
+        for k, v in val["distribucion_veredicto"].items()) or "<tr><td>—</td><td>0</td></tr>"
+    html = f"""<!doctype html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Laboratorio · Antrosapiens</title>
+<style>body{{font-family:system-ui;max-width:900px;margin:2rem auto;padding:0 1rem}}
+h1{{border-bottom:3px solid #2563eb;padding-bottom:.3rem}}
+h2{{color:#2563eb;margin-top:1.5rem}} table{{width:100%;border-collapse:collapse}}
+th,td{{text-align:left;padding:.35rem .5rem;border-bottom:1px solid #e5e7eb}}
+.pill{{display:inline-block;padding:.2rem .6rem;border-radius:.4rem;background:#dbeafe;color:#2563eb;font-weight:700}}</style>
+</head><body>
+<h1>Sistema Operativo del Laboratorio · {_esc(g['motor'])}</h1>
+<p><span class="pill">Estado: {_esc(g['estado'])}</span>
+<span class="pill">{_esc(g['estado_metodologico'])}</span>
+<span class="pill">{_esc(g['estado_cientifico'])}</span></p>
+<h2>Motores</h2><table>
+<tr><td>Motor A</td><td>{_esc(g['motores']['A'])}</td></tr>
+<tr><td>Motor B</td><td>{_esc(g['motores']['B'])}</td></tr>
+<tr><td>Motor C</td><td>{_esc(g['motores']['C'])}</td></tr></table>
+<h2>Corpus</h2><table>
+<tr><td>Evidencias</td><td>{corpus['evidencias_total']}</td></tr>
+<tr><td>Consumibles (ok)</td><td>{corpus['evidencias_ok']}</td></tr>
+<tr><td>Rechazos</td><td>{corpus['rechazos']}</td></tr>
+<tr><td>Prospectos</td><td>{corpus['prospectos']}</td></tr></table>
+<h2>Validación Científica</h2><table><tr><th>Veredicto</th><th>Expedientes</th></tr>{ver_rows}</table>
+<h2>Gobernanza</h2><table>
+<tr><td>Huellas digitales</td><td>{gob['huellas_digitales']}</td></tr>
+<tr><td>Certificados</td><td>{gob['certificados']}</td></tr>
+<tr><td>Auditorías</td><td>{gob['auditorias']}</td></tr>
+<tr><td>Versiones en memoria</td><td>{gob['versiones_memoria']}</td></tr></table>
+<h2>Capas ({lab['capas']['operativas']}/{lab['capas']['total']} operativas)</h2>
+<table><tr><th>#</th><th>Capa</th><th>Estado</th></tr>{capas_rows}</table>
+</body></html>"""
+    return HTMLResponse(html)
 
 
 # --- Capa 6: Motor de Drift Narrativo (endpoints) --------------------------
