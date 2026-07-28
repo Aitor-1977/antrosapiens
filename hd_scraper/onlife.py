@@ -377,3 +377,76 @@ def obtener_perfil(org_nombre: str) -> dict:
         "señales": [dict(s) for s in señales],
         "fuentes_observadas": list(por_fuente.keys()),
     }
+
+
+# ── Paridad de forma con RadarHD (Cutover 1.0): análisis Onlife (RespuestaOnlife) ──
+# Produce la forma que consume OrganizacionesObservadas de RadarHD, mapeando las
+# señales onlife REALES de Motor A. Los campos de observación de campo (rupturas,
+# continuidad física/digital, ritual competidor, capas afectadas) NO los observa
+# Motor A: se emiten vacíos/None, nunca inventados. Determinista, sin IA.
+
+_UMBRALES_ONLIFE = (
+    (80, "Alineado", "🟢 ONLIFE ALINEADO",
+     "La presencia onlife observada es consistente entre fuentes."),
+    (60, "Fragmentado", "🟡 ONLIFE FRAGMENTADO",
+     "La presencia onlife muestra señales dispersas entre fuentes."),
+    (40, "En conflicto", "🟠 ONLIFE EN CONFLICTO",
+     "Las señales onlife observadas son tensas o contradictorias."),
+    (0, "Bloqueado", "🔴 ONLIFE BLOQUEADO",
+     "Presencia onlife escasa o sin continuidad observable."),
+)
+
+_ACCION_ONLIFE_DEFECTO = (
+    "Sin ruptura principal determinada: profundizar la observación etnográfica "
+    "antes de formular una dirección de indagación."
+)
+
+
+def _estado_onlife(ico: int) -> dict:
+    for minimo, estado, etiqueta, desc in _UMBRALES_ONLIFE:
+        if ico >= minimo:
+            return {"estado": estado, "etiqueta": etiqueta, "descripcion": desc}
+    return {"estado": "Bloqueado", "etiqueta": "🔴 ONLIFE BLOQUEADO",
+            "descripcion": "Presencia onlife escasa o sin continuidad observable."}
+
+
+def analisis_onlife(org_nombre: str) -> dict:
+    """Análisis Onlife en la forma RespuestaOnlife de RadarHD (determinista).
+
+    Sin señales ⇒ {detectado: False}. Con señales ⇒ mapea las observaciones
+    digitales reales de Motor A; los campos de campo (rupturas, continuidad,
+    ritual, capas) van vacíos porque Motor A no realiza observación de campo.
+    """
+    perfil = obtener_perfil(org_nombre)
+    total = perfil["total_señales"]
+    if total == 0:
+        return {"detectado": False, "mensaje": "Sin análisis Onlife previo."}
+
+    fuentes = len(perfil["fuentes_observadas"])
+    # ICO como proxy determinista de continuidad observable (no es el ICO de campo):
+    # a más señales y más fuentes independientes, mayor continuidad observada.
+    ico = min(100, 40 + min(total, 4) * 10 + min(fuentes, 3) * 5)
+    señales = perfil["señales"]
+    evidencias = [s.get("descripcion", "") for s in señales if s.get("descripcion")][:10]
+    fecha = (señales[0].get("fecha_observacion") or "") if señales else ""
+
+    return {
+        "detectado": True,
+        "organizacion_id": 0,
+        "ico_score": ico,
+        "estado": _estado_onlife(ico),
+        "ruptura_principal": None,
+        "capas_afectadas": {"cultural": False, "social": False,
+                            "tecnica": False, "operativa": False},
+        "continuidad_fisica": "",
+        "continuidad_digital": "",
+        "ritual_competidor": "",
+        "mediacion_social": "",
+        "barrera_simbolica": "",
+        "infraestructura": "",
+        "evidencias": evidencias,
+        "hipotesis_dolormap": "",
+        "accion_sugerida": _ACCION_ONLIFE_DEFECTO,
+        "confidence_score": round(min(1.0, total / 5), 4),
+        "fecha_analisis": fecha,
+    }

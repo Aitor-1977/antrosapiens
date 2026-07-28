@@ -2532,6 +2532,16 @@ def onlife_perfil(org_nombre: str) -> dict:
     return _onlife.obtener_perfil(org_nombre)
 
 
+@app.get("/onlife/{org_nombre}/analisis")
+def onlife_analisis(org_nombre: str) -> dict:
+    """Análisis Onlife con paridad de forma para RadarHD (RespuestaOnlife).
+
+    Permite redirigir /api/radar/onlife/{org} a Motor A sin romper la UI. Sin
+    señales ⇒ {detectado:false}. Determinista; sin observación de campo inventada.
+    """
+    return _onlife.analisis_onlife(org_nombre)
+
+
 # --- Fase 4: DolorMap Visual (vista consolidada por organización) -------------
 
 
