@@ -369,6 +369,171 @@ def contexto_ecosistemico(nombre: str, exps: list[dict]) -> dict:
     }
 
 
+# ══════════════════════════════════════════════════════════════════════════════
+# Paridad de forma con RadarHD — panel ecosistémico (Cutover 1.0, Fase 1→2).
+# Produce EXACTAMENTE la forma que consume el componente InteligenciaEcosistemica
+# (interfaz Dashboard): así RadarHD puede redirigir /api/radar/ecosistema/dashboard
+# al gateway sin romper la UI. Todo determinista, sin IA.
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _id_map(exps: list[dict]) -> dict[str, int]:
+    """IDs enteros deterministas por organización (índice en orden alfabético)."""
+    return {nombre: i for i, nombre in
+            enumerate(sorted(e.get("nombre", "") for e in exps))}
+
+
+def _subtipo(tipo_deuda: str) -> str:
+    """Subtipo corto de Deuda Cultural (sin el prefijo 'Deuda ')."""
+    t = (tipo_deuda or "").strip()
+    if not t:
+        return "No determinado"
+    return t[6:] if t.startswith("Deuda ") else t
+
+
+def _fechas_validas(exps: list[dict]) -> list[str]:
+    out = []
+    for e in exps:
+        for ev in _evidencias(e):
+            f = (ev.get("fecha") or ev.get("fecha_publicacion") or "").strip()
+            if len(f) >= 8 and f[:4].isdigit():
+                out.append(f[:10])
+    return sorted(out)
+
+
+def _periodo(exps: list[dict]) -> dict:
+    f = _fechas_validas(exps)
+    return {"desde": f[0] if f else None, "hasta": f[-1] if f else None}
+
+
+def _fecha_primera(exp: dict) -> str:
+    fs = sorted((ev.get("fecha") or ev.get("fecha_publicacion") or "")[:10]
+                for ev in _evidencias(exp)
+                if (ev.get("fecha") or ev.get("fecha_publicacion") or ""))
+    return fs[0] if fs else ""
+
+
+def _frecuencia(exps: list[dict], idm: dict[str, int], campo_valor) -> list[dict]:
+    """Frecuencia[]: agrupa organizaciones por un valor (deuda/vertical/…)."""
+    grupos: dict[str, list[int]] = {}
+    for e in exps:
+        val = campo_valor(e)
+        if not val:
+            continue
+        grupos.setdefault(val, []).append(idm.get(e.get("nombre", ""), -1))
+    return [{"valor": v, "cantidad": len(ids), "organizaciones": sorted(ids)}
+            for v, ids in sorted(grupos.items(), key=lambda kv: (-len(kv[1]), kv[0]))]
+
+
+def _patrones_ecosistemicos(exps: list[dict], idm: dict[str, int]) -> list[dict]:
+    """PatronEcosistemico[]: organizaciones que comparten cada patrón."""
+    grupos: dict[str, list[int]] = {}
+    for e in exps:
+        for p in (e.get("patrones", []) or []):
+            lbl = p.get("patron", "")
+            if lbl:
+                grupos.setdefault(lbl, []).append(idm.get(e.get("nombre", ""), -1))
+    return [{"patron": lbl, "num_organizaciones": len(ids),
+             "organizaciones": sorted(ids), "evidencia_ids": []}
+            for lbl, ids in sorted(grupos.items(), key=lambda kv: (-len(kv[1]), kv[0]))]
+
+
+def panel_ecosistemico(exps: list[dict]) -> dict:
+    """Panel ecosistémico con la forma exacta del Dashboard de RadarHD.
+
+    Determinista y reproducible. Los IDs de organización son índices estables
+    (orden alfabético). Campos que Motor A no estructura (p. ej. país) se emiten
+    vacíos, no inventados.
+    """
+    idm = _id_map(exps)
+    n = len(exps)
+
+    # Madurez por organización.
+    mad_por_org = {e.get("nombre", ""): calcular_madurez(e)["nivel"] for e in exps}
+    mad_dist = _frecuencia(exps, idm, lambda e: mad_por_org.get(e.get("nombre", "")))
+    nivel_dominante = mad_dist[0]["valor"] if mad_dist else "naciente"
+
+    # Riesgo cultural agregado.
+    riesgos = [estimar_riesgo(e) for e in exps]
+    indice_riesgo = int(round(sum(r["riesgo_global"] for r in riesgos) / n)) if n else 0
+    nivel_riesgo = "Alto" if indice_riesgo >= 66 else ("Medio" if indice_riesgo >= 33 else "Bajo")
+    fundamento = dict(Counter(r["nivel"] for r in riesgos))
+
+    # Calidad del corpus.
+    q = calidad_corpus(exps)
+    indice_cal = int(round(q["confianza_promedio"] * 100))
+    nivel_cal = "Alta" if indice_cal >= 70 else ("Media" if indice_cal >= 40 else "Baja")
+
+    def _bucket_conf(e):
+        confs = [float(ev.get("confianza") or 0) for ev in _evidencias(e)]
+        c = max(confs) if confs else 0.0
+        return "Alta" if c >= 0.8 else ("Media" if c >= 0.5 else "Baja")
+
+    # Centinelas y atípicos con IDs y campos exactos.
+    por_nombre = {e.get("nombre", ""): e for e in exps}
+    centinelas = [{
+        "organizacion_id": idm.get(c["nombre"], -1),
+        "nombre_display": c["nombre"],
+        "subtipo": _subtipo(c.get("tipo_deuda", "")),
+        "fecha_primera_senal": _fecha_primera(por_nombre.get(c["nombre"], {})),
+        "motivo": c.get("motivo", ""),
+    } for c in detectar_centinelas(exps)]
+    atipicos = [{
+        "organizacion_id": idm.get(o["nombre"], -1),
+        "nombre_display": o["nombre"],
+        "motivo": "; ".join(o.get("razones", [])),
+    } for o in detectar_outliers(exps)]
+
+    # Clusters con subtipo.
+    clusters = [{
+        "subtipo": _subtipo(c["tipo_deuda"]),
+        "num_organizaciones": c["tamano"],
+        "organizaciones": sorted(idm.get(nom, -1) for nom in c["organizaciones"]),
+        "evidencia_ids": [],
+    } for c in detectar_clusters(exps)]
+
+    # Hipótesis ecosistémicas desde tensiones recurrentes.
+    tensiones = identificar_tensiones(exps)
+    hipotesis = []
+    for rec in tensiones["deudas_recurrentes"]:
+        deuda = rec["deuda"]
+        orgs = [e for e in exps if e.get("tipo_deuda") == deuda]
+        ids = sorted(idm.get(e.get("nombre", ""), -1) for e in orgs)
+        cant_ev = sum(e.get("total_evidencias", 0) for e in orgs)
+        hipotesis.append({
+            "texto": f"{len(orgs)} organizaciones comparten {deuda}.",
+            "organizaciones": ids, "nivel_confianza": nivel_riesgo,
+            "cantidad_evidencias": cant_ev, "periodo": _periodo(orgs),
+        })
+
+    # Tendencias emergentes: patrones presentes en organizaciones centinela.
+    nombres_cent = {c["nombre_display"] for c in centinelas}
+    emergentes = _patrones_ecosistemicos(
+        [e for e in exps if e.get("nombre", "") in nombres_cent], idm)
+
+    return {
+        "total_organizaciones": n,
+        "periodo": _periodo(exps),
+        "madurez": {"nivel_dominante": nivel_dominante, "distribucion": mad_dist},
+        "riesgo_cultural": {"indice": indice_riesgo, "nivel": nivel_riesgo,
+                            "fundamento": fundamento},
+        "calidad_corpus": {"indice": indice_cal, "nivel": nivel_cal,
+                           "distribucion_confianza": _frecuencia(exps, idm, _bucket_conf)},
+        "distribuciones": {
+            "deuda_cultural": _frecuencia(exps, idm, lambda e: _subtipo(e.get("tipo_deuda", "")) if e.get("tipo_deuda") else ""),
+            "por_vertical": _frecuencia(exps, idm, lambda e: e.get("vertical", "")),
+            "por_pais": [],  # Motor A no estructura país por organización.
+            "por_categoria": _frecuencia(exps, idm, lambda e: e.get("categoria", "")),
+        },
+        "patrones_dominantes": _patrones_ecosistemicos(exps, idm),
+        "tendencias_emergentes": emergentes,
+        "clusters": clusters,
+        "centinelas": centinelas,
+        "atipicos": atipicos,
+        "hipotesis_ecosistemicas": hipotesis,
+        "trazabilidad_valida": q["ratio_fechado"] > 0 and q["fuentes_distintas"] > 0,
+    }
+
+
 # ── Panorama ecosistémico completo (endpoint /ecosistema) ─────────────────────
 def panorama_ecosistemico(exps: list[dict], limite: int = 10) -> dict:
     """Vista JSON completa del ecosistema para RadarHD (todo determinista)."""

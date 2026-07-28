@@ -1698,6 +1698,7 @@ from ..observatorio import (
     identificar_tensiones,
     madurez_ecosistema,
     oportunidades,
+    panel_ecosistemico,
     panorama_ecosistemico,
     prioridades,
     ranking_hd,
@@ -2188,6 +2189,17 @@ def ecosistema(limite: int = Query(10, ge=1, le=100)) -> dict:
     centinelas, riesgos culturales, madurez, calidad del corpus, ranking,
     oportunidades y prioridades. Reemplaza el cálculo local de RadarHD."""
     return panorama_ecosistemico(_todos_expedientes(), limite)
+
+
+@app.get("/ecosistema/panel")
+def ecosistema_panel() -> dict:
+    """Panel ecosistémico con paridad de forma con RadarHD (interfaz Dashboard).
+
+    Permite que RadarHD redirija /api/radar/ecosistema/dashboard a Motor A sin
+    romper la UI. Determinista; `generado_en`/`cacheado` son metadatos de servicio.
+    """
+    panel = panel_ecosistemico(_todos_expedientes())
+    return {"generado_en": ahora_iso(), "cacheado": False, **panel}
 
 
 @app.get("/ecosistema/clusters")
