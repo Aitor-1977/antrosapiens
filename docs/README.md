@@ -12,6 +12,7 @@
 ## Ecosistema y fronteras
 - **[ARQUITECTURA_ECOSISTEMA.md](./ARQUITECTURA_ECOSISTEMA.md)** — 3 motores, 6 diagramas, estado 1.0.
 - **[FRONTERAS_MOTORES.md](./FRONTERAS_MOTORES.md)** — responsabilidad definitiva (A piensa, B muestra, C vende).
+- **[CANON_OPERATIVO_RADARHD.md](./CANON_OPERATIVO_RADARHD.md)** — documento canónico del uso metodológico de RadarHD (Motor B/C).
 - **[CONTRATOS_API.md](./CONTRATOS_API.md)** — contrato `motor_a.corpus.v1` y superficies API.
 - **[ROADMAP_ARQUITECTONICO.md](./ROADMAP_ARQUITECTONICO.md)** — plan de cutover a Arquitectura 1.0.
 
