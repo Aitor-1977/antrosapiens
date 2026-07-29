@@ -104,15 +104,56 @@ Migrado el **detalle del Expediente Vivo** sin alterar la experiencia visual:
   `concentrador.test.ts`) — regla "eliminar únicamente código muerto".
 - Verificación: `tsc=0`, `vitest` 205/205, `next build` verde, `pytest` 726/726.
 
-Pendiente (siguiente iteración): migrar los otros consumidores comerciales
-(`cadencia`, `lista-matutina`, `email-decisor`, rutas `dictamen`,
-`recomendaciones`, `prioridades`, `oportunidades`, `admin/ejecutar-todo`) para
-dejar `concentrador`/`expedientes.service` sin importadores y poder eliminarlos.
+### Fase 4 — Migración comercial y eliminación física `[ANALIZADA — 2026-07-29]`
 
-### Fase 4 — Verificación y limpieza `[PENDIENTE]`
+**Resultado: la migración comercial ya estaba completa tras la Fase 3; la
+eliminación física de `concentrador.ts`/`expedientes.service.ts` NO procede
+(quedan importadores vivos y load-bearing).** Se aplicó el protocolo de 7 pasos
+(paso 1: mapa de importadores); se documenta el bloqueo en vez de romper paneles
+(regla "si aún tienen importadores, NO los borres: reporta cuáles y por qué").
+
+**Consumidores comerciales — estado real (verificado en el código):**
+- `dictamen`, `recomendaciones`, `prioridades`, `oportunidades`, `dictamen/[org]`
+  → consumen `recomendacion.service`/`dictamenPericial.service`, que **ya son
+  Motor-A-fed** vía el adaptador (Fase 3). Sin inferencia local. ✅
+- `cadencia` → `engines/scoring` (contadores de cadencia comercial);
+  `lista-matutina` → `engines/priorizacion` (selección de lista matutina);
+  `email-decisor` → `email-finder`/`dominio` + `SMTP_MINIMO`. Son **operación
+  comercial (Motor C)**, NO inferencia antropológica; **no importan**
+  `concentrador` ni `expedientes.service`. No requieren migración. ✅
+
+**Por qué NO se eliminan los dos archivos (importadores vivos):**
+- `concentrador.ts` es **load-bearing del subsistema de ingesta local** de
+  RadarHD, no de la inferencia del Expediente Vivo (esa ya es de Motor A):
+  - `canonicalizar` → `evidencia.service` + densificadores (drift/empleo/adopción)
+    → escriben `senal_radar`, que **leen paneles vivos**: `radar/senales`,
+    `dashboard/metricas`, `lista-matutina`, `radar/cron`, `tarjeta/[id]`.
+  - `concentrar` → `admin/ejecutar-todo` + POST de `organizaciones` → pobla
+    `observacion` (fingerprint de caché de `ecosistema.service`).
+  - `calcularImplicacionSistemica` → ruta `organizaciones` + `dictamenPericial.
+    service`; preserva el **texto exacto** del bloque "Implicación Sistémica"
+    (cambiar la fuente alteraría el copy → prohibido por "verse idéntico").
+  - `curar`/`interpretar` (curaduría) → cubiertos por `concentrador.test.ts`.
+  Borrarlo **rompería paneles** → viola "ningún panel puede quedar vacío o roto".
+- `expedientes.service.ts` es el **único adaptador compartido** Motor A→Motor C
+  (sin inferencia local desde la Fase 3). Dejarlo sin importadores exigiría
+  **duplicar** el adaptador en cada consumidor (viola "sin duplicación") o
+  acoplar el gateway HTTP a Postgres. Se conserva **por diseño** como adaptador
+  único.
+
+**Condición de cierre:** no cumplida por dependencias reales; documentada. La
+eliminación física real depende de una iniciativa aparte: **desmontar el
+subsistema de ingesta local** (que Motor A sustituya también la captura que hoy
+llena `senal_radar`), fuera del alcance "migrar consumidores comerciales".
+Verificación de no-regresión: `tsc=0`, `vitest` 205/205.
+
+### Fase 5 — Verificación y limpieza `[PENDIENTE]`
 - `npm run build` verde + `vitest`. Borrar `/api/diag/{gemini,ia}` y las claves
   LLM de clasificación. En **Motor A**: deprecar `pipeline_comercial.py` +
   tablas homónimas (el comercial real vive en RadarHD).
+- Sustituir la ingesta local (`engines/radar` + densificadores + `concentrar`)
+  por consumo de Motor A; recién entonces `concentrador.ts` quedará sin
+  importadores y podrá eliminarse.
 - Archivar `Radar-Hd` y `marito-Aitorhd`.
 
 ## 4. Principios que el roadmap NO debe violar

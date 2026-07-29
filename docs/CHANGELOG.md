@@ -10,6 +10,26 @@ git; las versiones son etiquetas de hito de esta documentación).
 > (`hd_scraper/laboratorio.py`) usa 8 = Pipeline Comercial, 9 = DolorMap. Ver
 > `INCONSISTENCIAS.md`. Aquí se conservan las etiquetas históricas del commit.
 
+## [1.0.3] — Fase 4 · Análisis de eliminación (bloqueo documentado) — 2026-07-29
+### Analysis (repo RadarHD, sin cambios de código)
+- Protocolo de 7 pasos aplicado. **Inventario de referencias activas:**
+  - `expedientes.service.ts`: 4 importadores vivos — ruta `organizaciones` +
+    `ecosistema.service` + `dictamenPericial.service` + `recomendacion.service`.
+  - `concentrador.ts`: `admin/ejecutar-todo` (`concentrar`), ruta `organizaciones`
+    (`concentrar`, `calcularImplicacionSistemica`), `dictamenPericial.service`
+    (`calcularImplicacionSistemica`), `evidencia.service` (`canonicalizar`),
+    `expedientes.service` (tipos) + `concentrador.test.ts`.
+- **Consumidores comerciales ya migrados** (Fase 3): `dictamen`, `recomendaciones`,
+  `prioridades`, `oportunidades`, `dictamen/[org]` → Motor-A-fed vía el adaptador.
+  `cadencia`/`lista-matutina`/`email-decisor` son operación comercial (Motor C),
+  no inferencia; no tocan estos archivos.
+- **No se eliminó ningún archivo**: `concentrador.ts` es load-bearing del
+  subsistema de **ingesta local** (`canonicalizar`/`concentrar` → `senal_radar`/
+  `observacion` que leen paneles vivos: señales, dashboard, lista-matutina, cron,
+  tarjeta); `expedientes.service.ts` es el único adaptador compartido (borrarlo
+  duplicaría lógica o acoplaría el gateway a Postgres). Verificación de
+  no-regresión: `tsc=0`, `vitest` 205/205. Detalle → `ROADMAP §Fase 4`.
+
 ## [1.0.2] — Fase 3 · Detalle del Expediente Vivo migrado a Motor A — 2026-07-29
 ### Changed (repo RadarHD)
 - `src/lib/services/expedientes.service.ts`: reescrito como **adaptador del
