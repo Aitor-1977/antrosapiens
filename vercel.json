@@ -1,11 +1,12 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "builds": [
-    { "src": "api/index.py", "use": "@vercel/python",
-      "config": { "includeFiles": "hd_scraper/**" } }
-  ],
-  "routes": [
-    { "src": "/(.*)", "dest": "api/index.py" }
+  "functions": {
+    "api/index.py": {
+      "includeFiles": "hd_scraper/**"
+    }
+  },
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/api/index" }
   ],
   "env": {
     "HD_RAW_DIR": "/tmp/hd_raw",
