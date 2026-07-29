@@ -58,14 +58,31 @@ Todo determinista, aditivo (no rompe `motor_a.corpus.v1`), OpenAPI regenerado.
 Implementación: `hd_scraper/observatorio.py` (+ `_dossier_json` en `api/app.py`).
 Detalle: `CONTRATOS_API.md §1bis/§1ter`.
 
-### Fase 2 — Rutas de inteligencia → proxy y borrado de engines `[PENDIENTE]`
+### Fase 2 — Rutas de inteligencia → proxy y borrado de engines `[EN CURSO]`
 - Reescribir cada ruta de inteligencia de RadarHD como **proxy** al gateway.
+- **Ecosistémicas ✅**: `ecosistema/dashboard` (→ `motorA.panel()`), `ecosistema`,
+  `clusters`, `outliers`, `centinelas`, `patrones`, `riesgos`, `tendencias` y
+  `onlife/[org]` (→ `motorA.onlifeAnalisis`) ya consumen Motor A; `tsc=0`.
+- **Expediente Vivo — paridad de forma ✅ / flip de ruta diferido**: Motor A ya
+  emite las formas exactas `OrganizacionObservada` (listado), `Dossier` (detalle)
+  y `Drift` — `GET /organizaciones`, `/organizaciones/{id}`, `/organizaciones/{id}/drift`
+  (`hd_scraper/expediente_vivo.py`, `pytest` verde, 99% cobertura del módulo) — con
+  métodos de gateway `organizaciones/organizacion/organizacionDrift`. El **cambio
+  de las rutas proxy** (`organizaciones`, `organizaciones/[id]`, `drift/[org]`)
+  **se difiere a la Fase 3**: el detalle todavía renderiza
+  `recomendacion_estrategica` y `dictamen_pericial` desde servicios **comerciales**
+  locales (Motor C); redirigir el detalle a Motor A **antes** de migrar Motor C
+  haría desaparecer esas secciones del dossier (cambio visual, prohibido). Motor A
+  las emite `null` por diseño (ADR-0001). Detalle → `CONTRATOS_API.md §1quater`.
 - **Eliminar** `engines/{inference,scoring,dictamenPericial,contradiction,
   ecosistema,onlife,priorizacion,recomendacion,radar}` y `services/{llm,
   scoring-llm,scoring-reglas,dictamen*,drift,ecosistema,evidencia,expedientes,
   perfil,recomendacion}`.
-- **Cutover coordinado**: `engines/scoring` lo importan 11 archivos (incl. rutas
-  comerciales) → no se borra hasta reescribir todos sus importadores.
+- **Cutover coordinado**: `engines/scoring` lo importan 11 archivos y
+  `concentrador`/`expedientes.service` siguen importados por las rutas del
+  Expediente Vivo y por componentes con cálculo en render (`IntelligencePanel`,
+  `Prospectos`) → **no se borran hasta reescribir todos sus importadores**
+  (regla "nunca borrar primero"; solo se elimina lo que quede sin importadores).
 
 ### Fase 3 — Motor C consume inteligencia `[PENDIENTE]`
 - `cadencia`, `lista-matutina`, `email-decisor` dejan de importar engines de

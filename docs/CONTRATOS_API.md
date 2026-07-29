@@ -95,6 +95,40 @@ Cierran las brechas que RadarHD calculaba localmente. Todos deterministas:
 **Compatibilidad:** todas son adiciones; no rompen `motor_a.corpus.v1` ni rutas
 existentes. OpenAPI (`/openapi.json`, `/docs`) se regenera automáticamente.
 
+## 1quater. Contrato del Expediente Vivo (paridad de forma, Cutover 1.0)
+
+Motor A emite EXACTAMENTE las formas que consumen los componentes tipados del
+"Radar de Organizaciones Observadas" de RadarHD
+(`OrganizacionesObservadas.tsx`). Todo determinista; sin IA. Implementación:
+`hd_scraper/expediente_vivo.py`. Gateway: `motorA.organizaciones/organizacion/
+organizacionDrift` en `src/lib/motor-a.gateway.ts`.
+
+| Endpoint (Motor A) | Forma RadarHD | Consumidor de RadarHD |
+|--------------------|---------------|-----------------------|
+| `GET /organizaciones` | `{ generado_en, resumen, total, organizaciones: OrganizacionObservada[] }` | `GET /api/radar/organizaciones` |
+| `GET /organizaciones/{id}` | `Dossier` (OrganizacionObservada + `cadena_evidencia`, `fuentes`, `contexto_ecosistemico`, `recomendacion_estrategica`, `dictamen_pericial`, `tiene_analisis_onlife`, `dolormap`) | `GET /api/radar/organizaciones/{id}` |
+| `GET /organizaciones/{id}/drift` | `{ organizacion_id, drift: { detectado, resumen, ultima_fecha, num_observaciones } }` | `GET /api/radar/drift/{id}` |
+
+**Espacio de identificadores.** `organizacion_id` es un entero determinista
+(índice en orden alfabético del nombre, vía `observatorio._id_map`). El listado y
+el detalle comparten ese mismo espacio: el detalle y el drift se resuelven por id
+numérico. Las `evidencia_ids` de la inferencia remiten a los `id` de
+`cadena_evidencia` (trazabilidad afirmación → fuente).
+
+**Frontera A/C respetada.** Los campos comerciales `recomendacion_estrategica` y
+`dictamen_pericial` viajan **`null`**: son decisión y ejecución comercial de
+**Motor C** (ADR-0001), no de Motor A. `dolormap` viaja `null` (sin fuente de
+datos todavía). Motor A **no inventa** ninguno de esos campos: los emite vacíos.
+
+**Estado de migración.** Contrato + endpoints + gateway ✅ (con `pytest` verde y
+99% de cobertura del módulo). El **cambio de las rutas proxy** de RadarHD
+(`organizaciones`, `organizaciones/[id]`, `drift/[org]`) queda **pendiente de la
+migración de Motor C**: el detalle todavía renderiza `recomendacion_estrategica`
+y `dictamen_pericial` desde servicios locales de RadarHD; redirigir el detalle a
+Motor A sin migrar antes esos servicios comerciales **haría desaparecer esas dos
+secciones** del dossier (cambio visual). Por eso se completa hasta el gateway y se
+difiere el flip de ruta a la Fase 3 (Motor C). Detalle → `ROADMAP_ARQUITECTONICO.md`.
+
 ## 2. Superficie API de Motor A (82 endpoints, solo lectura)
 Inventario completo → `INVENTARIO_ENDPOINTS.md` §A. Contrato principal expuesto:
 `/corpus`. El resto (`/expedientes`, `/validacion`, `/certificado`, `/dossier`,

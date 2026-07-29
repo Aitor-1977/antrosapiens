@@ -10,6 +10,25 @@ git; las versiones son etiquetas de hito de esta documentación).
 > (`hd_scraper/laboratorio.py`) usa 8 = Pipeline Comercial, 9 = DolorMap. Ver
 > `INCONSISTENCIAS.md`. Aquí se conservan las etiquetas históricas del commit.
 
+## [1.0.1] — Cutover 1.0 · Expediente Vivo (paridad de forma) — 2026-07-29
+### Added
+- **Expediente Vivo en Motor A** (`hd_scraper/expediente_vivo.py`): funciones
+  deterministas que emiten EXACTAMENTE las formas `OrganizacionObservada`
+  (listado), `Dossier` (detalle) y `Drift` que consumen los componentes tipados
+  de RadarHD. IDs enteros deterministas compartidos entre listado y detalle;
+  `evidencia_ids` trazables a la cadena de evidencia.
+- Endpoints solo-lectura `GET /organizaciones`, `/organizaciones/{id}`,
+  `/organizaciones/{id}/drift` (`hd_scraper/api/app.py`).
+- `tests/test_expediente_vivo.py` (22 tests; 99% de cobertura del módulo — solo
+  quedan dos guardas defensivas inalcanzables). Suite total: 721 tests verdes.
+- Métodos de gateway `organizaciones/organizacion/organizacionDrift`
+  (repo RadarHD, `src/lib/motor-a.gateway.ts`; aditivo, `tsc=0`).
+### Notes
+- Frontera A/C: `recomendacion_estrategica`, `dictamen_pericial` y `dolormap`
+  viajan **`null`** (comercial = Motor C / sin fuente). El **flip de las rutas
+  proxy** de RadarHD se difiere a la Fase 3 (Motor C) para no alterar la
+  experiencia visual. Ver `CONTRATOS_API.md §1quater` y `ROADMAP_ARQUITECTONICO.md`.
+
 ## [1.0.0] — Arquitectura 1.0 — 2026-07-25
 ### Changed
 - Oficializada la **Arquitectura 1.0** (ADR-0001): *Motor A piensa, B muestra,

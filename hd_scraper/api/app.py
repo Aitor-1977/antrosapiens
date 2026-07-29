@@ -1704,6 +1704,7 @@ from ..observatorio import (
     ranking_hd,
     riesgos_culturales,
 )
+from .. import expediente_vivo as _exp_vivo
 from ..relevance import _sin_acentos
 from ..publicador import (
     generar_csv,
@@ -2262,6 +2263,47 @@ def prioridades_endpoint(limite: int = Query(10, ge=1, le=100)) -> dict:
     """Prioridades HD: hipótesis validadas primero, luego por score compuesto."""
     p = prioridades(_todos_expedientes(), limite)
     return {"total": len(p), "prioridades": p}
+
+
+# --- Cutover Arquitectura 1.0: Expediente Vivo (paridad de forma para RadarHD) -
+#
+# Motor A emite las MISMAS formas que consumen los componentes tipados de RadarHD
+# para el "Radar de Organizaciones Observadas": OrganizacionObservada (listado),
+# Dossier (detalle) y Drift. Todo determinista. Los IDs de organización son
+# enteros estables (orden alfabético), compartidos entre listado y detalle.
+# Los campos comerciales (recomendación, dictamen pericial) son de Motor C y
+# viajan null: Motor A no decide ni ejecuta acción comercial (ADR-0001).
+
+@app.get("/organizaciones")
+def organizaciones_listado() -> dict:
+    """Expediente Vivo (listado): OrganizacionObservada[] con la forma exacta de
+    RadarHD. Permite redirigir GET /api/radar/organizaciones a Motor A sin
+    romper la UI. generado_en es metadato; el resto es determinista."""
+    return {"generado_en": ahora_iso(), **_exp_vivo.listado(_todos_expedientes())}
+
+
+@app.get("/organizaciones/{org_id}")
+def organizacion_detalle(org_id: int) -> dict:
+    """Expediente Vivo (detalle/Dossier) por id numérico determinista. Incluye
+    cadena de evidencia, fuentes y contexto ecosistémico. Onlife se resuelve
+    contra las señales onlife ya observadas; comercial (Motor C) va null."""
+    exps = _todos_expedientes()
+    nombre = _exp_vivo.nombre_de(exps, org_id)
+    tiene_onlife = bool(nombre) and _onlife.analisis_onlife(nombre).get("detectado", False)
+    d = _exp_vivo.detalle(exps, org_id, tiene_analisis_onlife=tiene_onlife)
+    if d is None:
+        raise HTTPException(404, "Organización no encontrada.")
+    return d
+
+
+@app.get("/organizaciones/{org_id}/drift")
+def organizacion_drift(org_id: int) -> dict:
+    """Drift narrativo por id numérico determinista, forma Drift de RadarHD.
+    Permite redirigir GET /api/radar/drift/{id} a Motor A sin romper la UI."""
+    d = _exp_vivo.drift(_todos_expedientes(), org_id)
+    if d is None:
+        raise HTTPException(404, "Organización no encontrada.")
+    return d
 
 
 # --- Capa 17: Publicador Científico ------------------------------------------

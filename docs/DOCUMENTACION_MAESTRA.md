@@ -403,7 +403,8 @@ hd_scraper/
 | `memoria.py` / `_store.py` | 155/57 | §4 C13 | 13 |
 | `comparador.py` | — | §4 C14 | 14 |
 | `predictivo.py` | 194 | §4 C15 | 15 |
-| `observatorio.py` | 135 | §4 C16 | 16 |
+| `observatorio.py` | 135 | §4 C16 + `panel_ecosistemico` (paridad RadarHD) | 16 |
+| `expediente_vivo.py` | 461 | `listado`, `detalle`, `drift`, `organizacion_observada` (paridad `OrganizacionObservada`/`Dossier`/`Drift` para RadarHD) | Cutover 1.0 |
 | `publicador.py` | 159 | §4 C17 | 17 |
 | `laboratorio.py` | 140 | §4 C18 | 18 |
 | `pipeline.py` | 224 | `run_connector()` | orquestación |
@@ -550,6 +551,19 @@ propietario: **A** (todos).
 | GET | `/latam` · `/latam/{pais}` · `/vertical/{nombre}` | 16 |
 | GET | `/publicar/peritaje/{org}` · `/publicar/informe/{org}` · `/publicar/pdf/{org}` | 17 |
 | GET | `/laboratorio` · `/estado` · `/dashboard` | 18 |
+
+### 8.6bis Cutover 1.0 — paridad de forma para RadarHD
+Emiten EXACTAMENTE las interfaces tipadas que consume RadarHD (sin cálculo local
+en Motor B). Deterministas; implementación en `observatorio.py` y
+`expediente_vivo.py`. Detalle → `CONTRATOS_API.md §1ter/§1quater`.
+
+| Método | Ruta | Forma RadarHD |
+|--------|------|---------------|
+| GET | `/ecosistema/panel` | `Dashboard` (InteligenciaEcosistemica) |
+| GET | `/onlife/{org}/analisis` | `RespuestaOnlife` |
+| GET | `/organizaciones` | `{ generado_en, resumen, total, organizaciones: OrganizacionObservada[] }` |
+| GET | `/organizaciones/{id}` | `Dossier` (id numérico determinista; comercial → `null`) |
+| GET | `/organizaciones/{id}/drift` | `{ organizacion_id, drift }` |
 
 ### 8.7 PWA / estáticos
 `GET /manifest.webmanifest`, `/sw.js`, `/icon-192.png`, `/icon-512.png`,
