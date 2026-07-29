@@ -54,7 +54,7 @@ def _conjunto():
 # ── Listado (OrganizacionObservada) ──────────────────────────────────────────
 
 CLAVES_ORG = {
-    "organizacion_id", "nombre_display", "intensidad_label", "consistencia_label",
+    "organizacion_id", "nombre_display", "vertical", "intensidad_label", "consistencia_label",
     "calidad_evidencia_label", "num_senales", "num_fuentes_distintas", "tipos_evidencia",
     "madurez", "patrones_observados", "que_cambio", "hipotesis_deuda", "viabilidad_hd",
     "taxonomia", "implicacion_sistemica", "alerta", "tiene_evidencia_operativa",
@@ -67,7 +67,9 @@ def test_listado_forma_y_orden():
     assert set(d) == {"resumen", "total", "organizaciones"}
     assert d["total"] == 3
     for o in d["organizaciones"]:
-        assert set(o) == CLAVES_ORG
+        # Listado autosuficiente: OrganizacionObservada + cadena_evidencia/fuentes.
+        assert set(o) == CLAVES_ORG | {"cadena_evidencia", "fuentes"}
+        assert isinstance(o["cadena_evidencia"], list) and isinstance(o["fuentes"], list)
         assert set(o["viabilidad_hd"]) == {"nivel", "razon"}
         assert set(o["taxonomia"]) == {"marco", "subtipo"}
         assert o["taxonomia"]["marco"] == "Deuda Cultural Situacional-Simbólica™"
@@ -259,7 +261,8 @@ def test_endpoint_listado(poblado):
     assert r.status_code == 200
     d = r.json()
     assert "generado_en" in d and d["total"] >= 1
-    assert all(set(o) == CLAVES_ORG for o in d["organizaciones"])
+    assert all(CLAVES_ORG <= set(o) for o in d["organizaciones"])
+    assert all("cadena_evidencia" in o and "fuentes" in o for o in d["organizaciones"])
 
 
 def test_endpoint_detalle_por_id(poblado):

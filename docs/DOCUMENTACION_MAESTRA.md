@@ -565,6 +565,14 @@ en Motor B). Deterministas; implementación en `observatorio.py` y
 | GET | `/organizaciones/{id}` | `Dossier` (id numérico determinista; comercial → `null`) |
 | GET | `/organizaciones/{id}/drift` | `{ organizacion_id, drift }` |
 
+**Fase 3 (2026-07-29):** las rutas `organizaciones`, `organizaciones/[id]` y
+`drift/[id]` de RadarHD consumen **exclusivamente** estos endpoints. `expedientes.
+service` pasó de inferir localmente (`curar()`/`interpretar()`) a ser un
+adaptador del gateway. La Recomendación Estratégica y el Dictamen Pericial
+(**Motor C**) se derivan server-side de esta misma inteligencia + el vínculo
+`prospecto` local — nunca en componentes React. Motor A las emite `null` por
+frontera comercial. Detalle → `CONTRATOS_API.md §1quater`, `ROADMAP §Fase 3`.
+
 ### 8.7 PWA / estáticos
 `GET /manifest.webmanifest`, `/sw.js`, `/icon-192.png`, `/icon-512.png`,
 `/apple-touch-icon.png`.

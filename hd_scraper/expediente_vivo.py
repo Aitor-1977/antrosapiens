@@ -268,7 +268,7 @@ def inferencia_antropologica(exp: dict, items: list[dict], cur: dict) -> dict:
 
 # ── Organización observada (forma OrganizacionObservada) ──────────────────────
 
-def organizacion_observada(exp: dict, idm: dict[str, int]) -> dict:
+def organizacion_observada(exp: dict, idm: dict[str, int], incluir_cadena: bool = False) -> dict:
     items = _cadena_evidencia(exp)
     cur = curaduria(exp, items)
     inf = inferencia_antropologica(exp, items, cur)
@@ -277,9 +277,15 @@ def organizacion_observada(exp: dict, idm: dict[str, int]) -> dict:
     tiene_operativa = any(it["tipo_evento"] in _EVENTOS_OPERATIVOS for it in items)
     tiene_narrativa = any(it["tipo_evento"] in _EVENTOS_NARRATIVOS for it in items)
 
+    # cadena_evidencia + fuentes hacen el ítem del listado autosuficiente para la
+    # trazabilidad (evidencia_ids) que Motor C reconstruye sin volver al detalle.
+    extra = {"cadena_evidencia": items, "fuentes": _fuentes(items)} if incluir_cadena else {}
+
     return {
+        **extra,
         "organizacion_id": idm.get(exp.get("nombre", ""), -1),
         "nombre_display": exp.get("nombre", ""),
+        "vertical": exp.get("vertical", "") or "",
         "intensidad_label": _intensidad_label(exp),
         "consistencia_label": _consistencia_label(exp, items),
         "calidad_evidencia_label": _calidad_evidencia_label(exp, items),
@@ -306,7 +312,7 @@ def organizacion_observada(exp: dict, idm: dict[str, int]) -> dict:
 def listado(exps: list[dict]) -> dict:
     """{generado_en(lo añade la API), resumen, total, organizaciones[]} — orden de ranking HD."""
     idm = _id_map(exps)
-    orgs = [organizacion_observada(e, idm) for e in exps]
+    orgs = [organizacion_observada(e, idm, incluir_cadena=True) for e in exps]
     # Orden por prioridad de ranking HD (mismo criterio que el resto del sistema).
     rank = {r["nombre"]: r["posicion"] for r in ranking_hd(exps, len(exps))}
     orgs.sort(key=lambda o: rank.get(o["nombre_display"], 10_000))

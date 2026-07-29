@@ -84,9 +84,30 @@ Detalle: `CONTRATOS_API.md §1bis/§1ter`.
   `Prospectos`) → **no se borran hasta reescribir todos sus importadores**
   (regla "nunca borrar primero"; solo se elimina lo que quede sin importadores).
 
-### Fase 3 — Motor C consume inteligencia `[PENDIENTE]`
-- `cadencia`, `lista-matutina`, `email-decisor` dejan de importar engines de
-  inferencia; priorizan con la inteligencia (validada/certificada) de Motor A.
+### Fase 3 — Motor C consume inteligencia `[EJECUTADA (Expediente Vivo) — 2026-07-29]`
+Migrado el **detalle del Expediente Vivo** sin alterar la experiencia visual:
+- `expedientes.service` (constructor único del Expediente Vivo) YA **no infiere
+  localmente**: es un adaptador que consume Motor A vía gateway
+  (`motorA.organizaciones()`/`organizacion(id)`) y mapea a `ExpedienteVivo`.
+  `curar()`/`interpretar()`/`calcularViabilidadHd()`/`calcularAlerta()` salen del
+  camino de producción (quedan solo en el engine + su test).
+- Rutas `organizaciones`, `organizaciones/[id]` y `drift/[id]` consumen
+  **exclusivamente Motor A**. El detalle usa el `contexto_ecosistemico` de Motor A
+  directamente (ya no `obtenerEcosistema`+`contextualizarOrganizacion`).
+- **Motor C** (server-side, nunca React): `recomendacion_estrategica` y
+  `dictamen_pericial` se derivan de la inteligencia de Motor A (vía gateway) +
+  el `prospecto` local. Motor A las emite `null` por frontera comercial.
+- **Código muerto eliminado**: `derivarDriftNarrativo`/`DriftNarrativo` (drift
+  ahora es de Motor A). No se borran `concentrador`/`expedientes.service` porque
+  siguen con importadores vivos (`concentrar`, `calcularImplicacionSistemica`,
+  `canonicalizar`, el adaptador, y las funciones de inferencia cubiertas por
+  `concentrador.test.ts`) — regla "eliminar únicamente código muerto".
+- Verificación: `tsc=0`, `vitest` 205/205, `next build` verde, `pytest` 726/726.
+
+Pendiente (siguiente iteración): migrar los otros consumidores comerciales
+(`cadencia`, `lista-matutina`, `email-decisor`, rutas `dictamen`,
+`recomendaciones`, `prioridades`, `oportunidades`, `admin/ejecutar-todo`) para
+dejar `concentrador`/`expedientes.service` sin importadores y poder eliminarlos.
 
 ### Fase 4 — Verificación y limpieza `[PENDIENTE]`
 - `npm run build` verde + `vitest`. Borrar `/api/diag/{gemini,ia}` y las claves

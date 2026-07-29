@@ -10,6 +10,26 @@ git; las versiones son etiquetas de hito de esta documentación).
 > (`hd_scraper/laboratorio.py`) usa 8 = Pipeline Comercial, 9 = DolorMap. Ver
 > `INCONSISTENCIAS.md`. Aquí se conservan las etiquetas históricas del commit.
 
+## [1.0.2] — Fase 3 · Detalle del Expediente Vivo migrado a Motor A — 2026-07-29
+### Changed (repo RadarHD)
+- `src/lib/services/expedientes.service.ts`: reescrito como **adaptador del
+  gateway**. `construirExpedientesVivos`/`construirExpedienteVivo` consumen
+  Motor A (`/organizaciones[/{id}]`) y mapean a `ExpedienteVivo`. RadarHD ya no
+  ejecuta `curar()`/`interpretar()` en el camino de producción.
+- `src/app/api/radar/organizaciones/[id]/route.ts`: el detalle obtiene toda la
+  inteligencia científica (incl. `contexto_ecosistemico`) de Motor A; compone
+  `recomendacion_estrategica`/`dictamen_pericial` (Motor C) server-side.
+- `src/app/api/radar/drift/[org]/route.ts`: consume `GET /organizaciones/{id}/drift`.
+### Added (repo antrosapiens · Motor A)
+- Ítems de `GET /organizaciones` enriquecidos con `vertical`, `cadena_evidencia`
+  y `fuentes` (aditivo) para la trazabilidad de Motor C.
+### Removed (repo RadarHD)
+- `derivarDriftNarrativo` + interfaz `DriftNarrativo` (código muerto tras migrar
+  el Drift a Motor A).
+### Notes
+- Sin cambios visuales; sin inferencia antropológica en React. Verificación:
+  `tsc=0`, `vitest` 205/205, `next build` verde, `pytest` 726/726.
+
 ## [1.0.1] — Cutover 1.0 · Expediente Vivo (paridad de forma) — 2026-07-29
 ### Added
 - **Expediente Vivo en Motor A** (`hd_scraper/expediente_vivo.py`): funciones

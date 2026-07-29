@@ -120,14 +120,27 @@ numérico. Las `evidencia_ids` de la inferencia remiten a los `id` de
 **Motor C** (ADR-0001), no de Motor A. `dolormap` viaja `null` (sin fuente de
 datos todavía). Motor A **no inventa** ninguno de esos campos: los emite vacíos.
 
-**Estado de migración.** Contrato + endpoints + gateway ✅ (con `pytest` verde y
-99% de cobertura del módulo). El **cambio de las rutas proxy** de RadarHD
-(`organizaciones`, `organizaciones/[id]`, `drift/[org]`) queda **pendiente de la
-migración de Motor C**: el detalle todavía renderiza `recomendacion_estrategica`
-y `dictamen_pericial` desde servicios locales de RadarHD; redirigir el detalle a
-Motor A sin migrar antes esos servicios comerciales **haría desaparecer esas dos
-secciones** del dossier (cambio visual). Por eso se completa hasta el gateway y se
-difiere el flip de ruta a la Fase 3 (Motor C). Detalle → `ROADMAP_ARQUITECTONICO.md`.
+**Estado de migración (Fase 3 · EJECUTADA).** Contrato + endpoints + gateway ✅
+(`pytest` verde, 99% del módulo). Las **rutas del Expediente Vivo YA consumen
+exclusivamente Motor A**:
+
+- `GET /api/radar/organizaciones` (listado) y `GET /api/radar/organizaciones/[id]`
+  (detalle) obtienen la inteligencia científica (Curaduría, Inferencia
+  Antropológica, cadena de evidencia, fuentes, Contexto Ecosistémico) del
+  gateway. RadarHD **ya no** reconstruye el Expediente Vivo con `curar()`/
+  `interpretar()` locales: `expedientes.service` es ahora un **adaptador** que
+  mapea `OrganizacionObservada`/`Dossier` de Motor A a la forma `ExpedienteVivo`.
+- `GET /api/radar/drift/[id]` consume `GET /organizaciones/{id}/drift` de Motor A.
+- **Capa comercial (Motor C)**: `recomendacion_estrategica` y `dictamen_pericial`
+  las compone RadarHD server-side (nunca en React) a partir de la MISMA
+  inteligencia de Motor A (vía el gateway, dentro de los servicios) más el
+  vínculo local con `prospecto` (decisor). Motor A las emite `null` por frontera
+  (ADR-0001: no decide ni ejecuta acción comercial). Así el dossier conserva esas
+  secciones sin que Motor A cruce la frontera comercial. Sin cambios visuales.
+
+Enriquecimiento del contrato: los ítems de `GET /organizaciones` incluyen ahora
+`vertical`, `cadena_evidencia` y `fuentes` (aditivo) para que Motor C reconstruya
+la trazabilidad sin volver al detalle. Detalle → `ROADMAP_ARQUITECTONICO.md` §Fase 3.
 
 ## 2. Superficie API de Motor A (82 endpoints, solo lectura)
 Inventario completo → `INVENTARIO_ENDPOINTS.md` §A. Contrato principal expuesto:
