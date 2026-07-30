@@ -1,0 +1,62 @@
+name: build-antrosapiens-apk
+
+# Compila el APK nativo de Antrosapiens. El SDK de Android se descarga desde
+# dl.google.com, alcanzable en los runners de GitHub (no en el entorno local del
+# agente, donde el proxy de egress lo bloquea). Publica el .apk como artefacto y
+# como asset de una Release para descarga inmediata.
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - claude/repository-branches-status-ql1o6e
+    paths:
+      - 'android/**'
+      - '.github/workflows/build-antrosapiens-apk.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Build debug APK
+        working-directory: android
+        run: |
+          chmod +x ./gradlew
+          ./gradlew --no-daemon clean assembleDebug
+
+      - name: Locate APK
+        id: apk
+        run: |
+          APK=$(find android/app/build/outputs/apk/debug -name '*.apk' | head -1)
+          echo "Ruta del APK: $APK"
+          echo "path=$APK" >> "$GITHUB_OUTPUT"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: antrosapiens-debug-apk
+          path: ${{ steps.apk.outputs.path }}
+          if-no-files-found: error
+
+      - name: Publish APK to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: antrosapiens-apk-latest
+          name: Antrosapiens APK (debug)
+          body: APK de depuración instalable de Antrosapiens, compilado en CI.
+          files: ${{ steps.apk.outputs.path }}
