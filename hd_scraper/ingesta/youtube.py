@@ -70,7 +70,12 @@ def agrupar(cues: list[tuple[str, str]], ventana_s: int = 60) -> list[tuple[str,
 
 
 def _runner_ytdlp(video_url: str, lang: str) -> str:
-    """Descarga subtítulos con el binario yt-dlp y devuelve el contenido VTT."""
+    """Descarga subtítulos con el binario yt-dlp y devuelve el contenido VTT.
+
+    Blindaje serverless: yt-dlp NO se instala en el runtime de producción (vive
+    en requirements-dev.txt, es pesado y no corre en Vercel). Si el binario no
+    está, damos un error claro en vez de romper la petición con un traceback.
+    """
     with tempfile.TemporaryDirectory() as tmp:
         salida = os.path.join(tmp, "sub")
         cmd = [
@@ -78,7 +83,15 @@ def _runner_ytdlp(video_url: str, lang: str) -> str:
             "--sub-langs", f"{lang},{lang}-orig,en", "--sub-format", "vtt",
             "-o", salida, video_url,
         ]
-        subprocess.run(cmd, check=True, capture_output=True, timeout=180)
+        try:
+            subprocess.run(cmd, check=True, capture_output=True, timeout=180)
+        except FileNotFoundError as exc:
+            raise RuntimeError(
+                "El conector de YouTube requiere el binario 'yt-dlp', no disponible "
+                "en este entorno (p. ej. Vercel serverless). Instálalo con "
+                "'pip install -r requirements-dev.txt' o ejecuta la ingesta en un host "
+                "always-on."
+            ) from exc
         vtts = glob.glob(os.path.join(tmp, "*.vtt"))
         if not vtts:
             raise RuntimeError("yt-dlp no produjo subtítulos para el video")
