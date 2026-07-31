@@ -47,6 +47,7 @@ from ..pipeline import run_connector
 from ..relevance import detectar_empresa, evaluar_relevancia
 from ..signals import detectar_keywords
 from ..prospectos import nuevo_prospecto, upsert_prospecto
+from ..perfil_fundacional import construir_perfil
 from ..validation.validator import validate_prospecto
 
 app = FastAPI(
@@ -1492,20 +1493,32 @@ def directorio_endpoint(payload: DirectorioIn,
 
     empresas = res["empresas"]
     nuevos = actualizados = 0
-    for e in empresas:
-        rec = nuevo_prospecto(
-            e["nombre"], payload.categoria,
-            vertical=e.get("vertical_sugerida") or (payload.vertical if payload.vertical != "todas" else None),
-            sitio_web=e.get("sitio_web") or None,
-            discurso_corporativo=e.get("descripcion") or None,
-            fuente_discurso="directorio:wikidata",
-            fecha_captura=ahora_iso(),
-        )
-        r = upsert_prospecto(db, rec)
-        if r.get("accion") == "insertado":
-            nuevos += 1
-        elif r.get("accion") == "actualizado":
-            actualizados += 1
+    # Cliente compartido para el perfilado orgánico (perfil fundacional desde el
+    # sitio propio de cada organización): aporta escala/tamaño y, si el sitio es
+    # más rico que Wikidata, discurso y URL de perfil. Determinista y best-effort
+    # (sin red -> escala 'indeterminada' y se conserva la descripción de Wikidata).
+    with httpx.Client(timeout=settings.request_timeout_s,
+                      headers={"User-Agent": settings.user_agent},
+                      follow_redirects=True) as _cli_perfil:
+        for e in empresas:
+            sitio = e.get("sitio_web") or ""
+            perfil = construir_perfil(e["nombre"], sitio, client=_cli_perfil) if sitio else None
+            discurso_organico = perfil.discurso_corporativo if perfil else None
+            rec = nuevo_prospecto(
+                e["nombre"], payload.categoria,
+                vertical=e.get("vertical_sugerida") or (payload.vertical if payload.vertical != "todas" else None),
+                sitio_web=sitio or None,
+                discurso_corporativo=(discurso_organico or e.get("descripcion")) or None,
+                url_perfil=(perfil.url_perfil if perfil else None),
+                fuente_discurso=("perfil_fundacional" if discurso_organico else "directorio:wikidata"),
+                fecha_captura=ahora_iso(),
+                escala=(perfil.escala if perfil else "indeterminada"),
+            )
+            r = upsert_prospecto(db, rec)
+            if r.get("accion") == "insertado":
+                nuevos += 1
+            elif r.get("accion") == "actualizado":
+                actualizados += 1
 
     if not empresas:
         nota = ("0 empresas para esa zona/vertical, incluso ampliando el filtro. "
