@@ -16,7 +16,26 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from hd_scraper.api.app import app  # noqa: E402
+from hd_scraper.api.app import app as _app  # noqa: E402
+
+# ── Normalización de ruta para el rewrite de Vercel ─────────────────────────
+# vercel.json reescribe `/(.*)` -> `/api/index`. Según la configuración, el
+# runtime puede entregarle a la app ASGI la ruta ORIGINAL (correcto) o la ruta
+# de DESTINO (`/api/index[...]`). En el segundo caso FastAPI no encuentra ruta y
+# responde `{"detail":"Not Found"}` para TODO. Este envoltorio quita ese prefijo
+# si aparece, dejando la ruta real (`/prospectos`, `/health`, `/` …). Es inocuo
+# cuando la ruta ya llega bien (no empieza por `/api/index`).
+_PREFIJO = "/api/index"
+
+
+async def app(scope, receive, send):  # noqa: D401 - envoltorio ASGI
+    if scope.get("type") in ("http", "websocket"):
+        ruta = scope.get("path", "") or ""
+        if ruta == _PREFIJO or ruta.startswith(_PREFIJO + "/"):
+            nueva = ruta[len(_PREFIJO):] or "/"
+            scope = {**scope, "path": nueva, "raw_path": nueva.encode("utf-8")}
+    await _app(scope, receive, send)
+
 
 # Vercel toma esta variable como la aplicación ASGI a servir.
 __all__ = ["app"]

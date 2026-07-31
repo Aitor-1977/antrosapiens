@@ -129,6 +129,17 @@ Intake del operador (única escritura vía API; la evidencia NUNCA se escribe po
 API): `POST /prospectos` y `/prospectos/bulk` con cabecera `X-Ingest-Token` ==
 `HD_INGEST_TOKEN` (sin token → 503). `GET /admin` sirve un formulario web.
 
+**Directorio semilla (operación sin fricción).** Para que Motor A entregue
+organizaciones REALES desde el primer arranque —sin ingesta ni credenciales— si
+`prospectos` está vacía se siembra un directorio curado de entidades públicas y
+verificables de LATAM (`hd_scraper/seed_prospectos.py`, invocado desde
+`get_db()` tras `init_schema()`). Es INTAKE ESTRUCTURAL del mismo tipo que
+`POST /directorio`: `categoria` DECLARADA (no inferida), `escala='indeterminada'`
+(la semilla no rastrea el sitio; la enriquece luego `perfil_fundacional`). No
+puntúa ni interpreta. Idempotente (`ON CONFLICT DO NOTHING`; sólo si la tabla
+está vacía) y sin red: funciona incluso sobre el SQLite efímero de Vercel,
+repoblándose en cada arranque en frío.
+
 Base: SQLite (dev/tests) o PostgreSQL (producción), según la URL. El driver
 (`db/database.py`) traduce marcadores y elige el esquema; `scripts/migrate.py`
 crea el esquema. En Vercel se auto-detecta `DATABASE_URL`/`POSTGRES_URL`.
