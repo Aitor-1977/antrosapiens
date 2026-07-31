@@ -357,6 +357,7 @@ def _row_a_prospecto(row) -> dict:
         "url_perfil": row["url_perfil"],
         "fuente_discurso": row["fuente_discurso"],
         "fecha_captura": row["fecha_captura"],
+        "escala": row["escala"],
         "creado_en": row["creado_en"],
         "actualizado_en": row["actualizado_en"],
     }
