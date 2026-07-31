@@ -72,6 +72,8 @@ CREATE TABLE IF NOT EXISTS prospectos (
     url_perfil            TEXT,
     fuente_discurso       TEXT,
     fecha_captura         TEXT,
+    -- Escala/tamaño: parámetro estructural OBLIGATORIO desde fuente orgánica.
+    escala                TEXT NOT NULL DEFAULT 'indeterminada',
     hash_dedup            TEXT NOT NULL UNIQUE,
     creado_en             TEXT NOT NULL,
     actualizado_en        TEXT NOT NULL,
@@ -82,6 +84,7 @@ CREATE TABLE IF NOT EXISTS prospectos (
 ALTER TABLE prospectos ADD COLUMN IF NOT EXISTS vertical  TEXT;
 ALTER TABLE prospectos ADD COLUMN IF NOT EXISTS sitio_web TEXT;
 ALTER TABLE prospectos ADD COLUMN IF NOT EXISTS linkedin  TEXT;
+ALTER TABLE prospectos ADD COLUMN IF NOT EXISTS escala    TEXT NOT NULL DEFAULT 'indeterminada';
 
 CREATE INDEX IF NOT EXISTS idx_prospectos_categoria ON prospectos (categoria);
 CREATE INDEX IF NOT EXISTS idx_prospectos_nombre    ON prospectos (nombre);

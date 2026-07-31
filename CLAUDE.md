@@ -115,6 +115,16 @@ URLs/perfiles: el motor lo ALMACENA, no lo interpreta. Escritura vía
 `hd_scraper/prospectos.py:upsert_prospecto` (UPSERT por `hash_dedup`, enriquece
 sin duplicar; inválidos → `rechazos`). Validación: `validate_prospecto`.
 
+**Escala/tamaño y perfil fundacional (autorizado por el operador, 2026-07-31).**
+`escala` es un campo **estructural OBLIGATORIO** de `prospectos` (banda de
+tamaño; `'indeterminada'` cuando la fuente no la declara — patrón `no_fechado`).
+Se puebla desde `hd_scraper/perfil_fundacional.py`, que rastrea la **fuente
+orgánica** de la entidad (su propio sitio: `/`, `/nosotros`, `/about`…), **no
+prensa**, y extrae de forma determinista tamaño, año de fundación y descripción.
+Es **extracción objetiva** (hechos que la organización declara), no
+interpretación: por eso NO activa la «Regla de ampliación». Salida vía
+`PerfilFundacional.a_thick()` → `nuevo_prospecto(..., **thick)`.
+
 Intake del operador (única escritura vía API; la evidencia NUNCA se escribe por
 API): `POST /prospectos` y `/prospectos/bulk` con cabecera `X-Ingest-Token` ==
 `HD_INGEST_TOKEN` (sin token → 503). `GET /admin` sirve un formulario web.

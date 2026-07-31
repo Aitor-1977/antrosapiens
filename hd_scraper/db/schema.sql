@@ -74,6 +74,9 @@ CREATE TABLE IF NOT EXISTS prospectos (
     url_perfil            TEXT,            -- URL/perfil de donde se extrajo el discurso
     fuente_discurso       TEXT,            -- nombre de la fuente/plataforma
     fecha_captura         TEXT,            -- ISO 8601 de la captura del texto
+    -- Escala/tamaño: parámetro estructural OBLIGATORIO extraído de la fuente
+    -- orgánica. 'indeterminada' cuando la fuente no lo declara (patrón no_fechado).
+    escala                TEXT NOT NULL DEFAULT 'indeterminada',
     -- Metadatos
     hash_dedup            TEXT NOT NULL UNIQUE,  -- sha256(nombre normalizado + categoria)
     creado_en             TEXT NOT NULL,

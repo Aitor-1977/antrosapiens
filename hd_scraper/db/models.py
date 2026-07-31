@@ -273,6 +273,11 @@ class ProspectoRecord:
     fuente_discurso: Optional[str] = None        # nombre de la fuente/plataforma
     fecha_captura: Optional[str] = None          # ISO 8601 de la captura del texto
 
+    # --- Escala/tamaño (parámetro estructural OBLIGATORIO) ---
+    # Banda de tamaño extraída de la fuente orgánica (dato objetivo, no juicio).
+    # 'indeterminada' cuando la fuente no la declara (patrón no_fechado).
+    escala: str = "indeterminada"
+
     # --- Metadatos ---
     creado_en: str = field(default_factory=ahora_iso)
     actualizado_en: str = field(default_factory=ahora_iso)
@@ -290,6 +295,7 @@ class ProspectoRecord:
             "url_perfil": self.url_perfil,
             "fuente_discurso": self.fuente_discurso,
             "fecha_captura": self.fecha_captura,
+            "escala": self.escala,
             "creado_en": self.creado_en,
             "actualizado_en": self.actualizado_en,
         }
