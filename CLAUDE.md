@@ -134,9 +134,11 @@ organizaciones REALES desde el primer arranque —sin ingesta ni credenciales—
 `prospectos` está vacía se siembra un directorio curado de entidades públicas y
 verificables de LATAM (`hd_scraper/seed_prospectos.py`, invocado desde
 `get_db()` tras `init_schema()`). Es INTAKE ESTRUCTURAL del mismo tipo que
-`POST /directorio`: `categoria` DECLARADA (no inferida), `escala='indeterminada'`
-(la semilla no rastrea el sitio; la enriquece luego `perfil_fundacional`). No
-puntúa ni interpreta. Idempotente (`ON CONFLICT DO NOTHING`) y sin red: funciona
+`POST /directorio`: `categoria` DECLARADA (no inferida) y `escala` = banda de tamaño **pública y
+verificable** de la organización (autorizado por el operador el 2026-08-01 para
+habilitar el filtro por tamaño; es un hecho estructural declarado —rango de
+plantilla público— no un juicio; `perfil_fundacional` puede refinarla luego
+desde la fuente orgánica). No puntúa ni interpreta. Idempotente (`ON CONFLICT DO NOTHING`) y sin red: funciona
 incluso sobre el SQLite efímero de Vercel, repoblándose en cada arranque en frío.
 El directorio se **asegura SIEMPRE** (`asegurar_directorio_semilla`), no sólo con
 la tabla vacía: así una base persistente (Neon) que ya tuviera filas recibe

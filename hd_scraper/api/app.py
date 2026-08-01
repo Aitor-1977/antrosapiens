@@ -368,6 +368,7 @@ def _row_a_prospecto(row) -> dict:
 def listar_prospectos(
     categoria: Optional[str] = Query(None, description="Filtra por ecosistema (VC|Startup|Incubadora|Corporativo)"),
     q: Optional[str] = Query(None, description="Búsqueda por nombre (subcadena)"),
+    escala: Optional[str] = Query(None, description="Filtra por banda de tamaño (1-10|11-50|51-200|201-500|501+)"),
     con_discurso: Optional[bool] = Query(None, description="Solo con/sin Thick Data"),
     limite: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0),
@@ -383,6 +384,9 @@ def listar_prospectos(
     if q:
         where.append("LOWER(nombre) LIKE ?")
         params.append(f"%{q.lower()}%")
+    if escala:
+        where.append("escala = ?")
+        params.append(escala)
     if con_discurso is True:
         where.append("discurso_corporativo IS NOT NULL AND TRIM(discurso_corporativo) <> ''")
     elif con_discurso is False:

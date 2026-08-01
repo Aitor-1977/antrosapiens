@@ -15,13 +15,42 @@ def test_asegura_directorio_real(db):
     assert total == len(DIRECTORIO_SEMILLA)
 
 
-def test_categorias_validas_y_escala_indeterminada(db):
+def test_categorias_validas_y_escala_en_bandas(db):
+    from hd_scraper.perfil_fundacional import BANDAS
+
     asegurar_directorio_semilla(db)
     filas = db.fetch_all("SELECT categoria, escala, sitio_web FROM prospectos")
     for f in filas:
         assert f["categoria"] in CATEGORIAS
-        assert f["escala"] == "indeterminada"
+        # el directorio trae banda de tamaño pública y verificable (no 'indeterminada').
+        assert f["escala"] in BANDAS
         assert f["sitio_web"].startswith("http")
+
+
+def test_filtro_por_escala(db):
+    asegurar_directorio_semilla(db)
+    # los fondos VC son equipos pequeños; los corporativos son 501+.
+    corp_grandes = db.fetch_one(
+        "SELECT COUNT(*) AS n FROM prospectos WHERE categoria='Corporativo' AND escala='501+'")["n"]
+    assert corp_grandes == 10
+    vc_grandes = db.fetch_one(
+        "SELECT COUNT(*) AS n FROM prospectos WHERE categoria='VC' AND escala='501+'")["n"]
+    assert vc_grandes == 0
+
+
+def test_rellena_escala_de_filas_ya_sembradas_como_indeterminada(db):
+    """Regresión del caso de producción: filas ya sembradas con
+    'indeterminada' deben recibir su banda real al re-asegurar."""
+    ahora = ahora_iso()
+    # simula el estado previo (sembrado sin banda) de una org curada.
+    db.execute(
+        """INSERT INTO prospectos (nombre, categoria, escala, hash_dedup, creado_en, actualizado_en)
+           VALUES ('Kaszek', 'VC', 'indeterminada', ?, ?, ?)""",
+        (calcular_hash_prospecto("Kaszek", "VC"), ahora, ahora),
+    )
+    asegurar_directorio_semilla(db)
+    escala = db.fetch_one("SELECT escala FROM prospectos WHERE nombre='Kaszek'")["escala"]
+    assert escala == "11-50"  # se rellenó con la banda real
 
 
 def test_es_idempotente(db):
