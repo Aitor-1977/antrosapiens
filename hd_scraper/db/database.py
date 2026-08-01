@@ -138,13 +138,15 @@ def get_db() -> Database:
     _db_singleton = Database()
     if not _schema_ready:
         _db_singleton.init_schema()
-        # Directorio semilla: si `prospectos` está vacía, se puebla con
-        # organizaciones reales de LATAM para que Motor A entregue datos desde
-        # el primer arranque (sin ingesta ni credenciales). Idempotente y sin
-        # red; nunca tumba el arranque. Ver `hd_scraper/seed_prospectos.py`.
+        # Directorio semilla: asegura organizaciones reales de LATAM en
+        # `prospectos` para que Motor A entregue datos desde el primer arranque
+        # (sin ingesta ni credenciales). Idempotente (ON CONFLICT), se ejecuta
+        # SIEMPRE —no sólo con la tabla vacía— para poblar también una base
+        # persistente que ya tuviera filas. Sin red; nunca tumba el arranque.
+        # Ver `hd_scraper/seed_prospectos.py`.
         try:
-            from ..seed_prospectos import sembrar_prospectos_si_vacio
-            sembrar_prospectos_si_vacio(_db_singleton)
+            from ..seed_prospectos import asegurar_directorio_semilla
+            asegurar_directorio_semilla(_db_singleton)
         except Exception:  # pragma: no cover - la siembra jamás bloquea la API
             pass
         _schema_ready = True

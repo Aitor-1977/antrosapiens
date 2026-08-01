@@ -136,9 +136,13 @@ verificables de LATAM (`hd_scraper/seed_prospectos.py`, invocado desde
 `get_db()` tras `init_schema()`). Es INTAKE ESTRUCTURAL del mismo tipo que
 `POST /directorio`: `categoria` DECLARADA (no inferida), `escala='indeterminada'`
 (la semilla no rastrea el sitio; la enriquece luego `perfil_fundacional`). No
-puntúa ni interpreta. Idempotente (`ON CONFLICT DO NOTHING`; sólo si la tabla
-está vacía) y sin red: funciona incluso sobre el SQLite efímero de Vercel,
-repoblándose en cada arranque en frío.
+puntúa ni interpreta. Idempotente (`ON CONFLICT DO NOTHING`) y sin red: funciona
+incluso sobre el SQLite efímero de Vercel, repoblándose en cada arranque en frío.
+El directorio se **asegura SIEMPRE** (`asegurar_directorio_semilla`), no sólo con
+la tabla vacía: así una base persistente (Neon) que ya tuviera filas recibe
+igualmente el directorio curado (sin duplicar ni sobrescribir las altas del
+operador). Antes, un guardado «sólo si vacía» se saltaba por completo en una BD
+no vacía y la Indagación quedaba sin organizaciones.
 
 Base: SQLite (dev/tests) o PostgreSQL (producción), según la URL. El driver
 (`db/database.py`) traduce marcadores y elige el esquema; `scripts/migrate.py`

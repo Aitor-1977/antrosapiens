@@ -2,7 +2,7 @@
 
 Propósito operativo: que Motor A entregue organizaciones REALES desde el primer
 arranque, sin depender de una corrida de ingesta ni de configurar credenciales.
-Cuando la tabla ``prospectos`` está vacía, se siembra este directorio curado.
+El directorio curado se ASEGURA (idempotente) en cada arranque.
 
 Frontera Motor A (ver CLAUDE.md): esto es INTAKE ESTRUCTURAL del directorio, del
 mismo tipo que ``POST /prospectos`` o ``POST /directorio`` (Wikidata). Cada
@@ -15,8 +15,13 @@ que no hay un dato numérico de tamaño que declarar (patrón ``no_fechado``). L
 enriquece después ``perfil_fundacional`` desde la fuente orgánica. ``vertical`` y
 ``sitio_web`` son datos estructurales públicos de la entidad.
 
-La siembra es IDEMPOTENTE: sólo inserta si la tabla está vacía y usa
-``ON CONFLICT (hash_dedup) DO NOTHING`` (portable SQLite/Postgres).
+Idempotencia (clave para producción): se usa
+``INSERT ... ON CONFLICT (hash_dedup) DO NOTHING`` (portable SQLite/Postgres), y
+el directorio se asegura SIEMPRE, no sólo cuando la tabla está vacía. Esto evita
+el fallo observado en producción: una base persistente (Neon) con filas previas
+hacía que un guardado «sólo si vacía» se saltara por completo y la Indagación
+quedara sin organizaciones. Las filas que el operador haya dado de alta NO se
+tocan (ON CONFLICT no sobrescribe); sólo se garantiza que las curadas existan.
 """
 from __future__ import annotations
 
@@ -81,22 +86,25 @@ DIRECTORIO_SEMILLA: tuple[tuple[str, str, str, str], ...] = (
 )
 
 
-def sembrar_prospectos_si_vacio(db: Database) -> int:
-    """Siembra el directorio curado si ``prospectos`` está vacía. Idempotente.
-
-    Devuelve el número de filas insertadas (0 si ya había prospectos o si otra
-    invocación ganó la carrera). Nunca lanza: un fallo de siembra no debe tumbar
-    el arranque de la API.
-    """
+def _rollback(db: Database) -> None:
+    """Deshace una transacción fallida (evita el cascadeo 'transaction aborted'
+    de Postgres, que dejaría 0 filas sembradas si un INSERT falla)."""
     try:
-        n = db.fetch_one("SELECT COUNT(*) AS n FROM prospectos")["n"]
-    except Exception:  # pragma: no cover - tabla aún inexistente
-        return 0
-    if n and n > 0:
-        return 0
+        db.conn.rollback()
+    except Exception:  # pragma: no cover
+        pass
 
+
+def asegurar_directorio_semilla(db: Database) -> int:
+    """Garantiza que el directorio curado exista en ``prospectos``. Idempotente.
+
+    Se ejecuta SIEMPRE (no sólo con la tabla vacía): usa ON CONFLICT sobre
+    ``hash_dedup`` para no duplicar ni sobrescribir. Devuelve cuántas sentencias
+    de alta se ejecutaron sin error. Nunca lanza: un fallo de siembra no debe
+    tumbar el arranque de la API.
+    """
     ahora = ahora_iso()
-    insertadas = 0
+    ok = 0
     for nombre, categoria, vertical, sitio in DIRECTORIO_SEMILLA:
         try:
             db.execute(
@@ -108,9 +116,15 @@ def sembrar_prospectos_si_vacio(db: Database) -> int:
                 (nombre, categoria, vertical, sitio,
                  calcular_hash_prospecto(nombre, categoria), ahora, ahora),
             )
-            insertadas += 1
+            ok += 1
         except Exception:  # pragma: no cover
-            log.warning("no se pudo sembrar el prospecto %r", nombre, exc_info=True)
-    if insertadas:
-        log.info("directorio semilla: %d prospectos insertados", insertadas)
-    return insertadas
+            _rollback(db)
+            log.warning("no se pudo asegurar el prospecto semilla %r", nombre, exc_info=True)
+    log.info("directorio semilla asegurado (%d/%d sentencias ok)", ok, len(DIRECTORIO_SEMILLA))
+    return ok
+
+
+# Alias de compatibilidad: antes la siembra era «sólo si vacía». Se mantiene el
+# nombre para no romper llamadas externas, pero ahora ASEGURA el directorio.
+def sembrar_prospectos_si_vacio(db: Database) -> int:
+    return asegurar_directorio_semilla(db)
