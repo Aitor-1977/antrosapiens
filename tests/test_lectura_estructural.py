@@ -59,3 +59,26 @@ def test_normalizar_quita_acentos():
 def test_marco_cubre_los_cinco_tipos():
     tipos = {td.tipo for td in MARCO_DEUDA}
     assert tipos == {"Ontológica", "Moral", "Temporal", "Relacional", "Epistémica"}
+
+
+def test_cobertura_ampliada_es_y_pt():
+    casos = {
+        "Vive a tu manera, tú al mando.": "Ontológica",
+        "Constrúyelo paso a paso, con visión a futuro.": "Temporal",
+        "Ábrela sin burocracia, sin salir de casa.": "Relacional",
+        "Tan fácil como enviar un mensaje, sin curva de aprendizaje.": "Epistémica",
+        # portugués
+        "Faça do seu jeito, você no comando.": "Ontológica",
+        "Passo a passo, sustentável no tempo.": "Temporal",
+    }
+    for disc, esperado in casos.items():
+        r = leer_discurso(disc, empresa="X")
+        assert r["estado"] == "grounded", disc
+        assert r["tipo_deuda_preliminar"] == esperado, (disc, r["tipo_deuda_preliminar"])
+
+
+def test_precision_no_sobre_dispara_con_texto_generico():
+    # Lenguaje de producto neutro (sin marcadores del marco) NO debe etiquetar Deuda.
+    disc = "Ofrecemos una plataforma para empresas de logística en toda la región."
+    r = leer_discurso(disc, empresa="X")
+    assert r["estado"] == "requiere_campo"
