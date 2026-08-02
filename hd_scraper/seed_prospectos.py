@@ -63,6 +63,21 @@ DIRECTORIO_SEMILLA: tuple[tuple[str, str, str, str, str], ...] = (
     ("Nowports", "Startup", "Logística / Freight", "https://www.nowports.com", "201-500"),
     ("Ualá", "Startup", "Fintech", "https://www.uala.com.ar", "501+"),
     ("Jüsto", "Startup", "Supermercado online", "https://www.justo.mx", "501+"),
+    # Startups tempranas / en crecimiento (bandas públicas aproximadas; el
+    # perfil fundacional las refina). Cubren tamaños pequeños/medianos: el ICP
+    # real de HD, donde la Deuda Cultural muerde antes del product-market fit.
+    ("Palenca", "Startup", "Infraestructura de datos laborales", "https://palenca.com", "1-10"),
+    ("Trii", "Startup", "Inversión minorista", "https://www.trii.co", "1-10"),
+    ("Toku", "Startup", "Pagos y cobranza", "https://www.trytoku.com", "1-10"),
+    ("Cobre", "Startup", "Pagos B2B", "https://cobre.co", "11-50"),
+    ("Mundi", "Startup", "Comercio / Trade finance", "https://www.mundi.io", "11-50"),
+    ("Kamino", "Startup", "Finanzas para PyME", "https://www.kamino.com.br", "11-50"),
+    ("Trace Finance", "Startup", "Fintech transfronteriza", "https://www.tracefinance.io", "11-50"),
+    ("Divibank", "Startup", "Financiamiento a creadores", "https://www.divibank.co", "11-50"),
+    ("Pomelo", "Startup", "Infraestructura fintech", "https://www.pomelo.la", "51-200"),
+    ("Simetrik", "Startup", "Conciliación financiera", "https://www.simetrik.com", "51-200"),
+    ("Fintual", "Startup", "Inversión", "https://fintual.com", "51-200"),
+    ("Zubale", "Startup", "Retail / Gig economy", "https://www.zubale.com", "51-200"),
 
     # ── Incubadora · aceleradoras / builders / soporte de ecosistema ──────
     ("Start-Up Chile", "Incubadora", "Aceleradora pública", "https://www.startupchile.org", "11-50"),
