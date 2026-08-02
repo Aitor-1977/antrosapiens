@@ -62,6 +62,17 @@ SOLO sobre datos ya extraídos por este mismo motor; sin IA, sin juicio libre):
 - **Clasificación preliminar de señales de Deuda Cultural™**: hipótesis
   etiquetadas y reproducibles (mismo insumo ⇒ mismo resultado), marcadas siempre
   como preliminares.
+- **Lectura estructural del discurso corporativo (Capa 0 · pre-peritaje)**
+  (autorizado por el operador —Mario— el 2026-08-02): clasificación preliminar
+  de Deuda Cultural™ sobre el discurso que la PROPIA organización declara (Thick
+  Data ya extraído), por **léxico/reglas determinista, sin IA**. Mapea marcadores
+  del discurso a los cinco tipos de Deuda (Ontológica/Moral/Temporal/Relacional/
+  Epistémica) y produce un **pre-peritaje**: síntoma observable citable, tipo de
+  Deuda preliminar, la pregunta cultural que las métricas no responden y el
+  competidor simbólico. SIEMPRE preliminar y **grounded**: sin marcador en el
+  discurso ⇒ estado `requiere_campo` (NUNCA fabrica una Deuda; el diagnóstico
+  real es DolorMap®). No decide ni ejecuta acción comercial. Implementación:
+  `hd_scraper/lectura_estructural.py`.
 - **Validación científica del peritaje (Capa 11)**: auditoría metodológica
   determinista de las hipótesis ya producidas por este motor. NO añade
   interpretación nueva del contenido: mide trazabilidad, suficiencia del corpus,
@@ -79,8 +90,10 @@ SOLO sobre datos ya extraídos por este mismo motor; sin IA, sin juicio libre):
 - Cualquier decisión sobre **Expediente Activado**.
 
 **Implementación actual de esta frontera:** `hd_scraper/analisis.py` (scoring,
-ICP, Deuda preliminar) y `hd_scraper/engine/rule_engine.py` (reglas y pesos de
-señal). No reproducir esa lógica en otros módulos.
+ICP, Deuda preliminar sobre señales de evento), `hd_scraper/engine/rule_engine.py`
+(reglas y pesos de señal) y `hd_scraper/lectura_estructural.py` (lectura
+estructural preliminar de Deuda sobre el discurso corporativo). No reproducir esa
+lógica en otros módulos.
 
 **Regla de ampliación:** cualquier ampliación futura de interpretación en este
 repo exige actualizar **esta misma sección ANTES de escribir código**. Si una

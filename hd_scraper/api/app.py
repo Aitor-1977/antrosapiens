@@ -48,6 +48,7 @@ from ..relevance import detectar_empresa, evaluar_relevancia
 from ..signals import detectar_keywords
 from ..prospectos import nuevo_prospecto, upsert_prospecto
 from ..perfil_fundacional import construir_perfil
+from ..lectura_estructural import leer_discurso
 from ..validation.validator import validate_prospecto
 
 app = FastAPI(
@@ -1407,6 +1408,46 @@ def analizar_endpoint(payload: AnalizarIn) -> dict:
     if payload.dominio:
         salida["contacto"] = rutas_contacto(payload.dominio, payload.nombre_decisor)
     return salida
+
+
+class LecturaIn(BaseModel):
+    empresa: str = ""
+    discurso: Optional[str] = None   # discurso ya extraído (preferido)
+    dominio: str = ""                # opcional: rastrea el sitio propio si falta discurso
+
+
+@app.post("/lectura")
+def lectura_estructural_endpoint(payload: LecturaIn) -> dict:
+    """Pre-peritaje de Capa 0: lectura estructural PRELIMINAR de Deuda Cultural™
+    sobre el discurso que la propia organización declara.
+
+    Público y determinista (no escribe). Fuentes del discurso, por prioridad:
+    1) ``discurso`` explícito; 2) el discurso ya guardado del prospecto (por
+    nombre); 3) rastreo del ``dominio`` propio (perfil fundacional). Si no hay
+    discurso o no exhibe marcadores ⇒ estado ``requiere_campo`` (nunca fabrica).
+    """
+    discurso = (payload.discurso or "").strip() or None
+    empresa = payload.empresa.strip()
+
+    # 2) discurso ya guardado del prospecto (por nombre normalizado).
+    if not discurso and empresa:
+        fila = get_db().fetch_one(
+            "SELECT discurso_corporativo FROM prospectos WHERE LOWER(nombre) = ?",
+            (empresa.lower(),),
+        )
+        if fila and fila["discurso_corporativo"]:
+            discurso = fila["discurso_corporativo"]
+
+    # 3) rastreo del sitio propio (sólo dominio; cero prensa). Funciona fuera del
+    #    sandbox; si la red falla, `construir_perfil` devuelve perfil vacío.
+    if not discurso and payload.dominio:
+        try:
+            perfil = construir_perfil(empresa or payload.dominio, payload.dominio)
+            discurso = perfil.discurso_corporativo
+        except Exception:
+            discurso = None
+
+    return leer_discurso(discurso, empresa=empresa)
 
 
 class VerificarContactoIn(BaseModel):
