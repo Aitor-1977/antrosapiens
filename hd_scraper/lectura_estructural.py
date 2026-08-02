@@ -58,10 +58,14 @@ MARCO_DEUDA: tuple[TipoDeuda, ...] = (
     TipoDeuda(
         tipo="Ontológica",
         marcadores=(
+            # ES
             "tu decides", "tu eliges", "tu tienes el control", "control total",
             "empodera", "empoderar", "cada persona", "cada usuario", "el individuo",
             "hazlo tu mismo", "sin depender de nadie", "toma el control", "tu dinero tus reglas",
             "libertad individual", "autonomia", "se tu propio",
+            # PT
+            "voce decide", "voce escolhe", "controle total", "cada pessoa",
+            "faca voce mesmo", "sem depender", "liberdade individual", "seja seu proprio",
         ),
         supuesto="asume un usuario-individuo autónomo donde puede operar una personería relacional (el usuario decide en red de obligaciones y pertenencias).",
         pregunta_cultural="¿Quién decide realmente en la red de obligaciones del usuario, aunque él sea el comprador?",
@@ -71,9 +75,13 @@ MARCO_DEUDA: tuple[TipoDeuda, ...] = (
     TipoDeuda(
         tipo="Temporal",
         marcadores=(
+            # ES
             "a largo plazo", "planea tu futuro", "planifica", "roadmap", "metas anuales",
             "ahorra para", "para el retiro", "constancia", "habitos diarios", "todos los meses",
             "proyecta", "cada mes", "disciplina", "tu futuro financiero", "planeacion",
+            # PT
+            "a longo prazo", "planeje seu futuro", "planeje", "poupe para", "aposentadoria",
+            "todo mes", "seu futuro financeiro", "planejamento",
         ),
         supuesto="opera con temporalidad lineal y proyectable (roadmaps, metas mensuales) en contextos que pueden ser cíclicos o estructuralmente precarios.",
         pregunta_cultural="¿Qué configuración temporal (cíclica, situacional, precaria) compite con la planeación lineal que el producto exige?",
@@ -83,9 +91,13 @@ MARCO_DEUDA: tuple[TipoDeuda, ...] = (
     TipoDeuda(
         tipo="Relacional",
         marcadores=(
+            # ES
             "sin intermediarios", "directo", "en un clic", "un solo clic", "100% digital",
             "sin contacto", "autoservicio", "sin filas", "sin papeleo", "sin sucursales",
             "confia en la app", "todo desde tu celular", "sin asesores", "self-service", "sin agentes",
+            # PT
+            "sem intermediarios", "em um clique", "sem contato", "autoatendimento",
+            "sem filas", "sem papelada", "sem agencias", "tudo pelo celular", "sem agentes",
         ),
         supuesto="ignora que la confianza y el compromiso se construyen por mediación social, no por transacción directa.",
         pregunta_cultural="¿Qué mediación social (recomendación, aval, presencia) reemplaza la confianza que el producto pide dar directamente?",
@@ -95,9 +107,13 @@ MARCO_DEUDA: tuple[TipoDeuda, ...] = (
     TipoDeuda(
         tipo="Epistémica",
         marcadores=(
+            # ES
             "es facil", "es simple", "es intuitivo", "cualquiera puede", "sin conocimientos",
             "sin ser experto", "solo tienes que", "es obvio", "en minutos", "sin complicaciones",
             "educacion financiera", "aprende a", "te explicamos", "sencillo", "facil de usar",
+            # PT
+            "e facil", "e simples", "e intuitivo", "qualquer um pode", "sem ser especialista",
+            "voce so precisa", "e obvio", "sem complicacoes", "educacao financeira", "facil de usar",
         ),
         supuesto="asume que el usuario comparte la relación del founder con el conocimiento, la evidencia y la decisión.",
         pregunta_cultural="¿Qué relación con el conocimiento y la evidencia tiene el usuario, distinta a la que el equipo da por obvia?",
@@ -107,9 +123,13 @@ MARCO_DEUDA: tuple[TipoDeuda, ...] = (
     TipoDeuda(
         tipo="Moral",
         marcadores=(
+            # ES
             "sin tabu", "sin tabus", "rompe el estigma", "habla abiertamente", "sin verguenza",
             "sin pena", "sin miedo", "sin juicios", "libre de estigma", "normaliza",
             "sin culpa", "atrevete a", "sin secretos",
+            # PT
+            "sem tabu", "quebre o estigma", "fale abertamente", "sem vergonha",
+            "sem medo", "sem julgamentos", "sem culpa", "sem segredos",
         ),
         supuesto="activa un tabú o transgresión simbólica que el usuario no articula pero que gobierna su comportamiento.",
         pregunta_cultural="¿Qué tabú o vergüenza simbólica gobierna el comportamiento que el usuario no articula?",
