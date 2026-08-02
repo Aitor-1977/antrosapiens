@@ -49,6 +49,7 @@ from ..signals import detectar_keywords
 from ..prospectos import nuevo_prospecto, upsert_prospecto
 from ..perfil_fundacional import construir_perfil
 from ..lectura_estructural import leer_discurso
+from ..indagacion_profunda import indagar_profundo
 from ..validation.validator import validate_prospecto
 
 app = FastAPI(
@@ -1448,6 +1449,39 @@ def lectura_estructural_endpoint(payload: LecturaIn) -> dict:
             discurso = None
 
     return leer_discurso(discurso, empresa=empresa)
+
+
+class IndagarIn(BaseModel):
+    empresa: str = ""
+    dominio: str = ""       # opcional: habilita la lectura del discurso propio
+    vertical: str = ""      # opcional: afina el ICP (si falta, se toma del prospecto)
+
+
+@app.post("/indagar")
+def indagar_endpoint(payload: IndagarIn) -> dict:
+    """Indagación PROFUNDA bajo demanda (Fase B): corre los conectores de prensa
+    en modo lectura, extrae EVENTOS reales (fechados y citables) y los cruza con
+    el discurso para un peritaje preliminar de Deuda Cultural™.
+
+    Público y READ-ONLY (no escribe). Grounded: sin eventos ni marcadores ⇒
+    ``requiere_campo``. Nota de entorno: si el egress bloquea las fuentes, la
+    indagación degrada a la lectura del discurso y lo reporta en salud_fuentes.
+    """
+    empresa = payload.empresa.strip()
+    if not empresa:
+        raise HTTPException(400, "empresa requerida")
+    dominio = payload.dominio.strip()
+    vertical = payload.vertical.strip()
+    # Completa dominio/vertical desde el prospecto si no vinieron.
+    if not dominio or not vertical:
+        fila = get_db().fetch_one(
+            "SELECT sitio_web, vertical FROM prospectos WHERE LOWER(nombre) = ?",
+            (empresa.lower(),),
+        )
+        if fila:
+            dominio = dominio or (fila["sitio_web"] or "")
+            vertical = vertical or (fila["vertical"] or "")
+    return indagar_profundo(empresa, dominio=dominio or None, vertical=vertical)
 
 
 class VerificarContactoIn(BaseModel):
