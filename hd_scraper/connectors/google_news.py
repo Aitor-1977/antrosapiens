@@ -28,6 +28,7 @@ from ..db.models import (
     ahora_iso,
     calcular_hash_dedup,
 )
+from ..filtros import REGIONES
 from .base import Connector
 
 GOOGLE_NEWS_RSS = "https://news.google.com/rss/search"
@@ -62,9 +63,14 @@ class GoogleNewsConnector(Connector):
         q = f'"{query.empresa}"' if query.exact else query.empresa
         if query.terminos:
             q += f" {query.terminos}"
+        # La región del radar sobreescribe los parámetros por defecto de clase.
+        region = REGIONES.get(query.region) if query.region else None
+        hl = region["hl"] if region else self.hl
+        gl = region["gl"] if region else self.gl
+        ceid = region["ceid"] if region else self.ceid
         return (
             f"{GOOGLE_NEWS_RSS}?q={quote_plus(q)}"
-            f"&hl={self.hl}&gl={self.gl}&ceid={quote_plus(self.ceid)}"
+            f"&hl={hl}&gl={gl}&ceid={quote_plus(ceid)}"
         )
 
     def search(self, query: QuerySpec) -> Iterable[RawItem]:

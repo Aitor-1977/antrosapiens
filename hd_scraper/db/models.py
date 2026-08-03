@@ -149,6 +149,7 @@ class QuerySpec:
     terminos: Optional[str] = None   # términos extra opcionales para la búsqueda
     slug: Optional[str] = None       # slug de empresa (para job boards)
     categoria: Optional[str] = None  # ecosistema declarado (descubrimiento por categoría)
+    region: Optional[str] = None     # región del radar (gl/hl/ceid o sourcecountry)
     exact: bool = True               # True: frase exacta (nombre); False: amplia (descubrimiento)
 
     def to_dict(self) -> dict:
@@ -158,6 +159,7 @@ class QuerySpec:
             "terminos": self.terminos,
             "slug": self.slug,
             "categoria": self.categoria,
+            "region": self.region,
             "exact": self.exact,
         }
 
@@ -169,6 +171,7 @@ class QuerySpec:
             terminos=d.get("terminos"),
             slug=d.get("slug"),
             categoria=d.get("categoria"),
+            region=d.get("region"),
             exact=d.get("exact", True),
         )
 

@@ -36,6 +36,9 @@ def main(argv: list[str] | None = None) -> int:
     n.add_argument("--query", default=None, help="Búsqueda en Google News RSS (si se omite: consultas por defecto)")
     n.add_argument("--feed", default=None, help="URL de un feed RSS/Atom directo")
     n.add_argument("--limite", type=int, default=25, help="máximo de notas a enviar")
+    n.add_argument("--region", default=None,
+                   help="región del radar (gl/hl/ceid); si se omite: parámetros por defecto")
+    n.add_argument("--keyword", default=None, help="palabra clave agregada a la búsqueda")
 
     y = sub.add_parser("youtube", help="Transcripción de videos de YouTube")
     y.add_argument("--url", default=None,
@@ -46,7 +49,8 @@ def main(argv: list[str] | None = None) -> int:
     args = p.parse_args(argv)
     try:
         if args.cmd == "noticias":
-            res = noticias.correr(query=args.query, feed_url=args.feed, limite=args.limite)
+            res = noticias.correr(query=args.query, feed_url=args.feed, limite=args.limite,
+                                  region=args.region, keyword=args.keyword)
         else:
             res = youtube.correr(args.url, args.org, lang=args.lang)
     except Exception as exc:

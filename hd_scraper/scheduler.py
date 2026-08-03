@@ -19,8 +19,8 @@ from .config import settings
 from .connectors import REGISTRY
 from .db.database import Database
 from .db.models import TIPOS_EVENTO, QuerySpec
+from .filtros import descripcion, filtros_desde_env, objetivos_por_filtros
 from .jobs import encolar, procesar_pendientes
-from .objetivos import objetivos_por_defecto
 from .storage.raw_store import purgar_expirados
 
 log = logging.getLogger("hd_scraper.scheduler")
@@ -33,6 +33,9 @@ def corrida(db: Database, tipos_evento: tuple[str, ...] | None = None) -> None:
         log.info("crudos purgados por retención: %d", purgados)
 
     tipos = tipos_evento or tuple(sorted(TIPOS_EVENTO))
+    filtros = filtros_desde_env()
+    if filtros.activo:
+        log.info("filtros del radar: %s", descripcion(filtros))
     encolados = 0
     for connector, cls in REGISTRY.items():
         if cls.requires_slug:
@@ -44,11 +47,17 @@ def corrida(db: Database, tipos_evento: tuple[str, ...] | None = None) -> None:
                 encolados += 1
         else:
             # Autonomía: si no hay empresas seguidas configuradas, se barren los
-            # objetivos por defecto (HD_TRACKED_EMPRESAS o el directorio semilla).
-            empresas = settings.tracked_empresas or objetivos_por_defecto()
+            # objetivos por defecto (HD_TRACKED_EMPRESAS o el directorio semilla),
+            # filtrados por enfoque/tamaño cuando el operador lo declaró.
+            empresas = settings.tracked_empresas or objetivos_por_filtros(filtros)
             for empresa in empresas:
                 for tipo in tipos:
-                    encolar(db, connector, QuerySpec(empresa=empresa, tipo_evento=tipo))
+                    encolar(db, connector, QuerySpec(
+                        empresa=empresa,
+                        tipo_evento=tipo,
+                        region=filtros.region,
+                        terminos=filtros.terminos_extra,
+                    ))
                     encolados += 1
     log.info("jobs encolados: %d", encolados)
 

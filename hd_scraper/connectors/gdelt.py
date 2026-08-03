@@ -23,6 +23,7 @@ from ..db.models import (
     ahora_iso,
     calcular_hash_dedup,
 )
+from ..filtros import REGIONES
 from .base import Connector
 
 GDELT_DOC_API = "https://api.gdeltproject.org/api/v2/doc/doc"
@@ -60,6 +61,11 @@ class GdeltConnector(Connector):
             q += f" {query.terminos}"
         if self.sourcelang:
             q += f" sourcelang:{self.sourcelang}"
+        # La región del radar se traduce a sourcecountry (ISO alfa-2); "Toda
+        # LATAM" no añade restricción de país.
+        region = REGIONES.get(query.region) if query.region else None
+        if region and region["country"]:
+            q += f" sourcecountry:{region['country']}"
         url = (
             f"{GDELT_DOC_API}?query={quote_plus(q)}"
             f"&mode=ArtList&format=json&maxrecords={self.maxrecords}"

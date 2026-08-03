@@ -25,8 +25,25 @@ GOOGLE_NEWS_RSS = "https://news.google.com/rss/search"
 USER_AGENT = "hd-prospector/1.0 (+https://hamaca.digital) ingesta-noticias"
 
 
-def google_news_url(query: str, hl: str = "es-419", gl: str = "MX", ceid: str = "MX:es") -> str:
-    return (f"{GOOGLE_NEWS_RSS}?q={quote_plus(query)}"
+def google_news_url(query: str, region: Optional[str] = None,
+                    keyword: Optional[str] = None,
+                    hl: str = "es-419", gl: str = "MX", ceid: str = "MX:es") -> str:
+    """URL de búsqueda de Google News RSS con los filtros del radar aplicados.
+
+    ``region`` (nombre de región) sobreescribe ``hl``/``gl``/``ceid`` usando el
+    vocabulario estructural de ``hd_scraper.filtros.REGIONES``; ``keyword`` se
+    agrega a la consulta.
+    """
+    from ..filtros import REGIONES
+
+    q = query.strip()
+    kw = (keyword or "").strip()
+    if kw:
+        q = f"{q} {kw}".strip()
+    conf = REGIONES.get(region) if region else None
+    if conf:
+        hl, gl, ceid = conf["hl"], conf["gl"], conf["ceid"]
+    return (f"{GOOGLE_NEWS_RSS}?q={quote_plus(q)}"
             f"&hl={hl}&gl={gl}&ceid={quote_plus(ceid)}")
 
 
@@ -76,26 +93,30 @@ def correr(
     feed_url: Optional[str] = None,
     *,
     limite: int = 25,
+    region: Optional[str] = None,
+    keyword: Optional[str] = None,
     http_get: Optional[Callable[[str], str]] = None,
     enviar_fn: Callable[[dict], dict] = enviar,
 ) -> dict:
     """Lee feeds (por consulta de Google News o URL directa) y postea cada nota.
 
     Operación autónoma: si no se pasa ``query`` ni ``feed_url``, se barren las
-    consultas por defecto de ``config.CONSULTAS_DEFAULT``. Un item que falla al
-    enviar no tumba el lote (se registra y se sigue).
+    consultas por defecto de ``config.CONSULTAS_DEFAULT``. ``region`` y
+    ``keyword`` aplican los filtros del radar a la URL de Google News (un feed
+    directo ignora ``region``). Un item que falla al enviar no tumba el lote (se
+    registra y se sigue).
     """
     http_get = http_get or _http_get
     if feed_url:
         urls = [feed_url]
     elif query:
-        urls = [google_news_url(query)]
+        urls = [google_news_url(query, region=region, keyword=keyword)]
     else:
         consultas = config.CONSULTAS_DEFAULT
         if not consultas:
             return {"conector": "noticias", "items": 0, "enviados": 0,
                     "senales_detectadas": 0, "nota": "sin consultas por defecto"}
-        urls = [google_news_url(c) for c in consultas]
+        urls = [google_news_url(c, region=region, keyword=keyword) for c in consultas]
 
     items = enviados = detectadas = 0
     for url in urls:
