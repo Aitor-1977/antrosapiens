@@ -24,6 +24,8 @@ import unicodedata
 from typing import Callable, Optional
 from urllib.parse import quote_plus
 
+from .emails import _host_oficial, email_utilizable, motivo_rechazo, normalizar_email
+
 log = logging.getLogger("hd_scraper.hunter")
 
 API = "https://api.hunter.io/v2"
@@ -140,6 +142,14 @@ def enriquecer_contacto(dominio: str, nombre_decisor: str, api_key: str,
                 "verificado": False, "score": None, "fuente": hallado.get("fuente"),
                 "nota": "Hunter no encontró un correo para este dominio/decisor"}
 
+    # Validación estructural ANTES de gastar la cuota de verificación: un correo
+    # que no es utilizable por forma no merece una llamada a email-verifier.
+    if not email_utilizable(email):
+        return {"dominio": dominio, "email_verificado": "", "status": "no_utilizable",
+                "verificado": False, "score": None, "fuente": hallado.get("fuente"),
+                "nota": f"correo encontrado pero no utilizable por forma ({motivo_rechazo(email)})",
+                "email_encontrado": normalizar_email(email)}
+
     ver = verificar_email(email, api_key, http_get_json)
     return {
         "dominio": dominio,
@@ -149,6 +159,15 @@ def enriquecer_contacto(dominio: str, nombre_decisor: str, api_key: str,
         "verificado": ver["verificado"],
         "score": ver.get("score"),
         "fuente": hallado.get("fuente"),
+        "dominio_coincide": _dominio_coincide(email, dominio),
         "nota": "correo verificado por Hunter" if ver["verificado"]
                 else f"Hunter marcó el correo como '{ver['status']}' (revisa antes de usar)",
     }
+
+
+def _dominio_coincide(email: str, dominio: str) -> bool:
+    """¿El correo pertenece al dominio oficial del prospecto? Señal de confirmación."""
+    host = _host_oficial(dominio)
+    if not host:
+        return False
+    return normalizar_email(email).endswith(f"@{host}")

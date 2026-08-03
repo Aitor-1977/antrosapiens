@@ -35,3 +35,15 @@ def test_rutas_contacto_marca_no_verificado():
 def test_rutas_contacto_sin_dominio_valido():
     r = rutas_contacto("", "Juan Pérez")
     assert r["dominio"] == "" and r["emails_candidatos"] == []
+
+
+def test_rutas_contacto_separa_validados_de_genericos():
+    r = rutas_contacto("https://konfio.mx", "Juan Pérez")
+    # Los patrones personales pasan la validación; los buzones genéricos no.
+    assert "juan.perez@konfio.mx" in r["emails_validados"]
+    assert "info@konfio.mx" not in r["emails_validados"]
+    assert "info@konfio.mx" in r["emails_candidatos"]
+    # rechazos explica cada genérico con su motivo.
+    motivos = {x["email"]: x["motivo"] for x in r["rechazos"]}
+    assert "buzón genérico (no de decisión)" in motivos["info@konfio.mx"]
+    assert all(e in r["emails_candidatos"] for e in r["emails_validados"])

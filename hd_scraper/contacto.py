@@ -8,11 +8,19 @@ HONESTIDAD (crítico): esto NO es un correo verificado. Es una LISTA DE CANDIDAT
 para que el operador pruebe/confirme. La verificación real (SMTP/Hunter) exige un
 servicio externo con clave y red; cuando esté disponible, este módulo es el punto
 donde se conectaría. Marcado siempre como ``verificado=False``.
+
+Limpieza (validación estructural sin red): cada paquete incluye
+``emails_validados`` — los candidatos que pasan la validación de forma de
+``hd_scraper.emails`` (los buzones genéricos que este módulo genera a propósito
+quedan como candidatos, pero NO como correos "limpios"). Así la interfaz puede
+distinguir qué direcciones merecen confirmarse frente a las que son solo a prueba.
 """
 from __future__ import annotations
 
 import unicodedata
 from urllib.parse import urlsplit
+
+from .emails import emails_validos, motivo_rechazo
 
 # Buzones genéricos frecuentes, en orden de probabilidad de respuesta comercial.
 BUZONES_GENERICOS = ("contacto", "hola", "info", "ventas", "comercial", "prensa")
@@ -68,13 +76,22 @@ def patrones_email(dominio: str, nombre_decisor: str = "") -> list[str]:
 
 
 def rutas_contacto(dominio: str, nombre_decisor: str = "") -> dict:
-    """Paquete de contacto (hipótesis): dominio, correos candidatos, verificado=False."""
+    """Paquete de contacto (hipótesis): dominio, correos candidatos, verificado=False.
+
+    Incluye ``emails_validados``: los candidatos que pasan la validación
+    estructural de ``hd_scraper.emails`` (sin genéricos ni ruido de forma).
+    ``rechazos`` explica por qué los candidatos que no pasaron no pasaron.
+    """
     dom = dominio_de(dominio) or (dominio or "").strip().lower()
     emails = patrones_email(dom, nombre_decisor)
+    validos = emails_validos(emails)
     return {
         "dominio": dom if "." in dom else "",
         "emails_candidatos": emails,
         "email_sugerido": emails[0] if emails else "",
+        "emails_validados": validos,
+        "rechazos": [{"email": e, "motivo": motivo_rechazo(e)}
+                     for e in emails if e not in validos and motivo_rechazo(e)],
         "verificado": False,
         "nota": "correos candidatos (hipótesis), sin verificar; confírmalos antes de usar",
     }

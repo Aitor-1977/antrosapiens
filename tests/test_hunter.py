@@ -67,6 +67,29 @@ def test_sin_clave_devuelve_sin_clave():
     assert r["verificado"] is False and r["status"] == "sin_clave"
 
 
+def test_no_gasta_cuota_en_correo_no_utilizable():
+    # email-finder devuelve un correo de forma inutilizable (placeholder): se
+    # corta antes de email-verifier (no se debe gastar la cuota de verificación).
+    def fake(url):
+        if "email-finder" in url:
+            return {"data": {"email": "ceo@example.com", "score": 90}}
+        raise AssertionError("no debería llamarse a email-verifier: " + url)
+    r = hunter.enriquecer_contacto("clara.com", "Ana Ruiz", "KEY", fake)
+    assert r["verificado"] is False and r["status"] == "no_utilizable"
+    assert "placeholder" in r["nota"]
+
+
+def test_verificado_incluye_dominio_coincide():
+    def fake(url):
+        if "email-finder" in url:
+            return {"data": {"email": "ceo@clara.com", "score": 95}}
+        if "email-verifier" in url:
+            return {"data": {"status": "valid", "score": 96}}
+        raise AssertionError(url)
+    r = hunter.enriquecer_contacto("clara.com", "Ana Ruiz", "KEY", fake)
+    assert r["verificado"] is True and r["dominio_coincide"] is True
+
+
 # ── endpoint /verificar-contacto ─────────────────────────────────────────────
 
 @pytest.fixture()
