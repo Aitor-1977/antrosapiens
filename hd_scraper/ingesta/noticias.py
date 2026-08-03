@@ -65,7 +65,8 @@ def parse_feed(xml_text: str) -> list[dict]:
 def _http_get(url: str) -> str:
     import httpx
 
-    r = httpx.get(url, timeout=config.REQUEST_TIMEOUT_S, headers={"User-Agent": USER_AGENT})
+    r = httpx.get(url, timeout=config.REQUEST_TIMEOUT_S,
+                  headers={"User-Agent": USER_AGENT}, follow_redirects=True)
     r.raise_for_status()
     return r.text
 
