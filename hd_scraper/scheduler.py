@@ -20,6 +20,7 @@ from .connectors import REGISTRY
 from .db.database import Database
 from .db.models import TIPOS_EVENTO, QuerySpec
 from .jobs import encolar, procesar_pendientes
+from .objetivos import objetivos_por_defecto
 from .storage.raw_store import purgar_expirados
 
 log = logging.getLogger("hd_scraper.scheduler")
@@ -42,7 +43,10 @@ def corrida(db: Database, tipos_evento: tuple[str, ...] | None = None) -> None:
                         QuerySpec(empresa=empresa, tipo_evento="contratacion", slug=slug))
                 encolados += 1
         else:
-            for empresa in settings.tracked_empresas:
+            # Autonomía: si no hay empresas seguidas configuradas, se barren los
+            # objetivos por defecto (HD_TRACKED_EMPRESAS o el directorio semilla).
+            empresas = settings.tracked_empresas or objetivos_por_defecto()
+            for empresa in empresas:
                 for tipo in tipos:
                     encolar(db, connector, QuerySpec(empresa=empresa, tipo_evento=tipo))
                     encolados += 1

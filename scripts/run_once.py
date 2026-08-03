@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
-"""Corre el pipeline una vez para una empresa (verificación de punta a punta).
+"""Corre el pipeline una vez para una o varias empresas (verificación punta a punta).
+
+Operación autónoma: ``empresa`` es opcional. Si se omite, se barre la lista de
+objetivos por defecto (``HD_TRACKED_EMPRESAS`` o el directorio semilla curado).
+Los conectores que requieren slug (job_boards) siguen exigiendo ``--slug``.
 
 Uso:
+    python -m scripts.run_once                          # autónomo: objetivos por defecto
     python -m scripts.run_once "Nombre Empresa" --tipo ronda --connector google_news
 
-Sirve para verificar el flujo completo del conector Google News RSS:
-extracción -> normalización -> validación -> escritura en SQLite.
+Sirve para verificar el flujo completo del conector: extracción -> normalización
+-> validación -> escritura en SQLite.
 """
 from __future__ import annotations
 
@@ -15,12 +20,14 @@ import logging
 from hd_scraper.connectors import REGISTRY
 from hd_scraper.db.database import Database
 from hd_scraper.db.models import TIPOS_EVENTO, QuerySpec
+from hd_scraper.objetivos import objetivos_por_defecto
 from hd_scraper.pipeline import run_connector
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Corrida única de un conector.")
-    parser.add_argument("empresa", help="Nombre de la empresa a buscar")
+    parser.add_argument("empresa", nargs="?", default=None,
+                        help="Nombre de la empresa a buscar (si se omite: objetivos por defecto)")
     parser.add_argument("--tipo", default="ronda", choices=sorted(TIPOS_EVENTO),
                         help="tipo_evento declarado para la consulta")
     parser.add_argument("--connector", default="google_news", choices=sorted(REGISTRY),
@@ -38,12 +45,18 @@ def main() -> None:
     connector_cls = REGISTRY[args.connector]
     if connector_cls.requires_slug and not args.slug:
         parser.error(f"el conector {args.connector} requiere --slug")
-    query = QuerySpec(empresa=args.empresa, tipo_evento=args.tipo,
-                      terminos=args.terminos, slug=args.slug)
-    with connector_cls() as connector:
-        res = run_connector(db, connector, query)
 
-    print(res.resumen())
+    empresas: list[str] = [args.empresa] if args.empresa else list(objetivos_por_defecto())
+    if not empresas:
+        parser.error("no hay objetivos por defecto (HD_TRACKED_EMPRESAS vacío y sin semilla)")
+
+    for empresa in empresas:
+        query = QuerySpec(empresa=empresa, tipo_evento=args.tipo,
+                          terminos=args.terminos, slug=args.slug)
+        with connector_cls() as connector:
+            res = run_connector(db, connector, query)
+        print(res.resumen())
+
     db.close()
 
 

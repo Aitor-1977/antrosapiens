@@ -1,4 +1,5 @@
 # Conectores de ingesta Capa 0 (100% gratuitos; leen config de .env).
+# Operación autónoma: sin variables, cada receta barre sus listas por defecto.
 PYTHON ?= python3
 QUERY ?=
 FEED ?=
@@ -11,8 +12,10 @@ LANG ?= es
 help:
 	@echo "make install                       # instala requirements"
 	@echo "make test                          # corre las pruebas"
+	@echo "make noticias                      # autónomo: consultas por defecto"
 	@echo "make noticias QUERY=\"fintech México ronda\""
 	@echo "make noticias FEED=<URL_RSS>"
+	@echo "make youtube                       # autónomo: cola HD_INGESTA_DEFAULT_VIDEOS"
 	@echo "make youtube URL=<video> ORG=\"Acme\" LANG=es"
 
 install:
@@ -22,7 +25,7 @@ test:
 	$(PYTHON) -m pytest -q
 
 noticias:
-	$(PYTHON) -m hd_scraper.ingesta noticias --query "$(QUERY)" --feed "$(FEED)" --limite "$(LIMITE)"
+	$(PYTHON) -m hd_scraper.ingesta noticias $(if $(QUERY),--query "$(QUERY)") $(if $(FEED),--feed "$(FEED)") --limite "$(LIMITE)"
 
 youtube:
-	$(PYTHON) -m hd_scraper.ingesta youtube --url "$(URL)" --org "$(ORG)" --lang "$(LANG)"
+	$(PYTHON) -m hd_scraper.ingesta youtube $(if $(URL),--url "$(URL)") $(if $(ORG),--org "$(ORG)") --lang "$(LANG)"

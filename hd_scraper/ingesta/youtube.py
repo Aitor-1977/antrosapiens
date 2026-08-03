@@ -3,7 +3,8 @@
 Extrae los subtítulos (VTT, auto o manuales) con yt-dlp, limpia el texto, lo
 agrupa en ventanas con su timestamp y postea cada bloque al webhook. yt-dlp se
 invoca por subprocess (el paquete no se importa), y el runner y el envío se
-inyectan para testear sin red ni yt-dlp instalado.
+inyectan para testear sin red ni yt-dlp instalado. Operación autónoma: sin URL
+se procesa la cola por defecto ``HD_INGESTA_DEFAULT_VIDEOS``.
 """
 from __future__ import annotations
 
@@ -105,7 +106,7 @@ def descargar_subs(video_url: str, lang: str = "es", *,
 
 
 def correr(
-    video_url: str,
+    video_url: Optional[str] = None,
     org_name: Optional[str] = None,
     *,
     lang: str = "es",
@@ -113,8 +114,29 @@ def correr(
     runner: Optional[Callable[[str, str], str]] = None,
     enviar_fn: Callable[[dict], dict] = enviar,
 ) -> dict:
-    """Transcribe el video, agrupa por ventana y postea cada bloque con su timestamp."""
+    """Transcribe el video, agrupa por ventana y postea cada bloque con su timestamp.
+
+    Operación autónoma: sin ``video_url`` se procesa la cola por defecto
+    ``config.VIDEOS_DEFAULT`` (``HD_INGESTA_DEFAULT_VIDEOS``, "Org=URL,...").
+    Si la cola está vacía, responde sin hacer nada en vez de pedir una URL.
+    """
     ventana = config.VENTANA_VIDEO_S if ventana_s is None else ventana_s
+    if not video_url:
+        videos = config.VIDEOS_DEFAULT
+        if not videos:
+            return {"conector": "youtube", "bloques": 0, "enviados": 0,
+                    "senales_detectadas": 0,
+                    "nota": "sin videos por defecto (configura HD_INGESTA_DEFAULT_VIDEOS)"}
+        total: dict = {"conector": "youtube", "bloques": 0, "enviados": 0,
+                       "senales_detectadas": 0}
+        for org, url in videos:
+            res = correr(url, org, lang=lang, ventana_s=ventana,
+                         runner=runner, enviar_fn=enviar_fn)
+            for clave in ("bloques", "enviados", "senales_detectadas"):
+                total[clave] += int(res.get(clave, 0))
+        total["videos"] = len(videos)
+        return total
+
     vtt = descargar_subs(video_url, lang, runner=runner)
     bloques = agrupar(parse_vtt(vtt), ventana)
     enviados = detectadas = 0

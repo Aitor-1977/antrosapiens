@@ -258,11 +258,20 @@ certificados; ampliar cobertura de fuentes reales fuera del entorno con proxy.
 
 ## Comandos
 
+Operación autónoma: ningún argumento es obligatorio. Sin flags, los motores
+barren sus listas por defecto — ``noticias`` usa ``CONSULTAS_DEFAULT``,
+``youtube`` la cola ``HD_INGESTA_DEFAULT_VIDEOS`` y ``run_once`` los objetivos
+por defecto (``HD_TRACKED_EMPRESAS`` o el directorio semilla curado).
+
 ```bash
 pip install -r requirements.txt
-python -m scripts.run_once "Nubank" --tipo ronda                        # google_news
-python -m scripts.run_once "Nubank" --tipo ronda --connector gdelt      # gdelt
-python -m scripts.run_once "Nubank" --tipo lanzamiento --connector rss_fijos
+python -m hd_scraper.ingesta noticias                    # autónomo: consultas por defecto
+python -m hd_scraper.ingesta noticias --query "fintech México ronda"
+python -m hd_scraper.ingesta noticias --feed <URL_RSS>
+python -m hd_scraper.ingesta youtube                     # autónomo: cola HD_INGESTA_DEFAULT_VIDEOS
+python -m hd_scraper.ingesta youtube --url <VIDEO_URL> --org Acme
+python -m scripts.run_once                               # autónomo: barre objetivos por defecto
+python -m scripts.run_once "Nubank" --tipo ronda --connector gdelt
 python -m scripts.run_once "Acme" --connector job_boards --slug acme     # requiere --slug
 python -m scripts.serve_api                              # API + scheduler
 uvicorn hd_scraper.api.app:app --reload                  # solo API

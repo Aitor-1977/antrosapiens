@@ -99,12 +99,28 @@ def test_noticias_correr_por_feed_directo():
     assert res["items"] == 2
 
 
-def test_noticias_sin_query_ni_feed_lanza():
+def test_noticias_sin_query_ni_feed_usa_consultas_por_defecto():
+    urls = []
+
+    def get(url):
+        urls.append(url)
+        return RSS
+
+    res = noticias.correr(http_get=get, enviar_fn=lambda p: {"senales_detectadas": 0})
+    assert urls                                       # usó consultas por defecto
+    assert all("news.google.com/rss/search" in u for u in urls)
+    assert len(urls) == len(noticias.config.CONSULTAS_DEFAULT)
+    assert res["items"] == 2 * len(urls)              # 2 items por cada consulta
+
+
+def test_noticias_sin_consultas_por_defecto_no_pide_nada():
+    prev = noticias.config.CONSULTAS_DEFAULT
+    noticias.config.CONSULTAS_DEFAULT = ()
     try:
-        noticias.correr(http_get=lambda url: RSS)
-        assert False
-    except ValueError:
-        pass
+        res = noticias.correr(http_get=lambda url: RSS)
+    finally:
+        noticias.config.CONSULTAS_DEFAULT = prev
+    assert res["items"] == 0 and res["enviados"] == 0
 
 
 # ── yt-dlp: parseo VTT, agrupado y envío con timestamp ───────────────────────
@@ -146,3 +162,29 @@ def test_youtube_correr_envia_bloques_con_timestamp():
     assert res["bloques"] == 2 and res["enviados"] == 2
     assert all(e["url"] == "https://yt/abc" and e["timestamp"] for e in enviados)
     assert enviados[1]["timestamp"] == "00:01:10"
+
+
+def test_youtube_sin_url_procesa_cola_por_defecto():
+    prev = youtube.config.VIDEOS_DEFAULT
+    youtube.config.VIDEOS_DEFAULT = (("Acme", "https://yt/uno"), ("Beta", "https://yt/dos"))
+    try:
+        enviados = []
+        res = youtube.correr(
+            ventana_s=60,
+            runner=lambda url, lang: VTT,
+            enviar_fn=lambda p: (enviados.append(p) or {"senales_detectadas": 1}))
+    finally:
+        youtube.config.VIDEOS_DEFAULT = prev
+    assert res["videos"] == 2
+    assert res["bloques"] == 4 and res["enviados"] == 4   # 2 bloques por video
+
+
+def test_youtube_sin_url_ni_cola_no_pide_nada():
+    prev = youtube.config.VIDEOS_DEFAULT
+    youtube.config.VIDEOS_DEFAULT = ()
+    try:
+        res = youtube.correr(ventana_s=60, runner=lambda url, lang: VTT)
+    finally:
+        youtube.config.VIDEOS_DEFAULT = prev
+    assert res["conector"] == "youtube"
+    assert res["bloques"] == 0 and res["enviados"] == 0

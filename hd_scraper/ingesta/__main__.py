@@ -1,8 +1,13 @@
 """CLI de los conectores de ingesta Capa 0.
 
+Operación autónoma: ningún argumento es obligatorio. Sin flags, cada conector
+barre sus listas por defecto (consultas de noticias / cola de videos).
+
 Ejemplos:
+    python -m hd_scraper.ingesta noticias                 # autónomo: consultas por defecto
     python -m hd_scraper.ingesta noticias --query "fintech México ronda"
     python -m hd_scraper.ingesta noticias --feed https://un-medio.com/rss
+    python -m hd_scraper.ingesta youtube                  # autónomo: cola HD_INGESTA_DEFAULT_VIDEOS
     python -m hd_scraper.ingesta youtube --url <VIDEO_URL> --org "Acme" --lang es
 """
 from __future__ import annotations
@@ -28,12 +33,13 @@ def main(argv: list[str] | None = None) -> int:
     sub = p.add_subparsers(dest="cmd", required=True)
 
     n = sub.add_parser("noticias", help="Noticias por RSS gratis (Google News u otro feed)")
-    n.add_argument("--query", default=None, help="Búsqueda en Google News RSS")
+    n.add_argument("--query", default=None, help="Búsqueda en Google News RSS (si se omite: consultas por defecto)")
     n.add_argument("--feed", default=None, help="URL de un feed RSS/Atom directo")
     n.add_argument("--limite", type=int, default=25, help="máximo de notas a enviar")
 
-    y = sub.add_parser("youtube", help="Transcripción de un video de YouTube")
-    y.add_argument("--url", required=True, help="URL del video")
+    y = sub.add_parser("youtube", help="Transcripción de videos de YouTube")
+    y.add_argument("--url", default=None,
+                   help="URL del video (si se omite: cola HD_INGESTA_DEFAULT_VIDEOS)")
     y.add_argument("--org", default=None, help="Nombre de la organización")
     y.add_argument("--lang", default="es", help="Idioma de subtítulos (default: es)")
 

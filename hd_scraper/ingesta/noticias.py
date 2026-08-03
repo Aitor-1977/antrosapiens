@@ -3,7 +3,9 @@
 Reemplaza al conector Apify (de pago) por lectura directa de feeds públicos:
 Google News RSS (por consulta) o cualquier URL de feed RSS/Atom. Sin claves ni
 servicios de pago. Mapea cada entrada a ``{texto, url, org_name}`` y la postea.
-La descarga y el envío se inyectan para testear sin red. No interpreta: reenvía.
+Operación autónoma: sin ``--query`` ni ``--feed`` se barren las consultas por
+defecto de ``config.CONSULTAS_DEFAULT`` (ninguna petición manual). La descarga y
+el envío se inyectan para testear sin red. No interpreta: reenvía.
 """
 from __future__ import annotations
 
@@ -76,27 +78,39 @@ def correr(
     http_get: Optional[Callable[[str], str]] = None,
     enviar_fn: Callable[[dict], dict] = enviar,
 ) -> dict:
-    """Lee un feed (por consulta de Google News o URL directa) y postea cada nota.
+    """Lee feeds (por consulta de Google News o URL directa) y postea cada nota.
 
-    Un item que falla al enviar no tumba el lote (se registra y se sigue).
+    Operación autónoma: si no se pasa ``query`` ni ``feed_url``, se barren las
+    consultas por defecto de ``config.CONSULTAS_DEFAULT``. Un item que falla al
+    enviar no tumba el lote (se registra y se sigue).
     """
     http_get = http_get or _http_get
     if feed_url:
-        url = feed_url
+        urls = [feed_url]
     elif query:
-        url = google_news_url(query)
+        urls = [google_news_url(query)]
     else:
-        raise ValueError("indica --query (Google News) o --feed (URL de RSS)")
+        consultas = config.CONSULTAS_DEFAULT
+        if not consultas:
+            return {"conector": "noticias", "items": 0, "enviados": 0,
+                    "senales_detectadas": 0, "nota": "sin consultas por defecto"}
+        urls = [google_news_url(c) for c in consultas]
 
-    xml = http_get(url)
-    payloads = parse_feed(xml)[: max(1, limite)]
-    enviados = detectadas = 0
-    for p in payloads:
+    items = enviados = detectadas = 0
+    for url in urls:
         try:
-            resp = enviar_fn(p)
-            enviados += 1
-            detectadas += int((resp or {}).get("senales_detectadas", 0))
+            xml = http_get(url)
         except Exception as exc:
-            log.error("noticias: no se pudo enviar (%s): %s", p.get("url"), exc)
-    return {"conector": "noticias", "items": len(payloads), "enviados": enviados,
+            log.error("noticias: no se pudo leer %s: %s", url, exc)
+            continue
+        payloads = parse_feed(xml)[: max(1, limite)]
+        items += len(payloads)
+        for p in payloads:
+            try:
+                resp = enviar_fn(p)
+                enviados += 1
+                detectadas += int((resp or {}).get("senales_detectadas", 0))
+            except Exception as exc:
+                log.error("noticias: no se pudo enviar (%s): %s", p.get("url"), exc)
+    return {"conector": "noticias", "items": items, "enviados": enviados,
             "senales_detectadas": detectadas}
