@@ -91,3 +91,8 @@ profundidad** (scoring, Deuda Cultural, ICP, decisor), de forma **determinista**
 - Análisis profundo: scoring, Deuda Cultural (combinaciones, intensidad, ángulo),
   ICP, decisor + correo candidato; verificación con Hunter; export MD/CSV.
 - Directorio Wikidata para volumen real, con **cascada + caché 7 días + reintento**.
+- **Síntesis Estructural (Capa 19)** autorizada por el operador (2026-08-04) y
+  registrada en `CLAUDE.md` → «Frontera de Interpretación»: reordenamiento
+  determinista de señales Nivel 1 por organización ([patrón, tensión/dolor,
+  actores, sustancia] + evidencia_urls), grounded, sin IA, sin Deuda Cultural™,
+  preliminar. Implementación: `hd_scraper/sintesis.py` + `GET /sintesis/{org}`.

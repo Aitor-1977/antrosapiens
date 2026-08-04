@@ -49,6 +49,7 @@ from ..signals import detectar_keywords
 from ..prospectos import nuevo_prospecto, upsert_prospecto
 from ..perfil_fundacional import construir_perfil
 from ..lectura_estructural import leer_discurso
+from ..sintesis import sintetizar
 from ..indagacion_profunda import indagar_profundo
 from ..validation.validator import validate_prospecto
 from .. import radar as _radar
@@ -2141,6 +2142,31 @@ def validacion_cientifica_org(org_nombre: str) -> dict:
     """
     expediente = _expediente_para_validacion(org_nombre)
     return validar_expediente(expediente)
+
+
+# --- Capa 19: Síntesis Estructural por organización (alerta estructural) -----
+#
+# Reordenamiento determinista de las señales Nivel 1 ya extraídas para que el
+# consumidor (la app Radar) deje de recibir noticias crudas y reciba una
+# estructura mínima: [patrón, tensión/dolor, actores, sustancia] + evidencias.
+# Autorizado por el operador el 2026-08-04 (CLAUDE.md → Frontera de
+# Interpretación). Determinista, grounded, sin IA; NO clasifica Deuda Cultural™.
+
+@app.get("/sintesis/{org_nombre}")
+def sintesis_org(org_nombre: str) -> dict:
+    """Síntesis Estructural (Capa 19) de una organización.
+
+    Lectura pública, 100% determinista y SIEMPRE preliminar. Cada campo cita su
+    evidencia (marcador textual literal o metadata de captura); no inventa nada.
+    """
+    db = get_db()
+    nombre = (org_nombre or "").strip()
+    filas = db.fetch_all(
+        "SELECT * FROM evidencias WHERE empresa_mencionada = ? AND estado = ? "
+        "ORDER BY creado_en DESC LIMIT 500",
+        (nombre, ESTADO_OK),
+    )
+    return sintetizar([_row_a_evidencia(r) for r in filas], nombre)
 
 
 # --- Capa 12: Gobernanza Científica, Auditoría Total y Reproducibilidad ------

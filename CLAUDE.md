@@ -81,6 +81,19 @@ SOLO sobre datos ya extraídos por este mismo motor; sin IA, sin juicio libre):
   hipótesis marcadas como preliminares hasta que la evidencia las sostenga. El
   Dictamen Científico recomienda (no ejecuta) escalar a Motor B.
   Implementación: `hd_scraper/validacion_cientifica.py`.
+- **Síntesis Estructural por organización (Capa 19 · alerta estructural)**
+  (autorizado por el operador —Mario— el 2026-08-04): reordenamiento
+  determinista de las señales Nivel 1 ya extraídas por este motor para que el
+  consumidor (la app Radar) deje de recibir noticias crudas y reciba una
+  estructura mínima: [patrón de comportamiento, señal de tensión/dolor,
+  actores involucrados, sustancia/métrica] + [evidencia_urls]. Sin IA, sin
+  juicio libre, **grounded**: cada campo cita su evidencia (marcador textual
+  literal o metadata de captura); sin marcador ⇒ estado `sin_marcador` /
+  `insuficiente` (NUNCA inventa). El patrón y la tensión usan la taxonomía
+  genérica/pública de este motor (`tipo_evento` y keywords Nivel 1), NO
+  clasifica Deuda Cultural™ (eso sigue siendo RadarHD/`lectura_estructural`).
+  No decide ni ejecuta acción comercial. Implementación:
+  `hd_scraper/sintesis.py`.
 
 **Exclusivo de RadarHD (JAMÁS aquí):**
 
@@ -91,9 +104,10 @@ SOLO sobre datos ya extraídos por este mismo motor; sin IA, sin juicio libre):
 
 **Implementación actual de esta frontera:** `hd_scraper/analisis.py` (scoring,
 ICP, Deuda preliminar sobre señales de evento), `hd_scraper/engine/rule_engine.py`
-(reglas y pesos de señal) y `hd_scraper/lectura_estructural.py` (lectura
-estructural preliminar de Deuda sobre el discurso corporativo). No reproducir esa
-lógica en otros módulos.
+(reglas y pesos de señal), `hd_scraper/lectura_estructural.py` (lectura
+estructural preliminar de Deuda sobre el discurso corporativo) y
+`hd_scraper/sintesis.py` (síntesis estructural preliminar por organización). No
+reproducir esa lógica en otros módulos.
 
 **Regla de ampliación:** cualquier ampliación futura de interpretación en este
 repo exige actualizar **esta misma sección ANTES de escribir código**. Si una
