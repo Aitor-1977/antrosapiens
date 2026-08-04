@@ -102,3 +102,10 @@ profundidad** (scoring, Deuda Cultural, ICP, decisor), de forma **determinista**
   público genérico (sin Deuda Cultural™ ni juicios), salida preliminar
   etiquetada (`metodo: llm_nvidia`) y **fallback determinista garantizado**.
   Implementación: `hd_scraper/nvidia_parser.py`.
+- **Interfaz: síntesis como fuente principal, corpus como respaldo técnico**
+  (decisión del operador 2026-08-04): el envío de texto crudo a la interfaz se
+  bloquea SOLO a nivel de presentación — la app Radar muestra la síntesis
+  estructurada (Capa 19, LLM) como contenido primario y el corpus crudo queda
+  colapsado como respaldo read-only. El contrato `GET /corpus` NO cambia: el
+  texto crudo de GDELT/Google News sigue fluyendo a `evidencias` y es servible
+  para el consumidor técnico. Implementación: app (interfaz) → `IndagacionScreen`.
