@@ -51,6 +51,12 @@ from ..perfil_fundacional import construir_perfil
 from ..lectura_estructural import leer_discurso
 from ..indagacion_profunda import indagar_profundo
 from ..validation.validator import validate_prospecto
+from .. import radar as _radar
+from ..filtros import (
+    ESCALAS as ESCALAS_FILTRO,
+    FiltrosRadar,
+    REGIONES as REGIONES_FILTRO,
+)
 
 app = FastAPI(
     title="hd-prospector API",
@@ -155,6 +161,7 @@ def raiz() -> dict:
             "GET /prospectos/export.json": "descarga los prospectos en JSON (filtro: categoria)",
             "POST /prospectos": "alta de prospecto (requiere X-Ingest-Token)",
             "POST /scrape": "rastreo bajo demanda de una empresa (requiere X-Ingest-Token)",
+            "POST /radar": "orquestador agéntico: filtra (región/enfoque/tamaño/palabra clave), barre, valida contacto y consolida (requiere X-Ingest-Token)",
             "POST /enrich": "descubre web + discurso + enlaces de un nombre (requiere X-Ingest-Token)",
             "GET /informe": "informe profundo: prioriza empresas por scoring + Deuda Cultural™ + Interés Analítico (filtro: categoria)",
             "GET /informe.md": "descarga el informe profundo en Markdown (filtros: categoria|categorias)",
@@ -874,6 +881,64 @@ def corpus_poblar(payload: CorpusIn,
         "tiempo_s": round(time.monotonic() - t0, 1),
         "progreso": progreso,
     }
+
+
+# --- Radar: orquestador agéntico (filtros inteligentes + contacto) ---------
+
+class RadarIn(BaseModel):
+    region: str = "Toda LATAM"         # del vocabulario de filtros.py (región/país)
+    enfoque: list[str] = []            # ecosistemas (VC|Startup|Incubadora|Corporativo)
+    tamanos: list[str] = []            # bandas de escala (1-10|11-50|51-200|201-500|501+)
+    palabra_clave: str = ""            # término extra de la búsqueda
+    presupuesto_s: float = _radar.PRESUPUESTO_DEFAULT_S
+    max_rondas: int = _radar.MAX_RONDAS_DEFAULT
+    limite_expedientes: int = _radar.LIMITE_EXPEDIENTES
+    conectores: list[str] = list(_radar.CONECTORES_RADAR)
+
+
+@app.post("/radar")
+def radar_agente(payload: RadarIn,
+                 x_ingest_token: Optional[str] = Header(None)) -> dict:
+    """Orquestador agéntico del radar: filtra, barre, valida y consolida.
+
+    Ciclo determinista (sin IA): los filtros (región, enfoque, tamaño, palabra
+    clave) definen el plan; el loop ejecuta lotes acotados por presupuesto,
+    observa los Expedientes Vivos (con Dictamen Científico y gobernanza),
+    valida los correos de contacto (estructura + dominio oficial) y se detiene
+    por SATURACIÓN cuando una ronda no aporta señal nueva. Autenticado porque
+    escribe evidencia. Motor A barre y valida; no decide contacto ni acción.
+    """
+    _exigir_token(x_ingest_token)
+    for c in payload.enfoque:
+        if c not in CATEGORIAS:
+            raise HTTPException(400, f"enfoque inválido: {c}")
+    for t in payload.tamanos:
+        if t not in ESCALAS_FILTRO:
+            raise HTTPException(400, f"tamaño inválido: {t}")
+    if payload.region not in REGIONES_FILTRO:
+        raise HTTPException(
+            400, f"region inválida: {payload.region} "
+                 f"(vocabulario: {', '.join(sorted(REGIONES_FILTRO))})")
+
+    conectores = [c for c in payload.conectores if c in CONECTORES_SCRAPE] \
+        or list(CONECTORES_SCRAPE)
+
+    filtros = FiltrosRadar(
+        region=payload.region,
+        categorias=tuple(dict.fromkeys(payload.enfoque)),
+        escalas=tuple(dict.fromkeys(payload.tamanos)),
+        palabra_clave=payload.palabra_clave.strip(),
+    )
+    return _radar.radar_loop(
+        filtros,
+        db=get_db(),
+        ejecutar_fn=_correr_query,
+        expedientes_fn=_construir_expedientes,
+        conectores=conectores,
+        presupuesto_s=max(5.0, min(payload.presupuesto_s, 120.0)),
+        max_rondas=max(1, min(payload.max_rondas, 6)),
+        limite_expedientes=max(5, min(payload.limite_expedientes, 100)),
+    )
 
 
 # --- Centro de Inteligencia Comercial --------------------------------------
