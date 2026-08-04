@@ -2,7 +2,8 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "functions": {
     "api/index.py": {
-      "includeFiles": "hd_scraper/**"
+      "includeFiles": "hd_scraper/**",
+      "maxDuration": 60
     }
   },
   "rewrites": [
