@@ -2,6 +2,9 @@
 # Solo lo que necesita la API serverless. Dev y test → requirements-dev.txt
 fastapi>=0.110,<1.0
 uvicorn>=0.29,<1.0
+# httpx cubre también el consumo REST de NVIDIA NIM (síntesis estructural Capa 19,
+# endpoint compatible con OpenAI: POST /v1/chat/completions). No se necesita el
+# SDK openai: evitamos pydantic-core en el runtime serverless.
 httpx>=0.27,<1.0
 feedparser>=6.0,<7.0
 apscheduler>=3.10,<4.0

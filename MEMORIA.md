@@ -96,3 +96,9 @@ profundidad** (scoring, Deuda Cultural, ICP, decisor), de forma **determinista**
   determinista de señales Nivel 1 por organización ([patrón, tensión/dolor,
   actores, sustancia] + evidencia_urls), grounded, sin IA, sin Deuda Cultural™,
   preliminar. Implementación: `hd_scraper/sintesis.py` + `GET /sintesis/{org}`.
+- **Síntesis estructural con LLM (NVIDIA)** autorizada por el operador
+  (2026-08-04, misma sesión): Motor A puede enriquecer la Capa 19 con NVIDIA
+  NIM (`NVIDIA_API_KEY`), SOLO sobre evidencia ya extraída, con vocabulario
+  público genérico (sin Deuda Cultural™ ni juicios), salida preliminar
+  etiquetada (`metodo: llm_nvidia`) y **fallback determinista garantizado**.
+  Implementación: `hd_scraper/nvidia_parser.py`.

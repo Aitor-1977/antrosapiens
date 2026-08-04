@@ -14,6 +14,7 @@ import csv
 import hmac
 import io
 import json
+import logging
 import os
 import time
 from pathlib import Path
@@ -50,6 +51,9 @@ from ..prospectos import nuevo_prospecto, upsert_prospecto
 from ..perfil_fundacional import construir_perfil
 from ..lectura_estructural import leer_discurso
 from ..sintesis import sintetizar
+from ..nvidia_parser import NvidiaError as _NvidiaError
+from ..nvidia_parser import disponible as _nvidia_disponible
+from ..nvidia_parser import sintetizar as _sintetizar_llm
 from ..indagacion_profunda import indagar_profundo
 from ..validation.validator import validate_prospecto
 from .. import radar as _radar
@@ -58,6 +62,8 @@ from ..filtros import (
     FiltrosRadar,
     REGIONES as REGIONES_FILTRO,
 )
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="hd-prospector API",
@@ -2153,20 +2159,56 @@ def validacion_cientifica_org(org_nombre: str) -> dict:
 # Interpretación). Determinista, grounded, sin IA; NO clasifica Deuda Cultural™.
 
 @app.get("/sintesis/{org_nombre}")
-def sintesis_org(org_nombre: str) -> dict:
+def sintesis_org(org_nombre: str):
     """Síntesis Estructural (Capa 19) de una organización.
 
-    Lectura pública, 100% determinista y SIEMPRE preliminar. Cada campo cita su
-    evidencia (marcador textual literal o metadata de captura); no inventa nada.
+    Con ``NVIDIA_API_KEY`` configurada intenta enriquecerla con el LLM (NVIDIA
+    NIM); ante cualquier fallo (red, timeout, JSON inválido) o sin clave,
+    degrada a la síntesis determinista. Salida SIEMPRE preliminar, grounded y
+    con ``metodo`` (llm_nvidia | determinista). Nunca colapsa: un fallo
+    inesperado devuelve un error HTTP estructurado.
     """
-    db = get_db()
-    nombre = (org_nombre or "").strip()
-    filas = db.fetch_all(
-        "SELECT * FROM evidencias WHERE empresa_mencionada = ? AND estado = ? "
-        "ORDER BY creado_en DESC LIMIT 500",
-        (nombre, ESTADO_OK),
-    )
-    return sintetizar([_row_a_evidencia(r) for r in filas], nombre)
+    try:
+        db = get_db()
+        nombre = (org_nombre or "").strip()
+        filas = db.fetch_all(
+            "SELECT * FROM evidencias WHERE empresa_mencionada = ? AND estado = ? "
+            "ORDER BY creado_en DESC LIMIT 500",
+            (nombre, ESTADO_OK),
+        )
+        evidencias = [_row_a_evidencia(r) for r in filas]
+        base = sintetizar(evidencias, nombre)
+        return _sintesis_resuelta(nombre, evidencias, base)
+    except Exception as error:
+        logger.exception("síntesis falló para %s", org_nombre)
+        return JSONResponse(
+            status_code=500,
+            content={
+                "error": {
+                    "tipo": "sintesis",
+                    "org": org_nombre,
+                    "mensaje": str(error),
+                }
+            },
+        )
+
+
+def _sintesis_resuelta(nombre: str, evidencias: list[dict], base: dict) -> dict:
+    """Intenta el LLM de NVIDIA y degrada a la base determinista ante fallos."""
+    if not _nvidia_disponible():
+        base["metodo"] = "determinista"
+        return base
+    try:
+        resultado = _sintetizar_llm(evidencias, nombre)
+        resultado["metodo"] = "llm_nvidia"
+        return resultado
+    except _NvidiaError as error:
+        logger.warning("fallback determinista para %s: %s", nombre, error.mensaje)
+        base["metodo"] = "determinista"
+        base["nota"] = (
+            f"{base['nota']} Fallback determinista: LLM no disponible ({error.mensaje})."
+        )
+        return base
 
 
 # --- Capa 12: Gobernanza Científica, Auditoría Total y Reproducibilidad ------

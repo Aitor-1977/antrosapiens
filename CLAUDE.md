@@ -94,6 +94,21 @@ SOLO sobre datos ya extraídos por este mismo motor; sin IA, sin juicio libre):
   clasifica Deuda Cultural™ (eso sigue siendo RadarHD/`lectura_estructural`).
   No decide ni ejecuta acción comercial. Implementación:
   `hd_scraper/sintesis.py`.
+- **Síntesis estructural con LLM (infraestructura de pensamiento NVIDIA)**
+  (autorizado por el operador —Mario— el 2026-08-04): Motor A puede
+  enriquecer la Síntesis Estructural (Capa 19) invocando un LLM vía NVIDIA
+  NIM (compatible OpenAI) cuando `NVIDIA_API_KEY` está configurada. El LLM
+  SOLO reordena/sintetiza evidencia que este motor ya extrajo — nunca
+  escribe — y devuelve el mismo esquema `sintesis_estructural.v1`
+  (patrón, señal de tensión/dolor, actores, sustancia + `evidencia_urls`).
+  Restricciones inmutables: vocabulario público/genérico de la taxonomía
+  Motor A (NO clasifica Deuda Cultural™ ni emite juicios de valor — eso sigue
+  siendo RadarHD), salida SIEMPRE preliminar y etiquetada (`metodo:
+  llm_nvidia`), grounded (`evidencia_urls` y métricas son las deterministas,
+  jamás inventadas por el LLM) y con **fallback determinista garantizado**
+  (sin key, ante fallo de red, timeout o JSON inválido, Motor A degrada a
+  `sintetizar` y nunca colapsa). No decide ni ejecuta acción comercial.
+  Implementación: `hd_scraper/nvidia_parser.py`.
 
 **Exclusivo de RadarHD (JAMÁS aquí):**
 
@@ -105,9 +120,10 @@ SOLO sobre datos ya extraídos por este mismo motor; sin IA, sin juicio libre):
 **Implementación actual de esta frontera:** `hd_scraper/analisis.py` (scoring,
 ICP, Deuda preliminar sobre señales de evento), `hd_scraper/engine/rule_engine.py`
 (reglas y pesos de señal), `hd_scraper/lectura_estructural.py` (lectura
-estructural preliminar de Deuda sobre el discurso corporativo) y
-`hd_scraper/sintesis.py` (síntesis estructural preliminar por organización). No
-reproducir esa lógica en otros módulos.
+estructural preliminar de Deuda sobre el discurso corporativo),
+`hd_scraper/sintesis.py` (síntesis estructural preliminar por organización) y
+`hd_scraper/nvidia_parser.py` (síntesis estructural LLM preliminar por
+organización). No reproducir esa lógica en otros módulos.
 
 **Regla de ampliación:** cualquier ampliación futura de interpretación en este
 repo exige actualizar **esta misma sección ANTES de escribir código**. Si una

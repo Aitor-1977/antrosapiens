@@ -92,6 +92,17 @@ class Settings:
     # deterministas (correos candidatos sin verificar). Se agrega en Vercel.
     hunter_api_key: str = os.getenv("HUNTER_API_KEY", "")
 
+    # LLM NVIDIA (NIM) para la Síntesis Estructural (Capa 19 · opcional). Sin
+    # clave, la síntesis queda 100% determinista (`sintetizar`); con clave, se
+    # intenta enriquecerla con el LLM y se degrada a determinista ante cualquier
+    # fallo (red, timeout, JSON inválido). Nunca clasifica Deuda Cultural™.
+    nvidia_api_key: str = os.getenv("NVIDIA_API_KEY", "")
+    nvidia_base_url: str = os.getenv(
+        "NVIDIA_BASE_URL", "https://integrate.api.nvidia.com/v1"
+    )
+    nvidia_model: str = os.getenv("NVIDIA_MODEL", "meta/llama-3.3-70b-instruct")
+    nvidia_timeout_s: float = float(os.getenv("NVIDIA_TIMEOUT_S", "10"))
+
     # User-Agent identificable para las fuentes.
     user_agent: str = os.getenv(
         "HD_USER_AGENT",
