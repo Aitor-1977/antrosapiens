@@ -31,6 +31,7 @@ from ..db.models import CATEGORIAS, ESTADO_OK, TIPOS_EVENTO, QuerySpec, ahora_is
 import httpx
 
 from .. import directorio, hunter
+from .. import candidato as _candidato
 from .. import drift as _drift
 from .. import drift_compare as _drift_compare
 from .. import onlife as _onlife
@@ -945,7 +946,111 @@ def radar_agente(payload: RadarIn,
         presupuesto_s=max(5.0, min(payload.presupuesto_s, 120.0)),
         max_rondas=max(1, min(payload.max_rondas, 6)),
         limite_expedientes=max(5, min(payload.limite_expedientes, 100)),
+        materializar_fn=_candidato.materializar_candidatos,
     )
+
+
+# --- Reparación BC-I ↔ BC-II: Candidatos Comerciales --------------------------
+#
+# Cada organización detectada por Motor A se materializa como un Candidato
+# Comercial independiente y trazable (identidad referencial determinista). La
+# Regla Cero (G0) gatea la transición detectado → observado: sin peritaje
+# validado originado en BC-I, el candidato no avanza.
+
+class CandidatoTransicionIn(BaseModel):
+    org_nombre: str
+    notas: str = ""
+    evidencia_id: Optional[int] = None
+    evidencia_url: str = ""
+    evidencia_texto: str = ""
+
+
+@app.post("/candidatos/materializar")
+def candidatos_materializar(
+    x_ingest_token: Optional[str] = Header(None),
+) -> dict:
+    """Materializa cada organización detectada como Candidato Comercial (BC-I→BC-II).
+
+    Idempotente: reprocesar produce los mismos candidato_id sin duplicar.
+    Registra la transición inicial ``→ detectado`` con la evidencia que la
+    sustenta. Autenticado (escribe Candidatos).
+    """
+    _exigir_token(x_ingest_token)
+    exp_data = _construir_expedientes(None, limite=100)
+    return _candidato.materializar_candidatos(
+        get_db(), exp_data.get("expedientes", []))
+
+
+@app.post("/candidatos/observar")
+def candidato_observar(
+    payload: CandidatoTransicionIn,
+    x_ingest_token: Optional[str] = Header(None),
+) -> dict:
+    """Pone un candidato bajo observación. Gateado por la Regla Cero (G0).
+
+    Sin dictamen científico validado (veredicto VALIDADA/VALIDADA_PARCIAL y sin
+    hipótesis bloqueada) devuelve 409: el candidato no avanza. La transición
+    conserva la referencia a la evidencia que la sustenta.
+    """
+    _exigir_token(x_ingest_token)
+    org = payload.org_nombre.strip()
+    if not org:
+        raise HTTPException(400, "org_nombre vacío")
+    try:
+        exp, val, huella = _paquete_cientifico(org)
+        exp["validacion_cientifica"] = val["dictamen_cientifico"]
+        exp["huella"] = huella["hash"]
+    except Exception:  # pragma: no cover - sin expediente el G0 deniega
+        exp = None
+    evidencia = {"id": payload.evidencia_id, "url": payload.evidencia_url,
+                 "texto": payload.evidencia_texto}
+    try:
+        return _candidato.observar(get_db(), org, exp=exp, evidencia=evidencia,
+                                   notas=payload.notas)
+    except _candidato.G0Denied as e:
+        raise HTTPException(409, f"Regla Cero: {e}")
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@app.post("/candidatos/descartar")
+def candidato_descartar(
+    payload: CandidatoTransicionIn,
+    x_ingest_token: Optional[str] = Header(None),
+) -> dict:
+    """Descarta un candidato (decisión del operador, siempre con motivo y evidencia)."""
+    _exigir_token(x_ingest_token)
+    org = payload.org_nombre.strip()
+    if not org:
+        raise HTTPException(400, "org_nombre vacío")
+    evidencia = {"id": payload.evidencia_id, "url": payload.evidencia_url,
+                 "texto": payload.evidencia_texto}
+    try:
+        return _candidato.descartar(get_db(), org, notas=payload.notas,
+                                    evidencia=evidencia)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@app.get("/candidatos")
+def candidatos_listar(estado: str | None = Query(None)) -> dict:
+    """Lista los Candidatos Comerciales, opcionalmente por estado."""
+    try:
+        return _candidato.listar_candidatos(get_db(), estado)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@app.get("/candidatos/{org_nombre}")
+def candidato_detalle(org_nombre: str) -> dict:
+    """Detalle de un candidato con su cadena referencial completa.
+
+    organización → candidato → prospecto → expediente → evidencia.
+    """
+    result = _candidato.obtener_candidato(get_db(), org_nombre)
+    if not result:
+        raise HTTPException(404, f"No hay candidato para '{org_nombre}'")
+    return result
 
 
 # --- Centro de Inteligencia Comercial --------------------------------------

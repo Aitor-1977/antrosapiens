@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Nivel 1: Mesa de Evidencias</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&amp;family=Newsreader:opsz,wght@6..72,400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "primary": "#091426",
+                      "tertiary-container": "#1a2a3e",
+                      "surface-container-high": "#eae9dc",
+                      "ink-blue": "#1E293B",
+                      "on-surface-variant": "#45474c",
+                      "secondary-fixed-dim": "#a9cfb9",
+                      "on-primary-fixed": "#111c2d",
+                      "tertiary": "#041528",
+                      "background": "#fcfaed",
+                      "on-secondary-container": "#476a58",
+                      "on-surface": "#1b1c14",
+                      "secondary": "#436653",
+                      "on-secondary-fixed": "#002113",
+                      "slate-text": "#334155",
+                      "stone-blue": "#475569",
+                      "surface-container": "#f0eee1",
+                      "primary-container": "#1e293b",
+                      "surface-container-highest": "#e5e3d6",
+                      "surface-container-lowest": "#ffffff",
+                      "parchment": "#FCFAED",
+                      "surface-bright": "#fcfaed",
+                      "on-tertiary": "#ffffff",
+                      "outline": "#75777d",
+                      "outline-variant": "#c5c6cd",
+                      "on-secondary-fixed-variant": "#2c4e3d",
+                      "surface-container-low": "#f6f4e7",
+                      "on-background": "#1b1c14",
+                      "error-container": "#ffdad6",
+                      "moss-green": "#2D4F3E",
+                      "surface": "#fcfaed",
+                      "inverse-on-surface": "#f3f1e4",
+                      "on-primary": "#ffffff",
+                      "on-secondary": "#ffffff",
+                      "tertiary-fixed-dim": "#b7c8e1",
+                      "inverse-surface": "#303129",
+                      "amber-question": "#D97706",
+                      "on-primary-container": "#8590a6",
+                      "primary-fixed-dim": "#bcc7de",
+                      "on-primary-fixed-variant": "#3c475a",
+                      "on-error-container": "#93000a",
+                      "on-tertiary-fixed": "#0b1c30",
+                      "on-tertiary-fixed-variant": "#38485d",
+                      "terracotta-alert": "#991B1B",
+                      "surface-dim": "#dcdace",
+                      "inverse-primary": "#bcc7de",
+                      "tertiary-fixed": "#d3e4fe",
+                      "surface-tint": "#545f73",
+                      "on-tertiary-container": "#8191a9",
+                      "error": "#ba1a1a",
+                      "on-error": "#ffffff",
+                      "secondary-container": "#c2e9d2",
+                      "surface-variant": "#e5e3d6",
+                      "secondary-fixed": "#c5ebd4",
+                      "primary-fixed": "#d8e3fb"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "margin-desktop": "64px",
+                      "gutter": "16px",
+                      "visual-silence": "48px",
+                      "touch-target": "48px",
+                      "margin-mobile": "24px"
+              },
+              "fontFamily": {
+                      "metadata": [
+                              "JetBrains Mono"
+                      ],
+                      "mono-technical": [
+                              "JetBrains Mono"
+                      ],
+                      "mono-label": [
+                              "JetBrains Mono"
+                      ],
+                      "body-reading-mobile": [
+                              "Newsreader"
+                      ],
+                      "display-lg": [
+                              "Newsreader"
+                      ],
+                      "headline-md": [
+                              "Newsreader"
+                      ],
+                      "headline-md-mobile": [
+                              "Newsreader"
+                      ],
+                      "body-reading": [
+                              "Newsreader"
+                      ]
+              },
+              "fontSize": {
+                      "metadata": [
+                              "11px",
+                              {
+                                      "lineHeight": "14px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "mono-technical": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "mono-label": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "body-reading-mobile": [
+                              "18px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "display-lg": [
+                              "48px",
+                              {
+                                      "lineHeight": "56px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-md": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "headline-md-mobile": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "body-reading": [
+                              "20px",
+                              {
+                                      "lineHeight": "32px",
+                                      "fontWeight": "400"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+    </script>
+<style>
+        body {
+            background-color: theme('colors.background');
+            color: theme('colors.on-background');
+        }
+        
+        .evidence-card {
+            background-color: theme('colors.surface-container-lowest');
+            border: 1px solid rgba(71, 85, 105, 0.1); /* stone-blue at 10% */
+            box-shadow: 0 4px 20px rgba(30, 41, 59, 0.05); /* ink-blue tinted shadow */
+        }
+
+        .focus-column {
+            max-width: 65ch;
+            margin: 0 auto;
+        }
+
+        .ariadne-thread-reinforces {
+            border-left: 1px dashed theme('colors.moss-green');
+        }
+
+        .ariadne-thread-contradicts {
+            border-left: 1px dashed theme('colors.terracotta-alert');
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="antialiased min-h-screen flex flex-col pb-24 md:pb-0 md:pl-80">
+<!-- TopAppBar -->
+<header class="fixed top-0 left-0 w-full z-40 bg-surface dark:bg-surface shadow-sm opacity-90 transition-colors duration-300 ease-in-out">
+<div class="flex justify-between items-center w-full px-margin-mobile md:px-margin-desktop h-touch-target">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-primary dark:text-primary-fixed">fingerprint</span>
+<h1 class="font-headline-md-mobile text-headline-md-mobile md:font-headline-md md:text-headline-md text-primary dark:text-primary-fixed font-bold tracking-tight">
+                    Inquiry-7429 • Field Evidence
+                </h1>
+</div>
+<span class="material-symbols-outlined text-primary dark:text-primary-fixed">cloud_done</span>
+</div>
+</header>
+<!-- Navigation Drawer (Desktop) -->
+<nav class="hidden md:flex fixed top-0 left-0 h-full w-80 rounded-r-xl bg-surface-container-low dark:bg-tertiary shadow-md flex-col p-margin-mobile gap-4 z-50 pt-24 Slide-in transition-all duration-300">
+<div class="mb-8">
+<h2 class="font-headline-md text-primary">Methodology</h2>
+</div>
+<ul class="flex flex-col gap-2">
+<li>
+<a class="flex items-center gap-3 p-3 rounded-lg hover:bg-surface-container-high dark:hover:bg-tertiary-container transition-colors duration-300 ease-in-out text-stone-blue dark:text-on-tertiary-container font-body-reading text-body-reading" href="#">
+<span class="material-symbols-outlined">menu_book</span>
+                    Glossary
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-3 p-3 rounded-lg hover:bg-surface-container-high dark:hover:bg-tertiary-container transition-colors duration-300 ease-in-out text-stone-blue dark:text-on-tertiary-container font-body-reading text-body-reading" href="#">
+<span class="material-symbols-outlined">group_work</span>
+                    Persona Nodes
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-3 p-3 rounded-lg hover:bg-surface-container-high dark:hover:bg-tertiary-container transition-colors duration-300 ease-in-out text-stone-blue dark:text-on-tertiary-container font-body-reading text-body-reading" href="#">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+                    Cultural Debt
+                </a>
+</li>
+</ul>
+</nav>
+<!-- Main Content Canvas -->
+<main class="flex-grow pt-24 px-margin-mobile md:px-margin-desktop w-full focus-column relative">
+<div class="mb-visual-silence">
+<h2 class="font-display-lg text-display-lg text-primary mb-4">Nivel 1: Mesa de Evidencias</h2>
+<p class="font-body-reading-mobile text-body-reading-mobile md:font-body-reading md:text-body-reading text-slate-text">
+                A curated collection of signals extracted from field observations. Review, annotate, and synthesize to establish rigorous foundational hypotheses.
+            </p>
+</div>
+<div class="space-y-visual-silence relative">
+<!-- Thread Line Background (Visual Context) -->
+<div class="absolute left-8 top-8 bottom-8 w-px bg-outline-variant/30 hidden sm:block -z-10"></div>
+<!-- Evidence Card 1 -->
+<article class="evidence-card rounded-lg p-6 relative sm:ml-12 transform -rotate-1 hover:rotate-0 transition-transform duration-300">
+<!-- Ariadne Connection -->
+<div class="absolute -left-12 top-1/2 w-12 border-b border-dashed border-outline-variant/50 hidden sm:block"></div>
+<div class="flex flex-col h-full gap-4">
+<header class="flex justify-between items-start">
+<h3 class="font-headline-md-mobile text-headline-md-mobile text-primary pr-8 leading-tight">
+                            Uso de terminología religiosa en foros locales
+                        </h3>
+<span class="material-symbols-outlined text-stone-blue opacity-50">description</span>
+</header>
+<div class="flex-grow">
+<p class="font-body-reading-mobile text-body-reading-mobile text-slate-text mb-4">
+                            Analysis indicates a 40% increase in theological framing when discussing community resource allocation during Q3.
+                        </p>
+</div>
+<footer class="flex justify-between items-end border-t border-surface-container-highest pt-4 mt-4">
+<div class="flex gap-2">
+<button class="h-touch-target px-4 flex items-center justify-center font-mono-label text-mono-label text-secondary hover:text-moss-green hover:bg-secondary-container/20 rounded transition-colors group">
+<span class="material-symbols-outlined mr-2 text-[18px] group-hover:scale-110 transition-transform">edit_note</span>
+                                Annotate
+                            </button>
+<button class="h-touch-target px-4 flex items-center justify-center font-mono-label text-mono-label text-stone-blue hover:text-primary hover:bg-surface-variant/50 rounded transition-colors group">
+<span class="material-symbols-outlined mr-2 text-[18px] group-hover:scale-110 transition-transform">hub</span>
+                                Relate
+                            </button>
+</div>
+<span class="font-metadata text-metadata text-ink-blue/60 bg-surface-container-low px-2 py-1 rounded">
+                            [SOURCE: TGM-882]
+                        </span>
+</footer>
+</div>
+</article>
+<!-- Evidence Card 2 -->
+<article class="evidence-card rounded-lg p-6 relative sm:ml-12 transform rotate-1 hover:rotate-0 transition-transform duration-300 ariadne-thread-reinforces pl-6 sm:pl-6">
+<!-- Ariadne Connection -->
+<div class="absolute -left-12 top-1/2 w-12 border-b border-dashed border-moss-green hidden sm:block"></div>
+<div class="flex flex-col h-full gap-4">
+<header class="flex justify-between items-start">
+<h3 class="font-headline-md-mobile text-headline-md-mobile text-primary pr-8 leading-tight">
+                            Rituales de purificación económica
+                        </h3>
+<span class="material-symbols-outlined text-stone-blue opacity-50">account_balance</span>
+</header>
+<div class="flex-grow">
+<p class="font-body-reading-mobile text-body-reading-mobile text-slate-text mb-4">
+                            Observational data details specific protocols enacted by merchants prior to finalizing high-risk debt transfers.
+                        </p>
+</div>
+<footer class="flex justify-between items-end border-t border-surface-container-highest pt-4 mt-4">
+<div class="flex gap-2">
+<button class="h-touch-target px-4 flex items-center justify-center font-mono-label text-mono-label text-secondary hover:text-moss-green hover:bg-secondary-container/20 rounded transition-colors group">
+<span class="material-symbols-outlined mr-2 text-[18px] group-hover:scale-110 transition-transform">edit_note</span>
+                                Annotate
+                            </button>
+<button class="h-touch-target px-4 flex items-center justify-center font-mono-label text-mono-label text-stone-blue hover:text-primary hover:bg-surface-variant/50 rounded transition-colors group">
+<span class="material-symbols-outlined mr-2 text-[18px] group-hover:scale-110 transition-transform">code</span>
+                                Code
+                            </button>
+</div>
+<span class="font-metadata text-metadata text-ink-blue/60 bg-surface-container-low px-2 py-1 rounded">
+                            [SOURCE: ECO-104]
+                        </span>
+</footer>
+</div>
+</article>
+</div>
+</main>
+<!-- BottomNavBar (Mobile) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-gutter py-2 border-t border-outline-variant/10 bg-surface-bright dark:bg-tertiary docked full-width rounded-t-xl transition-colors duration-300 ease-in-out pb-safe">
+<a class="flex flex-col items-center justify-center bg-secondary-container dark:bg-on-secondary-fixed-variant rounded-full w-12 h-12 text-moss-green dark:text-secondary-fixed-dim scale-95 transition-transform duration-150 group" href="#">
+<span class="material-symbols-outlined font-headline-md text-primary">inventory_2</span>
+<span class="sr-only font-mono-label text-metadata">Evidence</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-tertiary-container w-12 h-12 hover:opacity-80 group" href="#">
+<span class="material-symbols-outlined">hub</span>
+<span class="sr-only font-mono-label text-metadata">Nodes</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-tertiary-container w-12 h-12 hover:opacity-80 group" href="#">
+<span class="material-symbols-outlined">article</span>
+<span class="sr-only font-mono-label text-metadata">Reports</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-tertiary-container w-12 h-12 hover:opacity-80 group" href="#">
+<span class="material-symbols-outlined">menu_book</span>
+<span class="sr-only font-mono-label text-metadata">Glossary</span>
+</a>
+</nav>
+<script>
+        // Micro-interaction for evidence cards to subtly raise on hover in a realistic physical manner
+        document.querySelectorAll('.evidence-card').forEach(card => {
+            card.addEventListener('mouseenter', () => {
+                card.style.transform = 'translateY(-2px) rotate(0deg)';
+                card.style.boxShadow = '0 8px 24px rgba(30, 41, 59, 0.08)';
+            });
+            card.addEventListener('mouseleave', () => {
+                const originalRotation = card.classList.contains('-rotate-1') ? '-1deg' : (card.classList.contains('rotate-1') ? '1deg' : '0deg');
+                card.style.transform = `translateY(0) rotate(${originalRotation})`;
+                card.style.boxShadow = '0 4px 20px rgba(30, 41, 59, 0.05)';
+            });
+        });
+    </script>
+</body></html>

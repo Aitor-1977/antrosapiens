@@ -247,12 +247,17 @@ CREATE TABLE IF NOT EXISTS pipeline_comercial (
     notas            TEXT NOT NULL DEFAULT '',
     resultado        TEXT NOT NULL DEFAULT '',   -- ganado|descartado|pausado (solo en cerrado)
     hash_dedup       TEXT NOT NULL UNIQUE,       -- sha256(org_nombre normalizado)
+    candidato_id     TEXT,                       -- identidad referencial del candidato (BC-I→BC-II)
     creado_en        TEXT NOT NULL,
     actualizado_en   TEXT NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_pipeline_etapa ON pipeline_comercial (etapa);
 CREATE INDEX IF NOT EXISTS idx_pipeline_org   ON pipeline_comercial (org_nombre);
+-- `idx_pipeline_candidato` se crea en `database._migrar_pipeline_candidato`
+-- DESPUÉS del ALTER: en bases preexistentes la columna no existe aún cuando
+-- `executescript` corre, y el índice sobre una columna ausente rompería la
+-- migración de bases legacy.
 
 CREATE TABLE IF NOT EXISTS pipeline_transiciones (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -266,6 +271,54 @@ CREATE TABLE IF NOT EXISTS pipeline_transiciones (
 
 CREATE INDEX IF NOT EXISTS idx_trans_pipeline ON pipeline_transiciones (pipeline_id);
 CREATE INDEX IF NOT EXISTS idx_trans_fecha    ON pipeline_transiciones (fecha);
+
+-- =========================================================================
+-- Reparación BC-I ↔ BC-II — Candidatos Comerciales (identidad referencial)
+-- Cada organización detectada por Motor A (BC-I) se materializa como un
+-- Candidato Comercial independiente y trazable (BC-II). Sustituye la unión
+-- NOMINAL por nombre/hash_dedup por una identidad referencial determinista:
+--   organización → candidato → prospecto → expediente → evidencia.
+-- `candidato_id` = sha256(normalizar_empresa(org_nombre)): estable y
+-- determinista (reprocesar la misma organización produce el mismo ID).
+-- `hash_dedup` = hash legacy de pipeline_comercial, para compat 1:1 con los
+-- datos existentes (los registros de pipeline de hoy no se rompen).
+-- =========================================================================
+
+CREATE TABLE IF NOT EXISTS candidatos (
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    candidato_id     TEXT NOT NULL UNIQUE,       -- ID estable por organización/candidato
+    org_nombre       TEXT NOT NULL,              -- nombre de la organización observada (BC-I)
+    organizacion_id  INTEGER,                    -- snapshot del índice estable de observatorio._id_map
+    estado           TEXT NOT NULL DEFAULT 'detectado',  -- detectado|observado|descartado
+    prospecto_id     INTEGER REFERENCES prospectos(id),  -- enlace referencial al prospecto (BC-II)
+    expediente_hash  TEXT,                       -- hash de la huella del expediente (BC-I)
+    hash_dedup       TEXT NOT NULL UNIQUE,       -- compat legacy con pipeline_comercial
+    creado_en        TEXT NOT NULL,
+    actualizado_en   TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_candidatos_estado ON candidatos (estado);
+CREATE INDEX IF NOT EXISTS idx_candidatos_org    ON candidatos (org_nombre);
+
+-- Cada transición (Detectado/Observado/Descartado) conserva la referencia a la
+-- evidencia que la sustenta: `evidencia_id` (evidencias.id) + url/texto
+-- (referencias estables denormalizadas) + `expediente_hash` vigente.
+CREATE TABLE IF NOT EXISTS candidato_transiciones (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    candidato_id    TEXT NOT NULL REFERENCES candidatos(candidato_id),
+    org_nombre      TEXT NOT NULL,
+    estado_desde    TEXT NOT NULL DEFAULT '',
+    estado_hasta    TEXT NOT NULL,
+    notas           TEXT NOT NULL DEFAULT '',
+    evidencia_id    INTEGER REFERENCES evidencias(id),
+    evidencia_url   TEXT,
+    evidencia_texto TEXT,
+    expediente_hash TEXT,
+    fecha           TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_candidato_trans_cand ON candidato_transiciones (candidato_id);
+CREATE INDEX IF NOT EXISTS idx_candidato_trans_fecha ON candidato_transiciones (fecha);
 
 -- =========================================================================
 -- Capa 12 — Gobernanza Científica, Auditoría Total y Reproducibilidad

@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Nivel 2: El Alambique - Mesa de Relaciones</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,100..900;1,100..900&amp;family=JetBrains+Mono:wght@400;500;700&amp;family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "secondary": "#496800",
+                      "on-primary-fixed-variant": "#2c4c4c",
+                      "on-primary": "#ffffff",
+                      "surface-container-lowest": "#ffffff",
+                      "secondary-fixed": "#c8f17a",
+                      "background": "#fbfaee",
+                      "surface-container": "#efeee3",
+                      "inverse-on-surface": "#f2f1e5",
+                      "outline-variant": "#c1c8c7",
+                      "primary": "#173838",
+                      "on-primary-container": "#9ec0bf",
+                      "surface-tint": "#446464",
+                      "surface-dim": "#dbdbcf",
+                      "surface": "#fbfaee",
+                      "tertiary": "#670f17",
+                      "surface-variant": "#e4e3d7",
+                      "inverse-primary": "#abcdcd",
+                      "on-secondary-fixed-variant": "#364e00",
+                      "on-error-container": "#93000a",
+                      "surface-container-highest": "#e4e3d7",
+                      "on-secondary-fixed": "#131f00",
+                      "surface-container-high": "#e9e9dd",
+                      "tertiary-container": "#87272b",
+                      "on-surface": "#1b1c15",
+                      "secondary-container": "#c8f17a",
+                      "on-surface-variant": "#414848",
+                      "tertiary-fixed-dim": "#ffb3b0",
+                      "on-secondary-container": "#4e6e00",
+                      "error-container": "#ffdad6",
+                      "on-tertiary": "#ffffff",
+                      "primary-fixed": "#c6e9e9",
+                      "tertiary-fixed": "#ffdad8",
+                      "on-error": "#ffffff",
+                      "outline": "#717878",
+                      "error": "#ba1a1a",
+                      "on-tertiary-container": "#ff9f9d",
+                      "on-primary-fixed": "#002020",
+                      "on-tertiary-fixed-variant": "#832428",
+                      "on-tertiary-fixed": "#410006",
+                      "on-background": "#1b1c15",
+                      "surface-container-low": "#f5f4e8",
+                      "on-secondary": "#ffffff",
+                      "surface-bright": "#fbfaee",
+                      "primary-container": "#2f4f4f",
+                      "inverse-surface": "#303129",
+                      "primary-fixed-dim": "#abcdcd",
+                      "secondary-fixed-dim": "#add461"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "stack-md": "24px",
+                      "unit": "8px",
+                      "gutter": "32px",
+                      "stack-lg": "48px",
+                      "margin-page": "64px",
+                      "stack-sm": "12px"
+              },
+              "fontFamily": {
+                      "body-lg": [
+                              "Newsreader"
+                      ],
+                      "headline-md": [
+                              "Newsreader"
+                      ],
+                      "display-lg": [
+                              "Newsreader"
+                      ],
+                      "headline-lg-mobile": [
+                              "Newsreader"
+                      ],
+                      "body-md": [
+                              "Newsreader"
+                      ],
+                      "label-sm": [
+                              "Hanken Grotesk"
+                      ],
+                      "label-lg": [
+                              "Hanken Grotesk"
+                      ],
+                      "headline-lg": [
+                              "Newsreader"
+                      ],
+                      "mono": [
+                              "JetBrains Mono", "monospace"
+                      ]
+              },
+              "fontSize": {
+                      "body-lg": [
+                              "18px",
+                              {
+                                      "lineHeight": "1.7",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "1.3",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "display-lg": [
+                              "48px",
+                              {
+                                      "lineHeight": "1.1",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-lg-mobile": [
+                              "28px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "1.6",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label-sm": [
+                              "12px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "letterSpacing": "0.03em",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "label-lg": [
+                              "14px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "fontWeight": "500"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<style>
+        /* Tactile Background Texture */
+        body {
+            background-color: #fbfaee; /* background */
+            background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+            color: #1b1c15; /* on-background */
+        }
+
+        /* Thread SVG Container */
+        .thread-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .thread {
+            fill: none;
+            stroke-linecap: round;
+        }
+
+        .thread-refuerza {
+            stroke: #2f4f4f; /* primary-container */
+            stroke-width: 3px;
+            filter: drop-shadow(0px 2px 2px rgba(0,0,0,0.1));
+        }
+
+        .thread-contradice {
+            stroke: #87272b; /* tertiary-container */
+            stroke-width: 2px;
+            stroke-dasharray: 8 4;
+            filter: drop-shadow(0px 2px 2px rgba(0,0,0,0.1));
+        }
+
+        .thread-matiza {
+            stroke: #414848; /* on-surface-variant */
+            stroke-width: 2px;
+            stroke-dasharray: 4 4;
+            filter: drop-shadow(0px 2px 2px rgba(0,0,0,0.1));
+        }
+
+        /* Physical Card Styles */
+        .evidence-card {
+            background-color: #ffffff; /* surface-container-lowest */
+            border: 1px solid #e4e3d7; /* surface-variant */
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            z-index: 20;
+            position: relative;
+        }
+        
+        .evidence-card:hover {
+            transform: translateY(-2px) rotate(0.5deg);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
+            z-index: 30;
+        }
+
+        .pin {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            position: absolute;
+            top: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            box-shadow: 1px 1px 2px rgba(0,0,0,0.3) inset, -1px -1px 2px rgba(255,255,255,0.5) inset, 0px 2px 4px rgba(0,0,0,0.2);
+            z-index: 25;
+        }
+
+        .pin-silver { background-color: #c1c8c7; }
+        .pin-dark { background-color: #173838; }
+        .pin-red { background-color: #670f17; }
+
+        /* Small Tag Styles */
+        .relation-tag {
+            background-color: #efeee3; /* surface-container */
+            border: 1px solid #c1c8c7; /* outline-variant */
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            z-index: 25;
+            position: absolute;
+            transform: translate(-50%, -50%);
+        }
+        
+        .id-tag {
+            font-family: 'JetBrains Mono', monospace;
+            background-color: #f5f4e8; /* surface-container-low */
+            border: 1px dashed #c1c8c7;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="antialiased min-h-screen flex flex-col font-body-lg text-body-lg selection:bg-secondary-container selection:text-on-secondary-container">
+<!-- TopAppBar -->
+<header class="w-full top-0 sticky z-50 bg-background border-b border-outline-variant flat no shadows flex justify-between items-center px-gutter py-stack-sm w-full">
+<div class="flex items-center gap-unit">
+<span class="material-symbols-outlined text-on-surface-variant font-[300]" style="font-variation-settings: 'FILL' 0;">smb_share</span>
+<span class="font-headline-md text-headline-md text-primary tracking-tight font-bold">AntroSapiens V4</span>
+</div>
+<div class="flex items-center">
+<button aria-label="Sync" class="p-2 rounded-full hover:bg-surface-container-low transition-colors active:opacity-70 transition-opacity flex items-center justify-center text-on-surface-variant">
+<span class="material-symbols-outlined font-[300]" style="font-variation-settings: 'FILL' 0;">sync</span>
+</button>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-grow flex flex-col relative overflow-hidden">
+<!-- Header Section -->
+<section class="px-gutter pt-margin-page pb-stack-lg max-w-[720px] mx-auto w-full z-40 relative">
+<h1 class="font-display-lg text-display-lg text-primary mb-unit">Mesa de Relaciones</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant italic border-l-2 border-outline-variant pl-4 py-1">
+                Visualizando hilos de tensión y convergencia entre evidencias.
+            </p>
+</section>
+<!-- Corkboard / Interactive Area -->
+<section class="relative flex-grow min-h-[600px] w-full max-w-[1200px] mx-auto px-gutter pb-margin-page">
+<!-- SVG Threads Layer -->
+<svg class="thread-layer" xmlns="http://www.w3.org/2000/svg">
+<!-- Thread 1: Refuerza (Thick, curved) -->
+<path class="thread thread-refuerza" d="M 250 200 C 350 150, 450 250, 550 200"></path>
+<!-- Thread 2: Contradice (Jagged) -->
+<path class="thread thread-contradice" d="M 650 220 L 700 350 L 750 300 L 850 400"></path>
+<!-- Thread 3: Matiza (Dashed curve with knot) -->
+<path class="thread thread-matiza" d="M 300 450 C 400 400, 500 550, 600 450"></path>
+<!-- Visual Knot for Matiza -->
+<circle cx="450" cy="475" fill="#414848" r="4"></circle>
+</svg>
+<!-- Evidence Card 1 (TGM-882) -->
+<article class="evidence-card absolute w-[280px] p-stack-md rounded-[2px] top-[100px] left-[10%] rotate-[-2deg]">
+<div class="pin pin-dark"></div>
+<div class="flex justify-between items-start mb-stack-sm mt-2">
+<span class="id-tag text-[10px] px-2 py-1 text-on-surface-variant">TGM-882</span>
+<span class="material-symbols-outlined text-outline-variant text-[18px]">biotech</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-primary mb-unit leading-tight">Análisis Estratigráfico Sector B</h3>
+<p class="font-body-md text-body-md text-on-surface-variant text-sm line-clamp-4">
+                    La secuencia de depósitos indica una ocupación continua durante el periodo formativo. Se observan rastros de material cerámico intrusivo en la capa III.
+                </p>
+</article>
+<!-- Relation Tag: Refuerza -->
+<div class="relation-tag absolute top-[190px] left-[35%] px-3 py-1 rounded-[2px] rotate-[5deg]">
+<span class="font-label-sm text-label-sm uppercase tracking-widest text-primary-container font-bold">Refuerza</span>
+</div>
+<!-- Evidence Card 2 (EXT-041) -->
+<article class="evidence-card absolute w-[260px] p-stack-md rounded-[2px] top-[120px] left-[45%] rotate-[3deg]">
+<div class="pin pin-silver"></div>
+<div class="flex justify-between items-start mb-stack-sm mt-2">
+<span class="id-tag text-[10px] px-2 py-1 text-on-surface-variant">EXT-041</span>
+<span class="material-symbols-outlined text-outline-variant text-[18px]">menu_book</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-primary mb-unit leading-tight">Crónica de Villalobos (1542)</h3>
+<p class="font-body-md text-body-md text-on-surface-variant text-sm line-clamp-3">
+                    Mención de asentamientos permanentes a orillas del río principal, con producción cerámica distintiva descrita como "barro oscuro pulido".
+                </p>
+</article>
+<!-- Relation Tag: Contradice -->
+<div class="relation-tag absolute top-[300px] left-[65%] px-3 py-1 rounded-[2px] bg-[#f5f4e8] border-[#87272b] rotate-[-10deg]">
+<div class="flex items-center gap-1 text-tertiary-container">
+<span class="font-mono text-[10px] font-bold">[!]</span>
+<span class="font-label-sm text-label-sm uppercase tracking-widest font-bold">Contradice</span>
+</div>
+</div>
+<!-- Evidence Card 3 (C14-112) -->
+<article class="evidence-card absolute w-[240px] p-stack-md rounded-[2px] top-[340px] left-[70%] rotate-[1deg]">
+<div class="pin pin-red"></div>
+<div class="flex justify-between items-start mb-stack-sm mt-2">
+<span class="id-tag text-[10px] px-2 py-1 text-on-surface-variant">C14-112</span>
+<span class="material-symbols-outlined text-outline-variant text-[18px]">science</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-primary mb-unit leading-tight">Datación Radiocarbónica</h3>
+<p class="font-body-md text-body-md text-on-surface-variant text-sm">
+                    Muestra de carbón vegetal asociada a la cerámica intrusiva. Fecha calibrada: 1250 - 1320 d.C.
+                </p>
+</article>
+<!-- Evidence Card 4 (GEO-005) -->
+<article class="evidence-card absolute w-[270px] p-stack-md rounded-[2px] top-[400px] left-[15%] rotate-[-4deg]">
+<div class="pin pin-silver"></div>
+<div class="flex justify-between items-start mb-stack-sm mt-2">
+<span class="id-tag text-[10px] px-2 py-1 text-on-surface-variant">GEO-005</span>
+<span class="material-symbols-outlined text-outline-variant text-[18px]">terrain</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-primary mb-unit leading-tight">Estudio Geomorfológico</h3>
+<p class="font-body-md text-body-md text-on-surface-variant text-sm">
+                    Evidencia de una inundación masiva en el valle, estimando su ocurrencia a finales del siglo XIII, alterando la deposición natural.
+                </p>
+</article>
+<!-- Relation Tag: Matiza -->
+<div class="relation-tag absolute top-[470px] left-[40%] px-3 py-1 rounded-[2px] rotate-[2deg]">
+<span class="font-label-sm text-label-sm uppercase tracking-widest text-on-surface-variant font-bold">Matiza</span>
+</div>
+</section>
+</main>
+<!-- BottomNavBar (Hidden on md and up per instructions, but requested active tab logic) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 bg-surface-container border-t border-outline-variant shadow-sm rounded-t-full flex justify-around items-center px-4 pb-6 pt-3">
+<!-- Journal (Inactive) -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-5 py-2 hover:bg-surface-variant rounded-full scale-95 transition-transform duration-150 ease-in-out" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">book_5</span>
+<span class="font-label-sm text-label-sm mt-1">Journal</span>
+</a>
+<!-- Evidence (Inactive) -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-5 py-2 hover:bg-surface-variant rounded-full scale-95 transition-transform duration-150 ease-in-out" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">biotech</span>
+<span class="font-label-sm text-label-sm mt-1">Evidence</span>
+</a>
+<!-- Relations (Active - closest match to Mesa de Relaciones) -->
+<a class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-full px-5 py-2 hover:bg-surface-variant scale-95 transition-transform duration-150 ease-in-out" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">account_tree</span>
+<span class="font-label-sm text-label-sm mt-1">Relations</span>
+</a>
+<!-- Synthesis (Inactive) -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-5 py-2 hover:bg-surface-variant rounded-full scale-95 transition-transform duration-150 ease-in-out" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">analytics</span>
+<span class="font-label-sm text-label-sm mt-1">Synthesis</span>
+</a>
+</nav>
+<!-- Desktop Nav in TopAppBar (Hidden on mobile) -->
+<div class="hidden md:flex absolute top-0 right-gutter h-full items-center gap-4 z-[60]">
+<a class="text-on-surface-variant hover:bg-surface-container-low transition-colors px-3 py-2 rounded-lg font-label-lg text-label-lg flex items-center gap-2" href="#">
+<span class="material-symbols-outlined text-[18px]">book_5</span> Journal
+         </a>
+<a class="text-on-surface-variant hover:bg-surface-container-low transition-colors px-3 py-2 rounded-lg font-label-lg text-label-lg flex items-center gap-2" href="#">
+<span class="material-symbols-outlined text-[18px]">biotech</span> Evidence
+         </a>
+<a class="text-primary font-bold bg-surface-container-low px-3 py-2 rounded-lg font-label-lg text-label-lg flex items-center gap-2 border-b-2 border-primary" href="#">
+<span class="material-symbols-outlined text-[18px]" style="font-variation-settings: 'FILL' 1;">account_tree</span> Relations
+         </a>
+<a class="text-on-surface-variant hover:bg-surface-container-low transition-colors px-3 py-2 rounded-lg font-label-lg text-label-lg flex items-center gap-2" href="#">
+<span class="material-symbols-outlined text-[18px]">analytics</span> Synthesis
+         </a>
+</div>
+</body></html>

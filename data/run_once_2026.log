@@ -1,0 +1,157 @@
+INFO httpx: HTTP Request: GET https://news.google.com/rss/search?q=%22Kaszek%22&hl=es-419&gl=MX&ceid=MX%3Aes-419 "HTTP/1.1 200 OK"
+INFO hd_scraper.pipeline: google_news[Kaszek/ronda] vistos=72 escritos=0 no_fechados=0 duplicados=72 rechazados=0 filtrados=0 errores=0
+INFO httpx: HTTP Request: GET https://news.google.com/rss/search?q=%22monashees%22&hl=es-419&gl=MX&ceid=MX%3Aes-419 "HTTP/1.1 200 OK"
+INFO hd_scraper.pipeline: google_news[monashees/ronda] vistos=50 escritos=0 no_fechados=0 duplicados=50 rechazados=0 filtrados=0 errores=0
+INFO httpx: HTTP Request: GET https://news.google.com/rss/search?q=%22NXTP+Ventures%22&hl=es-419&gl=MX&ceid=MX%3Aes-419 "HTTP/1.1 200 OK"
+INFO hd_scraper.pipeline: google_news[NXTP Ventures/ronda] vistos=10 escritos=0 no_fechados=0 duplicados=10 rechazados=0 filtrados=0 errores=0
+INFO httpx: HTTP Request: GET https://news.google.com/rss/search?q=%22ALLVP%22&hl=es-419&gl=MX&ceid=MX%3Aes-419 "HTTP/1.1 200 OK"
+INFO hd_scraper.pipeline: google_news[ALLVP/ronda] vistos=25 escritos=0 no_fechados=0 duplicados=25 rechazados=0 filtrados=0 errores=0
+INFO httpx: HTTP Request: GET https://news.google.com/rss/search?q=%22Dalus+Capital%22&hl=es-419&gl=MX&ceid=MX%3Aes-419 "HTTP/1.1 200 OK"
+INFO hd_scraper.pipeline: google_news[Dalus Capital/ronda] vistos=22 escritos=0 no_fechados=0 duplicados=22 rechazados=0 filtrados=0 errores=0
+INFO httpx: HTTP Request: GET https://news.google.com/rss/search?q=%22Cometa%22&hl=es-419&gl=MX&ceid=MX%3Aes-419 "HTTP/1.1 200 OK"
+INFO hd_scraper.pipeline: google_news[Cometa/ronda] vistos=100 escritos=2 no_fechados=0 duplicados=98 rechazados=0 filtrados=0 errores=0
+INFO httpx: HTTP Request: GET https://news.google.com/rss/search?q=%22Angel+Ventures%22&hl=es-419&gl=MX&ceid=MX%3Aes-419 "HTTP/1.1 200 OK"
+INFO hd_scraper.pipeline: google_news[Angel Ventures/ronda] vistos=47 escritos=0 no_fechados=0 duplicados=47 rechazados=0 filtrados=0 errores=0
+INFO httpx: HTTP Request: GET https://news.google.com/rss/search?q=%22Mountain+Nazca%22&hl=es-419&gl=MX&ceid=MX%3Aes-419 "HTTP/1.1 200 OK"
+INFO hd_scraper.pipeline: google_news[Mountain Nazca/ronda] vistos=16 escritos=0 no_fechados=0 duplicados=16 rechazados=0 filtrados=0 errores=0
+INFO httpx: HTTP Request: GET https://news.google.com/rss/search?q=%22Magma+Partners%22&hl=es-419&gl=MX&ceid=MX%3Aes-419 "HTTP/1.1 200 OK"
+INFO hd_scraper.pipeline: google_news[Magma Partners/ronda] vistos=19 escritos=0 no_fechados=0 duplicados=19 rechazados=0 filtrados=0 errores=0
+INFO httpx: HTTP Request: GET https://news.google.com/rss/search?q=%22Amplifica+Capital%22&hl=es-419&gl=MX&ceid=MX%3Aes-419 "HTTP/1.1 200 OK"
+INFO hd_scraper.pipeline: google_news[Amplifica Capital/ronda] vistos=10 escritos=0 no_fechados=0 duplicados=10 rechazados=0 filtrados=0 errores=0
+INFO httpx: HTTP Request: GET https://news.google.com/rss/search?q=%22Nubank%22&hl=es-419&gl=MX&ceid=MX%3Aes-419 "HTTP/1.1 200 OK"
+INFO hd_scraper.pipeline: google_news[Nubank/ronda] vistos=100 escritos=0 no_fechados=0 duplicados=100 rechazados=0 filtrados=0 errores=0
+INFO httpx: HTTP Request: GET https://news.google.com/rss/search?q=%22Rappi%22&hl=es-419&gl=MX&ceid=MX%3Aes-419 "HTTP/1.1 200 OK"
+INFO hd_scraper.pipeline: google_news[Rappi/ronda] vistos=100 escritos=0 no_fechados=0 duplicados=100 rechazados=0 filtrados=0 errores=0
+INFO httpx: HTTP Request: GET https://news.google.com/rss/search?q=%22Kavak%22&hl=es-419&gl=MX&ceid=MX%3Aes-419 "HTTP/1.1 200 OK"
+INFO hd_scraper.pipeline: google_news[Kavak/ronda] vistos=100 escritos=0 no_fechados=0 duplicados=100 rechazados=0 filtrados=0 errores=0
+INFO httpx: HTTP Request: GET https://news.google.com/rss/search?q=%22Bitso%22&hl=es-419&gl=MX&ceid=MX%3Aes-419 "HTTP/1.1 200 OK"
+INFO hd_scraper.pipeline: google_news[Bitso/ronda] vistos=100 escritos=0 no_fechados=0 duplicados=100 rechazados=0 filtrados=0 errores=0
+INFO httpx: HTTP Request: GET https://news.google.com/rss/search?q=%22Clip%22&hl=es-419&gl=MX&ceid=MX%3Aes-419 "HTTP/1.1 200 OK"
+INFO hd_scraper.pipeline: google_news[Clip/ronda] vistos=100 escritos=2 no_fechados=0 duplicados=98 rechazados=0 filtrados=0 errores=0
+INFO httpx: HTTP Request: GET https://news.google.com/rss/search?q=%22Konf%C3%ADo%22&hl=es-419&gl=MX&ceid=MX%3Aes-419 "HTTP/1.1 200 OK"
+INFO hd_scraper.pipeline: google_news[Konfío/ronda] vistos=94 escritos=3 no_fechados=0 duplicados=91 rechazados=0 filtrados=0 errores=0
+INFO httpx: HTTP Request: GET https://news.google.com/rss/search?q=%22Clara%22&hl=es-419&gl=MX&ceid=MX%3Aes-419 "HTTP/1.1 200 OK"
+INFO hd_scraper.pipeline: google_news[Clara/ronda] vistos=102 escritos=13 no_fechados=0 duplicados=89 rechazados=0 filtrados=0 errores=0
+INFO httpx: HTTP Request: GET https://news.google.com/rss/search?q=%22Nowports%22&hl=es-419&gl=MX&ceid=MX%3Aes-419 "HTTP/1.1 200 OK"
+INFO hd_scraper.pipeline: google_news[Nowports/ronda] vistos=77 escritos=0 no_fechados=0 duplicados=77 rechazados=0 filtrados=0 errores=0
+INFO httpx: HTTP Request: GET https://news.google.com/rss/search?q=%22Ual%C3%A1%22&hl=es-419&gl=MX&ceid=MX%3Aes-419 "HTTP/1.1 200 OK"
+INFO hd_scraper.pipeline: google_news[Ualá/ronda] vistos=100 escritos=3 no_fechados=0 duplicados=97 rechazados=0 filtrados=0 errores=0
+INFO httpx: HTTP Request: GET https://news.google.com/rss/search?q=%22J%C3%BCsto%22&hl=es-419&gl=MX&ceid=MX%3Aes-419 "HTTP/1.1 200 OK"
+INFO hd_scraper.pipeline: google_news[Jüsto/ronda] vistos=100 escritos=0 no_fechados=0 duplicados=100 rechazados=0 filtrados=0 errores=0
+INFO httpx: HTTP Request: GET https://news.google.com/rss/search?q=%22Palenca%22&hl=es-419&gl=MX&ceid=MX%3Aes-419 "HTTP/1.1 200 OK"
+INFO hd_scraper.pipeline: google_news[Palenca/ronda] vistos=11 escritos=0 no_fechados=0 duplicados=11 rechazados=0 filtrados=0 errores=0
+INFO httpx: HTTP Request: GET https://news.google.com/rss/search?q=%22Trii%22&hl=es-419&gl=MX&ceid=MX%3Aes-419 "HTTP/1.1 200 OK"
+INFO hd_scraper.pipeline: google_news[Trii/ronda] vistos=100 escritos=0 no_fechados=0 duplicados=100 rechazados=0 filtrados=0 errores=0
+INFO httpx: HTTP Request: GET https://news.google.com/rss/search?q=%22Toku%22&hl=es-419&gl=MX&ceid=MX%3Aes-419 "HTTP/1.1 200 OK"
+INFO hd_scraper.pipeline: google_news[Toku/ronda] vistos=59 escritos=0 no_fechados=0 duplicados=59 rechazados=0 filtrados=0 errores=0
+INFO httpx: HTTP Request: GET https://news.google.com/rss/search?q=%22Cobre%22&hl=es-419&gl=MX&ceid=MX%3Aes-419 "HTTP/1.1 200 OK"
+INFO hd_scraper.pipeline: google_news[Cobre/ronda] vistos=100 escritos=1 no_fechados=0 duplicados=99 rechazados=0 filtrados=0 errores=0
+INFO httpx: HTTP Request: GET https://news.google.com/rss/search?q=%22Mundi%22&hl=es-419&gl=MX&ceid=MX%3Aes-419 "HTTP/1.1 200 OK"
+INFO hd_scraper.pipeline: google_news[Mundi/ronda] vistos=100 escritos=0 no_fechados=0 duplicados=100 rechazados=0 filtrados=0 errores=0
+INFO httpx: HTTP Request: GET https://news.google.com/rss/search?q=%22Kamino%22&hl=es-419&gl=MX&ceid=MX%3Aes-419 "HTTP/1.1 200 OK"
+INFO hd_scraper.pipeline: google_news[Kamino/ronda] vistos=44 escritos=7 no_fechados=0 duplicados=37 rechazados=0 filtrados=0 errores=0
+INFO httpx: HTTP Request: GET https://news.google.com/rss/search?q=%22Trace+Finance%22&hl=es-419&gl=MX&ceid=MX%3Aes-419 "HTTP/1.1 200 OK"
+INFO hd_scraper.pipeline: google_news[Trace Finance/ronda] vistos=8 escritos=0 no_fechados=0 duplicados=8 rechazados=0 filtrados=0 errores=0
+INFO httpx: HTTP Request: GET https://news.google.com/rss/search?q=%22Divibank%22&hl=es-419&gl=MX&ceid=MX%3Aes-419 "HTTP/1.1 200 OK"
+INFO hd_scraper.pipeline: google_news[Divibank/ronda] vistos=1 escritos=0 no_fechados=0 duplicados=1 rechazados=0 filtrados=0 errores=0
+INFO httpx: HTTP Request: GET https://news.google.com/rss/search?q=%22Pomelo%22&hl=es-419&gl=MX&ceid=MX%3Aes-419 "HTTP/1.1 200 OK"
+INFO hd_scraper.pipeline: google_news[Pomelo/ronda] vistos=100 escritos=4 no_fechados=0 duplicados=96 rechazados=0 filtrados=0 errores=0
+INFO httpx: HTTP Request: GET https://news.google.com/rss/search?q=%22Simetrik%22&hl=es-419&gl=MX&ceid=MX%3Aes-419 "HTTP/1.1 200 OK"
+INFO hd_scraper.pipeline: google_news[Simetrik/ronda] vistos=28 escritos=0 no_fechados=0 duplicados=28 rechazados=0 filtrados=0 errores=0
+INFO httpx: HTTP Request: GET https://news.google.com/rss/search?q=%22Fintual%22&hl=es-419&gl=MX&ceid=MX%3Aes-419 "HTTP/1.1 200 OK"
+INFO hd_scraper.pipeline: google_news[Fintual/ronda] vistos=100 escritos=0 no_fechados=0 duplicados=100 rechazados=0 filtrados=0 errores=0
+INFO httpx: HTTP Request: GET https://news.google.com/rss/search?q=%22Zubale%22&hl=es-419&gl=MX&ceid=MX%3Aes-419 "HTTP/1.1 200 OK"
+INFO hd_scraper.pipeline: google_news[Zubale/ronda] vistos=24 escritos=0 no_fechados=0 duplicados=24 rechazados=0 filtrados=0 errores=0
+INFO httpx: HTTP Request: GET https://news.google.com/rss/search?q=%22Start-Up+Chile%22&hl=es-419&gl=MX&ceid=MX%3Aes-419 "HTTP/1.1 200 OK"
+INFO hd_scraper.pipeline: google_news[Start-Up Chile/ronda] vistos=100 escritos=0 no_fechados=0 duplicados=100 rechazados=0 filtrados=0 errores=0
+INFO httpx: HTTP Request: GET https://news.google.com/rss/search?q=%22Wayra%22&hl=es-419&gl=MX&ceid=MX%3Aes-419 "HTTP/1.1 200 OK"
+INFO hd_scraper.pipeline: google_news[Wayra/ronda] vistos=100 escritos=0 no_fechados=0 duplicados=100 rechazados=0 filtrados=0 errores=0
+INFO httpx: HTTP Request: GET https://news.google.com/rss/search?q=%22Endeavor%22&hl=es-419&gl=MX&ceid=MX%3Aes-419 "HTTP/1.1 200 OK"
+INFO hd_scraper.pipeline: google_news[Endeavor/ronda] vistos=100 escritos=0 no_fechados=0 duplicados=100 rechazados=0 filtrados=0 errores=0
+INFO httpx: HTTP Request: GET https://news.google.com/rss/search?q=%22INCmty%22&hl=es-419&gl=MX&ceid=MX%3Aes-419 "HTTP/1.1 200 OK"
+INFO hd_scraper.pipeline: google_news[INCmty/ronda] vistos=100 escritos=3 no_fechados=0 duplicados=97 rechazados=0 filtrados=0 errores=0
+INFO httpx: HTTP Request: GET https://news.google.com/rss/search?q=%22MassChallenge+M%C3%A9xico%22&hl=es-419&gl=MX&ceid=MX%3Aes-419 "HTTP/1.1 200 OK"
+INFO hd_scraper.pipeline: google_news[MassChallenge México/ronda] vistos=10 escritos=0 no_fechados=0 duplicados=10 rechazados=0 filtrados=0 errores=0
+INFO httpx: HTTP Request: GET https://news.google.com/rss/search?q=%22Founder+Institute%22&hl=es-419&gl=MX&ceid=MX%3Aes-419 "HTTP/1.1 200 OK"
+INFO hd_scraper.pipeline: google_news[Founder Institute/ronda] vistos=50 escritos=1 no_fechados=0 duplicados=49 rechazados=0 filtrados=0 errores=0
+INFO httpx: HTTP Request: GET https://news.google.com/rss/search?q=%22Socialab%22&hl=es-419&gl=MX&ceid=MX%3Aes-419 "HTTP/1.1 200 OK"
+INFO hd_scraper.pipeline: google_news[Socialab/ronda] vistos=45 escritos=0 no_fechados=0 duplicados=45 rechazados=0 filtrados=0 errores=0
+INFO httpx: HTTP Request: GET https://news.google.com/rss/search?q=%22Platanus+Ventures%22&hl=es-419&gl=MX&ceid=MX%3Aes-419 "HTTP/1.1 200 OK"
+INFO hd_scraper.pipeline: google_news[Platanus Ventures/ronda] vistos=22 escritos=0 no_fechados=0 duplicados=22 rechazados=0 filtrados=0 errores=0
+INFO httpx: HTTP Request: GET https://news.google.com/rss/search?q=%22500+Global+LATAM%22&hl=es-419&gl=MX&ceid=MX%3Aes-419 "HTTP/1.1 200 OK"
+INFO hd_scraper.pipeline: google_news[500 Global LATAM/ronda] vistos=10 escritos=0 no_fechados=0 duplicados=10 rechazados=0 filtrados=0 errores=0
+INFO httpx: HTTP Request: GET https://news.google.com/rss/search?q=%22Y+Combinator%22&hl=es-419&gl=MX&ceid=MX%3Aes-419 "HTTP/1.1 200 OK"
+INFO hd_scraper.pipeline: google_news[Y Combinator/ronda] vistos=100 escritos=0 no_fechados=0 duplicados=100 rechazados=0 filtrados=0 errores=0
+INFO httpx: HTTP Request: GET https://news.google.com/rss/search?q=%22Mercado+Libre%22&hl=es-419&gl=MX&ceid=MX%3Aes-419 "HTTP/1.1 200 OK"
+INFO hd_scraper.pipeline: google_news[Mercado Libre/ronda] vistos=100 escritos=1 no_fechados=0 duplicados=99 rechazados=0 filtrados=0 errores=0
+INFO httpx: HTTP Request: GET https://news.google.com/rss/search?q=%22Globant%22&hl=es-419&gl=MX&ceid=MX%3Aes-419 "HTTP/1.1 200 OK"
+INFO hd_scraper.pipeline: google_news[Globant/ronda] vistos=100 escritos=2 no_fechados=0 duplicados=98 rechazados=0 filtrados=0 errores=0
+INFO httpx: HTTP Request: GET https://news.google.com/rss/search?q=%22Grupo+Bimbo%22&hl=es-419&gl=MX&ceid=MX%3Aes-419 "HTTP/1.1 200 OK"
+INFO hd_scraper.pipeline: google_news[Grupo Bimbo/ronda] vistos=100 escritos=0 no_fechados=0 duplicados=100 rechazados=0 filtrados=0 errores=0
+INFO httpx: HTTP Request: GET https://news.google.com/rss/search?q=%22FEMSA%22&hl=es-419&gl=MX&ceid=MX%3Aes-419 "HTTP/1.1 200 OK"
+INFO hd_scraper.pipeline: google_news[FEMSA/ronda] vistos=100 escritos=2 no_fechados=0 duplicados=98 rechazados=0 filtrados=0 errores=0
+INFO httpx: HTTP Request: GET https://news.google.com/rss/search?q=%22Falabella%22&hl=es-419&gl=MX&ceid=MX%3Aes-419 "HTTP/1.1 200 OK"
+INFO hd_scraper.pipeline: google_news[Falabella/ronda] vistos=100 escritos=0 no_fechados=0 duplicados=100 rechazados=0 filtrados=0 errores=0
+INFO httpx: HTTP Request: GET https://news.google.com/rss/search?q=%22CEMEX%22&hl=es-419&gl=MX&ceid=MX%3Aes-419 "HTTP/1.1 200 OK"
+INFO hd_scraper.pipeline: google_news[CEMEX/ronda] vistos=100 escritos=0 no_fechados=0 duplicados=100 rechazados=0 filtrados=0 errores=0
+INFO httpx: HTTP Request: GET https://news.google.com/rss/search?q=%22BBVA+M%C3%A9xico%22&hl=es-419&gl=MX&ceid=MX%3Aes-419 "HTTP/1.1 200 OK"
+INFO hd_scraper.pipeline: google_news[BBVA México/ronda] vistos=100 escritos=1 no_fechados=0 duplicados=99 rechazados=0 filtrados=0 errores=0
+INFO httpx: HTTP Request: GET https://news.google.com/rss/search?q=%22Banco+Santander+M%C3%A9xico%22&hl=es-419&gl=MX&ceid=MX%3Aes-419 "HTTP/1.1 200 OK"
+INFO hd_scraper.pipeline: google_news[Banco Santander México/ronda] vistos=100 escritos=0 no_fechados=0 duplicados=100 rechazados=0 filtrados=0 errores=0
+INFO httpx: HTTP Request: GET https://news.google.com/rss/search?q=%22Arca+Continental%22&hl=es-419&gl=MX&ceid=MX%3Aes-419 "HTTP/1.1 200 OK"
+INFO hd_scraper.pipeline: google_news[Arca Continental/ronda] vistos=100 escritos=1 no_fechados=0 duplicados=99 rechazados=0 filtrados=0 errores=0
+INFO httpx: HTTP Request: GET https://news.google.com/rss/search?q=%22Grupo+Salinas%22&hl=es-419&gl=MX&ceid=MX%3Aes-419 "HTTP/1.1 200 OK"
+INFO hd_scraper.pipeline: google_news[Grupo Salinas/ronda] vistos=100 escritos=0 no_fechados=0 duplicados=100 rechazados=0 filtrados=0 errores=0
+región=Toda LATAM
+google_news[Kaszek/ronda] vistos=72 escritos=0 no_fechados=0 duplicados=72 rechazados=0 filtrados=0 errores=0
+google_news[monashees/ronda] vistos=50 escritos=0 no_fechados=0 duplicados=50 rechazados=0 filtrados=0 errores=0
+google_news[NXTP Ventures/ronda] vistos=10 escritos=0 no_fechados=0 duplicados=10 rechazados=0 filtrados=0 errores=0
+google_news[ALLVP/ronda] vistos=25 escritos=0 no_fechados=0 duplicados=25 rechazados=0 filtrados=0 errores=0
+google_news[Dalus Capital/ronda] vistos=22 escritos=0 no_fechados=0 duplicados=22 rechazados=0 filtrados=0 errores=0
+google_news[Cometa/ronda] vistos=100 escritos=2 no_fechados=0 duplicados=98 rechazados=0 filtrados=0 errores=0
+google_news[Angel Ventures/ronda] vistos=47 escritos=0 no_fechados=0 duplicados=47 rechazados=0 filtrados=0 errores=0
+google_news[Mountain Nazca/ronda] vistos=16 escritos=0 no_fechados=0 duplicados=16 rechazados=0 filtrados=0 errores=0
+google_news[Magma Partners/ronda] vistos=19 escritos=0 no_fechados=0 duplicados=19 rechazados=0 filtrados=0 errores=0
+google_news[Amplifica Capital/ronda] vistos=10 escritos=0 no_fechados=0 duplicados=10 rechazados=0 filtrados=0 errores=0
+google_news[Nubank/ronda] vistos=100 escritos=0 no_fechados=0 duplicados=100 rechazados=0 filtrados=0 errores=0
+google_news[Rappi/ronda] vistos=100 escritos=0 no_fechados=0 duplicados=100 rechazados=0 filtrados=0 errores=0
+google_news[Kavak/ronda] vistos=100 escritos=0 no_fechados=0 duplicados=100 rechazados=0 filtrados=0 errores=0
+google_news[Bitso/ronda] vistos=100 escritos=0 no_fechados=0 duplicados=100 rechazados=0 filtrados=0 errores=0
+google_news[Clip/ronda] vistos=100 escritos=2 no_fechados=0 duplicados=98 rechazados=0 filtrados=0 errores=0
+google_news[Konfío/ronda] vistos=94 escritos=3 no_fechados=0 duplicados=91 rechazados=0 filtrados=0 errores=0
+google_news[Clara/ronda] vistos=102 escritos=13 no_fechados=0 duplicados=89 rechazados=0 filtrados=0 errores=0
+google_news[Nowports/ronda] vistos=77 escritos=0 no_fechados=0 duplicados=77 rechazados=0 filtrados=0 errores=0
+google_news[Ualá/ronda] vistos=100 escritos=3 no_fechados=0 duplicados=97 rechazados=0 filtrados=0 errores=0
+google_news[Jüsto/ronda] vistos=100 escritos=0 no_fechados=0 duplicados=100 rechazados=0 filtrados=0 errores=0
+google_news[Palenca/ronda] vistos=11 escritos=0 no_fechados=0 duplicados=11 rechazados=0 filtrados=0 errores=0
+google_news[Trii/ronda] vistos=100 escritos=0 no_fechados=0 duplicados=100 rechazados=0 filtrados=0 errores=0
+google_news[Toku/ronda] vistos=59 escritos=0 no_fechados=0 duplicados=59 rechazados=0 filtrados=0 errores=0
+google_news[Cobre/ronda] vistos=100 escritos=1 no_fechados=0 duplicados=99 rechazados=0 filtrados=0 errores=0
+google_news[Mundi/ronda] vistos=100 escritos=0 no_fechados=0 duplicados=100 rechazados=0 filtrados=0 errores=0
+google_news[Kamino/ronda] vistos=44 escritos=7 no_fechados=0 duplicados=37 rechazados=0 filtrados=0 errores=0
+google_news[Trace Finance/ronda] vistos=8 escritos=0 no_fechados=0 duplicados=8 rechazados=0 filtrados=0 errores=0
+google_news[Divibank/ronda] vistos=1 escritos=0 no_fechados=0 duplicados=1 rechazados=0 filtrados=0 errores=0
+google_news[Pomelo/ronda] vistos=100 escritos=4 no_fechados=0 duplicados=96 rechazados=0 filtrados=0 errores=0
+google_news[Simetrik/ronda] vistos=28 escritos=0 no_fechados=0 duplicados=28 rechazados=0 filtrados=0 errores=0
+google_news[Fintual/ronda] vistos=100 escritos=0 no_fechados=0 duplicados=100 rechazados=0 filtrados=0 errores=0
+google_news[Zubale/ronda] vistos=24 escritos=0 no_fechados=0 duplicados=24 rechazados=0 filtrados=0 errores=0
+google_news[Start-Up Chile/ronda] vistos=100 escritos=0 no_fechados=0 duplicados=100 rechazados=0 filtrados=0 errores=0
+google_news[Wayra/ronda] vistos=100 escritos=0 no_fechados=0 duplicados=100 rechazados=0 filtrados=0 errores=0
+google_news[Endeavor/ronda] vistos=100 escritos=0 no_fechados=0 duplicados=100 rechazados=0 filtrados=0 errores=0
+google_news[INCmty/ronda] vistos=100 escritos=3 no_fechados=0 duplicados=97 rechazados=0 filtrados=0 errores=0
+google_news[MassChallenge México/ronda] vistos=10 escritos=0 no_fechados=0 duplicados=10 rechazados=0 filtrados=0 errores=0
+google_news[Founder Institute/ronda] vistos=50 escritos=1 no_fechados=0 duplicados=49 rechazados=0 filtrados=0 errores=0
+google_news[Socialab/ronda] vistos=45 escritos=0 no_fechados=0 duplicados=45 rechazados=0 filtrados=0 errores=0
+google_news[Platanus Ventures/ronda] vistos=22 escritos=0 no_fechados=0 duplicados=22 rechazados=0 filtrados=0 errores=0
+google_news[500 Global LATAM/ronda] vistos=10 escritos=0 no_fechados=0 duplicados=10 rechazados=0 filtrados=0 errores=0
+google_news[Y Combinator/ronda] vistos=100 escritos=0 no_fechados=0 duplicados=100 rechazados=0 filtrados=0 errores=0
+google_news[Mercado Libre/ronda] vistos=100 escritos=1 no_fechados=0 duplicados=99 rechazados=0 filtrados=0 errores=0
+google_news[Globant/ronda] vistos=100 escritos=2 no_fechados=0 duplicados=98 rechazados=0 filtrados=0 errores=0
+google_news[Grupo Bimbo/ronda] vistos=100 escritos=0 no_fechados=0 duplicados=100 rechazados=0 filtrados=0 errores=0
+google_news[FEMSA/ronda] vistos=100 escritos=2 no_fechados=0 duplicados=98 rechazados=0 filtrados=0 errores=0
+google_news[Falabella/ronda] vistos=100 escritos=0 no_fechados=0 duplicados=100 rechazados=0 filtrados=0 errores=0
+google_news[CEMEX/ronda] vistos=100 escritos=0 no_fechados=0 duplicados=100 rechazados=0 filtrados=0 errores=0
+google_news[BBVA México/ronda] vistos=100 escritos=1 no_fechados=0 duplicados=99 rechazados=0 filtrados=0 errores=0
+google_news[Banco Santander México/ronda] vistos=100 escritos=0 no_fechados=0 duplicados=100 rechazados=0 filtrados=0 errores=0
+google_news[Arca Continental/ronda] vistos=100 escritos=1 no_fechados=0 duplicados=99 rechazados=0 filtrados=0 errores=0
+google_news[Grupo Salinas/ronda] vistos=100 escritos=0 no_fechados=0 duplicados=100 rechazados=0 filtrados=0 errores=0

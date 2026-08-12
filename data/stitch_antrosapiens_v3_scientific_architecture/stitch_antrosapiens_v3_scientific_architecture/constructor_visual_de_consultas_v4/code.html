@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Visual Query Constructor - AntroSapiens V4</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;family=Newsreader:ital,wght@0,400;0,500;0,600;1,400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "inverse-surface": "#303129",
+                        "on-primary-fixed-variant": "#2c4c4c",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary-fixed": "#ffdbd0",
+                        "error-container": "#ffdad6",
+                        "on-surface": "#1b1c15",
+                        "error": "#ba1a1a",
+                        "background": "#fcfaed",
+                        "on-secondary-fixed": "#390c00",
+                        "secondary-container": "#fd6b36",
+                        "surface-container": "#f0eee2",
+                        "on-tertiary-fixed-variant": "#3d475b",
+                        "on-secondary-fixed-variant": "#832600",
+                        "secondary-fixed-dim": "#ffb59d",
+                        "on-error-container": "#93000a",
+                        "surface-container-highest": "#e5e3d7",
+                        "on-error": "#ffffff",
+                        "primary-container": "#2f4f4f",
+                        "outline": "#717878",
+                        "on-primary-container": "#9ec0bf",
+                        "tertiary": "#293347",
+                        "surface-dim": "#dcdacf",
+                        "surface": "#fcfaed",
+                        "on-background": "#1b1c15",
+                        "outline-variant": "#c1c8c7",
+                        "primary": "#173838",
+                        "secondary": "#ac3400",
+                        "inverse-primary": "#abcdcd",
+                        "primary-fixed-dim": "#abcdcd",
+                        "on-primary": "#ffffff",
+                        "on-tertiary": "#ffffff",
+                        "inverse-on-surface": "#f3f1e5",
+                        "primary-fixed": "#c6e9e9",
+                        "on-secondary": "#ffffff",
+                        "on-tertiary-fixed": "#111c2e",
+                        "tertiary-fixed-dim": "#bcc7df",
+                        "on-secondary-container": "#5d1900",
+                        "on-tertiary-container": "#afbad2",
+                        "surface-tint": "#446464",
+                        "tertiary-container": "#404a5e",
+                        "on-primary-fixed": "#002020",
+                        "surface-container-high": "#eae8dd",
+                        "surface-bright": "#fcfaed",
+                        "surface-container-low": "#f6f4e8",
+                        "on-surface-variant": "#414848",
+                        "tertiary-fixed": "#d8e2fc",
+                        "surface-variant": "#e5e3d7"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "stack-xl": "3rem",
+                        "gutter": "2rem",
+                        "margin-page": "4rem",
+                        "stack-sm": "0.75rem",
+                        "margin-mobile": "1.5rem",
+                        "stack-md": "1.5rem"
+                    },
+                    "fontFamily": {
+                        "headline-lg-mobile": ["Newsreader"],
+                        "headline-lg": ["Newsreader"],
+                        "body-lg": ["Newsreader"],
+                        "title-md": ["Newsreader"],
+                        "label-md": ["Inter"],
+                        "technical-mono": ["JetBrains Mono"],
+                        "display-lg": ["Newsreader"],
+                        "label-sm": ["Inter"],
+                        "body-md": ["Newsreader"]
+                    },
+                    "fontSize": {
+                        "headline-lg-mobile": ["28px", {"lineHeight": "36px", "fontWeight": "500"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "500"}],
+                        "body-lg": ["19px", {"lineHeight": "32px", "fontWeight": "400"}],
+                        "title-md": ["22px", {"lineHeight": "28px", "fontWeight": "500"}],
+                        "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                        "technical-mono": ["13px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                        "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "600"}],
+                        "body-md": ["17px", {"lineHeight": "28px", "fontWeight": "400"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            background-color: #fcfaed; /* Parchment background */
+            color: #1b1c15; /* On Surface */
+            background-image: url('data:image/svg+xml,%3Csvg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="%23c1c8c7" fill-opacity="0.1" fill-rule="evenodd"%3E%3Ccircle cx="3" cy="3" r="1"/%3E%3Ccircle cx="13" cy="13" r="1"/%3E%3C/g%3E%3C/svg%3E'); /* Subtle texture */
+        }
+        
+        .ambient-shadow {
+            box-shadow: 0 4px 24px -4px rgba(27, 28, 21, 0.04);
+        }
+        
+        .thin-border {
+            border: 1px solid rgba(71, 85, 105, 0.15);
+        }
+
+        .horizontal-rule {
+            height: 1px;
+            background: linear-gradient(to right, transparent, rgba(71, 85, 105, 0.15) 20%, rgba(71, 85, 105, 0.15) 80%, transparent);
+            margin: 2rem auto;
+            width: 80%;
+        }
+        
+        /* Selectively hide nav on this transactional/focused screen */
+        nav { display: none !important; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="min-h-screen flex flex-col font-body-md text-body-md antialiased selection:bg-secondary-fixed selection:text-on-secondary-fixed">
+<!-- TopAppBar -->
+<header class="bg-surface dark:bg-surface border-b border-outline-variant/15 flex justify-between items-center px-gutter w-full h-16 sticky top-0 z-10 transition-all">
+<button class="text-primary hover:bg-surface-container-high/50 transition-colors p-2 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">arrow_back</span>
+</button>
+<h1 class="font-headline-lg text-headline-lg font-medium text-primary dark:text-on-primary-container text-center flex-1">
+            Constructor de Consultas
+        </h1>
+<button class="font-label-md text-label-md text-secondary hover:bg-surface-container-high/50 transition-colors px-4 py-2 rounded-full flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">restart_alt</span>
+<span class="hidden md:inline">Reset</span>
+</button>
+</header>
+<main class="flex-1 max-w-[720px] mx-auto w-full px-margin-mobile md:px-0 py-stack-xl flex flex-col gap-stack-xl">
+<!-- Inquiry Focus -->
+<section class="bg-surface-container-low rounded-xl p-stack-md thin-border ambient-shadow relative overflow-hidden">
+<div class="absolute top-0 left-0 w-full h-1 bg-secondary opacity-80"></div>
+<div class="flex items-start gap-4">
+<div class="bg-surface-container-highest p-2 rounded-full shrink-0">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">target</span>
+</div>
+<div>
+<h2 class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-2">Pregunta Antropológica Activa</h2>
+<p class="font-body-lg text-body-lg text-on-surface italic text-primary/90">
+                        "¿Cómo las narrativas de escasez hídrica legitiman o desestabilizan el poder de los líderes comunitarios en la cuenca alta?"
+                    </p>
+<div class="mt-4 flex gap-2">
+<span class="font-technical-mono text-technical-mono bg-surface-container text-on-surface-variant px-2 py-1 rounded thin-border">ID: QRY-7A4B</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Conversational Selection Area -->
+<section class="bg-surface-container-lowest p-stack-xl rounded-xl thin-border ambient-shadow relative">
+<h2 class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-6 absolute top-6 left-stack-xl">Articulación de Búsqueda</h2>
+<div class="mt-8 font-title-md text-title-md leading-[2.5] text-on-surface">
+                Quiero examinar 
+                
+                <div class="inline-flex items-center group relative cursor-pointer mx-1 align-middle">
+<span class="bg-surface-container-high text-primary px-3 py-1 rounded-md thin-border flex items-center gap-1 hover:bg-surface-variant transition-colors">
+                        Evidencias Narrativas
+                        <span class="material-symbols-outlined text-[16px] text-on-surface-variant group-hover:text-primary transition-colors">arrow_drop_down</span>
+</span>
+</div>
+                
+                que involucren a 
+                
+                <div class="inline-flex items-center group relative cursor-pointer mx-1 align-middle">
+<span class="bg-secondary-fixed text-on-secondary-fixed px-3 py-1 rounded-md border border-secondary-fixed-dim flex items-center gap-1 font-medium shadow-sm">
+<span class="material-symbols-outlined text-[16px]">person</span>
+                        Líderes Comunitarios
+                        <button class="hover:bg-black/10 rounded-full p-0.5 ml-1 flex items-center justify-center transition-colors">
+<span class="material-symbols-outlined text-[14px]">close</span>
+</button>
+</span>
+</div>
+                
+                específicamente en contextos relacionados con 
+                
+                <div class="inline-flex items-center group relative cursor-pointer mx-1 align-middle">
+<span class="bg-surface-container-highest text-on-surface-variant px-3 py-1 rounded-md border border-dashed border-outline-variant flex items-center gap-2 hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-[16px] text-outline">add</span>
+<span class="font-label-md text-label-md italic">Añadir Ritual...</span>
+</span>
+</div>
+                
+                dentro del marco analítico de 
+                
+                <div class="inline-flex items-center group relative cursor-pointer mx-1 align-middle">
+<span class="bg-surface-container-high text-primary px-3 py-1 rounded-md thin-border flex items-center gap-1 hover:bg-surface-variant transition-colors">
+                        Legitimidad de Autoridad
+                        <span class="material-symbols-outlined text-[16px] text-on-surface-variant group-hover:text-primary transition-colors">arrow_drop_down</span>
+</span>
+</div>
+                .
+            </div>
+<!-- AI Suggestion inline -->
+<div class="mt-8 flex items-start gap-3 bg-surface-container p-4 rounded-lg border border-outline-variant/30">
+<span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+<p class="font-technical-mono text-technical-mono text-on-surface-variant leading-relaxed">
+                    Sugiero considerar la inclusión del ritual <span class="bg-surface-container-highest px-1 rounded">Asamblea de Regantes</span> dado que co-ocurre con "Líderes Comunitarios" en el 78% de los nodos de legitimidad en esta región.
+                </p>
+</div>
+</section>
+<!-- The Library Metaphor / Selector -->
+<section class="flex flex-col gap-stack-md">
+<h3 class="font-title-md text-title-md text-primary font-medium flex items-center gap-2 border-b border-outline-variant/20 pb-2">
+<span class="material-symbols-outlined text-on-surface-variant" style="font-variation-settings: 'FILL' 0;">category</span>
+                Biblioteca de Conceptos
+            </h3>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-gutter">
+<!-- Actores (Persona Nodo) -->
+<div class="flex flex-col gap-4">
+<h4 class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider border-l-2 border-primary pl-2">Actores (Persona Nodo)</h4>
+<div class="flex flex-wrap gap-2">
+<button class="font-label-md text-label-md bg-surface-container-high hover:bg-secondary-fixed/50 hover:border-secondary-fixed-dim text-on-surface border border-outline-variant/30 px-3 py-1.5 rounded-full transition-all">
+                            Agricultores Base
+                        </button>
+<button class="font-label-md text-label-md bg-surface-container-high hover:bg-secondary-fixed/50 hover:border-secondary-fixed-dim text-on-surface border border-outline-variant/30 px-3 py-1.5 rounded-full transition-all opacity-50 cursor-not-allowed" title="No presente en esta cuenca">
+                            Técnicos Estatales
+                        </button>
+<button class="font-label-md text-label-md bg-secondary-fixed text-on-secondary-fixed border border-secondary-fixed-dim px-3 py-1.5 rounded-full transition-all flex items-center gap-1 shadow-sm font-medium">
+<span class="material-symbols-outlined text-[14px]">check</span>
+                            Líderes Comunitarios
+                        </button>
+<button class="font-label-md text-label-md bg-surface-container-high hover:bg-secondary-fixed/50 hover:border-secondary-fixed-dim text-on-surface border border-outline-variant/30 px-3 py-1.5 rounded-full transition-all">
+                            Ancianos Conservadores
+                        </button>
+</div>
+</div>
+<!-- Rituales -->
+<div class="flex flex-col gap-4">
+<h4 class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider border-l-2 border-secondary pl-2">Rituales y Prácticas</h4>
+<div class="flex flex-wrap gap-2">
+<button class="font-label-md text-label-md bg-surface-container-high hover:bg-surface-variant hover:border-outline-variant text-on-surface border border-outline-variant/30 px-3 py-1.5 rounded-full transition-all">
+                            Limpieza de Canales
+                        </button>
+<button class="font-label-md text-label-md bg-surface-container-high hover:bg-surface-variant hover:border-outline-variant text-on-surface border border-outline-variant/30 px-3 py-1.5 rounded-full transition-all">
+                            Pago a la Tierra
+                        </button>
+<button class="font-label-md text-label-md bg-surface-container-highest text-primary border border-primary px-3 py-1.5 rounded-full transition-all flex items-center gap-1 animate-pulse">
+<span class="material-symbols-outlined text-[14px]">auto_awesome</span>
+                            Asamblea de Regantes
+                        </button>
+<button class="font-label-md text-label-md bg-surface-container-high hover:bg-surface-variant hover:border-outline-variant text-on-surface border border-outline-variant/30 px-3 py-1.5 rounded-full transition-all">
+                            Distribución de Turnos
+                        </button>
+</div>
+</div>
+</div>
+</section>
+<div class="horizontal-rule"></div>
+<!-- CTA -->
+<div class="flex justify-center pb-stack-xl">
+<button class="bg-primary text-on-primary font-title-md text-title-md px-8 py-4 rounded-lg hover:bg-primary/90 transition-all shadow-md hover:shadow-lg flex items-center gap-3 w-full md:w-auto justify-center group">
+<span class="material-symbols-outlined group-hover:translate-x-1 transition-transform">water_drop</span>
+                Sumergirse en el Corpus
+            </button>
+</div>
+</main>
+</body></html>

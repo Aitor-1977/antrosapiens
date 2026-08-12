@@ -77,7 +77,31 @@ class Database:
         else:
             # psycopg admite múltiples sentencias en un execute sin parámetros.
             self.conn.execute(SCHEMA_POSTGRES.read_text(encoding="utf-8"))
+        self._migrar_pipeline_candidato()
         self.conn.commit()
+
+    def _migrar_pipeline_candidato(self) -> None:
+        """Migración idempotente: añade ``candidato_id`` a ``pipeline_comercial``.
+
+        ``CREATE TABLE IF NOT EXISTS`` no añade columnas a una tabla ya
+        existente (bases persistentes previas a la reparación BC-I↔BC-II).
+        El ALTER es un no-op cuando la columna ya existe (SQLite y Postgres
+        lanzan el mismo tipo de error de columna duplicada). El índice de la
+        columna se crea AQUÍ (y no en el DDL) porque en una base legacy la
+        columna aún no existe cuando ``executescript`` corre.
+        """
+        try:
+            self.conn.execute(
+                "ALTER TABLE pipeline_comercial ADD COLUMN candidato_id TEXT")
+        except Exception:
+            pass
+        try:
+            self.conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_pipeline_candidato "
+                "ON pipeline_comercial (candidato_id)")
+            self.conn.commit()
+        except Exception:  # pragma: no cover - defensivo, nunca tumba el arranque
+            pass
 
     # -- Operaciones ----------------------------------------------------
     def execute(self, sql: str, params: Iterable[Any] = ()):

@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Memoria Antropológica - AntroSapiens V4</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400&amp;family=Newsreader:opsz,wght@6..72,400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-variant": "#e5e3d7",
+                        "on-primary-container": "#9ec0bf",
+                        "outline": "#717878",
+                        "on-surface-variant": "#414848",
+                        "outline-variant": "#c1c8c7",
+                        "on-primary": "#ffffff",
+                        "surface-bright": "#fcfaed",
+                        "on-tertiary-container": "#afbad2",
+                        "error-container": "#ffdad6",
+                        "on-secondary": "#ffffff",
+                        "inverse-primary": "#abcdcd",
+                        "surface-container-lowest": "#ffffff",
+                        "tertiary-fixed": "#d8e2fc",
+                        "surface-container-high": "#eae8dd",
+                        "surface-container": "#f0eee2",
+                        "error": "#ba1a1a",
+                        "surface-dim": "#dcdacf",
+                        "primary-fixed-dim": "#abcdcd",
+                        "tertiary-container": "#404a5e",
+                        "primary-fixed": "#c6e9e9",
+                        "primary": "#173838",
+                        "surface-container-low": "#f6f4e8",
+                        "on-error-container": "#93000a",
+                        "surface-container-highest": "#e5e3d7",
+                        "tertiary": "#293347",
+                        "inverse-on-surface": "#f3f1e5",
+                        "tertiary-fixed-dim": "#bcc7df",
+                        "on-background": "#1b1c15",
+                        "on-secondary-fixed-variant": "#832600",
+                        "on-surface": "#1b1c15",
+                        "secondary-fixed-dim": "#ffb59d",
+                        "secondary-container": "#fd6b36",
+                        "surface": "#fcfaed",
+                        "on-secondary-fixed": "#390c00",
+                        "on-secondary-container": "#5d1900",
+                        "surface-tint": "#446464",
+                        "on-tertiary-fixed-variant": "#3d475b",
+                        "inverse-surface": "#303129",
+                        "background": "#fcfaed",
+                        "on-primary-fixed": "#002020",
+                        "on-primary-fixed-variant": "#2c4c4c",
+                        "on-error": "#ffffff",
+                        "secondary-fixed": "#ffdbd0",
+                        "primary-container": "#2f4f4f",
+                        "on-tertiary-fixed": "#111c2e",
+                        "on-tertiary": "#ffffff",
+                        "secondary": "#ac3400"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "stack-xl": "3rem",
+                        "margin-page": "4rem",
+                        "stack-md": "1.5rem",
+                        "stack-sm": "0.75rem",
+                        "margin-mobile": "1.5rem",
+                        "gutter": "2rem"
+                    },
+                    "fontFamily": {
+                        "title-md": ["Newsreader"],
+                        "technical-mono": ["JetBrains Mono"],
+                        "display-lg": ["Newsreader"],
+                        "label-md": ["Inter"],
+                        "body-lg": ["Newsreader"],
+                        "headline-lg": ["Newsreader"],
+                        "headline-lg-mobile": ["Newsreader"],
+                        "label-sm": ["Inter"],
+                        "body-md": ["Newsreader"]
+                    },
+                    "fontSize": {
+                        "title-md": ["22px", { "lineHeight": "28px", "fontWeight": "500" }],
+                        "technical-mono": ["13px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "label-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "500" }],
+                        "body-lg": ["19px", { "lineHeight": "32px", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "fontWeight": "500" }],
+                        "headline-lg-mobile": ["28px", { "lineHeight": "36px", "fontWeight": "500" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "fontWeight": "600" }],
+                        "body-md": ["17px", { "lineHeight": "28px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23noise)' opacity='0.08'/%3E%3C/svg%3E");
+            background-color: #fcfaed; /* surface */
+        }
+        .archive-card {
+            box-shadow: 0 4px 20px -2px rgba(23, 56, 56, 0.04);
+            border: 1px solid rgba(71, 85, 105, 0.15);
+        }
+        .separator-line {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(71, 85, 105, 0.2), transparent);
+        }
+        /* Custom scrollbar for horizontal sections */
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="text-on-surface antialiased bg-surface selection:bg-primary-container selection:text-on-primary-container min-h-screen pb-32">
+<!-- Header / TopAppBar (Hybrid interpretation focusing on search/archive context) -->
+<header class="sticky top-0 z-40 bg-surface/90 backdrop-blur-md border-b border-outline-variant/10">
+<div class="px-margin-mobile py-4 flex flex-col gap-4 max-w-[720px] mx-auto md:px-margin-page md:pt-8 md:pb-6">
+<div class="flex justify-between items-start">
+<div>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile md:font-headline-lg md:text-headline-lg text-primary tracking-tight">Memoria Antropológica</h1>
+<p class="font-body-md text-body-md text-on-surface-variant mt-1 max-w-sm">Volumen de conocimiento acumulado: <span class="font-technical-mono text-technical-mono text-primary">8,492 REGISTROS</span></p>
+</div>
+<div class="hidden md:flex bg-surface-container-low p-2 rounded-full border border-outline-variant/20">
+<span class="material-symbols-outlined text-outline" style="font-variation-settings: 'FILL' 0;">history_edu</span>
+</div>
+</div>
+<!-- Search: "Consultar el Archivo" -->
+<div class="relative mt-2">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline-variant" style="font-variation-settings: 'FILL' 0;">search</span>
+<input class="w-full bg-surface-container-low border-none border-b border-outline-variant/30 focus:border-primary focus:ring-0 rounded-t-lg pl-12 pr-4 py-3 font-body-md text-body-md text-on-surface placeholder:text-outline-variant transition-colors" placeholder="Consultar el Archivo..." type="text"/>
+<div class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+<span class="font-technical-mono text-[10px] text-outline px-2 py-1 bg-surface rounded">⌘K</span>
+</div>
+</div>
+</div>
+</header>
+<main class="max-w-[720px] mx-auto px-margin-mobile md:px-0 pt-6 pb-stack-xl flex flex-col gap-stack-xl">
+<!-- 1. Hallazgos Consolidados -->
+<section class="flex flex-col gap-4">
+<header class="flex items-center justify-between border-b border-outline-variant/20 pb-2">
+<h2 class="font-title-md text-title-md text-primary flex items-center gap-2">
+<span class="material-symbols-outlined text-surface-tint" style="font-variation-settings: 'FILL' 1;">inventory_2</span>
+                    Hallazgos Consolidados
+                </h2>
+<a class="font-label-sm text-label-sm text-surface-tint hover:text-primary uppercase tracking-widest transition-colors" href="#">Ver Índice</a>
+</header>
+<div class="flex flex-col gap-3">
+<!-- Record Card 1 -->
+<article class="archive-card bg-surface-container-lowest rounded-lg p-4 flex flex-col gap-3 relative overflow-hidden group cursor-pointer hover:bg-surface-bright transition-colors">
+<div class="absolute top-0 left-0 w-full h-1 bg-surface-tint"></div>
+<div class="flex justify-between items-start">
+<span class="font-technical-mono text-technical-mono text-on-surface-variant bg-surface-container px-2 py-0.5 rounded">ID-902A</span>
+<span class="font-technical-mono text-[11px] text-outline tracking-wider uppercase">12 Oct 2023</span>
+</div>
+<div>
+<h3 class="font-body-lg text-body-lg text-primary leading-tight mb-1 group-hover:text-surface-tint transition-colors">Sintaxis del Aislamiento Urbano</h3>
+<p class="font-body-md text-body-md text-on-surface-variant line-clamp-2">Análisis de patrones de evitación en espacios públicos de alta densidad durante horas pico, revelando estructuras de confort no verbal.</p>
+</div>
+</article>
+<!-- Record Card 2 -->
+<article class="archive-card bg-surface-container-lowest rounded-lg p-4 flex flex-col gap-3 relative overflow-hidden group cursor-pointer hover:bg-surface-bright transition-colors">
+<div class="absolute top-0 left-0 w-full h-1 bg-surface-tint"></div>
+<div class="flex justify-between items-start">
+<span class="font-technical-mono text-technical-mono text-on-surface-variant bg-surface-container px-2 py-0.5 rounded">ID-743C</span>
+<span class="font-technical-mono text-[11px] text-outline tracking-wider uppercase">04 Sep 2023</span>
+</div>
+<div>
+<h3 class="font-body-lg text-body-lg text-primary leading-tight mb-1 group-hover:text-surface-tint transition-colors">Rituales de Desconexión Digital</h3>
+<p class="font-body-md text-body-md text-on-surface-variant line-clamp-2">Estudio longitudinal sobre prácticas emergentes para simular pérdida de señal como mecanismo de evasión social aceptable.</p>
+</div>
+</article>
+</div>
+</section>
+<div class="separator-line w-3/4 mx-auto"></div>
+<!-- 2. Personas Nodo Identificadas (Horizontal Scroll for Mobile) -->
+<section class="flex flex-col gap-4">
+<header class="flex items-center justify-between border-b border-outline-variant/20 pb-2">
+<h2 class="font-title-md text-title-md text-primary flex items-center gap-2">
+<span class="material-symbols-outlined text-surface-tint" style="font-variation-settings: 'FILL' 1;">hub</span>
+                    Personas Nodo Identificadas
+                </h2>
+</header>
+<div class="flex overflow-x-auto hide-scrollbar gap-4 pb-4 -mx-margin-mobile px-margin-mobile md:mx-0 md:px-0 snap-x">
+<!-- Profile Card 1 -->
+<div class="snap-start flex-none w-64 archive-card bg-surface-container-lowest rounded-lg p-5 flex flex-col items-center text-center gap-3">
+<div class="w-16 h-16 rounded-full overflow-hidden border border-outline-variant/30 mb-1">
+<img class="w-full h-full object-cover grayscale opacity-90 mix-blend-multiply" data-alt="Black and white portrait photography of an elderly woman with deep distinct facial lines, looking away thoughtfully. High contrast, academic editorial style, soft natural lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDJqlht-Qa8FWhpZIQE8bOffGaSrqRyfOe3rpTs580VZ3caWGd88W7PXhF4bwKqGVI94_o6lLz9M1DLk8sd62DonSiVZnXoJYpPHI7bbMZGZzVZKVEumBGVTDa06qoQg_UMtm_70oEJtzxQTC09HFx1IILnIcrX5LBQ6bjsaLJscACz_80tAzWkIDsMaISiEIlBcsbfK3Jgl9p7ehK_oF0ejJf_pzBYyiIYZD27vyluosKhgUzvn1JSxQ"/>
+</div>
+<div>
+<h3 class="font-label-md text-label-md text-primary">Elena M.</h3>
+<p class="font-technical-mono text-[11px] text-on-surface-variant mt-1">NODO CONSERVADOR</p>
+</div>
+<p class="font-body-md text-[14px] leading-snug text-on-surface-variant border-t border-outline-variant/20 pt-3">Actúa como preservadora de memoria barrial frente a gentrificación temprana.</p>
+<div class="mt-auto pt-2 w-full flex justify-center">
+<span class="font-technical-mono text-[10px] text-outline bg-surface-container px-2 py-1 rounded">IND-442</span>
+</div>
+</div>
+<!-- Profile Card 2 -->
+<div class="snap-start flex-none w-64 archive-card bg-surface-container-lowest rounded-lg p-5 flex flex-col items-center text-center gap-3">
+<div class="w-16 h-16 rounded-full overflow-hidden border border-outline-variant/30 mb-1">
+<img class="w-full h-full object-cover grayscale opacity-90 mix-blend-multiply" data-alt="Black and white portrait photography of a young man wearing thick glasses, looking intently at something off-camera. High contrast, academic editorial style, shallow depth of field." src="https://lh3.googleusercontent.com/aida-public/AB6AXuApxaOOkt6K3tQVgyt3ItBXIiaUO9eUJsM5gLvrhIig4Agnds0bdx-6DcdtFKwJAp85yNNXRW9Vaj0cvUaKC_qysxjz5XNSuVdP_uZrBFd2MUV3I49tvR_swB-jKZf-z-FPWBOr2EU14SiHFQo34D7fQAJ-kZB66UMXVEiNDr_FdfebyAmqR7Th9Rg_waje07Pl1xujZ_FIVAB4eOqi5o_efmoaXoL06g1i-2UWde1KpiKZ3vdRwr3O7Q"/>
+</div>
+<div>
+<h3 class="font-label-md text-label-md text-primary">Carlos V.</h3>
+<p class="font-technical-mono text-[11px] text-on-surface-variant mt-1">CATALIZADOR DE RIESGO</p>
+</div>
+<p class="font-body-md text-[14px] leading-snug text-on-surface-variant border-t border-outline-variant/20 pt-3">Inicia y legitima nuevas prácticas de consumo en subgrupos cerrados.</p>
+<div class="mt-auto pt-2 w-full flex justify-center">
+<span class="font-technical-mono text-[10px] text-outline bg-surface-container px-2 py-1 rounded">IND-891</span>
+</div>
+</div>
+<!-- Profile Card 3 -->
+<div class="snap-start flex-none w-64 archive-card bg-surface-container-lowest border border-dashed border-outline-variant/40 rounded-lg p-5 flex flex-col items-center justify-center text-center gap-3 bg-surface-container-low/50">
+<span class="material-symbols-outlined text-outline-variant text-4xl" style="font-variation-settings: 'FILL' 0;">person_search</span>
+<p class="font-label-md text-label-md text-outline">Explorar Índice Completo</p>
+</div>
+</div>
+</section>
+<div class="separator-line w-3/4 mx-auto"></div>
+<!-- 3. Rituales Documentados -->
+<section class="flex flex-col gap-4">
+<header class="flex items-center justify-between border-b border-outline-variant/20 pb-2">
+<h2 class="font-title-md text-title-md text-primary flex items-center gap-2">
+<span class="material-symbols-outlined text-surface-tint" style="font-variation-settings: 'FILL' 1;">menu_book</span>
+                    Rituales Documentados
+                </h2>
+</header>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<!-- Ritual 1 -->
+<div class="flex gap-4 p-4 archive-card bg-surface-container-lowest rounded-lg">
+<div class="w-12 h-12 flex-shrink-0 bg-surface-container flex items-center justify-center rounded">
+<span class="material-symbols-outlined text-surface-tint" style="font-variation-settings: 'FILL' 0;">local_cafe</span>
+</div>
+<div>
+<h3 class="font-label-md text-label-md text-primary mb-1">Transición Matutina (Tercer Espacio)</h3>
+<p class="font-body-md text-[14px] leading-tight text-on-surface-variant">Uso de cafeterías como zonas de descompresión psicológica antes del ingreso laboral.</p>
+</div>
+</div>
+<!-- Ritual 2 -->
+<div class="flex gap-4 p-4 archive-card bg-surface-container-lowest rounded-lg">
+<div class="w-12 h-12 flex-shrink-0 bg-surface-container flex items-center justify-center rounded">
+<span class="material-symbols-outlined text-surface-tint" style="font-variation-settings: 'FILL' 0;">smartphone</span>
+</div>
+<div>
+<h3 class="font-label-md text-label-md text-primary mb-1">Pantalla Escudo</h3>
+<p class="font-body-md text-[14px] leading-tight text-on-surface-variant">Interacción fingida con dispositivos móviles para disuadir aproximaciones sociales en tránsito.</p>
+</div>
+</div>
+<!-- Ritual 3 -->
+<div class="flex gap-4 p-4 archive-card bg-surface-container-lowest rounded-lg">
+<div class="w-12 h-12 flex-shrink-0 bg-surface-container flex items-center justify-center rounded">
+<span class="material-symbols-outlined text-surface-tint" style="font-variation-settings: 'FILL' 0;">shopping_bag</span>
+</div>
+<div>
+<h3 class="font-label-md text-label-md text-primary mb-1">Consumo Expiatorio</h3>
+<p class="font-body-md text-[14px] leading-tight text-on-surface-variant">Adquisición de micro-lujos como mecanismo de compensación tras episodios de alto estrés.</p>
+</div>
+</div>
+</div>
+</section>
+<!-- 4. Deudas Culturales Históricas (Machine Inference block styling) -->
+<section class="flex flex-col gap-4 mt-4">
+<header class="flex items-center justify-between border-b border-outline-variant/20 pb-2">
+<h2 class="font-title-md text-title-md text-primary flex items-center gap-2">
+<span class="material-symbols-outlined text-error" style="font-variation-settings: 'FILL' 1;">warning</span>
+                    Deudas Culturales Históricas
+                </h2>
+</header>
+<div class="bg-[#F2F0E4] border border-outline-variant/30 rounded-lg p-5 flex flex-col gap-4 shadow-sm">
+<div class="flex items-center gap-2 border-b border-outline-variant/20 pb-2">
+<span class="font-technical-mono text-[10px] text-on-surface bg-surface-variant px-2 py-1 rounded uppercase tracking-wider">Análisis Sistémico</span>
+<span class="font-technical-mono text-[10px] text-outline">Hito de Innovación Documentado</span>
+</div>
+<div class="flex flex-col gap-2">
+<h3 class="font-technical-mono text-technical-mono font-bold text-primary">DEUDA-04: Fricción de Pago Digital (2018)</h3>
+<p class="font-technical-mono text-technical-mono text-on-surface-variant leading-relaxed">
+                        &gt; Hallazgo crítico: La resistencia a carteras digitales no derivaba de falta de confianza tecnológica, sino de la pérdida del ritual de intercambio físico y la incapacidad de demostrar estatus mediante artefactos materiales (tarjetas premium).
+                        <br/><br/>
+                        &gt; Resolución: Introducción de skeuomorfismo auditivo e interfaces hápticas pesadas para simular transferencia de valor material.
+                    </p>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar (Mobile Only) - Using JSON definition but adjusting for context -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-gutter py-2 border-t border-outline-variant/10 bg-surface-bright pb-safe">
+<a class="flex flex-col items-center justify-center bg-secondary-container rounded-full w-12 h-12 scale-95 transition-transform duration-150 shadow-sm" href="#">
+<span class="material-symbols-outlined text-on-primary" style="font-variation-settings: 'FILL' 1;">inventory_2</span>
+<span class="sr-only">Hallazgos</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant w-12 h-12 hover:opacity-80 transition-opacity" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">hub</span>
+<span class="sr-only">Nodos</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant w-12 h-12 hover:opacity-80 transition-opacity" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">article</span>
+<span class="sr-only">Artículos</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant w-12 h-12 hover:opacity-80 transition-opacity" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">menu_book</span>
+<span class="sr-only">Rituales</span>
+</a>
+</nav>
+<style>
+        /* Safe area padding for mobile bottom nav */
+        .pb-safe {
+            padding-bottom: env(safe-area-inset-bottom, 0.5rem);
+        }
+        @media (max-width: 768px) {
+            body {
+                padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0.5rem));
+            }
+        }
+    </style>
+</body></html>

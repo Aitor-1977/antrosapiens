@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>La Mesa de Evidencias - AntroSapiens V4</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&amp;family=Hanken+Grotesk:ital,wght@0,100..900;1,100..900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary": "#670f17",
+                        "outline": "#717878",
+                        "on-error-container": "#93000a",
+                        "secondary-fixed": "#c8f17a",
+                        "error-container": "#ffdad6",
+                        "secondary-fixed-dim": "#add461",
+                        "on-surface-variant": "#414848",
+                        "surface-variant": "#e4e3d7",
+                        "surface-container-lowest": "#ffffff",
+                        "tertiary-container": "#87272b",
+                        "inverse-primary": "#abcdcd",
+                        "surface-container-highest": "#e4e3d7",
+                        "on-secondary-fixed-variant": "#364e00",
+                        "primary": "#173838",
+                        "on-tertiary-fixed": "#410006",
+                        "tertiary-fixed": "#ffdad8",
+                        "on-primary-fixed": "#002020",
+                        "on-secondary-fixed": "#131f00",
+                        "outline-variant": "#c1c8c7",
+                        "on-primary-container": "#9ec0bf",
+                        "surface-tint": "#446464",
+                        "on-background": "#1b1c15",
+                        "inverse-surface": "#303129",
+                        "surface-container-low": "#f5f4e8",
+                        "surface-container": "#efeee3",
+                        "error": "#ba1a1a",
+                        "on-tertiary-fixed-variant": "#832428",
+                        "on-primary": "#ffffff",
+                        "on-secondary": "#ffffff",
+                        "secondary": "#496800",
+                        "primary-fixed-dim": "#abcdcd",
+                        "primary-container": "#2f4f4f",
+                        "surface-dim": "#dbdbcf",
+                        "secondary-container": "#c8f17a",
+                        "inverse-on-surface": "#f2f1e5",
+                        "on-primary-fixed-variant": "#2c4c4c",
+                        "on-surface": "#1b1c15",
+                        "primary-fixed": "#c6e9e9",
+                        "on-tertiary-container": "#ff9f9d",
+                        "surface-bright": "#fbfaee",
+                        "surface-container-high": "#e9e9dd",
+                        "on-secondary-container": "#4e6e00",
+                        "surface": "#fbfaee",
+                        "tertiary-fixed-dim": "#ffb3b0",
+                        "background": "#fbfaee",
+                        "on-error": "#ffffff",
+                        "on-tertiary": "#ffffff",
+                        "clinical-mint": "#2f4f4f" /* Added to match JSON expectation loosely, matching primary-container */
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "stack-sm": "12px",
+                        "gutter": "32px",
+                        "margin-page": "64px",
+                        "margin-mobile": "20px",
+                        "unit": "8px",
+                        "stack-lg": "48px",
+                        "stack-md": "24px",
+                        "touch-target": "48px",
+                        "safe": "env(safe-area-inset-bottom, 16px)"
+                    },
+                    "fontFamily": {
+                        "body-lg": ["Newsreader", "serif"],
+                        "label-sm": ["Hanken Grotesk", "sans-serif"],
+                        "headline-md": ["Newsreader", "serif"],
+                        "body-md": ["Newsreader", "serif"],
+                        "label-lg": ["Hanken Grotesk", "sans-serif"],
+                        "headline-lg-mobile": ["Newsreader", "serif"],
+                        "headline-lg": ["Newsreader", "serif"],
+                        "display-lg": ["Newsreader", "serif"]
+                    },
+                    "fontSize": {
+                        "body-lg": ["18px", { "lineHeight": "1.7", "fontWeight": "400" }],
+                        "label-sm": ["12px", { "lineHeight": "1.2", "letterSpacing": "0.03em", "fontWeight": "500" }],
+                        "headline-md": ["24px", { "lineHeight": "1.3", "fontWeight": "500" }],
+                        "body-md": ["16px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "label-lg": ["14px", { "lineHeight": "1.2", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "headline-lg-mobile": ["28px", { "lineHeight": "1.2", "fontWeight": "500" }],
+                        "headline-lg": ["32px", { "lineHeight": "1.2", "fontWeight": "500" }],
+                        "display-lg": ["48px", { "lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            background-color: theme('colors.background');
+            color: theme('colors.on-background');
+            -webkit-font-smoothing: antialiased;
+        }
+        .paper-shadow {
+            box-shadow: 0 4px 12px -2px rgba(47, 79, 79, 0.05), 0 2px 4px -2px rgba(47, 79, 79, 0.02);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background min-h-screen pb-safe md:pb-0">
+<!-- TopAppBar -->
+<header class="bg-background dark:bg-background text-on-background font-headline-md text-headline-md w-full top-0 sticky border-b border-border-subtle z-40" style="border-bottom-color: theme('colors.surface-variant')">
+<div class="flex items-center justify-between px-margin-mobile md:px-margin-page h-touch-target">
+<button class="flex items-center justify-center w-touch-target h-touch-target hover:bg-surface-variant transition-none text-on-surface-variant rounded-full">
+<span class="material-symbols-outlined" data-icon="menu">menu</span>
+</button>
+<h1 class="font-headline-md text-headline-md font-bold text-clinical-mint">Investigación &gt; Evidencias</h1>
+<button class="flex items-center justify-center w-touch-target h-touch-target hover:bg-surface-variant transition-none text-on-surface-variant rounded-full">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="max-w-[720px] mx-auto px-margin-mobile md:px-0 pt-stack-md pb-stack-lg md:pb-margin-page">
+<!-- Header Section -->
+<section class="mb-stack-lg">
+<h2 class="font-headline-lg-mobile md:font-headline-lg text-headline-lg-mobile md:text-headline-lg text-primary mb-stack-sm">
+                La Mesa de Evidencias
+            </h2>
+<p class="font-body-lg text-body-lg text-on-surface-variant">
+                Contexto del Corpus: Analizando 12 señales clave sobre la adopción de nuevas dinámicas ritualísticas en comunidades emergentes. Revisión de patrones anómalos y confirmaciones de campo.
+            </p>
+</section>
+<!-- Filter & Search -->
+<section class="mb-stack-lg flex flex-col md:flex-row gap-stack-sm items-start md:items-center">
+<div class="relative w-full md:w-auto flex-grow max-w-sm">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline-variant">search</span>
+<input class="w-full bg-transparent border-b border-outline-variant focus:border-primary-container focus:outline-none focus:ring-0 py-2 pl-10 pr-4 font-label-lg text-label-lg text-on-surface placeholder:text-outline-variant transition-colors" placeholder="Buscar en corpus..." type="text"/>
+</div>
+<div class="flex flex-wrap gap-unit">
+<button class="px-3 py-1 rounded border border-primary-container bg-primary-container text-on-primary font-label-sm text-label-sm">Todo</button>
+<button class="px-3 py-1 rounded border border-outline-variant text-on-surface-variant hover:bg-surface-variant font-label-sm text-label-sm">Por Validar</button>
+<button class="px-3 py-1 rounded border border-outline-variant text-on-surface-variant hover:bg-surface-variant font-label-sm text-label-sm">Tensiones</button>
+<button class="px-3 py-1 rounded border border-outline-variant text-on-surface-variant hover:bg-surface-variant font-label-sm text-label-sm">Fuentes Externas</button>
+</div>
+</section>
+<!-- Evidence List (Bento/Card layout) -->
+<section class="flex flex-col gap-stack-md">
+<!-- Card 1 -->
+<article class="bg-surface-container-lowest rounded-lg border border-surface-variant p-stack-md paper-shadow relative overflow-hidden group">
+<div class="absolute top-0 left-0 w-1 h-full bg-secondary-fixed"></div>
+<div class="flex justify-between items-start mb-stack-sm">
+<span class="inline-flex items-center gap-1 font-label-sm text-label-sm text-on-surface-variant bg-surface-variant px-2 py-0.5 rounded">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+                        Certeza Alta
+                    </span>
+<span class="font-label-sm text-label-sm text-outline">TGM-882 • 14:32</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-primary mb-unit">Convergencia Espontánea en Nodos Periféricos</h3>
+<p class="font-body-md text-body-md text-on-surface mb-stack-sm">
+                    Múltiples sujetos documentados convergiendo en la zona designada sin instrucción previa, repitiendo vocalizaciones no estándar.
+                </p>
+<div class="bg-surface-container-low p-3 rounded-lg border border-surface-variant mb-stack-sm">
+<h4 class="font-label-sm text-label-sm text-primary-container mb-1 uppercase tracking-wider">Valor Antropológico</h4>
+<p class="font-body-md text-body-md text-on-surface-variant italic">
+                        Demuestra la internalización de normas rituales sin transferencia formal. Sugiere un modelo de adopción mimética rápida.
+                    </p>
+</div>
+<div class="flex flex-wrap gap-unit mt-stack-sm border-t border-surface-variant pt-stack-sm">
+<button class="flex items-center gap-1 px-3 py-1.5 text-primary-container hover:bg-surface-variant rounded transition-colors font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[18px]">check_circle</span>
+                        Validar como Evidencia
+                    </button>
+<button class="flex items-center gap-1 px-3 py-1.5 text-on-surface-variant hover:bg-surface-variant rounded transition-colors font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[18px]">note_add</span>
+                        Añadir Nota
+                    </button>
+<button class="flex items-center gap-1 px-3 py-1.5 text-on-surface-variant hover:bg-surface-variant rounded transition-colors font-label-sm text-label-sm ml-auto">
+<span class="material-symbols-outlined text-[18px]">link</span>
+                        Vincular a Hipótesis
+                    </button>
+</div>
+</article>
+<!-- Card 2 -->
+<article class="bg-surface-container-lowest rounded-lg border border-surface-variant p-stack-md paper-shadow relative overflow-hidden group">
+<div class="absolute top-0 left-0 w-1 h-full bg-surface-tint opacity-50"></div>
+<div class="flex justify-between items-start mb-stack-sm">
+<span class="inline-flex items-center gap-1 font-label-sm text-label-sm text-on-surface-variant bg-surface-variant px-2 py-0.5 rounded">
+<span class="w-1.5 h-1.5 rounded-full bg-surface-tint"></span>
+                        Certeza Moderada
+                    </span>
+<span class="font-label-sm text-label-sm text-outline">EXT-041 • Ayer</span>
+</div>
+<div class="flex gap-stack-sm mb-unit">
+<div class="flex-grow">
+<h3 class="font-headline-md text-headline-md text-primary mb-unit">Variación de Símbolos en Artefactos Secundarios</h3>
+<p class="font-body-md text-body-md text-on-surface mb-stack-sm">
+                            El análisis fotográfico revela alteraciones menores en la iconografía central reproducida en prendas no oficiales.
+                        </p>
+</div>
+<div class="hidden sm:block w-24 h-24 flex-shrink-0 bg-surface-variant rounded overflow-hidden">
+<img class="object-cover w-full h-full opacity-80 mix-blend-multiply" data-alt="A detailed close-up shot of a rough textured fabric bearing a faintly stamped, slightly distorted geometric symbol in faded dark ink. The setting is a sterile, well-lit laboratory table, creating a clinical yet tactile aesthetic. The color palette features muted creams, off-whites, and the dark charcoal of the ink. The mood is analytical and investigative." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCVWosgzds6lxHIA4JhySlpkkVet2se7xrxvuV4Le_XxAEuPCLxQg9ho1F-jCgZbA_pWjGU7FYduEySfR6aQnlPO-Gpy_Knh7FUjAAA2O08YBgHW2H_sa2DPFtAaN15L6u76WB-2pPZZtSkzqqTaSCWNHe_Qghhh2rA1hqgulMh33bnZf-qwQy6tckZeGou5Zrdb03H_r4cSoAT61UmDNtNPFlGNTvItJTljCm9rkpEBpPvtgqxW_v8pg"/>
+</div>
+</div>
+<div class="bg-surface-container-low p-3 rounded-lg border border-surface-variant mb-stack-sm">
+<h4 class="font-label-sm text-label-sm text-primary-container mb-1 uppercase tracking-wider">Valor Antropológico</h4>
+<p class="font-body-md text-body-md text-on-surface-variant italic">
+                        Contradice la teoría de transmisión pura. Indica un proceso de adaptación individual o resistencia simbólica latente.
+                    </p>
+</div>
+<div class="flex flex-wrap gap-unit mt-stack-sm border-t border-surface-variant pt-stack-sm">
+<button class="flex items-center gap-1 px-3 py-1.5 text-primary-container hover:bg-surface-variant rounded transition-colors font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[18px]">check_circle</span>
+                        Validar como Evidencia
+                    </button>
+<button class="flex items-center gap-1 px-3 py-1.5 text-on-surface-variant hover:bg-surface-variant rounded transition-colors font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[18px]">note_add</span>
+                        Añadir Nota
+                    </button>
+<button class="flex items-center gap-1 px-3 py-1.5 text-on-surface-variant hover:bg-surface-variant rounded transition-colors font-label-sm text-label-sm ml-auto">
+<span class="material-symbols-outlined text-[18px]">link</span>
+                        Vincular a Hipótesis
+                    </button>
+</div>
+</article>
+<!-- Card 3 (Tension) -->
+<article class="bg-surface-container-lowest rounded-lg border border-surface-variant p-stack-md paper-shadow relative overflow-hidden group">
+<div class="absolute top-0 left-0 w-1 h-full bg-error-container"></div>
+<div class="flex justify-between items-start mb-stack-sm">
+<span class="inline-flex items-center gap-1 font-label-sm text-label-sm text-on-surface-variant bg-surface-variant px-2 py-0.5 rounded">
+<span class="w-1.5 h-1.5 rounded-full bg-error"></span>
+                        Baja (Tensión)
+                    </span>
+<span class="font-label-sm text-label-sm text-outline">OBS-112 • Hace 2 días</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-primary mb-unit">Falta de Participación en Fase Lunar Clave</h3>
+<p class="font-body-md text-body-md text-on-surface mb-stack-sm">
+                    Registros de asistencia muestran una caída del 40% durante el evento principal anticipado, contrario a los patrones estacionales previos.
+                </p>
+<div class="bg-surface-container-low p-3 rounded-lg border border-surface-variant mb-stack-sm">
+<h4 class="font-label-sm text-label-sm text-primary-container mb-1 uppercase tracking-wider">Valor Antropológico</h4>
+<p class="font-body-md text-body-md text-on-surface-variant italic">
+                        Cuestiona la solidez del calendario ritual propuesto. Requiere re-evaluación de los factores ambientales o liderazgos en competencia.
+                    </p>
+</div>
+<div class="flex flex-wrap gap-unit mt-stack-sm border-t border-surface-variant pt-stack-sm">
+<button class="flex items-center gap-1 px-3 py-1.5 text-outline hover:bg-surface-variant rounded transition-colors font-label-sm text-label-sm opacity-50 cursor-not-allowed">
+<span class="material-symbols-outlined text-[18px]">check_circle</span>
+                        Validar como Evidencia
+                    </button>
+<button class="flex items-center gap-1 px-3 py-1.5 text-on-surface-variant hover:bg-surface-variant rounded transition-colors font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[18px]">note_add</span>
+                        Añadir Nota
+                    </button>
+<button class="flex items-center gap-1 px-3 py-1.5 text-on-surface-variant hover:bg-surface-variant rounded transition-colors font-label-sm text-label-sm ml-auto">
+<span class="material-symbols-outlined text-[18px]">link</span>
+                        Vincular a Hipótesis
+                    </button>
+</div>
+</article>
+</section>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="md:hidden bg-surface-container-low dark:bg-surface-container-low font-label-caps text-label-caps fixed bottom-0 w-full z-50 border-t border-border-subtle flex justify-around items-center pb-safe" style="border-top-color: theme('colors.surface-variant')">
+<button class="flex flex-col items-center justify-center text-on-surface-variant py-1 hover:bg-surface-container-high transition-none w-1/4 h-14">
+<span class="material-symbols-outlined mb-1" data-icon="book_2">book_2</span>
+<span class="font-label-sm text-label-sm">Journal</span>
+</button>
+<button class="flex flex-col items-center justify-center text-clinical-mint border-t-2 border-clinical-mint py-1 hover:bg-surface-container-high transition-none w-1/4 h-14">
+<span class="material-symbols-outlined mb-1" data-icon="archive" data-weight="fill" style="font-variation-settings: 'FILL' 1;">archive</span>
+<span class="font-label-sm text-label-sm">Evidence</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant py-1 hover:bg-surface-container-high transition-none w-1/4 h-14">
+<span class="material-symbols-outlined mb-1" data-icon="hub">hub</span>
+<span class="font-label-sm text-label-sm">Relations</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant py-1 hover:bg-surface-container-high transition-none w-1/4 h-14">
+<span class="material-symbols-outlined mb-1" data-icon="analytics">analytics</span>
+<span class="font-label-sm text-label-sm">Synthesis</span>
+</button>
+</nav>
+<!-- SideNav (Desktop Only - Implied by missing top nav links, adapting bottom nav for desktop shell) -->
+<div class="hidden md:flex fixed top-1/2 -translate-y-1/2 left-0 h-auto w-24 flex-col items-center gap-stack-lg z-50 py-stack-md bg-surface-container-lowest/80 backdrop-blur border-r border-surface-variant rounded-r-2xl paper-shadow">
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-colors group">
+<span class="material-symbols-outlined mb-1 group-hover:scale-110 transition-transform" data-icon="book_2">book_2</span>
+<span class="font-label-sm text-label-sm">Journal</span>
+</button>
+<button class="flex flex-col items-center justify-center text-primary-container relative group">
+<div class="absolute -left-1 top-1/2 -translate-y-1/2 w-1 h-8 bg-primary-container rounded-r"></div>
+<span class="material-symbols-outlined mb-1 scale-110" data-icon="archive" data-weight="fill" style="font-variation-settings: 'FILL' 1;">archive</span>
+<span class="font-label-sm text-label-sm font-semibold">Evidence</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-colors group">
+<span class="material-symbols-outlined mb-1 group-hover:scale-110 transition-transform" data-icon="hub">hub</span>
+<span class="font-label-sm text-label-sm">Relations</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-colors group">
+<span class="material-symbols-outlined mb-1 group-hover:scale-110 transition-transform" data-icon="analytics">analytics</span>
+<span class="font-label-sm text-label-sm">Synthesis</span>
+</button>
+</div>
+</body></html>

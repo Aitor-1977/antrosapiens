@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>El Cuaderno de Campo</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&amp;family=JetBrains+Mono:wght@400&amp;family=Newsreader:opsz,wght@6..72,400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "background": "#fdf9ee",
+                        "inverse-on-surface": "#f4f1e6",
+                        "outline": "#707974",
+                        "secondary-container": "#fe932c",
+                        "on-tertiary-fixed-variant": "#3a485c",
+                        "tertiary-fixed-dim": "#b9c7e0",
+                        "surface-dim": "#dddacf",
+                        "on-secondary": "#ffffff",
+                        "primary": "#003527",
+                        "tertiary-container": "#374559",
+                        "on-error": "#ffffff",
+                        "on-tertiary": "#ffffff",
+                        "inverse-primary": "#95d3ba",
+                        "primary-fixed": "#b0f0d6",
+                        "surface-container-highest": "#e6e2d8",
+                        "on-tertiary-container": "#a4b2ca",
+                        "on-primary": "#ffffff",
+                        "surface-bright": "#fdf9ee",
+                        "on-error-container": "#93000a",
+                        "inverse-surface": "#31312a",
+                        "secondary-fixed-dim": "#ffb77d",
+                        "surface-container-lowest": "#ffffff",
+                        "primary-fixed-dim": "#95d3ba",
+                        "surface-variant": "#e6e2d8",
+                        "error": "#ba1a1a",
+                        "on-background": "#1c1c15",
+                        "on-primary-fixed-variant": "#0b513d",
+                        "surface-tint": "#2b6954",
+                        "surface-container-low": "#f7f3e8",
+                        "secondary": "#904d00",
+                        "on-surface-variant": "#404944",
+                        "tertiary-fixed": "#d5e3fd",
+                        "error-container": "#ffdad6",
+                        "on-secondary-fixed": "#2f1500",
+                        "surface": "#fdf9ee",
+                        "on-secondary-fixed-variant": "#6e3900",
+                        "on-surface": "#1c1c15",
+                        "on-primary-fixed": "#002117",
+                        "primary-container": "#064e3b",
+                        "tertiary": "#212f42",
+                        "on-secondary-container": "#663500",
+                        "outline-variant": "#bfc9c3",
+                        "surface-container": "#f1eee3",
+                        "on-primary-container": "#80bea6",
+                        "secondary-fixed": "#ffdcc3",
+                        "on-tertiary-fixed": "#0d1c2f",
+                        "surface-container-high": "#ece8dd"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "gutter": "2rem",
+                        "stack-loose": "2.5rem",
+                        "margin-page": "4rem",
+                        "stack-compact": "0.75rem",
+                        "margin-mobile": "1.25rem"
+                    },
+                    "fontFamily": {
+                        "caption": ["Inter"],
+                        "body-lg": ["Newsreader"],
+                        "headline-lg": ["Newsreader"],
+                        "headline-lg-mobile": ["Newsreader"],
+                        "display-lg": ["Newsreader"],
+                        "mono-code": ["JetBrains Mono"],
+                        "body-md": ["Newsreader"],
+                        "label-sm": ["Inter"]
+                    },
+                    "fontSize": {
+                        "caption": ["14px", { "lineHeight": "1.4", "fontWeight": "400" }],
+                        "body-lg": ["20px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "1.2", "fontWeight": "500" }],
+                        "headline-lg-mobile": ["28px", { "lineHeight": "1.2", "fontWeight": "500" }],
+                        "display-lg": ["48px", { "lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "mono-code": ["14px", { "lineHeight": "1.5", "fontWeight": "400" }],
+                        "body-md": ["17px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "label-sm": ["13px", { "lineHeight": "1.4", "letterSpacing": "0.05em", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .paper-texture {
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+        }
+        .ruled-line {
+            border-bottom: 1px solid rgba(112, 121, 116, 0.2);
+        }
+        .threaded-line {
+            border-left: 1px solid rgba(112, 121, 116, 0.15);
+        }
+        .contact-shadow {
+            box-shadow: 0 4px 12px rgba(254, 147, 44, 0.08), 0 1px 3px rgba(254, 147, 44, 0.04);
+        }
+        .marginalia {
+            position: absolute;
+            left: -3rem;
+            top: 0;
+            opacity: 0.6;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface font-body-md min-h-screen relative pb-24 md:pb-0 overflow-x-hidden paper-texture">
+<!-- TopAppBar -->
+<header class="hidden md:flex justify-between items-center w-full px-margin-page py-6 border-b border-outline-variant opacity-90 sticky top-0 bg-surface z-40">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 0;">clinical_notes</span>
+<h1 class="font-headline-lg text-headline-lg font-semibold text-primary">Investigation ID: AS-2024-X</h1>
+</div>
+<nav class="flex gap-8">
+<a class="font-label-sm text-label-sm text-primary border-b border-primary pb-1" href="#">Journal</a>
+<a class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors pb-1" href="#">Evidence</a>
+<a class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors pb-1" href="#">Relations</a>
+<a class="font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors pb-1" href="#">Synthesis</a>
+</nav>
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">query_stats</span>
+</button>
+</header>
+<!-- Mobile TopAppBar -->
+<header class="md:hidden flex justify-between items-center w-full px-margin-mobile py-4 border-b border-outline-variant opacity-90 sticky top-0 bg-surface z-40">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary text-xl" style="font-variation-settings: 'FILL' 0;">clinical_notes</span>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile font-semibold text-primary truncate">AS-2024-X</h1>
+</div>
+<button class="text-on-surface-variant">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">query_stats</span>
+</button>
+</header>
+<!-- Main Content Well -->
+<main class="max-w-[720px] mx-auto px-margin-mobile md:px-0 py-stack-loose md:py-16 relative">
+<!-- Header Section -->
+<section class="mb-16">
+<div class="flex items-center gap-3 mb-6">
+<span class="px-3 py-1 bg-surface-container rounded-full font-mono-code text-mono-code text-on-surface-variant uppercase tracking-wider text-xs">
+                    Phase: Immersion
+                </span>
+<span class="px-3 py-1 bg-surface-container rounded-full font-mono-code text-mono-code text-on-surface-variant uppercase tracking-wider text-xs">
+                    Corpus: 65%
+                </span>
+</div>
+<h2 class="font-display-lg text-display-lg text-primary mb-8 leading-tight">
+                ¿Cómo están mutando los rituales de ahorro en la generación Z?
+            </h2>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-prose">
+                Observaciones iniciales sugieren una transición del acaparamiento defensivo (típico de la era post-crisis) hacia un modelo de "liquidez fluida", donde el ahorro no se concibe como estasis, sino como un estado potencial de experiencia inmediata.
+            </p>
+</section>
+<!-- Recent Findings Narrative -->
+<section class="mb-16 threaded-line pl-8 relative">
+<div class="hidden md:block marginalia font-mono-code text-xs text-on-surface-variant mt-2">
+                14:30<br/>Oct 24
+            </div>
+<h3 class="font-headline-lg text-headline-lg text-primary mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">lightbulb</span>
+                Hallazgos Recientes
+            </h3>
+<div class="space-y-6">
+<p class="font-body-md text-body-md text-on-surface">
+                    El Motor A ha detectado una anomalía léxica en foros de finanzas descentralizadas. El término "atesorar" ha sido reemplazado casi en su totalidad por variaciones semánticas de "estacionar" o "aparcar" capital. 
+                </p>
+<!-- Pinned Note Observation -->
+<div class="bg-inverse-on-surface p-6 rounded border-t-2 border-secondary-container contact-shadow -rotate-1 my-8 max-w-md mx-auto">
+<p class="font-label-sm text-label-sm text-secondary mb-2 uppercase tracking-wide">Señal a Validar</p>
+<p class="font-body-md text-body-md italic text-on-surface-variant">
+                        "El dinero quieto es dinero muerto, pero el dinero en movimiento constante genera ansiedad. Buscamos 'salas de espera' con rendimiento."
+                    </p>
+<div class="mt-4 flex justify-between items-center text-xs font-mono-code text-on-surface-variant">
+<span>Fuente: Entrevista S-04</span>
+<span class="material-symbols-outlined text-sm">push_pin</span>
+</div>
+</div>
+<p class="font-body-md text-body-md text-on-surface">
+                    Esta metáfora espacial (la sala de espera) requiere una indagación etnográfica profunda. ¿Qué tipo de rituales acompañan este "estacionamiento" de valor? ¿Es un acto solitario o un performance socializado a través de capturas de pantalla de rendimientos APY?
+                </p>
+</div>
+</section>
+<!-- Scientific Notepad Quick Entry -->
+<section class="mt-12 bg-surface-container-lowest p-8 rounded-lg border border-outline-variant contact-shadow">
+<div class="flex justify-between items-center mb-6">
+<h4 class="font-headline-lg-mobile text-headline-lg-mobile text-primary">Bloc de Notas Científico</h4>
+<span class="material-symbols-outlined text-outline">edit_note</span>
+</div>
+<form class="space-y-6">
+<div class="relative">
+<textarea class="w-full bg-transparent border-0 border-b border-outline-variant focus:ring-0 focus:border-primary font-body-md text-on-surface resize-none py-2 px-0 h-32 placeholder:text-outline placeholder:italic" placeholder="Registra ráfagas de pensamiento, hipótesis emergentes o conexiones sueltas..."></textarea>
+</div>
+<div class="flex justify-between items-center">
+<div class="flex gap-2">
+<button class="p-2 text-on-surface-variant hover:bg-surface-container rounded-full transition-colors" type="button">
+<span class="material-symbols-outlined text-sm">attach_file</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:bg-surface-container rounded-full transition-colors" type="button">
+<span class="material-symbols-outlined text-sm">mic</span>
+</button>
+</div>
+<button class="px-6 py-2 bg-primary-container text-on-primary rounded font-label-sm text-label-sm hover:bg-primary transition-colors flex items-center gap-2" type="button">
+<span>Fijar Nota</span>
+<span class="material-symbols-outlined text-sm">send</span>
+</button>
+</div>
+</form>
+</section>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="md:hidden fixed bottom-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-3 bg-surface-container-low border-t border-outline-variant rounded-t-full shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+<a class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-full px-5 py-1.5 active:scale-95 transition-transform duration-200 ease-out" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">book_5</span>
+<span class="font-label-sm text-label-sm mt-1">Journal</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-5 py-1.5 hover:bg-surface-container-high rounded-full active:scale-95 transition-transform duration-200 ease-out" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">database</span>
+<span class="font-label-sm text-label-sm mt-1">Evidence</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-5 py-1.5 hover:bg-surface-container-high rounded-full active:scale-95 transition-transform duration-200 ease-out" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">hub</span>
+<span class="font-label-sm text-label-sm mt-1">Relations</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-5 py-1.5 hover:bg-surface-container-high rounded-full active:scale-95 transition-transform duration-200 ease-out" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">assignment_turned_in</span>
+<span class="font-label-sm text-label-sm mt-1">Synthesis</span>
+</a>
+</nav>
+</body></html>

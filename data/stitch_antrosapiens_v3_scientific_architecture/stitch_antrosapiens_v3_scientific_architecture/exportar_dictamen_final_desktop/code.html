@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AntroSapiens V4 - Export Dictamen</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,100..900;1,100..900&amp;family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-secondary-fixed": "#131f00",
+                      "secondary-container": "#c8f17a",
+                      "primary-fixed-dim": "#abcdcd",
+                      "on-secondary-container": "#4e6e00",
+                      "on-primary-fixed-variant": "#2c4c4c",
+                      "secondary-fixed": "#c8f17a",
+                      "on-surface": "#1b1c15",
+                      "primary": "#173838",
+                      "on-secondary": "#ffffff",
+                      "surface-tint": "#446464",
+                      "on-error-container": "#93000a",
+                      "on-primary-container": "#9ec0bf",
+                      "surface-container": "#efeee3",
+                      "inverse-surface": "#303129",
+                      "surface-container-highest": "#e4e3d7",
+                      "on-tertiary": "#ffffff",
+                      "error-container": "#ffdad6",
+                      "on-tertiary-fixed-variant": "#832428",
+                      "background": "#fbfaee",
+                      "on-primary": "#ffffff",
+                      "tertiary-container": "#87272b",
+                      "on-background": "#1b1c15",
+                      "surface-container-lowest": "#ffffff",
+                      "surface-container-high": "#e9e9dd",
+                      "outline-variant": "#c1c8c7",
+                      "primary-fixed": "#c6e9e9",
+                      "on-tertiary-container": "#ff9f9d",
+                      "secondary-fixed-dim": "#add461",
+                      "outline": "#717878",
+                      "surface": "#fbfaee",
+                      "surface-container-low": "#f5f4e8",
+                      "surface-bright": "#fbfaee",
+                      "secondary": "#496800",
+                      "error": "#ba1a1a",
+                      "on-primary-fixed": "#002020",
+                      "tertiary-fixed": "#ffdad8",
+                      "inverse-on-surface": "#f2f1e5",
+                      "surface-variant": "#e4e3d7",
+                      "on-tertiary-fixed": "#410006",
+                      "surface-dim": "#dbdbcf",
+                      "on-surface-variant": "#414848",
+                      "on-error": "#ffffff",
+                      "inverse-primary": "#abcdcd",
+                      "tertiary": "#670f17",
+                      "tertiary-fixed-dim": "#ffb3b0",
+                      "primary-container": "#2f4f4f",
+                      "on-secondary-fixed-variant": "#364e00"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "stack-lg": "48px",
+                      "stack-md": "24px",
+                      "gutter": "32px",
+                      "margin-page": "64px",
+                      "stack-sm": "12px",
+                      "unit": "8px"
+              },
+              "fontFamily": {
+                      "body-md": ["Newsreader"],
+                      "display-lg": ["Newsreader"],
+                      "headline-md": ["Newsreader"],
+                      "label-lg": ["Hanken Grotesk"],
+                      "headline-lg": ["Newsreader"],
+                      "label-sm": ["Hanken Grotesk"],
+                      "body-lg": ["Newsreader"],
+                      "headline-lg-mobile": ["Newsreader"]
+              },
+              "fontSize": {
+                      "body-md": ["16px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                      "display-lg": ["48px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "400"}],
+                      "headline-md": ["24px", {"lineHeight": "1.3", "fontWeight": "500"}],
+                      "label-lg": ["14px", {"lineHeight": "1.2", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                      "headline-lg": ["32px", {"lineHeight": "1.2", "fontWeight": "500"}],
+                      "label-sm": ["12px", {"lineHeight": "1.2", "letterSpacing": "0.03em", "fontWeight": "500"}],
+                      "body-lg": ["18px", {"lineHeight": "1.7", "fontWeight": "400"}],
+                      "headline-lg-mobile": ["28px", {"lineHeight": "1.2", "fontWeight": "500"}]
+              }
+            }
+          }
+        }
+    </script>
+<style>
+        .paper-shadow {
+            box-shadow: 0 4px 20px -2px rgba(27, 28, 21, 0.05), 0 20px 40px -10px rgba(27, 28, 21, 0.08);
+        }
+        .watermark {
+            opacity: 0.03;
+            pointer-events: none;
+            user-select: none;
+        }
+        .archival-divider {
+            border-bottom: 1px solid theme('colors.outline-variant');
+            width: 80%;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen antialiased flex flex-col font-body-md">
+<!-- TopAppBar (Transactional - Hidden Nav, but keep Header) -->
+<header class="w-full top-0 sticky bg-background border-b border-outline-variant flat no shadows flex justify-between items-center px-gutter py-stack-sm z-50">
+<div class="flex items-center gap-4 text-primary">
+<button aria-label="Go back" class="p-2 hover:bg-surface-container-low transition-colors rounded-full active:opacity-70 transition-opacity">
+<span class="material-symbols-outlined" data-icon="close">close</span>
+</button>
+<span class="font-headline-md text-headline-md tracking-tight">AntroSapiens V4</span>
+</div>
+<div class="text-on-surface-variant font-label-lg text-label-lg">
+            Export Process
+        </div>
+</header>
+<main class="flex-1 flex flex-col lg:flex-row w-full max-w-[1600px] mx-auto p-4 md:p-margin-page gap-gutter">
+<!-- Document Canvas (Left/Center) -->
+<section class="flex-1 flex justify-center items-start min-w-0">
+<!-- Paper Stack Container -->
+<div class="relative w-full max-w-[720px] isolate">
+<!-- Stack visual effects -->
+<div class="absolute -bottom-2 -right-2 w-full h-full bg-surface-container border border-outline-variant rounded-sm shadow-sm z-[-2]"></div>
+<div class="absolute -bottom-1 -right-1 w-full h-full bg-surface border border-outline-variant rounded-sm shadow-sm z-[-1]"></div>
+<!-- Main Document -->
+<div class="bg-surface-container-lowest paper-shadow rounded-sm border border-outline-variant w-full p-8 md:p-12 lg:p-16 relative overflow-hidden">
+<!-- Watermark -->
+<div class="absolute inset-0 flex items-center justify-center watermark">
+<span class="material-symbols-outlined text-[300px] text-primary" data-icon="verified_user">verified_user</span>
+</div>
+<!-- Document Header -->
+<div class="mb-stack-lg border-b border-outline-variant pb-stack-md">
+<div class="flex justify-between items-start mb-6">
+<div>
+<h1 class="font-headline-lg text-headline-lg text-primary mb-2">Dictamen Antropológico</h1>
+<p class="font-body-md text-body-md text-on-surface-variant">Reference No: AS-2024-089-BR</p>
+</div>
+<div class="text-right">
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider mb-1">Status</p>
+<span class="inline-flex items-center gap-1 font-label-sm text-label-sm text-secondary px-2 py-1 bg-secondary-container rounded-sm">
+<span class="material-symbols-outlined text-[14px]" data-icon="lock">lock</span>
+                                    Finalized
+                                </span>
+</div>
+</div>
+</div>
+<!-- Document Body (Preview Content) -->
+<div class="space-y-stack-md font-body-lg text-body-lg text-on-surface">
+<p class="leading-relaxed">
+                            This document serves as the formal anthropological synthesis regarding the excavation site designated 'Alpha-7', situated in the lower river basin. The evidence collected between September 12th and November 4th, 2024, has undergone rigorous preliminary analysis.
+                        </p>
+<div class="archival-divider my-stack-md"></div>
+<h2 class="font-headline-md text-headline-md text-primary mt-stack-md mb-4">I. Stratigraphic Context</h2>
+<p class="leading-relaxed">
+                            The primary assemblage was recovered from Stratum III, characterized by highly compacted, humic-rich clay matrix. The uniform deposition suggests a period of stable occupation without significant environmental disruption. Associated macrobotanical remains indicate a reliance on cultivated flora typical of the middle holocene transition.
+                        </p>
+<h2 class="font-headline-md text-headline-md text-primary mt-stack-md mb-4">II. Material Culture Overview</h2>
+<p class="leading-relaxed">
+                            Ceramic diagnostic sherds present a localized variant of the 'incised-punctate' tradition, showing significant technological continuity with previously established regional typologies, yet exhibiting novel formal attributes in vessel rim structures.
+                        </p>
+<!-- Simulated Signature Block -->
+<div class="mt-margin-page pt-stack-md border-t border-outline-variant flex justify-between items-end">
+<div>
+<p class="font-body-md text-body-md italic mb-8">Authored by:</p>
+<div class="w-48 border-b border-outline-variant mb-2"></div>
+<p class="font-label-lg text-label-lg text-primary">Dr. E. Vance</p>
+<p class="font-label-sm text-label-sm text-on-surface-variant">Lead Field Researcher</p>
+</div>
+<div class="text-right">
+<img class="w-24 h-24 object-contain opacity-80 mix-blend-multiply" data-alt="A highly detailed close-up of a sophisticated, intricate circular red ink stamped seal on textured off-white parchment paper. The stamp features geometric minimalist patterns and the text 'ANTROSAPIENS APPROVED'. High-key, natural lighting emphasizing paper texture. Archival aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAjrCPD9Ax4yhzu7B48oF8wV9AtsKE4upgNYWM6xliJBk8NujKe59CYg4uJ4r3Gh9R3dxO5azpKJQA118y2kOXqmmDcOxv2-FKhOgqdJ3dDm-0HVuG8BMfEEO6oCtGKQLDLHDq48cxb28XwR6xVWeStGHUlOlmk8P_3hmKYbfuAi_5Fhqi1LNtfEY1_gFy-crFnz432ocy0mU0mHEx6UnUbiD_T1_i65XU2ZviyGCUB0bWvIrXYf_RWpA"/>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Control Sidebar (Right) -->
+<aside class="w-full lg:w-[400px] flex-shrink-0 flex flex-col gap-stack-md">
+<!-- Metadata Summary Card -->
+<div class="bg-surface border border-outline-variant rounded p-6 shadow-sm">
+<h3 class="font-label-lg text-label-lg text-primary mb-4 uppercase tracking-wider border-b border-outline-variant pb-2">Archival Metadata</h3>
+<dl class="space-y-4">
+<div>
+<dt class="font-label-sm text-label-sm text-on-surface-variant mb-1">Cryptographic Hash (SHA-256)</dt>
+<dd class="font-body-md text-body-md text-on-surface font-mono text-sm break-all bg-surface-container-low p-2 rounded-sm border border-outline-variant">a7b2c93d...f8e1a04b29c</dd>
+</div>
+<div>
+<dt class="font-label-sm text-label-sm text-on-surface-variant mb-1">Date of Issuance</dt>
+<dd class="font-body-md text-body-md text-on-surface">November 15, 2024</dd>
+</div>
+<div>
+<dt class="font-label-sm text-label-sm text-on-surface-variant mb-1">Signatories</dt>
+<dd class="font-body-md text-body-md text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary text-[16px]" data-icon="check_circle" data-weight="fill">check_circle</span>
+                            1/1 Confirmed
+                        </dd>
+</div>
+</dl>
+</div>
+<!-- Export Options Card -->
+<div class="bg-surface border border-outline-variant rounded p-6 shadow-sm">
+<h3 class="font-label-lg text-label-lg text-primary mb-4 uppercase tracking-wider border-b border-outline-variant pb-2">Export Format</h3>
+<div class="space-y-3">
+<label class="flex items-center gap-3 p-3 border border-primary rounded-sm bg-primary-fixed-dim/10 cursor-pointer transition-colors">
+<input checked="" class="text-primary focus:ring-primary border-outline-variant" name="format" type="radio" value="pdf"/>
+<span class="material-symbols-outlined text-primary" data-icon="picture_as_pdf">picture_as_pdf</span>
+<div class="flex-1">
+<span class="block font-label-lg text-label-lg text-on-surface">Digital Archive (PDF)</span>
+<span class="block font-body-md text-[13px] text-on-surface-variant">Preserves formatting and signatures.</span>
+</div>
+</label>
+<label class="flex items-center gap-3 p-3 border border-outline-variant rounded-sm hover:bg-surface-container-low cursor-pointer transition-colors">
+<input class="text-primary focus:ring-primary border-outline-variant" name="format" type="radio" value="print"/>
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="print">print</span>
+<div class="flex-1">
+<span class="block font-label-lg text-label-lg text-on-surface">Physical Copy</span>
+<span class="block font-body-md text-[13px] text-on-surface-variant">Optimized for high-contrast B&amp;W printing.</span>
+</div>
+</label>
+<label class="flex items-center gap-3 p-3 border border-outline-variant rounded-sm hover:bg-surface-container-low cursor-pointer transition-colors">
+<input class="text-primary focus:ring-primary border-outline-variant" name="format" type="radio" value="data"/>
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="database">database</span>
+<div class="flex-1">
+<span class="block font-label-lg text-label-lg text-on-surface">Raw Dataset (JSON)</span>
+<span class="block font-body-md text-[13px] text-on-surface-variant">Machine-readable structural data.</span>
+</div>
+</label>
+</div>
+</div>
+<!-- Primary Action -->
+<div class="mt-auto pt-4">
+<button class="w-full flex items-center justify-center gap-2 bg-primary-container text-on-primary-container font-label-lg text-label-lg py-4 px-6 rounded hover:bg-primary transition-colors active:scale-[0.98]">
+<span class="material-symbols-outlined" data-icon="archive">archive</span>
+                    Confirm Export &amp; Archive
+                </button>
+<p class="font-body-md text-[13px] text-on-surface-variant text-center mt-3">
+                    Note: Archiving will permanently lock this document state.
+                </p>
+</div>
+</aside>
+</main>
+</body></html>

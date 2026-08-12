@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Cuaderno de Campo - AntroSapiens V3</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "tertiary-container": "#221001",
+                        "on-background": "#dae2fd",
+                        "on-surface-variant": "#c5c6cd",
+                        "inverse-primary": "#545f74",
+                        "on-secondary": "#003824",
+                        "on-primary-container": "#747f95",
+                        "secondary-container": "#00a572",
+                        "secondary": "#4edea3",
+                        "surface-container-lowest": "#060e20",
+                        "tertiary-fixed": "#ffdcc0",
+                        "outline-variant": "#45474c",
+                        "background": "#0b1326",
+                        "on-error-container": "#ffdad6",
+                        "inverse-surface": "#dae2fd",
+                        "on-secondary-container": "#00311f",
+                        "primary-container": "#091426",
+                        "tertiary-fixed-dim": "#e5c0a1",
+                        "on-surface": "#dae2fd",
+                        "on-secondary-fixed-variant": "#005236",
+                        "surface-tint": "#bcc7df",
+                        "surface-container": "#171f33",
+                        "on-tertiary-fixed-variant": "#5b422a",
+                        "clinical-mint": "#10B981",
+                        "on-primary-fixed": "#111c2e",
+                        "on-tertiary-container": "#98795e",
+                        "surface-container-high": "#222a3d",
+                        "on-primary": "#263144",
+                        "primary-fixed-dim": "#bcc7df",
+                        "surface": "#0F172A",
+                        "secondary-fixed-dim": "#4edea3",
+                        "warning-orange": "#F59E0B",
+                        "surface-container-highest": "#2d3449",
+                        "primary": "#bcc7df",
+                        "tertiary": "#e5c0a1",
+                        "on-tertiary-fixed": "#2a1704",
+                        "outline": "#8f9097",
+                        "inverse-on-surface": "#283044",
+                        "on-error": "#690005",
+                        "on-secondary-fixed": "#002113",
+                        "surface-dim": "#0b1326",
+                        "surface-container-low": "#131b2e",
+                        "border-subtle": "rgba(255, 255, 255, 0.1)",
+                        "surface-bright": "#31394d",
+                        "surface-variant": "#2d3449",
+                        "error-container": "#93000a",
+                        "error": "#ffb4ab",
+                        "secondary-fixed": "#6ffbbe",
+                        "on-primary-fixed-variant": "#3d475b",
+                        "primary-fixed": "#d8e2fc",
+                        "on-tertiary": "#422c16"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "unit": "4px",
+                        "gutter": "16px",
+                        "touch-target": "48px",
+                        "margin-desktop": "32px",
+                        "margin-mobile": "16px"
+                    },
+                    "fontFamily": {
+                        "body-lg": ["Inter"],
+                        "data-display": ["JetBrains Mono"],
+                        "body-md": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "data-code": ["JetBrains Mono"],
+                        "label-caps": ["JetBrains Mono"],
+                        "headline-lg-mobile": ["Inter"],
+                        "headline-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "data-display": ["16px", { "lineHeight": "24px", "fontWeight": "500" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "headline-md": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "data-code": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+                        "label-caps": ["11px", { "lineHeight": "16px", "letterSpacing": "0.08em", "fontWeight": "500" }],
+                        "headline-lg-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "700" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .zebra-row:nth-child(even) {
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background dark:bg-background text-on-surface font-body-md h-screen overflow-hidden flex flex-col antialiased selection:bg-clinical-mint selection:text-background">
+<!-- TopAppBar -->
+<header class="flex justify-between items-center w-full px-margin-mobile h-touch-target docked full-width top-0 border-b border-border-subtle bg-background dark:bg-background immediate transition-none">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-clinical-mint dark:text-clinical-mint" data-weight="fill" style="font-variation-settings: 'FILL' 1;">biotech</span>
+<h1 class="font-headline-md text-headline-md-mobile text-clinical-mint dark:text-clinical-mint tracking-tight">ID: AS-V3-9942</h1>
+</div>
+<div class="font-data-code text-data-code text-on-surface-variant uppercase">
+            SYNC: OFFLINE
+        </div>
+</header>
+<!-- Main Content Area -->
+<main class="flex-1 overflow-y-auto px-margin-mobile md:px-margin-desktop py-6 pb-32">
+<div class="max-w-4xl mx-auto space-y-8">
+<!-- Central Question -->
+<section class="space-y-2">
+<div class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest border-b border-border-subtle pb-1 mb-3">
+                    Foco de Investigación
+                </div>
+<h2 class="font-headline-lg-mobile md:font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-background">
+                    ¿Qué ritual cultural sostiene el uso de criptoactivos en economías emergentes?
+                </h2>
+</section>
+<!-- Justificación Antropológica -->
+<section class="space-y-3 bg-surface p-6 border border-border-subtle rounded">
+<div class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest border-b border-border-subtle pb-1 mb-2">
+                    Justificación Antropológica
+                </div>
+<p class="font-body-lg text-body-lg text-on-surface-variant leading-relaxed">
+                    La adopción no se explica puramente por incentivos financieros. Observamos patrones de comportamiento similares a los ritos de iniciación comunitarios, donde la tenencia de activos funciona como un marcador de identidad y resistencia frente a la inestabilidad institucional. Comprender este sustrato cultural es vital para mapear la resiliencia sistémica.
+                </p>
+</section>
+<!-- Señales Recientes (Data Cells) -->
+<section class="space-y-3">
+<div class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest border-b border-border-subtle pb-1 mb-2">
+                    Señales Recientes (Motor A)
+                </div>
+<div class="border border-border-subtle rounded overflow-hidden">
+<!-- Row 1 -->
+<div class="zebra-row flex flex-col sm:flex-row justify-between p-3 border-b border-border-subtle hover:bg-surface-container-high transition-none">
+<div class="font-body-md text-body-md text-on-background truncate flex-1">
+                            Aumento de terminología religiosa en foros locales.
+                        </div>
+<div class="flex items-center gap-4 mt-2 sm:mt-0 font-data-code text-data-code text-on-surface-variant">
+<span>SRC: TGM-882</span>
+<span class="text-clinical-mint border border-clinical-mint px-2 rounded-sm bg-clinical-mint/10">IDX: 0.89</span>
+</div>
+</div>
+<!-- Row 2 -->
+<div class="zebra-row flex flex-col sm:flex-row justify-between p-3 border-b border-border-subtle hover:bg-surface-container-high transition-none">
+<div class="font-body-md text-body-md text-on-background truncate flex-1">
+                            Transferencias p2p agrupadas en fechas festivas específicas.
+                        </div>
+<div class="flex items-center gap-4 mt-2 sm:mt-0 font-data-code text-data-code text-on-surface-variant">
+<span>SRC: CHN-V2</span>
+<span class="text-clinical-mint border border-clinical-mint px-2 rounded-sm bg-clinical-mint/10">IDX: 0.94</span>
+</div>
+</div>
+<!-- Row 3 -->
+<div class="zebra-row flex flex-col sm:flex-row justify-between p-3 hover:bg-surface-container-high transition-none">
+<div class="font-body-md text-body-md text-on-background truncate flex-1">
+                            Declive en transacciones menores no vinculadas a grupos.
+                        </div>
+<div class="flex items-center gap-4 mt-2 sm:mt-0 font-data-code text-data-code text-on-surface-variant">
+<span>SRC: NET-99</span>
+<span class="text-on-surface-variant border border-border-subtle px-2 rounded-sm bg-surface">IDX: 0.42</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Pendientes de Demostración -->
+<section class="space-y-3">
+<div class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest border-b border-border-subtle pb-1 mb-2">
+                    Pendientes de Demostración
+                </div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div class="border border-border-subtle bg-surface p-4 rounded flex flex-col gap-2">
+<span class="font-data-code text-data-code text-warning-orange">HYP-01</span>
+<p class="font-body-md text-body-md text-on-background">Existe correlación directa entre pérdida de confianza institucional y volumen de transacciones ritualizadas.</p>
+</div>
+<div class="border border-border-subtle bg-surface p-4 rounded flex flex-col gap-2">
+<span class="font-data-code text-data-code text-warning-orange">HYP-02</span>
+<p class="font-body-md text-body-md text-on-background">Los 'influencers' actúan funcionales a figuras de autoridad chamánica en la estructura comunitaria.</p>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- Scientific Notepad Trigger (Floating above bottom nav) -->
+<div class="fixed bottom-24 right-margin-mobile md:right-margin-desktop z-40">
+<button class="bg-clinical-mint text-primary-container p-3 rounded-full flex items-center justify-center border border-clinical-mint immediate transition-none hover:bg-secondary">
+<span class="material-symbols-outlined" data-weight="fill" style="font-variation-settings: 'FILL' 1;">edit_note</span>
+</button>
+</div>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full flex justify-around items-center px-gutter pb-4 bg-surface-container dark:bg-surface-container fixed bottom-0 w-full z-50 h-20 border-t border-border-subtle immediate state changes zero animation">
+<!-- Tab 1: Inactive -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant h-12 w-12 hover:border-on-surface hover:text-on-surface" href="#">
+<span class="material-symbols-outlined" data-icon="radar">radar</span>
+</a>
+<!-- Tab 2: Inactive -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant h-12 w-12 hover:border-on-surface hover:text-on-surface" href="#">
+<span class="material-symbols-outlined" data-icon="folder_open">folder_open</span>
+</a>
+<!-- Tab 3: Active (Cuaderno de Campo mapping to insights/science logic) -->
+<a class="flex flex-col items-center justify-center border border-clinical-mint text-clinical-mint h-12 w-12" href="#">
+<span class="material-symbols-outlined" data-icon="science" data-weight="fill" style="font-variation-settings: 'FILL' 1;">science</span>
+</a>
+<!-- Tab 4: Inactive -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant h-12 w-12 hover:border-on-surface hover:text-on-surface" href="#">
+<span class="material-symbols-outlined" data-icon="insights">insights</span>
+</a>
+<!-- Tab 5: Inactive -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant h-12 w-12 hover:border-on-surface hover:text-on-surface" href="#">
+<span class="material-symbols-outlined" data-icon="assignment">assignment</span>
+</a>
+</nav>
+</body></html>

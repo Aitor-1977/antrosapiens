@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Mesa de Evidencias - Nivel 1</title>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Config injected from prompt -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "background": "#fdf9ee",
+                        "inverse-on-surface": "#f4f1e6",
+                        "outline": "#707974",
+                        "secondary-container": "#fe932c",
+                        "on-tertiary-fixed-variant": "#3a485c",
+                        "tertiary-fixed-dim": "#b9c7e0",
+                        "surface-dim": "#dddacf",
+                        "on-secondary": "#ffffff",
+                        "primary": "#003527",
+                        "tertiary-container": "#374559",
+                        "on-error": "#ffffff",
+                        "on-tertiary": "#ffffff",
+                        "inverse-primary": "#95d3ba",
+                        "primary-fixed": "#b0f0d6",
+                        "surface-container-highest": "#e6e2d8",
+                        "on-tertiary-container": "#a4b2ca",
+                        "on-primary": "#ffffff",
+                        "surface-bright": "#fdf9ee",
+                        "on-error-container": "#93000a",
+                        "inverse-surface": "#31312a",
+                        "secondary-fixed-dim": "#ffb77d",
+                        "surface-container-lowest": "#ffffff",
+                        "primary-fixed-dim": "#95d3ba",
+                        "surface-variant": "#e6e2d8",
+                        "error": "#ba1a1a",
+                        "on-background": "#1c1c15",
+                        "on-primary-fixed-variant": "#0b513d",
+                        "surface-tint": "#2b6954",
+                        "surface-container-low": "#f7f3e8",
+                        "secondary": "#904d00",
+                        "on-surface-variant": "#404944",
+                        "tertiary-fixed": "#d5e3fd",
+                        "error-container": "#ffdad6",
+                        "on-secondary-fixed": "#2f1500",
+                        "surface": "#fdf9ee",
+                        "on-secondary-fixed-variant": "#6e3900",
+                        "on-surface": "#1c1c15",
+                        "on-primary-fixed": "#002117",
+                        "primary-container": "#064e3b",
+                        "tertiary": "#212f42",
+                        "on-secondary-container": "#663500",
+                        "outline-variant": "#bfc9c3",
+                        "surface-container": "#f1eee3",
+                        "on-primary-container": "#80bea6",
+                        "secondary-fixed": "#ffdcc3",
+                        "on-tertiary-fixed": "#0d1c2f",
+                        "surface-container-high": "#ece8dd"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "gutter": "2rem",
+                        "stack-loose": "2.5rem",
+                        "margin-page": "4rem",
+                        "stack-compact": "0.75rem",
+                        "margin-mobile": "1.25rem"
+                    },
+                    "fontFamily": {
+                        "caption": ["Inter"],
+                        "body-lg": ["Newsreader"],
+                        "headline-lg": ["Newsreader"],
+                        "headline-lg-mobile": ["Newsreader"],
+                        "display-lg": ["Newsreader"],
+                        "mono-code": ["JetBrains Mono"],
+                        "body-md": ["Newsreader"],
+                        "label-sm": ["Inter"]
+                    },
+                    "fontSize": {
+                        "caption": ["14px", { "lineHeight": "1.4", "fontWeight": "400" }],
+                        "body-lg": ["20px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "1.2", "fontWeight": "500" }],
+                        "headline-lg-mobile": ["28px", { "lineHeight": "1.2", "fontWeight": "500" }],
+                        "display-lg": ["48px", { "lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "mono-code": ["14px", { "lineHeight": "1.5", "fontWeight": "400" }],
+                        "body-md": ["17px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "label-sm": ["13px", { "lineHeight": "1.4", "letterSpacing": "0.05em", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&amp;family=JetBrains+Mono:wght@400&amp;family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.fill {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        
+        /* Subtle paper texture effect for artifact cards */
+        .paper-texture {
+            background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+        }
+        
+        /* Skeuomorphic indentation line */
+        .thread-line {
+            position: relative;
+        }
+        .thread-line::before {
+            content: '';
+            position: absolute;
+            left: -16px;
+            top: 24px;
+            bottom: -24px;
+            width: 1px;
+            background-color: theme('colors.outline');
+            opacity: 0.15;
+        }
+        
+        /* Custom scrollbar for drawer */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: theme('colors.outline-variant');
+            border-radius: 10px;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-background text-on-background min-h-screen flex flex-col font-body-md antialiased selection:bg-primary-fixed selection:text-on-primary-fixed">
+<!-- TopAppBar -->
+<header class="hidden md:flex flex-col bg-surface dark:bg-surface-dim font-headline-lg-mobile text-headline-lg-mobile border-b border-outline-variant dark:border-outline flat no shadows flex justify-between items-center w-full px-margin-mobile py-4 sticky top-0 z-40 transition-colors">
+<div class="flex items-center justify-between w-full max-w-[720px] mx-auto">
+<div class="flex items-center gap-4">
+<button aria-label="Menu" class="text-primary dark:text-primary-fixed hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors active:opacity-70 rounded-full p-2">
+<span class="material-symbols-outlined" data-icon="clinical_notes">clinical_notes</span>
+</button>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile font-semibold text-primary dark:text-primary-fixed tracking-tight">Investigation ID: AS-2024-X</h1>
+</div>
+<button aria-label="Stats" class="text-primary dark:text-primary-fixed hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors active:opacity-70 rounded-full p-2">
+<span class="material-symbols-outlined" data-icon="query_stats">query_stats</span>
+</button>
+</div>
+</header>
+<!-- Mobile TopAppBar variant -->
+<header class="md:hidden flex items-center justify-between bg-surface/95 backdrop-blur-md border-b border-outline-variant/30 w-full px-4 h-16 sticky top-0 z-40">
+<div class="flex items-center gap-4">
+<button aria-label="Menu" class="text-primary p-2 active:bg-surface-container-high rounded-full transition-colors">
+<span class="material-symbols-outlined" data-icon="clinical_notes">clinical_notes</span>
+</button>
+<h1 class="font-headline-lg-mobile text-[22px] font-semibold text-primary truncate">Mesa de Evidencias</h1>
+</div>
+<button aria-label="Stats" class="text-primary p-2 active:bg-surface-container-high rounded-full transition-colors">
+<span class="material-symbols-outlined" data-icon="query_stats">query_stats</span>
+</button>
+</header>
+<!-- Main Content Canvas (The Well) -->
+<main class="flex-grow w-full max-w-[720px] mx-auto px-margin-mobile md:px-0 py-stack-loose pb-32 md:pb-stack-loose">
+<!-- Header Section -->
+<section class="mb-stack-loose pb-4 border-b border-outline/10">
+<h2 class="font-display-lg text-display-lg text-primary mb-2">La Mesa de Evidencias</h2>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-[600px] leading-relaxed text-on-surface">
+                El corpus vivo de la investigación. Registro cronológico inmutable de observaciones, discursos y tensiones identificadas en el campo.
+            </p>
+<!-- Filter Chips (Marginalia context) -->
+<div class="flex flex-wrap gap-3 mt-6">
+<button class="bg-surface-container border border-outline/20 text-on-surface px-4 py-1.5 rounded-full font-label-sm text-label-sm hover:bg-surface-container-high transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px]">filter_list</span> Todos
+                </button>
+<button class="bg-surface-container-lowest border border-outline/20 text-on-surface-variant px-4 py-1.5 rounded-full font-label-sm text-label-sm hover:bg-surface-container transition-colors">
+                    Fase 1: Entrevistas
+                </button>
+<button class="bg-error-container/20 border border-error/20 text-error px-4 py-1.5 rounded-full font-label-sm text-label-sm hover:bg-error-container/40 transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">warning</span> Con Tensiones
+                </button>
+</div>
+</section>
+<!-- Evidence List (Bento-inspired, Tactile) -->
+<div class="flex flex-col gap-8">
+<!-- Artifact Card 1: High Tension -->
+<article class="relative bg-surface-container-lowest rounded-lg border border-outline/10 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] paper-texture p-6 md:p-8 hover:shadow-[0_4px_15px_-5px_rgba(0,0,0,0.1)] transition-shadow duration-300">
+<!-- Trace ID & Meta (Marginalia) -->
+<div class="flex justify-between items-start mb-6">
+<div class="flex flex-col">
+<span class="font-mono-code text-mono-code text-outline uppercase tracking-wider">EV-2024-04-12A</span>
+<span class="font-caption text-caption text-on-surface-variant mt-1">12 Abr 2024 • 14:30</span>
+</div>
+<!-- Tension Indicator Pinned -->
+<div class="bg-error-container text-on-error-container px-3 py-1 rounded-sm border-t-2 border-error rotate-1 shadow-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px] fill" data-icon="bolt" data-weight="fill">bolt</span>
+<span class="font-label-sm text-label-sm uppercase tracking-wide">Tensión Detectada</span>
+</div>
+</div>
+<!-- Content -->
+<div class="pl-4 border-l-2 border-primary/20 mb-6">
+<blockquote class="font-body-lg text-body-lg italic text-on-surface leading-relaxed">
+                        "El sistema nuevo nos obliga a registrar todo dos veces. Dicen que es para agilizar, pero en la práctica termino llevándome trabajo a casa solo para llenar planillas que nadie lee."
+                    </blockquote>
+</div>
+<!-- Context & Actor -->
+<div class="flex items-center gap-4 mb-6 pb-6 border-b border-outline/10">
+<div class="w-10 h-10 rounded-full bg-surface-container-high border border-outline/20 overflow-hidden flex-shrink-0 flex items-center justify-center">
+<span class="material-symbols-outlined text-outline" data-icon="person">person</span>
+<!-- Image placeholder strictly for UI structure if needed, but skeuomorphic prefers abstract/icons here -->
+</div>
+<div>
+<h4 class="font-label-sm text-label-sm text-on-surface">Actor: M. Roldán (Operaciones)</h4>
+<p class="font-caption text-caption text-on-surface-variant">Contexto: Entrevista de seguimiento en planta.</p>
+</div>
+</div>
+<!-- Actions -->
+<div class="flex justify-between items-center">
+<div class="flex gap-2"><button class="text-on-surface-variant active:text-primary active:bg-surface-container-high transition-colors flex items-center gap-2 font-label-sm text-label-sm px-4 py-3 rounded-lg border border-outline/5">
+<span class="material-symbols-outlined text-[20px]" data-icon="edit_note">edit_note</span> Anotar
+</button>
+<button class="text-on-surface-variant active:text-primary active:bg-surface-container-high transition-colors flex items-center gap-2 font-label-sm text-label-sm px-4 py-3 rounded-lg border border-outline/5">
+<span class="material-symbols-outlined text-[20px]" data-icon="account_tree">account_tree</span> Relacionar
+</button>
+<button class="text-on-surface-variant active:text-primary active:bg-surface-container-high transition-colors flex items-center gap-2 font-label-sm text-label-sm px-4 py-3 rounded-lg border border-outline/5">
+<span class="material-symbols-outlined text-[20px]" data-icon="loyalty">loyalty</span> Codificar
+</button></div>
+<button class="bg-surface-container border border-outline/20 text-on-surface px-3 py-1.5 rounded text-sm font-label-sm hover:bg-surface-container-high transition-colors flex items-center gap-2"><button class="text-on-surface-variant active:text-primary active:bg-surface-container-high transition-colors flex items-center gap-2 font-label-sm text-label-sm px-4 py-3 rounded-lg border border-outline/5">
+<span class="material-symbols-outlined text-[20px]" data-icon="edit_note">edit_note</span> Anotar
+</button>
+<button class="text-on-surface-variant active:text-primary active:bg-surface-container-high transition-colors flex items-center gap-2 font-label-sm text-label-sm px-4 py-3 rounded-lg border border-outline/5">
+<span class="material-symbols-outlined text-[20px]" data-icon="account_tree">account_tree</span> Relacionar
+</button>
+<button class="text-on-surface-variant active:text-primary active:bg-surface-container-high transition-colors flex items-center gap-2 font-label-sm text-label-sm px-4 py-3 rounded-lg border border-outline/5">
+<span class="material-symbols-outlined text-[20px]" data-icon="loyalty">loyalty</span> Codificar
+</button></button>
+</div>
+<!-- Threaded Observation (Child) -->
+<div class="mt-6 pl-8 thread-line">
+<div class="bg-surface-container-low p-4 rounded border border-outline/5">
+<div class="flex items-center gap-2 mb-2 text-primary">
+<span class="material-symbols-outlined text-[16px]" data-icon="insights">insights</span>
+<span class="font-label-sm text-label-sm uppercase">Nota del Investigador</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant">
+                            Contradicción directa con la hipótesis H2 (Adopción fluida). Revisar métricas de tiempo de uso real vs proyectado.
+                        </p>
+</div>
+</div>
+</article>
+<!-- Artifact Card 2: Neutral Observation -->
+<article class="relative bg-surface-container-lowest rounded-lg border border-outline/10 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] paper-texture p-6 md:p-8 hover:shadow-[0_4px_15px_-5px_rgba(0,0,0,0.1)] transition-shadow duration-300">
+<div class="flex justify-between items-start mb-6">
+<div class="flex flex-col">
+<span class="font-mono-code text-mono-code text-outline uppercase tracking-wider">EV-2024-04-10B</span>
+<span class="font-caption text-caption text-on-surface-variant mt-1">10 Abr 2024 • 09:15</span>
+</div>
+<!-- Tag instead of tension -->
+<div class="bg-surface-container text-on-surface-variant px-3 py-1 rounded-full border border-outline/10 text-xs font-label-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]" data-icon="label">label</span> Flujo Trabajo
+                    </div>
+</div>
+<div class="pl-4 border-l-2 border-outline/30 mb-6">
+<blockquote class="font-body-lg text-body-lg italic text-on-surface leading-relaxed">
+                        "El equipo de diseño suele entregar los assets los jueves por la tarde. Esto nos deja el viernes para integrar, lo cual casi siempre es suficiente si no hay cambios de última hora."
+                    </blockquote>
+</div>
+<div class="flex items-center gap-4 mb-6 pb-6 border-b border-outline/10">
+<div class="w-10 h-10 rounded-full bg-surface-container-high border border-outline/20 overflow-hidden flex-shrink-0 flex items-center justify-center">
+<span class="material-symbols-outlined text-outline" data-icon="group">group</span>
+</div>
+<div>
+<h4 class="font-label-sm text-label-sm text-on-surface">Actor: Equipo Desarrollo (Sesión Grupal)</h4>
+<p class="font-caption text-caption text-on-surface-variant">Contexto: Taller de mapeo de procesos.</p>
+</div>
+</div>
+<div class="flex justify-between items-center">
+<div class="flex gap-2"><button class="text-on-surface-variant active:text-primary active:bg-surface-container-high transition-colors flex items-center gap-2 font-label-sm text-label-sm px-4 py-3 rounded-lg border border-outline/5">
+<span class="material-symbols-outlined text-[20px]" data-icon="edit_note">edit_note</span> Anotar
+</button>
+<button class="text-on-surface-variant active:text-primary active:bg-surface-container-high transition-colors flex items-center gap-2 font-label-sm text-label-sm px-4 py-3 rounded-lg border border-outline/5">
+<span class="material-symbols-outlined text-[20px]" data-icon="account_tree">account_tree</span> Relacionar
+</button></div>
+<button class="bg-surface-container border border-outline/20 text-on-surface px-3 py-1.5 rounded text-sm font-label-sm hover:bg-surface-container-high transition-colors flex items-center gap-2"><button class="text-on-surface-variant active:text-primary active:bg-surface-container-high transition-colors flex items-center gap-2 font-label-sm text-label-sm px-4 py-3 rounded-lg border border-outline/5">
+<span class="material-symbols-outlined text-[20px]" data-icon="edit_note">edit_note</span> Anotar
+</button>
+<button class="text-on-surface-variant active:text-primary active:bg-surface-container-high transition-colors flex items-center gap-2 font-label-sm text-label-sm px-4 py-3 rounded-lg border border-outline/5">
+<span class="material-symbols-outlined text-[20px]" data-icon="account_tree">account_tree</span> Relacionar
+</button></button>
+</div>
+</article>
+</div>
+<!-- Load More (Ghost Button) -->
+<div class="mt-12 flex justify-center">
+<button class="w-full max-w-[320px] bg-surface-container-high border border-outline/20 text-on-surface px-8 py-4 rounded-full font-label-sm text-label-sm active:scale-95 transition-all flex justify-center items-center gap-3 shadow-sm">
+<span>Cargar Registros Anteriores</span>
+<span class="material-symbols-outlined text-[20px]" data-icon="history">history</span>
+</button>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="md:hidden bg-surface-container-low/90 backdrop-blur-lg border-t border-outline-variant/20 fixed bottom-0 w-full z-50 flex justify-around items-center px-2 pb-4 pt-3">
+<a class="flex flex-col items-center justify-center text-on-surface-variant flex-1 py-1 group" href="#">
+<div class="px-5 py-1 rounded-full group-active:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined" data-icon="book_5">book_5</span>
+</div>
+<span class="font-label-sm text-[12px] mt-1">Journal</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-secondary-container flex-1 py-1" href="#">
+<div class="bg-secondary-container px-5 py-1 rounded-full">
+<span class="material-symbols-outlined fill" data-icon="database">database</span>
+</div>
+<span class="font-label-sm text-[12px] mt-1 font-semibold">Evidence</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant flex-1 py-1 group" href="#">
+<div class="px-5 py-1 rounded-full group-active:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined" data-icon="hub">hub</span>
+</div>
+<span class="font-label-sm text-[12px] mt-1">Relations</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant flex-1 py-1 group" href="#">
+<div class="px-5 py-1 rounded-full group-active:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined" data-icon="assignment_turned_in">assignment_turned_in</span>
+</div>
+<span class="font-label-sm text-[12px] mt-1">Synthesis</span>
+</a>
+</nav>
+</body></html>

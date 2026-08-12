@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Export Dictamen Final</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "error": "#ba1a1a",
+                    "secondary": "#ac3400",
+                    "on-tertiary-container": "#afbad2",
+                    "secondary-container": "#fd6b36",
+                    "on-secondary-container": "#5d1900",
+                    "on-secondary-fixed": "#390c00",
+                    "on-primary": "#ffffff",
+                    "inverse-primary": "#abcdcd",
+                    "surface": "#fcfaed",
+                    "primary-fixed-dim": "#abcdcd",
+                    "on-background": "#1b1c15",
+                    "primary-container": "#2f4f4f",
+                    "primary-fixed": "#c6e9e9",
+                    "tertiary-container": "#404a5e",
+                    "secondary-fixed": "#ffdbd0",
+                    "surface-container-highest": "#e5e3d7",
+                    "surface-container-lowest": "#ffffff",
+                    "on-primary-fixed-variant": "#2c4c4c",
+                    "outline-variant": "#c1c8c7",
+                    "on-primary-fixed": "#002020",
+                    "on-tertiary-fixed-variant": "#3d475b",
+                    "on-surface": "#1b1c15",
+                    "tertiary-fixed-dim": "#bcc7df",
+                    "surface-container": "#f0eee2",
+                    "surface-tint": "#446464",
+                    "error-container": "#ffdad6",
+                    "surface-container-high": "#eae8dd",
+                    "primary": "#173838",
+                    "on-secondary": "#ffffff",
+                    "inverse-surface": "#303129",
+                    "surface-dim": "#dcdacf",
+                    "surface-variant": "#e5e3d7",
+                    "tertiary-fixed": "#d8e2fc",
+                    "background": "#fcfaed",
+                    "on-tertiary-fixed": "#111c2e",
+                    "on-primary-container": "#9ec0bf",
+                    "inverse-on-surface": "#f3f1e5",
+                    "on-secondary-fixed-variant": "#832600",
+                    "surface-bright": "#fcfaed",
+                    "on-surface-variant": "#414848",
+                    "surface-container-low": "#f6f4e8",
+                    "on-tertiary": "#ffffff",
+                    "on-error": "#ffffff",
+                    "tertiary": "#293347",
+                    "outline": "#717878",
+                    "secondary-fixed-dim": "#ffb59d",
+                    "on-error-container": "#93000a"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "stack-md": "1.5rem",
+                    "stack-sm": "0.75rem",
+                    "gutter": "2rem",
+                    "margin-page": "4rem",
+                    "margin-mobile": "1.5rem",
+                    "stack-xl": "3rem"
+            },
+            "fontFamily": {
+                    "technical-mono": [
+                            "JetBrains Mono"
+                    ],
+                    "label-sm": [
+                            "Inter"
+                    ],
+                    "display-lg": [
+                            "Newsreader"
+                    ],
+                    "headline-lg-mobile": [
+                            "Newsreader"
+                    ],
+                    "label-md": [
+                            "Inter"
+                    ],
+                    "body-lg": [
+                            "Newsreader"
+                    ],
+                    "title-md": [
+                            "Newsreader"
+                    ],
+                    "body-md": [
+                            "Newsreader"
+                    ],
+                    "headline-lg": [
+                            "Newsreader"
+                    ]
+            },
+            "fontSize": {
+                    "technical-mono": [
+                            "13px",
+                            {
+                                    "lineHeight": "20px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "label-sm": [
+                            "12px",
+                            {
+                                    "lineHeight": "16px",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "display-lg": [
+                            "48px",
+                            {
+                                    "lineHeight": "56px",
+                                    "letterSpacing": "-0.02em",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "headline-lg-mobile": [
+                            "28px",
+                            {
+                                    "lineHeight": "36px",
+                                    "fontWeight": "500"
+                            }
+                    ],
+                    "label-md": [
+                            "14px",
+                            {
+                                    "lineHeight": "20px",
+                                    "letterSpacing": "0.01em",
+                                    "fontWeight": "500"
+                            }
+                    ],
+                    "body-lg": [
+                            "19px",
+                            {
+                                    "lineHeight": "32px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "title-md": [
+                            "22px",
+                            {
+                                    "lineHeight": "28px",
+                                    "fontWeight": "500"
+                            }
+                    ],
+                    "body-md": [
+                            "17px",
+                            {
+                                    "lineHeight": "28px",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "headline-lg": [
+                            "32px",
+                            {
+                                    "lineHeight": "40px",
+                                    "fontWeight": "500"
+                            }
+                    ]
+            }
+    },
+        },
+      }
+    </script>
+<style>
+        .paper-texture {
+            background-color: #fcfaed;
+            background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23noise)' opacity='0.08'/%3E%3C/svg%3E");
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-background text-on-background paper-texture min-h-screen flex flex-col items-center antialiased">
+<!-- Main Content Canvas (Constrained width for mobile/tablet feel, max 720px as per guidelines but optimized for mobile layout) -->
+<main class="w-full max-w-[720px] md:my-margin-page md:shadow-[0_0_40px_rgba(0,0,0,0.03)] md:border md:border-outline-variant/30 bg-surface-container-lowest min-h-screen md:min-h-0 relative flex flex-col">
+<!-- TopAppBar (Transactional / Final step, no global nav shell needed, just a back action and title) -->
+<header class="w-full top-0 sticky bg-surface-container-lowest z-40 border-b border-outline-variant/30">
+<div class="flex justify-between items-center px-margin-mobile py-stack-sm w-full h-16">
+<button aria-label="Go back" class="text-on-surface-variant hover:bg-surface-container-low transition-colors rounded-full p-2 -ml-2">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">arrow_back</span>
+</button>
+<div class="font-technical-mono text-technical-mono text-on-surface-variant uppercase tracking-wider">
+                    AS-V4-2024
+                </div>
+<div class="w-10"></div> <!-- Balancer for centering -->
+</div>
+</header>
+<!-- Content Area -->
+<div class="flex-grow px-margin-mobile py-stack-md flex flex-col gap-stack-xl pb-32">
+<!-- Header Section -->
+<section class="flex flex-col gap-stack-sm text-center items-center pt-stack-sm">
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile text-primary">Exportar Dictamen Final</h1>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-[400px]">
+                    El expediente ha sido cerrado. Por favor, seleccione los formatos de archivo definitivos para la certificación.
+                </p>
+</section>
+<!-- Status/Seal Section -->
+<section class="flex flex-col items-center justify-center p-stack-md bg-surface border border-outline-variant/30 rounded-lg relative overflow-hidden">
+<!-- Ambient background glow for 'seal' -->
+<div class="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none"></div>
+<div class="w-16 h-16 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center mb-stack-sm shadow-sm ring-4 ring-primary-container/20">
+<span class="material-symbols-outlined text-3xl" style="font-variation-settings: 'FILL' 1;">verified</span>
+</div>
+<h2 class="font-title-md text-title-md text-primary mb-1">Saturación Teórica Alcanzada</h2>
+<div class="font-technical-mono text-technical-mono text-secondary flex items-center gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+                    SELLO INMUTABLE LISTO
+                </div>
+<!-- Recessed Machine Data Block -->
+<div class="mt-stack-md w-full bg-[#F2F0E4] p-3 rounded text-center border border-outline-variant/20">
+<div class="font-technical-mono text-[11px] leading-relaxed text-on-surface-variant break-all">
+                        HASH: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+                    </div>
+</div>
+<div class="mt-stack-sm w-full flex flex-col items-center gap-1">
+<div class="font-label-md text-[10px] text-on-surface-variant uppercase tracking-widest">Geolocalización del Peritaje</div>
+<div class="flex items-center gap-2 text-primary">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">location_on</span>
+<span class="font-technical-mono text-[11px] text-on-surface-variant">42.3601° N, 71.0589° W · LABORATORIO CENTRAL</span>
+</div>
+</div></section>
+<!-- Export Options Section -->
+<section class="flex flex-col gap-stack-sm">
+<h3 class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider mb-2">Opciones de Archivo</h3>
+<!-- Option 1: PDF (High Priority) -->
+<label class="relative flex items-start gap-4 p-4 border border-primary/20 bg-surface-container-low rounded-lg cursor-pointer hover:bg-surface-container transition-colors group">
+<div class="flex items-center h-6">
+<input checked="" class="w-5 h-5 text-primary bg-surface-container-lowest border-outline-variant focus:ring-primary focus:ring-offset-surface-container-lowest" name="export_format" type="radio" value="pdf"/>
+</div>
+<div class="flex-grow">
+<div class="flex items-center gap-2 mb-1">
+<span class="material-symbols-outlined text-primary text-xl" style="font-variation-settings: 'FILL' 1;">history_edu</span>
+<span class="font-title-md text-body-md text-on-surface font-medium">Peritaje de Rigor Cualitativo</span>
+</div>
+<p class="font-body-md text-technical-mono text-on-surface-variant">PDF Certificado • Formato Editorial</p>
+</div>
+<div class="absolute top-4 right-4 flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary opacity-100 group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">check</span>
+</div>
+</label>
+<!-- Option 2: CSV/JSON -->
+<label class="relative flex items-start gap-4 p-4 border border-outline-variant/30 bg-surface-container-lowest rounded-lg cursor-pointer hover:bg-surface-container-low transition-colors">
+<div class="flex items-center h-6">
+<input class="w-5 h-5 text-primary bg-surface-container-lowest border-outline-variant focus:ring-primary focus:ring-offset-surface-container-lowest" name="export_format" type="radio" value="data"/>
+</div>
+<div class="flex-grow">
+<div class="flex items-center gap-2 mb-1">
+<span class="material-symbols-outlined text-on-surface-variant text-xl" style="font-variation-settings: 'FILL' 0;">database</span>
+<span class="font-title-md text-body-md text-on-surface font-medium">Base de Evidencias</span>
+</div>
+<p class="font-body-md text-technical-mono text-on-surface-variant">CSV/JSON • Archivo Técnico</p>
+</div>
+</label>
+<!-- Option 3: Vector Map -->
+<label class="relative flex items-start gap-4 p-4 border border-outline-variant/30 bg-surface-container-lowest rounded-lg cursor-pointer hover:bg-surface-container-low transition-colors">
+<div class="flex items-center h-6">
+<input class="w-5 h-5 text-primary bg-surface-container-lowest border-outline-variant focus:ring-primary focus:ring-offset-surface-container-lowest" name="export_format" type="radio" value="vector"/>
+</div>
+<div class="flex-grow">
+<div class="flex items-center gap-2 mb-1">
+<span class="material-symbols-outlined text-on-surface-variant text-xl" style="font-variation-settings: 'FILL' 0;">account_tree</span>
+<span class="font-title-md text-body-md text-on-surface font-medium">Mapa de Relaciones</span>
+</div>
+<p class="font-body-md text-technical-mono text-on-surface-variant">SVG Vectorial • Documentación Visual</p>
+</div>
+</label>
+</section>
+<!-- Final Signature Section -->
+<section class="mt-auto border-t border-outline-variant/20 pt-stack-md flex flex-col gap-2 relative">
+<div class="flex justify-between items-end">
+<div>
+<div class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface italic mb-1" style="font-family: 'Newsreader', serif;">
+                            Dr. Aris Thorne
+                        </div>
+<div class="font-technical-mono text-technical-mono text-on-surface-variant">
+                            Investigador Principal
+                        </div>
+</div>
+<div class="flex flex-col items-end">
+<span class="material-symbols-outlined text-primary/40 text-4xl mb-1 rotate-12" style="font-variation-settings: 'FILL' 0;">fingerprint</span>
+<div class="font-technical-mono text-[10px] text-primary/70 tracking-widest uppercase border border-primary/20 px-2 py-0.5 rounded-sm bg-primary/5">
+                            Firmado con Hash
+                        </div>
+</div>
+</div>
+</section>
+</div>
+<!-- Sticky Bottom Action Bar (Thumb-zone ergonomic) -->
+<div class="fixed bottom-0 left-0 w-full md:absolute z-50 p-margin-mobile bg-gradient-to-t from-surface-container-lowest via-surface-container-lowest to-transparent pb-8">
+<button class="w-full flex items-center justify-center gap-2 bg-primary text-on-primary py-4 px-6 rounded-full font-label-md text-label-md uppercase tracking-wider hover:bg-primary-container transition-colors shadow-md active:scale-[0.98]">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">approval</span>
+                Finalizar y Exportar
+            </button>
+</div>
+</main>
+</body></html>

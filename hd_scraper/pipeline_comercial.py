@@ -17,16 +17,24 @@ Principios:
   - El retroceso es posible (una organización puede volver a vigilancia).
   - Cada transición queda registrada con fecha y motivo (trazable).
   - El pipeline NO interpreta evidencia — solo organiza el flujo comercial.
+
+Identidad referencial (reparación BC-I ↔ BC-II):
+  - La unión con la Organización Observada (BC-I) dejó de ser NOMINAL (por
+    nombre/``hash_dedup``) y es REFERENCIAL: cada fila porta el
+    ``candidato_id`` determinista del Candidato Comercial materializado por
+    ``hd_scraper.candidato``. Los registros legacy (sin candidato_id) se
+    resuelven por ``hash_dedup`` y se backfillean: los datos existentes no se
+    rompen.
 """
 from __future__ import annotations
 
 import hashlib
-import json
 import logging
 from typing import Optional
 
 from .db.database import get_db
 from .db.models import ahora_iso
+from . import candidato
 
 logger = logging.getLogger("hd_scraper.pipeline_comercial")
 
@@ -47,6 +55,29 @@ ETAPAS_LABELS = {
 RESULTADO_CIERRE = ("ganado", "descartado", "pausado")
 
 
+def _dedup_legacy(org_nombre: str) -> str:
+    """Hash legacy por nombre (compat con registros pre-reparación)."""
+    return hashlib.sha256(org_nombre.strip().lower().encode()).hexdigest()[:32]
+
+
+def _resolver_fila(db, org_nombre: str):
+    """Resuelve la fila de pipeline por identidad REFERENCIAL primero.
+
+    1) ``candidato_id`` (identidad referencial BC-I→BC-II).
+    2) ``hash_dedup`` legacy (registros previos a la reparación).
+    """
+    cid = candidato.candidato_id(org_nombre)
+    dedup = _dedup_legacy(org_nombre)
+    fila = db.fetch_one(
+        "SELECT * FROM pipeline_comercial WHERE candidato_id = ?", (cid,),
+    )
+    if not fila:
+        fila = db.fetch_one(
+            "SELECT * FROM pipeline_comercial WHERE hash_dedup = ?", (dedup,),
+        )
+    return fila, cid, dedup
+
+
 def registrar_org(org_nombre: str, etapa: str = "observacion",
                   notas: str = "") -> dict:
     """Registra o actualiza una organización en el pipeline comercial."""
@@ -55,18 +86,14 @@ def registrar_org(org_nombre: str, etapa: str = "observacion",
 
     db = get_db()
     ahora = ahora_iso()
-    dedup = hashlib.sha256(org_nombre.strip().lower().encode()).hexdigest()[:32]
-
-    existente = db.fetch_one(
-        "SELECT id, etapa FROM pipeline_comercial WHERE hash_dedup = ?",
-        (dedup,),
-    )
+    existente, cid, dedup = _resolver_fila(db, org_nombre)
 
     if existente:
         db.execute(
-            "UPDATE pipeline_comercial SET etapa = ?, notas = ?, actualizado_en = ? "
+            "UPDATE pipeline_comercial SET etapa = ?, notas = ?, "
+            "actualizado_en = ?, candidato_id = COALESCE(candidato_id, ?) "
             "WHERE id = ?",
-            (etapa, notas, ahora, existente["id"]),
+            (etapa, notas, ahora, cid, existente["id"]),
         )
         _registrar_transicion(
             db, existente["id"], org_nombre, existente["etapa"], etapa, notas, ahora,
@@ -74,20 +101,27 @@ def registrar_org(org_nombre: str, etapa: str = "observacion",
         return {
             "id": existente["id"], "org_nombre": org_nombre,
             "etapa_anterior": existente["etapa"], "etapa": etapa,
-            "accion": "actualizado",
+            "accion": "actualizado", "candidato_id": cid,
         }
+
+    # Materializa el Candidato Comercial (identidad referencial BC-I→BC-II).
+    try:
+        candidato.asegurar_candidato(db, org_nombre)
+    except Exception:  # pragma: no cover - el pipeline jamás debe colapsar por esto
+        logger.warning("pipeline: no se materializó candidato para %s", org_nombre)
 
     pid = db.insert_returning_id(
         """INSERT INTO pipeline_comercial
-             (org_nombre, etapa, notas, resultado, hash_dedup, creado_en, actualizado_en)
-           VALUES (?, ?, ?, ?, ?, ?, ?)""",
-        (org_nombre.strip(), etapa, notas, "", dedup, ahora, ahora),
+             (org_nombre, etapa, notas, resultado, hash_dedup, candidato_id,
+              creado_en, actualizado_en)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+        (org_nombre.strip(), etapa, notas, "", dedup, cid, ahora, ahora),
     )
     _registrar_transicion(db, pid, org_nombre, "", etapa, notas, ahora)
     return {
         "id": pid, "org_nombre": org_nombre,
         "etapa_anterior": "", "etapa": etapa,
-        "accion": "creado",
+        "accion": "creado", "candidato_id": cid,
     }
 
 
@@ -100,11 +134,7 @@ def avanzar(org_nombre: str, nueva_etapa: str,
         raise ValueError(f"Resultado inválido: {resultado}. Válidos: {RESULTADO_CIERRE}")
 
     db = get_db()
-    dedup = hashlib.sha256(org_nombre.strip().lower().encode()).hexdigest()[:32]
-    existente = db.fetch_one(
-        "SELECT id, etapa FROM pipeline_comercial WHERE hash_dedup = ?",
-        (dedup,),
-    )
+    existente, cid, dedup = _resolver_fila(db, org_nombre)
 
     if not existente:
         return registrar_org(org_nombre, nueva_etapa, notas)
@@ -117,6 +147,9 @@ def avanzar(org_nombre: str, nueva_etapa: str,
     if resultado:
         updates += ", resultado = ?"
         params.append(resultado)
+    if not existente["candidato_id"]:
+        updates += ", candidato_id = ?"
+        params.append(cid)
     params.append(existente["id"])
 
     db.execute(
@@ -130,7 +163,7 @@ def avanzar(org_nombre: str, nueva_etapa: str,
     return {
         "id": existente["id"], "org_nombre": org_nombre,
         "etapa_anterior": etapa_anterior, "etapa": nueva_etapa,
-        "resultado": resultado,
+        "resultado": resultado, "candidato_id": cid,
     }
 
 
@@ -148,21 +181,38 @@ def _registrar_transicion(
     )
 
 
+def _anexar_referencia(db, row: dict) -> dict:
+    """Anexa la identidad referencial del candidato (BC-I→BC-II)."""
+    result = dict(row)
+    cid = result.get("candidato_id") or candidato.candidato_id(result.get("org_nombre", ""))
+    result["candidato_id"] = cid
+    cand = db.fetch_one(
+        "SELECT estado, prospecto_id, expediente_hash FROM candidatos "
+        "WHERE candidato_id = ?", (cid,),
+    )
+    if cand:
+        result["estado_candidato"] = cand["estado"]
+        result["prospecto_id"] = cand["prospecto_id"]
+        result["expediente_hash"] = cand["expediente_hash"]
+    else:
+        result["estado_candidato"] = None
+        result["prospecto_id"] = None
+        result["expediente_hash"] = None
+    return result
+
+
 def obtener_pipeline(org_nombre: str) -> Optional[dict]:
     """Devuelve el estado del pipeline de una organización."""
     db = get_db()
-    dedup = hashlib.sha256(org_nombre.strip().lower().encode()).hexdigest()[:32]
-    row = db.fetch_one(
-        "SELECT * FROM pipeline_comercial WHERE hash_dedup = ?", (dedup,),
-    )
-    if not row:
+    fila, _cid, _dedup = _resolver_fila(db, org_nombre)
+    if not fila:
         return None
 
     transiciones = db.fetch_all(
         "SELECT * FROM pipeline_transiciones WHERE pipeline_id = ? ORDER BY fecha DESC",
-        (row["id"],),
+        (fila["id"],),
     )
-    result = dict(row)
+    result = _anexar_referencia(db, dict(fila))
     result["transiciones"] = [dict(t) for t in transiciones]
     result["etapa_label"] = ETAPAS_LABELS.get(result["etapa"], result["etapa"])
     return result
@@ -181,7 +231,7 @@ def listar_pipeline(etapa: Optional[str] = None) -> dict:
             "SELECT * FROM pipeline_comercial ORDER BY actualizado_en DESC",
         )
 
-    items = [dict(r) for r in rows]
+    items = [_anexar_referencia(db, dict(r)) for r in rows]
     for item in items:
         item["etapa_label"] = ETAPAS_LABELS.get(item["etapa"], item["etapa"])
 

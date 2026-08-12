@@ -160,6 +160,7 @@ def radar_loop(
     max_rondas: int = MAX_RONDAS_DEFAULT,
     lote: int = LOTE_POR_RONDA,
     limite_expedientes: int = LIMITE_EXPEDIENTES,
+    materializar_fn=None,
 ) -> dict:
     """Ciclo agéntico del radar (ver docstring del módulo). Determinista.
 
@@ -167,6 +168,9 @@ def radar_loop(
     devuelve resultados por conector (claves ``escritos`` y ``vistos``).
     ``expedientes_fn(categorias, limite) -> dict`` reconstruye los Expedientes
     Vivos (con Dictamen Científico y gobernanza) tras cada ronda.
+    ``materializar_fn(db, expedientes)`` (opcional) materializa los Candidatos
+    Comerciales de las organizaciones detectadas (reparación BC-I↔BC-II); sin
+    él el radar conserva el comportamiento anterior.
 
     Devuelve el informe consolidado: filtros aplicados, plan, rondas, motivo de
     detención (``plan_completado | presupuesto | saturacion | max_rondas``),
@@ -191,6 +195,7 @@ def radar_loop(
         "expedientes": {"total": 0, "resumen_scoring": {"A": 0, "B": 0, "C": 0},
                         "expedientes": []},
         "contacto": _resumen_contacto([]),
+        "candidatos": None,
     }
     if not plan:
         vacio["nota"] = "sin tareas bajo los filtros (revisa enfoque/tamaño/región)"
@@ -202,6 +207,7 @@ def radar_loop(
     ejecutadas = 0
     detencion = "plan_completado"
     ultima_foto: dict = vacio["expedientes"]
+    ultima_candidatos = None
     categorias = list(filtros.categorias) if filtros.categorias else None
 
     for numero in range(1, max_rondas + 1):
@@ -229,6 +235,14 @@ def radar_loop(
         ultima_foto = expedientes_fn(categorias, limite_expedientes)
         for e in ultima_foto.get("expedientes", []):
             enriquecer_contacto(e)
+
+        # Reparación BC-I↔BC-II: materializa los Candidatos Comerciales de las
+        # organizaciones detectadas (opcional; por defecto el radar no cambia).
+        if materializar_fn is not None:
+            try:
+                ultima_candidatos = materializar_fn(db, ultima_foto.get("expedientes", []))
+            except Exception:  # pragma: no cover - el radar jamás colapsa por esto
+                pass
 
         orgs_ahora = {
             e["nombre"].lower()
@@ -262,4 +276,5 @@ def radar_loop(
         "total_vistos": total_vistos,
         "expedientes": ultima_foto,
         "contacto": _resumen_contacto(ultima_foto.get("expedientes", [])),
+        "candidatos": ultima_candidatos,
     }

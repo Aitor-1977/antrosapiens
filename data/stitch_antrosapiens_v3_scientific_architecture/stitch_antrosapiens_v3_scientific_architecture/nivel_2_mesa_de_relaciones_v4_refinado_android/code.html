@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Nivel 2: Mesa de Relaciones</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-dim": "#d9dbce",
+                        "tertiary-fixed-dim": "#f5bb89",
+                        "surface-container": "#edefe1",
+                        "outline": "#78776f",
+                        "on-secondary-fixed-variant": "#44483b",
+                        "surface-container-low": "#f3f5e7",
+                        "primary-fixed": "#e5e3d6",
+                        "on-surface": "#1a1d14",
+                        "inverse-primary": "#c8c7bb",
+                        "on-primary-container": "#737369",
+                        "on-primary-fixed-variant": "#47473e",
+                        "olive-deep": "#3E4235",
+                        "surface-tint": "#5f5f55",
+                        "on-error": "#ffffff",
+                        "on-secondary": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "inverse-on-surface": "#f0f2e4",
+                        "secondary-fixed": "#e1e4d2",
+                        "on-secondary-fixed": "#191d12",
+                        "on-primary": "#ffffff",
+                        "error": "#ba1a1a",
+                        "surface-container-highest": "#e2e4d6",
+                        "secondary": "#5c6052",
+                        "on-tertiary-fixed-variant": "#653e17",
+                        "on-background": "#1a1d14",
+                        "surface-container-lowest": "#ffffff",
+                        "inference-slate": "#4A4E54",
+                        "surface-container-high": "#e8e9dc",
+                        "on-tertiary": "#ffffff",
+                        "outline-variant": "#c8c7bd",
+                        "surface-bright": "#f9fbec",
+                        "secondary-fixed-dim": "#c5c8b7",
+                        "on-surface-variant": "#474740",
+                        "friccion-clay": "#6B4423",
+                        "on-primary-fixed": "#1b1c14",
+                        "primary": "#5f5f55",
+                        "surface": "#f9fbec",
+                        "clay-accent": "#8B5E34",
+                        "background": "#f9fbec",
+                        "tertiary": "#80552c",
+                        "on-secondary-container": "#606456",
+                        "parchment": "#FCFAED",
+                        "inverse-surface": "#2f3228",
+                        "primary-container": "#fcfaed",
+                        "primary-fixed-dim": "#c8c7bb",
+                        "tertiary-container": "#fff8f5",
+                        "on-error-container": "#93000a",
+                        "tertiary-fixed": "#ffdcc1",
+                        "parchment-dim": "#2A2D24",
+                        "on-tertiary-container": "#97683d",
+                        "amber-accent": "#D48C00",
+                        "surface-variant": "#e2e4d6",
+                        "on-tertiary-fixed": "#2e1600",
+                        "secondary-container": "#dee1cf"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "rhythm": "8px",
+                        "margin-desktop": "64px",
+                        "margin-mobile": "20px",
+                        "touch-min": "48dp",
+                        "gutter": "16px"
+                    },
+                    "fontFamily": {
+                        "ui-label": ["Inter"],
+                        "narrative-body": ["Newsreader"],
+                        "data-hash": ["JetBrains Mono"],
+                        "narrative-h1": ["Newsreader"],
+                        "narrative-body-mobile": ["Newsreader"],
+                        "ui-button": ["Inter"],
+                        "data-mono": ["JetBrains Mono"],
+                        "narrative-display": ["Newsreader"]
+                    },
+                    "fontSize": {
+                        "ui-label": ["14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "500" }],
+                        "narrative-body": ["19px", { "lineHeight": "32px", "fontWeight": "400" }],
+                        "data-hash": ["11px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500" }],
+                        "narrative-h1": ["32px", { "lineHeight": "1.3", "fontWeight": "600" }],
+                        "narrative-body-mobile": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "ui-button": ["14px", { "lineHeight": "16px", "letterSpacing": "0.03em", "fontWeight": "600" }],
+                        "data-mono": ["13px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "narrative-display": ["42px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600&amp;family=JetBrains+Mono:wght@400;500&amp;family=Newsreader:opsz,wght@6..72,400;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.filled {
+            font-variation-settings: 'FILL' 1;
+        }
+        .min-touch-target {
+            min-height: 48px;
+            min-width: 48px;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-narrative-body-mobile antialiased selection:bg-surface-dim selection:text-olive-deep pb-24">
+<!-- TopAppBar -->
+<header class="fixed top-0 left-0 w-full z-50 bg-parchment dark:bg-parchment-dim flex justify-between items-center w-full px-margin-mobile h-16 shadow-sm dark:shadow-none transition-colors duration-300">
+<button aria-label="Menu" class="min-touch-target flex items-center justify-center text-outline dark:text-outline-variant hover:bg-surface-container-low dark:hover:bg-surface-container-highest transition-colors rounded-full">
+<span class="material-symbols-outlined" data-icon="menu">menu</span>
+</button>
+<h1 class="font-narrative-h1 text-narrative-h1 text-olive-deep dark:text-primary-fixed truncate px-4">Anthropological Inquiry</h1>
+<button aria-label="Sync" class="min-touch-target flex items-center justify-center text-outline dark:text-outline-variant hover:bg-surface-container-low dark:hover:bg-surface-container-highest transition-colors rounded-full">
+<span class="material-symbols-outlined" data-icon="sync">sync</span>
+</button>
+</header>
+<!-- Main Canvas -->
+<main class="pt-24 px-margin-mobile md:px-margin-desktop max-w-4xl mx-auto flex flex-col gap-8">
+<!-- Context Header -->
+<section class="border-b border-outline-variant pb-6 mb-4">
+<p class="font-ui-label text-ui-label text-tertiary uppercase tracking-wider mb-2">Nivel 2: Mesa de Relaciones</p>
+<h2 class="font-narrative-display text-narrative-display text-olive-deep mb-4">¿Cómo se manifiesta la resistencia pasiva en los espacios comunes?</h2>
+<p class="font-narrative-body text-narrative-body text-on-surface-variant">Síntesis de evidencias (N1) y sus interconexiones emergentes.</p>
+</section>
+<!-- Relational Threads (Editorial Layout) -->
+<div class="flex flex-col gap-12 relative">
+<!-- Ariadne's Thread -->
+<div class="absolute left-[24px] top-4 bottom-0 w-px bg-outline-variant opacity-50 z-0"></div>
+<!-- Thread Node 1 -->
+<article class="relative z-10 flex gap-6 group">
+<div class="flex-shrink-0 mt-2">
+<div class="w-12 h-12 rounded-full bg-surface-container-high border-2 border-parchment flex items-center justify-center shadow-sm">
+<span class="material-symbols-outlined text-olive-deep text-lg" data-icon="forum">forum</span>
+</div>
+</div>
+<div class="flex-grow">
+<div class="bg-surface-container-lowest p-6 rounded-lg shadow-sm border border-surface-container transition-all group-hover:shadow-md transform -rotate-1 hover:rotate-0">
+<div class="flex justify-between items-start mb-4">
+<span class="font-data-hash text-data-hash text-outline">EV-8f3a2</span>
+<span class="inline-flex items-center gap-1 bg-surface-dim text-on-surface-variant px-2 py-1 rounded font-ui-label text-ui-label text-xs">
+<span class="material-symbols-outlined text-[14px]">sell</span> Silencio Táctico
+                            </span>
+</div>
+<p class="font-narrative-body text-narrative-body text-on-surface mb-4">
+                            Durante las asambleas, los residentes evitan deliberadamente el contacto visual cuando se discuten nuevas normativas, optando por mirar sus libretas.
+                        </p>
+<div class="flex items-center gap-2 mt-4 pt-4 border-t border-surface-variant">
+<span class="font-ui-label text-ui-label text-tertiary">Relación:</span>
+<span class="bg-tertiary-container text-on-tertiary-container px-3 py-1 rounded-full font-ui-label text-ui-label flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">add</span> Refuerza
+                            </span>
+<span class="font-data-mono text-data-mono text-outline-variant truncate">Hipótesis A</span>
+</div>
+</div>
+</div>
+</article>
+<!-- Thread Node 2 -->
+<article class="relative z-10 flex gap-6 group">
+<div class="flex-shrink-0 mt-2">
+<div class="w-12 h-12 rounded-full bg-surface-container-high border-2 border-parchment flex items-center justify-center shadow-sm">
+<span class="material-symbols-outlined text-friccion-clay text-lg" data-icon="gavel">gavel</span>
+</div>
+</div>
+<div class="flex-grow">
+<div class="bg-surface-container-lowest p-6 rounded-lg shadow-sm border border-surface-container transition-all group-hover:shadow-md transform rotate-1 hover:rotate-0">
+<div class="flex justify-between items-start mb-4">
+<span class="font-data-hash text-data-hash text-outline">EV-2b9c1</span>
+<span class="inline-flex items-center gap-1 bg-surface-dim text-on-surface-variant px-2 py-1 rounded font-ui-label text-ui-label text-xs">
+<span class="material-symbols-outlined text-[14px]">sell</span> Apropiación
+                            </span>
+</div>
+<p class="font-narrative-body text-narrative-body text-on-surface mb-4">
+                            Los carteles oficiales son sistemáticamente modificados con grafitis sutiles que alteran su significado original sin destruirlos por completo.
+                        </p>
+<div class="flex items-center gap-2 mt-4 pt-4 border-t border-surface-variant">
+<span class="font-ui-label text-ui-label text-friccion-clay">Relación:</span>
+<span class="bg-error-container text-on-error-container px-3 py-1 rounded-full font-ui-label text-ui-label flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">remove</span> Contradice
+                            </span>
+<span class="font-data-mono text-data-mono text-outline-variant truncate">Evidencia EV-9x4p</span>
+</div>
+</div>
+</div>
+</article>
+<!-- Thread Node 3 -->
+<article class="relative z-10 flex gap-6 group">
+<div class="flex-shrink-0 mt-2">
+<div class="w-12 h-12 rounded-full bg-surface-container-high border-2 border-parchment flex items-center justify-center shadow-sm">
+<span class="material-symbols-outlined text-amber-accent text-lg" data-icon="tune">tune</span>
+</div>
+</div>
+<div class="flex-grow">
+<div class="bg-surface-container-lowest p-6 rounded-lg shadow-sm border border-surface-container transition-all group-hover:shadow-md transform -rotate-1 hover:rotate-0">
+<div class="flex justify-between items-start mb-4">
+<span class="font-data-hash text-data-hash text-outline">EV-7k4m8</span>
+<span class="inline-flex items-center gap-1 bg-surface-dim text-on-surface-variant px-2 py-1 rounded font-ui-label text-ui-label text-xs">
+<span class="material-symbols-outlined text-[14px]">sell</span> Uso del Espacio
+                            </span>
+</div>
+<p class="font-narrative-body text-narrative-body text-on-surface mb-4">
+                            El patio central permanece vacío durante las horas designadas para 'recreación oficial', llenándose solo durante los cambios de turno.
+                        </p>
+<div class="flex items-center gap-2 mt-4 pt-4 border-t border-surface-variant">
+<span class="font-ui-label text-ui-label text-amber-accent">Relación:</span>
+<span class="bg-secondary-container text-on-secondary-container px-3 py-1 rounded-full font-ui-label text-ui-label flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">horizontal_rule</span> Matiza
+                            </span>
+<span class="font-data-mono text-data-mono text-outline-variant truncate">Observación Inicial</span>
+</div>
+</div>
+</div>
+</article>
+</div>
+<!-- Action Area -->
+<div class="flex justify-center mt-8 pb-12">
+<button class="min-touch-target font-ui-button text-ui-button bg-olive-deep text-parchment px-8 py-3 rounded-full flex items-center gap-2 hover:bg-surface-tint transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[20px]">psychology</span>
+                Consolidar Teoría (N3)
+            </button>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-2 border-t border-outline-variant dark:border-outline bg-surface-container dark:bg-inverse-surface shadow-sm dark:shadow-none md:hidden">
+<!-- Inactive Tab -->
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant h-[48px] w-[48px] hover:bg-surface-container-high dark:hover:bg-surface-variant transition-all rounded-full">
+<span class="material-symbols-outlined" data-icon="visibility">visibility</span>
+</button>
+<!-- Inactive Tab -->
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant h-[48px] w-[48px] hover:bg-surface-container-high dark:hover:bg-surface-variant transition-all rounded-full">
+<span class="material-symbols-outlined" data-icon="menu_book">menu_book</span>
+</button>
+<!-- Active Tab (Analysis/Relations) -->
+<button class="flex flex-col items-center justify-center bg-secondary-container dark:bg-secondary text-on-secondary-container dark:text-on-secondary rounded-full h-[48px] w-[48px] scale-95 transition-transform duration-150 ease-out">
+<span class="material-symbols-outlined filled" data-icon="rebase_edit">rebase_edit</span>
+</button>
+<!-- Inactive Tab -->
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant h-[48px] w-[48px] hover:bg-surface-container-high dark:hover:bg-surface-variant transition-all rounded-full">
+<span class="material-symbols-outlined" data-icon="diamond">diamond</span>
+</button>
+</nav>
+</body></html>

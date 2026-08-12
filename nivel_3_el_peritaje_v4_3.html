@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Pregunta Antropológica - Nivel 3: El Peritaje</title>
+<!-- Google Fonts & Material Symbols -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;700&amp;family=Newsreader:opsz,wght@6..72,400;6..72,600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Theme Configuration -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface": "#fcfaed",
+                        "surface-container-high": "#eae9dc",
+                        "surface-container": "#f0eee1",
+                        "surface-container-highest": "#e5e3d6",
+                        "on-primary-fixed": "#111c2e",
+                        "surface-container-low": "#f6f4e7",
+                        "surface-container-lowest": "#ffffff",
+                        "tertiary-fixed": "#e3e1ec",
+                        "on-tertiary": "#ffffff",
+                        "outline-variant": "#c5c6cd",
+                        "primary-fixed-dim": "#bcc7df",
+                        "on-primary-fixed-variant": "#3d475b",
+                        "on-error": "#ffffff",
+                        "primary-container": "#111c2e",
+                        "on-error-container": "#93000a",
+                        "error-container": "#ffdad6",
+                        "primary-fixed": "#d8e2fc",
+                        "on-primary": "#ffffff",
+                        "on-secondary-fixed-variant": "#00513a",
+                        "background": "#fcfaed",
+                        "inverse-on-surface": "#f3f1e4",
+                        "on-background": "#1b1c14",
+                        "secondary-fixed": "#97f5cc",
+                        "inverse-surface": "#303129",
+                        "tertiary-fixed-dim": "#c6c5cf",
+                        "on-secondary": "#ffffff",
+                        "tertiary-container": "#1a1b22",
+                        "on-surface": "#1b1c14",
+                        "on-tertiary-container": "#83838c",
+                        "inverse-primary": "#bcc7df",
+                        "surface-dim": "#dcdace",
+                        "secondary": "#006c4e",
+                        "on-tertiary-fixed-variant": "#46464e",
+                        "on-secondary-fixed": "#002115",
+                        "secondary-container": "#97f5cc",
+                        "outline": "#75777d",
+                        "on-primary-container": "#7a849b",
+                        "error": "#ba1a1a",
+                        "surface-tint": "#545f74",
+                        "secondary-fixed-dim": "#7bd8b1",
+                        "on-tertiary-fixed": "#1a1b22",
+                        "surface-bright": "#fcfaed",
+                        "on-surface-variant": "#45474c",
+                        "surface-variant": "#e5e3d6",
+                        "tertiary": "#000000",
+                        "primary": "#000000",
+                        "on-secondary-container": "#007353"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "margin-tablet": "40px",
+                        "thumb-zone-bottom": "120px",
+                        "unit": "4px",
+                        "gutter": "16px",
+                        "touch-target": "48px",
+                        "margin-mobile": "20px"
+                    },
+                    "fontFamily": {
+                        "ui-label": ["Inter"],
+                        "narrative-display-mobile": ["Newsreader"],
+                        "narrative-display": ["Newsreader"],
+                        "technical-caps": ["JetBrains Mono"],
+                        "technical-data": ["JetBrains Mono"],
+                        "narrative-body": ["Newsreader"],
+                        "ui-control": ["Inter"]
+                    },
+                    "fontSize": {
+                        "ui-label": ["14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "500" }],
+                        "narrative-display-mobile": ["32px", { "lineHeight": "38px", "fontWeight": "600" }],
+                        "narrative-display": ["40px", { "lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "technical-caps": ["11px", { "lineHeight": "16px", "fontWeight": "700" }],
+                        "technical-data": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+                        "narrative-body": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "ui-control": ["16px", { "lineHeight": "24px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.filled {
+            font-variation-settings: 'FILL' 1;
+        }
+        
+        /* Ch 65 Max Width for Editorial Readability */
+        .ch-65 {
+            max-width: 65ch;
+        }
+        
+        /* Pulse Animation (Slow, Rhythmic) */
+        @keyframes subtle-pulse {
+            0% { opacity: 0.6; }
+            50% { opacity: 1; }
+            100% { opacity: 0.6; }
+        }
+        .pulse-slow {
+            animation: subtle-pulse 3s infinite ease-in-out;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface-dim text-on-surface font-ui-control antialiased min-h-screen flex flex-col md:flex-row pb-[120px] md:pb-0">
+<!-- WEB ONLY Navigation Drawer (Hidden on Mobile) -->
+<nav class="hidden md:flex h-full w-80 rounded-r-xl border-r border-outline-variant shadow-lg bg-surface-container-lowest dark:bg-surface-container-low fixed inset-y-0 left-0 z-50 flex-col">
+<div class="p-margin-tablet border-b border-outline-variant">
+<h2 class="font-narrative-display text-narrative-display text-on-surface mb-2">Pregunta Antropológica</h2>
+<p class="font-technical-caps text-technical-caps text-primary uppercase tracking-widest">Metodología N0-N3</p>
+</div>
+<ul class="flex flex-col py-4">
+<li>
+<a class="flex items-center px-margin-tablet py-3 h-touch-target transition-colors duration-200 text-on-surface-variant hover:bg-surface-container" href="#">
+<span class="material-symbols-outlined mr-4">radio_button_unchecked</span>
+<span class="font-ui-label text-ui-label">Nivel 0: Observación</span>
+</a>
+</li>
+<li>
+<a class="flex items-center px-margin-tablet py-3 h-touch-target transition-colors duration-200 text-on-surface-variant hover:bg-surface-container" href="#">
+<span class="material-symbols-outlined mr-4">fiber_manual_record</span>
+<span class="font-ui-label text-ui-label">Nivel 1: Descripción</span>
+</a>
+</li>
+<li>
+<a class="flex items-center px-margin-tablet py-3 h-touch-target transition-colors duration-200 text-on-surface-variant hover:bg-surface-container" href="#">
+<span class="material-symbols-outlined mr-4">change_history</span>
+<span class="font-ui-label text-ui-label">Nivel 2: Análisis</span>
+</a>
+</li>
+<li>
+<a class="flex items-center px-margin-tablet py-3 h-touch-target transition-colors duration-200 bg-surface-container-high dark:bg-surface-container-highest text-primary font-bold" href="#">
+<span class="material-symbols-outlined mr-4 filled text-primary">pentagon</span>
+<span class="font-ui-label text-ui-label">Nivel 3: Teoría</span>
+</a>
+</li>
+</ul>
+</nav>
+<!-- MOBILE ONLY TopAppBar -->
+<header class="md:hidden sticky top-0 z-50 flex items-center justify-between px-margin-mobile h-touch-target bg-surface border-b border-outline-variant transition-all duration-300 ease-in-out">
+<button class="h-touch-target w-touch-target flex items-center justify-center text-primary hover:bg-surface-container-high rounded-full">
+<span class="material-symbols-outlined" data-icon="menu">menu</span>
+</button>
+<h1 class="font-narrative-display-mobile text-narrative-display-mobile text-on-surface">Pregunta Antropológica</h1>
+<div class="h-touch-target flex items-center text-primary">
+<div class="w-8 h-8 rounded-full bg-surface-container-highest border border-outline flex items-center justify-center overflow-hidden">
+<span class="font-technical-caps text-[10px]">FR</span>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas (Archival Focus) -->
+<main class="flex-1 md:ml-80 w-full max-w-4xl mx-auto p-margin-mobile md:p-margin-tablet">
+<!-- Document Header / Traceability -->
+<header class="mb-12 border-b border-outline-variant pb-8">
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
+<div>
+<h2 class="font-technical-caps text-technical-caps text-on-surface-variant tracking-widest uppercase mb-4">Instrumento V4 — Culminación</h2>
+<h1 class="font-narrative-display-mobile md:font-narrative-display text-narrative-display-mobile md:text-narrative-display text-on-surface leading-tight">
+                        Dictamen Antropológico:<br/>
+                        Dinámicas de Integración Espacial
+                    </h1>
+</div>
+<!-- Traceability Badge -->
+<div class="inline-flex items-center gap-3 bg-surface-container-low border border-outline-variant rounded p-3 self-start md:self-auto shadow-sm">
+<span class="material-symbols-outlined text-outline">fingerprint</span>
+<div class="flex flex-col">
+<span class="font-technical-caps text-technical-caps text-on-surface-variant">SHA-256 Checksum</span>
+<span class="font-technical-data text-technical-data text-on-surface">e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855</span>
+</div>
+</div>
+</div>
+</header>
+<!-- Editorial Content Area (Newsreader, Ch-65 limit for rhythm) -->
+<article class="font-narrative-body text-narrative-body text-on-surface leading-[1.6] ch-65 mx-auto space-y-8">
+<p class="first-letter:text-5xl first-letter:font-narrative-display first-letter:float-left first-letter:mr-2 first-letter:mt-1">
+                El presente dictamen sintetiza las observaciones longitudinales realizadas en la intersección de las dinámicas formales e informales de ocupación espacial en el distrito sur. La transición del Nivel 0 (Observación empírica) al Nivel 3 (Formulación teórica) revela patrones sistémicos que trascienden las explicaciones funcionales inmediatas.
+            </p>
+<p>
+                Se ha constatado que la reconfiguración de los límites territoriales no responde a directrices impuestas de manera vertical, sino que emerge como un mecanismo adaptativo de las comunidades en respuesta a la presión institucional. Los marcadores espaciales, previamente documentados en el Cuaderno de Campo (Ref: Obs-442), operan como un lenguaje semiótico silencioso.
+            </p>
+<!-- Observation Callout (Parchment Card with Mineral Gray border) -->
+<figure class="bg-surface border border-outline-variant p-6 my-10 rounded-sm">
+<figcaption class="font-technical-caps text-technical-caps text-on-surface-variant mb-4 uppercase tracking-widest flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px]">format_quote</span> Extracción de Diario (N2)
+                </figcaption>
+<blockquote class="font-narrative-display-mobile text-narrative-display-mobile text-on-surface italic border-l-2 border-outline pl-4 py-2">
+                    "La barrera física no aísla; en cambio, concentra el flujo social en nodos específicos, generando micro-economías efímeras que desaparecen al atardecer."
+                </blockquote>
+<div class="mt-4 flex gap-2 flex-wrap">
+<span class="px-3 py-1 border border-secondary text-secondary font-technical-data text-technical-data rounded">Espacio Transicional</span>
+<span class="px-3 py-1 border border-secondary text-secondary font-technical-data text-technical-data rounded">Economía Informal</span>
+</div>
+</figure>
+<p>
+                La teorización de estos hallazgos (Nivel 3) propone un modelo de "Resiliencia Topológica", donde el valor de un espacio no reside en su infraestructura física, sino en la densidad de las relaciones sociales que es capaz de soportar bajo condiciones de estrés. Esto refuta las hipótesis iniciales que sugerían un proceso de desintegración comunitaria.
+            </p>
+<h3 class="font-narrative-display-mobile text-2xl font-semibold mt-12 mb-4 border-b border-outline-variant pb-2">Conclusiones Estructurales</h3>
+<ul class="space-y-4 font-narrative-body text-narrative-body">
+<li class="flex items-start gap-4">
+<span class="material-symbols-outlined text-outline mt-1">remove</span>
+<span>La densidad habitacional y la intensidad de intercambio económico presentan una correlación no lineal, mediada por factores de parentesco y confianza histórica.</span>
+</li>
+<li class="flex items-start gap-4">
+<span class="material-symbols-outlined text-outline mt-1">remove</span>
+<span>El marco normativo oficial carece de la granularidad necesaria para registrar o regular las economías de proximidad emergentes.</span>
+</li>
+</ul>
+</article>
+<!-- Sealing Action (Sellar Peritaje) -->
+<section class="mt-20 mb-10 pb-20 md:pb-0 mx-auto max-w-md">
+<div class="bg-surface-container border border-outline-variant p-8 rounded-lg flex flex-col items-center text-center shadow-sm">
+<span class="material-symbols-outlined text-4xl text-on-surface-variant mb-4">gavel</span>
+<h4 class="font-narrative-display-mobile text-2xl mb-2 text-on-surface">Validación Definitiva</h4>
+<p class="font-technical-data text-technical-data text-on-surface-variant mb-8">
+                    El sellado de este dictamen inmutabiliza los datos. Reclama la responsabilidad autoral sobre el registro antropológico.
+                </p>
+<!-- Long Press / Swipe to Seal interaction simulation -->
+<button class="relative w-full h-16 bg-surface-container-highest border border-outline rounded-full flex items-center justify-center overflow-hidden group hover:bg-surface-variant transition-colors">
+<div class="absolute inset-y-0 left-0 bg-secondary w-0 group-active:w-full transition-all duration-1000 ease-in-out opacity-20"></div>
+<span class="font-ui-control text-ui-control font-medium text-on-surface relative z-10 flex items-center gap-2">
+                        Mantener pulsado para Sellar
+                        <span class="material-symbols-outlined text-[18px]">touch_app</span>
+</span>
+</button>
+</div>
+</section>
+</main>
+<!-- MOBILE ONLY BottomNavBar -->
+<nav class="md:hidden fixed bottom-0 w-full z-50 flex justify-around items-center px-2 pb-4 pt-2 h-thumb-zone-bottom bg-surface-container-low border-t border-outline-variant rounded-t-xl transition-transform">
+<button class="flex flex-col items-center justify-center text-on-surface-variant w-16 group hover:opacity-80 transition-transform scale-95 active:scale-90">
+<div class="px-4 py-1 rounded-full group-hover:bg-surface-container-highest transition-colors">
+<span class="material-symbols-outlined" data-icon="menu_book">menu_book</span>
+</div>
+<span class="font-ui-label text-[10px] tracking-wide mt-1">Cuaderno</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant w-16 group hover:opacity-80 transition-transform scale-95 active:scale-90">
+<div class="px-4 py-1 rounded-full group-hover:bg-surface-container-highest transition-colors">
+<span class="material-symbols-outlined" data-icon="sensors">sensors</span>
+</div>
+<span class="font-ui-label text-[10px] tracking-wide mt-1">Señales</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant w-16 group hover:opacity-80 transition-transform scale-95 active:scale-90">
+<div class="px-4 py-1 rounded-full group-hover:bg-surface-container-highest transition-colors">
+<span class="material-symbols-outlined" data-icon="hub">hub</span>
+</div>
+<span class="font-ui-label text-[10px] tracking-wide mt-1">Relaciones</span>
+</button>
+<!-- Active State: Peritaje -->
+<button class="flex flex-col items-center justify-center text-on-secondary-container w-16 group hover:opacity-80 transition-transform scale-95 active:scale-90">
+<div class="px-4 py-1 rounded-full bg-secondary-container flex items-center justify-center shadow-inner inner-border">
+<span class="material-symbols-outlined filled" data-icon="verified" data-weight="fill">verified</span>
+</div>
+<span class="font-ui-label text-[10px] font-bold tracking-wide mt-1">Peritaje</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant w-16 group hover:opacity-80 transition-transform scale-95 active:scale-90">
+<div class="px-4 py-1 rounded-full group-hover:bg-surface-container-highest transition-colors">
+<span class="material-symbols-outlined" data-icon="search">search</span>
+</div>
+<span class="font-ui-label text-[10px] tracking-wide mt-1">Consulta</span>
+</button>
+</nav>
+</body></html>

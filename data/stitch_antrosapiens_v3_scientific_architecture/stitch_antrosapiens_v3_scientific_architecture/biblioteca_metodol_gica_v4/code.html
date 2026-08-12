@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Biblioteca Metodológica</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-highest": "#e5e3d7",
+                        "tertiary": "#293347",
+                        "tertiary-fixed-dim": "#bcc7df",
+                        "secondary": "#ac3400",
+                        "surface-container-low": "#f6f4e8",
+                        "on-tertiary-fixed-variant": "#3d475b",
+                        "on-secondary-container": "#5d1900",
+                        "inverse-surface": "#303129",
+                        "surface": "#fcfaed",
+                        "on-primary-container": "#9ec0bf",
+                        "outline-variant": "#c1c8c7",
+                        "surface-dim": "#dcdacf",
+                        "on-background": "#1b1c15",
+                        "on-primary-fixed": "#002020",
+                        "on-primary-fixed-variant": "#2c4c4c",
+                        "on-surface": "#1b1c15",
+                        "primary-container": "#2f4f4f",
+                        "outline": "#717878",
+                        "tertiary-container": "#404a5e",
+                        "inverse-primary": "#abcdcd",
+                        "surface-bright": "#fcfaed",
+                        "error": "#ba1a1a",
+                        "on-secondary-fixed-variant": "#832600",
+                        "surface-container-high": "#eae8dd",
+                        "on-surface-variant": "#414848",
+                        "on-error-container": "#93000a",
+                        "surface-variant": "#e5e3d7",
+                        "inverse-on-surface": "#f3f1e5",
+                        "on-tertiary-container": "#afbad2",
+                        "secondary-fixed-dim": "#ffb59d",
+                        "on-tertiary-fixed": "#111c2e",
+                        "primary-fixed": "#c6e9e9",
+                        "tertiary-fixed": "#d8e2fc",
+                        "on-secondary-fixed": "#390c00",
+                        "on-error": "#ffffff",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary": "#ffffff",
+                        "surface-container": "#f0eee2",
+                        "surface-tint": "#446464",
+                        "on-tertiary": "#ffffff",
+                        "background": "#fcfaed",
+                        "on-primary": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "secondary-fixed": "#ffdbd0",
+                        "secondary-container": "#fd6b36",
+                        "primary-fixed-dim": "#abcdcd",
+                        "primary": "#173838",
+                        "mineral-blue": "#091426"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "gutter": "2rem",
+                        "stack-sm": "0.75rem",
+                        "margin-page": "4rem",
+                        "margin-mobile": "1.5rem",
+                        "stack-md": "1.5rem",
+                        "stack-xl": "3rem"
+                    },
+                    "fontFamily": {
+                        "label-sm": ["Inter"],
+                        "body-lg": ["Newsreader"],
+                        "headline-lg": ["Newsreader"],
+                        "headline-lg-mobile": ["Newsreader"],
+                        "display-lg": ["Newsreader"],
+                        "body-md": ["Newsreader"],
+                        "technical-mono": ["JetBrains Mono"],
+                        "title-md": ["Newsreader"],
+                        "label-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "label-sm": ["12px", { "lineHeight": "16px", "fontWeight": "600" }],
+                        "body-lg": ["19px", { "lineHeight": "32px", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "fontWeight": "500" }],
+                        "headline-lg-mobile": ["28px", { "lineHeight": "36px", "fontWeight": "500" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "body-md": ["17px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "technical-mono": ["13px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "title-md": ["22px", { "lineHeight": "28px", "fontWeight": "500" }],
+                        "label-md": ["14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "500" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            background-color: #fcfaed;
+            color: #091426;
+            background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23noise)' opacity='0.05'/%3E%3C/svg%3E");
+        }
+        .index-card {
+            background-color: #fffdf5;
+            box-shadow: 0 4px 20px rgba(9, 20, 38, 0.04);
+            border: 1px solid rgba(71, 85, 105, 0.15);
+            transition: transform 0.3s ease;
+        }
+        .index-card:hover {
+            transform: translateY(-2px) rotate(0.5deg);
+        }
+        .paper-texture {
+            position: relative;
+        }
+        .paper-texture::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.6' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 1;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="antialiased min-h-screen pb-24">
+<!-- TopAppBar -->
+<header class="bg-surface dark:bg-surface text-primary dark:text-primary-fixed font-headline-md-mobile text-headline-md-mobile docked full-width top-0 bg-surface-container-low dark:bg-tertiary-container shadow-sm shadow-sm opacity-90 transition-colors duration-300 ease-in-out flex justify-between items-center w-full px-margin-mobile h-touch-target sticky z-40 py-4 h-16" style="min-height: 48px;">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary" data-icon="science" style="font-variation-settings: 'FILL' 1;">science</span>
+<h1 class="font-bold tracking-tight text-mineral-blue">Biblioteca Metodológica</h1>
+</div>
+<div>
+<span class="material-symbols-outlined text-primary cursor-pointer" data-icon="cloud_done">cloud_done</span>
+</div>
+</header>
+<main class="max-w-7xl mx-auto px-margin-mobile md:px-margin-page py-stack-xl">
+<!-- Foco Activo & Search -->
+<section class="mb-stack-xl grid grid-cols-1 lg:grid-cols-3 gap-stack-md items-start">
+<div class="lg:col-span-2 relative group h-12 min-h-[48px]">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline" data-icon="search">search</span>
+<input class="w-full h-full pl-12 pr-4 bg-surface-bright border-b border-outline-variant/30 focus:border-primary focus:ring-0 font-body-md text-body-md text-mineral-blue placeholder-outline transition-all pb-2 focus:pb-1" placeholder="Constructor de Consultas..." style="min-height: 48px;" type="text"/>
+</div>
+<div class="lg:col-span-1 bg-surface-container-high rounded-lg p-4 flex items-start gap-3 border border-outline-variant/20 shadow-sm opacity-90">
+<span class="material-symbols-outlined text-secondary-container mt-1" data-icon="radar" style="font-variation-settings: 'FILL' 1;">radar</span>
+<div>
+<h3 class="font-label-sm text-label-sm text-outline uppercase tracking-wider mb-1">Foco Activo</h3>
+<p class="font-title-md text-title-md text-mineral-blue leading-snug">¿Cómo afecta la 'Deuda Cultural' la adopción de nuevas interfaces en áreas rurales?</p>
+</div>
+</div>
+</section>
+<!-- Bento Grid Layout for Library Content -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
+<!-- Left Column: Glossary & Node Personas -->
+<div class="md:col-span-8 flex flex-col gap-8">
+<!-- Glosario de Relaciones -->
+<section>
+<div class="flex items-center gap-2 mb-stack-sm border-b border-outline-variant/20 pb-2">
+<span class="material-symbols-outlined text-primary" data-icon="menu_book">menu_book</span>
+<h2 class="font-headline-lg-mobile md:font-headline-lg text-headline-lg-mobile md:text-headline-lg text-mineral-blue">Glosario de Relaciones</h2>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+<!-- Index Card 1 -->
+<div class="index-card paper-texture p-6 rounded rotate-1">
+<div class="flex justify-between items-start mb-4">
+<span class="bg-surface-container px-2 py-1 rounded font-technical-mono text-technical-mono text-primary border border-outline-variant/30">[REF-402]</span>
+<span class="material-symbols-outlined text-mineral-blue" data-icon="add_circle">add_circle</span>
+</div>
+<h3 class="font-title-md text-title-md text-mineral-blue mb-2 font-medium">Refuerza</h3>
+<p class="font-body-md text-body-md text-mineral-blue/80">Concepto que solidifica una creencia preexistente en la comunidad observada.</p>
+</div>
+<!-- Index Card 2 -->
+<div class="index-card paper-texture p-6 rounded -rotate-1">
+<div class="flex justify-between items-start mb-4">
+<span class="bg-surface-container px-2 py-1 rounded font-technical-mono text-technical-mono text-primary border border-outline-variant/30">[CTR-119]</span>
+<span class="material-symbols-outlined text-secondary-container" data-icon="cancel">cancel</span>
+</div>
+<h3 class="font-title-md text-title-md text-mineral-blue mb-2 font-medium">Contradice</h3>
+<p class="font-body-md text-body-md text-mineral-blue/80">Evidencia que desarticula la hipótesis inicial sobre el comportamiento de uso.</p>
+</div>
+<!-- Index Card 3 -->
+<div class="index-card paper-texture p-6 rounded rotate-[0.5deg]">
+<div class="flex justify-between items-start mb-4">
+<span class="bg-surface-container px-2 py-1 rounded font-technical-mono text-technical-mono text-primary border border-outline-variant/30">[MAT-055]</span>
+<span class="material-symbols-outlined text-tertiary-container" data-icon="tune">tune</span>
+</div>
+<h3 class="font-title-md text-title-md text-mineral-blue mb-2 font-medium">Matiza</h3>
+<p class="font-body-md text-body-md text-mineral-blue/80">Introduce variables contextuales (ej. clima, hora) que alteran el significado principal.</p>
+</div>
+</div>
+</section>
+<!-- Personas Nodo -->
+<section>
+<div class="flex items-center gap-2 mb-stack-sm border-b border-outline-variant/20 pb-2">
+<span class="material-symbols-outlined text-primary" data-icon="group_work">group_work</span>
+<h2 class="font-headline-lg-mobile md:font-headline-lg text-headline-lg-mobile md:text-headline-lg text-mineral-blue">Personas Nodo</h2>
+</div>
+<div class="flex flex-col gap-4">
+<div class="index-card paper-texture p-6 rounded border-t-2 border-t-primary">
+<div class="flex items-start gap-4">
+<div class="w-16 h-16 rounded-full bg-surface-container-high flex-shrink-0 flex items-center justify-center border border-outline-variant/30">
+<span class="material-symbols-outlined text-primary text-3xl" data-icon="person">person</span>
+</div>
+<div>
+<h3 class="font-title-md text-title-md text-mineral-blue font-medium">El "Traductor" Comunitario</h3>
+<p class="font-technical-mono text-technical-mono text-outline mb-2">ID: PN-01 | Frecuencia: Alta</p>
+<p class="font-body-md text-body-md text-mineral-blue/90">Individuo que actúa como puente cognitivo entre el vocabulario técnico de la interfaz y los modismos locales. Crucial para adopciones tempranas.</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Right Column: Sidebar (Deuda Cultural & Rituales) -->
+<div class="md:col-span-4 flex flex-col gap-8">
+<!-- Deuda Cultural -->
+<section class="bg-[#F2F0E4] p-6 rounded-lg border border-outline-variant/20 shadow-sm paper-texture">
+<div class="flex items-center gap-2 mb-4">
+<span class="material-symbols-outlined text-secondary-container" data-icon="account_balance_wallet">account_balance_wallet</span>
+<h2 class="font-title-md text-title-md text-mineral-blue font-semibold">Deuda Cultural™</h2>
+</div>
+<div class="mb-4">
+<p class="font-body-md text-body-md text-mineral-blue/90 italic border-l-2 border-secondary-container pl-3 ml-1">El costo cognitivo y social acumulado cuando un sistema tecnológico ignora los rituales preexistentes de una comunidad.</p>
+</div>
+<div class="bg-surface-container-low p-3 rounded border border-outline-variant/10 font-technical-mono text-technical-mono">
+<div class="text-outline mb-1 text-xs">PATRONES RECIENTES</div>
+<ul class="space-y-2 text-mineral-blue">
+<li class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-error"></span> [DC-992] Rechazo de notificaciones push</li>
+<li class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-secondary-container"></span> [DC-994] Adaptación informal del UI</li>
+</ul>
+</div>
+</section>
+<!-- Rituales Competidores -->
+<section class="bg-surface p-6 rounded-lg border border-outline-variant/20 paper-texture rotate-[0.5deg]">
+<div class="flex items-center gap-2 mb-4">
+<span class="material-symbols-outlined text-primary" data-icon="local_fire_department">local_fire_department</span>
+<h2 class="font-title-md text-title-md text-mineral-blue font-semibold">Rituales Competidores</h2>
+</div>
+<ul class="space-y-4">
+<li class="border-b border-outline-variant/10 pb-3 last:border-0 last:pb-0">
+<h4 class="font-label-md text-label-md text-mineral-blue font-bold mb-1">El "Corte de Caja" Físico</h4>
+<p class="font-body-md text-body-md text-mineral-blue/80 text-sm">Preferencia por contabilidad en papel a las 6 PM, compitiendo con los reportes automáticos de la app.</p>
+<span class="inline-block mt-2 font-technical-mono text-technical-mono text-xs bg-surface-container px-2 py-0.5 rounded text-outline">[RC-044]</span>
+</li>
+<li class="border-b border-outline-variant/10 pb-3 last:border-0 last:pb-0">
+<h4 class="font-label-md text-label-md text-mineral-blue font-bold mb-1">Validación Colectiva</h4>
+<p class="font-body-md text-body-md text-mineral-blue/80 text-sm">Necesidad de mostrar la pantalla a 2+ personas antes de confirmar una transacción.</p>
+<span class="inline-block mt-2 font-technical-mono text-technical-mono text-xs bg-surface-container px-2 py-0.5 rounded text-outline">[RC-089]</span>
+</li>
+</ul>
+</section>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (Mobile Only based on logic, but forced visible here for requirements) -->
+<nav class="md:hidden bg-parchment dark:bg-tertiary text-moss-green dark:text-secondary-fixed-dim font-mono-label text-metadata font-headline-md text-primary docked full-width bottom-0 rounded-t-xl border-t border-outline-variant/10 bg-surface-bright dark:bg-tertiary fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-gutter py-2 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+<!-- Active Tab: Methodology/Library -->
+<div class="flex flex-col items-center justify-center bg-secondary-container dark:bg-on-secondary-fixed-variant rounded-full w-12 h-12 cursor-pointer scale-95 transition-transform duration-150">
+<span class="material-symbols-outlined text-white" data-icon="menu_book" style="font-variation-settings: 'FILL' 1;">menu_book</span>
+</div>
+<!-- Inactive Tabs -->
+<div class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-tertiary-container w-12 h-12 cursor-pointer hover:opacity-80 transition-opacity">
+<span class="material-symbols-outlined" data-icon="inventory_2">inventory_2</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-tertiary-container w-12 h-12 cursor-pointer hover:opacity-80 transition-opacity">
+<span class="material-symbols-outlined" data-icon="hub">hub</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-tertiary-container w-12 h-12 cursor-pointer hover:opacity-80 transition-opacity">
+<span class="material-symbols-outlined" data-icon="article">article</span>
+</div>
+</nav>
+</body></html>

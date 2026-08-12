@@ -1,0 +1,87 @@
+región=Toda LATAM
+WARNING hd_scraper.rate_limit: [gdelt] transporte ConnectTimeout, backoff 4.0s (intento 1)
+WARNING hd_scraper.rate_limit: [gdelt] transporte ConnectTimeout, backoff 8.0s (intento 2)
+WARNING hd_scraper.rate_limit: [gdelt] transporte ConnectTimeout, backoff 16.0s (intento 3)
+ERROR hd_scraper.pipeline: [gdelt] search falló
+Traceback (most recent call last):
+  File "/data/data/com.termux/files/home/antrosapiens/venv/lib/python3.14/site-packages/httpx/_transports/default.py", line 101, in map_httpcore_exceptions
+    yield
+  File "/data/data/com.termux/files/home/antrosapiens/venv/lib/python3.14/site-packages/httpx/_transports/default.py", line 250, in handle_request
+    resp = self._pool.handle_request(req)
+  File "/data/data/com.termux/files/home/antrosapiens/venv/lib/python3.14/site-packages/httpcore/_sync/connection_pool.py", line 256, in handle_request
+    raise exc from None
+  File "/data/data/com.termux/files/home/antrosapiens/venv/lib/python3.14/site-packages/httpcore/_sync/connection_pool.py", line 236, in handle_request
+    response = connection.handle_request(
+        pool_request.request
+    )
+  File "/data/data/com.termux/files/home/antrosapiens/venv/lib/python3.14/site-packages/httpcore/_sync/connection.py", line 101, in handle_request
+    raise exc
+  File "/data/data/com.termux/files/home/antrosapiens/venv/lib/python3.14/site-packages/httpcore/_sync/connection.py", line 78, in handle_request
+    stream = self._connect(request)
+  File "/data/data/com.termux/files/home/antrosapiens/venv/lib/python3.14/site-packages/httpcore/_sync/connection.py", line 156, in _connect
+    stream = stream.start_tls(**kwargs)
+  File "/data/data/com.termux/files/home/antrosapiens/venv/lib/python3.14/site-packages/httpcore/_backends/sync.py", line 154, in start_tls
+    with map_exceptions(exc_map):
+         ~~~~~~~~~~~~~~^^^^^^^^^
+  File "/data/data/com.termux/files/usr/lib/python3.14/contextlib.py", line 162, in __exit__
+    self.gen.throw(value)
+    ~~~~~~~~~~~~~~^^^^^^^
+  File "/data/data/com.termux/files/home/antrosapiens/venv/lib/python3.14/site-packages/httpcore/_exceptions.py", line 14, in map_exceptions
+    raise to_exc(exc) from exc
+httpcore.ConnectTimeout: _ssl.c:1064: The handshake operation timed out
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/data/data/com.termux/files/home/antrosapiens/hd_scraper/pipeline.py", line 133, in run_connector
+    crudos = list(connector.search(query))
+                  ~~~~~~~~~~~~~~~~^^^^^^^
+  File "/data/data/com.termux/files/home/antrosapiens/hd_scraper/connectors/gdelt.py", line 78, in search
+    texto = self.rate_limiter.run(lambda: self._get(url))
+  File "/data/data/com.termux/files/home/antrosapiens/hd_scraper/governance/rate_limit.py", line 54, in run
+    return fn()
+  File "/data/data/com.termux/files/home/antrosapiens/hd_scraper/connectors/gdelt.py", line 78, in <lambda>
+    texto = self.rate_limiter.run(lambda: self._get(url))
+                                          ~~~~~~~~~^^^^^
+  File "/data/data/com.termux/files/home/antrosapiens/hd_scraper/connectors/gdelt.py", line 116, in _get
+    resp = self.client.get(url)
+  File "/data/data/com.termux/files/home/antrosapiens/venv/lib/python3.14/site-packages/httpx/_client.py", line 1053, in get
+    return self.request(
+           ~~~~~~~~~~~~^
+        "GET",
+        ^^^^^^
+    ...<7 lines>...
+        extensions=extensions,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/data/data/com.termux/files/home/antrosapiens/venv/lib/python3.14/site-packages/httpx/_client.py", line 825, in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/data/data/com.termux/files/home/antrosapiens/venv/lib/python3.14/site-packages/httpx/_client.py", line 914, in send
+    response = self._send_handling_auth(
+        request,
+    ...<2 lines>...
+        history=[],
+    )
+  File "/data/data/com.termux/files/home/antrosapiens/venv/lib/python3.14/site-packages/httpx/_client.py", line 942, in _send_handling_auth
+    response = self._send_handling_redirects(
+        request,
+        follow_redirects=follow_redirects,
+        history=history,
+    )
+  File "/data/data/com.termux/files/home/antrosapiens/venv/lib/python3.14/site-packages/httpx/_client.py", line 979, in _send_handling_redirects
+    response = self._send_single_request(request)
+  File "/data/data/com.termux/files/home/antrosapiens/venv/lib/python3.14/site-packages/httpx/_client.py", line 1014, in _send_single_request
+    response = transport.handle_request(request)
+  File "/data/data/com.termux/files/home/antrosapiens/venv/lib/python3.14/site-packages/httpx/_transports/default.py", line 249, in handle_request
+    with map_httpcore_exceptions():
+         ~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/data/data/com.termux/files/usr/lib/python3.14/contextlib.py", line 162, in __exit__
+    self.gen.throw(value)
+    ~~~~~~~~~~~~~~^^^^^^^
+  File "/data/data/com.termux/files/home/antrosapiens/venv/lib/python3.14/site-packages/httpx/_transports/default.py", line 118, in map_httpcore_exceptions
+    raise mapped_exc(message) from exc
+httpx.ConnectTimeout: _ssl.c:1064: The handshake operation timed out
+gdelt[Kaszek/ronda] vistos=0 escritos=0 no_fechados=0 duplicados=0 rechazados=0 filtrados=0 errores=1
+WARNING hd_scraper.rate_limit: [gdelt] transporte ConnectTimeout, backoff 4.0s (intento 1)

@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Cuaderno de Campo - Nivel 0</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&amp;family=Newsreader:opsz,wght@6..72,400;500;600&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary": "#091426",
+                        "tertiary-container": "#1a2a3e",
+                        "surface-container-high": "#eae9dc",
+                        "ink-blue": "#1E293B",
+                        "on-surface-variant": "#45474c",
+                        "secondary-fixed-dim": "#a9cfb9",
+                        "on-primary-fixed": "#111c2d",
+                        "tertiary": "#041528",
+                        "background": "#fcfaed",
+                        "on-secondary-container": "#476a58",
+                        "on-surface": "#1b1c14",
+                        "secondary": "#436653",
+                        "on-secondary-fixed": "#002113",
+                        "slate-text": "#334155",
+                        "stone-blue": "#475569",
+                        "surface-container": "#f0eee1",
+                        "primary-container": "#1e293b",
+                        "surface-container-highest": "#e5e3d6",
+                        "surface-container-lowest": "#ffffff",
+                        "parchment": "#FCFAED",
+                        "surface-bright": "#fcfaed",
+                        "on-tertiary": "#ffffff",
+                        "outline": "#75777d",
+                        "outline-variant": "#c5c6cd",
+                        "on-secondary-fixed-variant": "#2c4e3d",
+                        "surface-container-low": "#f6f4e7",
+                        "on-background": "#1b1c14",
+                        "error-container": "#ffdad6",
+                        "moss-green": "#2D4F3E",
+                        "surface": "#fcfaed",
+                        "inverse-on-surface": "#f3f1e4",
+                        "on-primary": "#ffffff",
+                        "on-secondary": "#ffffff",
+                        "tertiary-fixed-dim": "#b7c8e1",
+                        "inverse-surface": "#303129",
+                        "amber-question": "#D97706",
+                        "on-primary-container": "#8590a6",
+                        "primary-fixed-dim": "#bcc7de",
+                        "on-primary-fixed-variant": "#3c475a",
+                        "on-error-container": "#93000a",
+                        "on-tertiary-fixed": "#0b1c30",
+                        "on-tertiary-fixed-variant": "#38485d",
+                        "terracotta-alert": "#991B1B",
+                        "surface-dim": "#dcdace",
+                        "inverse-primary": "#bcc7de",
+                        "tertiary-fixed": "#d3e4fe",
+                        "surface-tint": "#545f73",
+                        "on-tertiary-container": "#8191a9",
+                        "error": "#ba1a1a",
+                        "on-error": "#ffffff",
+                        "secondary-container": "#c2e9d2",
+                        "surface-variant": "#e5e3d6",
+                        "secondary-fixed": "#c5ebd4",
+                        "primary-fixed": "#d8e3fb"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "margin-desktop": "64px",
+                        "gutter": "16px",
+                        "visual-silence": "64px", /* Increased whitespace */
+                        "touch-target": "48px", /* Enforced 48dp */
+                        "margin-mobile": "24px"
+                    },
+                    "fontFamily": {
+                        "metadata": ["JetBrains Mono"],
+                        "mono-technical": ["JetBrains Mono"],
+                        "mono-label": ["JetBrains Mono"],
+                        "body-reading-mobile": ["Newsreader"],
+                        "display-lg": ["Newsreader"],
+                        "headline-md": ["Newsreader"],
+                        "headline-md-mobile": ["Newsreader"],
+                        "body-reading": ["Newsreader"]
+                    },
+                    "fontSize": {
+                        "metadata": ["11px", { "lineHeight": "14px", "fontWeight": "400" }],
+                        "mono-technical": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "mono-label": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500" }],
+                        "body-reading-mobile": ["18px", { "lineHeight": "1.6", "fontWeight": "400" }], /* Line height 1.6 */
+                        "display-lg": ["48px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "headline-md": ["32px", { "lineHeight": "1.4", "fontWeight": "500" }],
+                        "headline-md-mobile": ["24px", { "lineHeight": "1.4", "fontWeight": "500" }],
+                        "body-reading": ["20px", { "lineHeight": "1.6", "fontWeight": "400" }] /* Line height 1.6 */
+                    },
+                    animation: {
+                        'fade-in-up': 'fadeInUp 0.6s ease-out forwards',
+                    },
+                    keyframes: {
+                        fadeInUp: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .focus-column { max-width: 65ch; margin: 0 auto; }
+        .ariadne-thread { border-left: 1px dashed var(--tw-colors-stone-blue); opacity: 0.3; }
+        /* Refined index card */
+        .paper-layer { 
+            background-color: var(--tw-colors-surface-container-lowest);
+            border: 1px solid rgba(71, 85, 105, 0.15); 
+            box-shadow: 2px 4px 12px rgba(9, 20, 38, 0.08);
+            border-radius: 4px 6px 3px 5px; /* Irregular border radius */
+        }
+        .rotated-card { transform: rotate(0.5deg); }
+        .input-baseline { border-bottom: 1px solid rgba(71, 85, 105, 0.3); }
+        .input-baseline:focus { outline: none; border-bottom-color: var(--tw-colors-primary); }
+        
+        /* Animation delays */
+        .delay-100 { animation-delay: 100ms; }
+        .delay-200 { animation-delay: 200ms; }
+        .delay-300 { animation-delay: 300ms; }
+        .delay-400 { animation-delay: 400ms; }
+
+        body {
+            min-height: max(884px, 100dvh);
+            background-color: #FCFAED; /* Parchment */
+            color: #091426; /* Mineral Blue */
+        }
+    </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body class="bg-parchment text-primary min-h-screen flex flex-col font-body-reading antialiased leading-relaxed" style="line-height: 1.7;">
+<!-- TopAppBar (Web & Mobile) -->
+<header class="flex justify-between items-center w-full px-margin-mobile h-touch-target bg-surface dark:bg-surface shadow-sm opacity-90 docked full-width top-0 z-40 bg-surface-container-low dark:bg-tertiary-container transition-colors duration-300 ease-in-out md:px-margin-desktop">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-primary dark:text-primary-fixed" data-icon="fingerprint">anchor</span>
+<div class="flex flex-col">
+<span class="font-headline-md-mobile text-headline-md-mobile text-primary dark:text-primary-fixed">Inquiry-7429 • Field Evidence</span>
+<span class="font-mono-technical text-mono-technical text-ink-blue dark:text-primary-fixed-dim">Nivel 0: Cuaderno de Campo</span>
+</div>
+</div>
+<!-- Desktop Nav Cluster -->
+<nav class="hidden md:flex items-center gap-8">
+<a class="text-on-surface-variant dark:text-on-tertiary-container hover:bg-surface-variant dark:hover:bg-primary-container px-4 py-2 rounded transition-colors duration-300 ease-in-out h-touch-target flex items-center justify-center" href="#">
+<div class="flex flex-col items-center">
+<span class="material-symbols-outlined mb-1" data-icon="biotech">biotech</span>
+<span class="font-mono-label text-metadata">biotech</span>
+</div>
+</a>
+<a class="text-on-surface-variant dark:text-on-tertiary-container hover:bg-surface-variant dark:hover:bg-primary-container px-4 py-2 rounded transition-colors duration-300 ease-in-out h-touch-target flex items-center justify-center" href="#">
+<div class="flex flex-col items-center">
+<span class="material-symbols-outlined mb-1" data-icon="science">science</span>
+<span class="font-mono-label text-metadata">science</span>
+</div>
+</a>
+<a class="text-primary dark:text-primary-fixed font-bold hover:bg-surface-variant dark:hover:bg-primary-container px-4 py-2 rounded transition-colors duration-300 ease-in-out bg-surface-variant h-touch-target flex items-center justify-center" href="#">
+<div class="flex flex-col items-center">
+<span class="material-symbols-outlined mb-1" data-icon="history_edu" data-weight="fill" style="font-variation-settings: 'FILL' 1;">history_edu</span>
+<span class="font-mono-label text-metadata">history_edu</span>
+</div>
+</a>
+<a class="text-on-surface-variant dark:text-on-tertiary-container hover:bg-surface-variant dark:hover:bg-primary-container px-4 py-2 rounded transition-colors duration-300 ease-in-out h-touch-target flex items-center justify-center" href="#">
+<div class="flex flex-col items-center">
+<span class="material-symbols-outlined mb-1" data-icon="menu_book">menu_book</span>
+<span class="font-mono-label text-metadata">menu_book</span>
+</div>
+</a>
+</nav>
+<button class="md:hidden text-primary h-touch-target w-touch-target flex items-center justify-center" id="drawer-toggle">
+<span class="material-symbols-outlined" data-icon="cloud_done">cloud_done</span>
+</button>
+<span class="hidden md:block material-symbols-outlined text-primary dark:text-primary-fixed" data-icon="cloud_done">cloud_done</span>
+</header>
+<!-- NavigationDrawer (Hidden by default, triggered by toggle) -->
+<div class="fixed inset-y-0 left-0 transform -translate-x-full h-full w-80 rounded-r-xl bg-surface-container-low dark:bg-tertiary shadow-md transition-all duration-300 z-50 flex flex-col p-margin-mobile gap-4 md:hidden" id="nav-drawer">
+<div class="flex justify-between items-center mb-6">
+<span class="font-headline-md text-primary">Methodology</span>
+<button class="text-primary p-2 h-touch-target w-touch-target flex items-center justify-center" id="drawer-close">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<nav class="flex flex-col gap-2">
+<a class="flex items-center gap-4 p-3 h-touch-target rounded-lg text-moss-green dark:text-secondary-fixed-dim font-bold hover:bg-surface-container-high dark:hover:bg-tertiary-container transition-colors" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">menu_book</span>
+<span class="font-body-reading-mobile text-body-reading-mobile">Glossary</span>
+</a>
+<a class="flex items-center gap-4 p-3 h-touch-target rounded-lg text-stone-blue dark:text-on-tertiary-container hover:bg-surface-container-high dark:hover:bg-tertiary-container transition-colors" href="#">
+<span class="material-symbols-outlined">group_work</span>
+<span class="font-body-reading-mobile text-body-reading-mobile">Persona Nodes</span>
+</a>
+<a class="flex items-center gap-4 p-3 h-touch-target rounded-lg text-stone-blue dark:text-on-tertiary-container hover:bg-surface-container-high dark:hover:bg-tertiary-container transition-colors" href="#">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+<span class="font-body-reading-mobile text-body-reading-mobile">Cultural Debt</span>
+</a>
+</nav>
+</div>
+<!-- Main Content Canvas -->
+<main class="flex-grow w-full px-margin-mobile md:px-margin-desktop py-visual-silence pb-32 md:pb-visual-silence overflow-y-auto bg-surface-variant/10">
+<div class="focus-column space-y-16 relative"> <!-- Increased spacing -->
+<!-- Contextual Thread Indicator -->
+<div class="absolute -left-8 md:-left-16 top-0 bottom-0 ariadne-thread hidden sm:block"></div>
+<!-- Central Anthropological Question -->
+<section class="space-y-4 opacity-0 animate-fade-in-up delay-100">
+<div class="flex items-center gap-3 text-stone-blue">
+<span class="material-symbols-outlined text-sm">explore</span>
+<span class="font-mono-label text-metadata uppercase tracking-widest">Pregunta Central</span>
+</div>
+<h1 class="font-display-lg text-display-lg text-primary leading-tight font-newsreader">
+                    ¿Cómo se construye la legitimidad social en entornos de alta volatilidad financiera?
+                </h1>
+</section>
+<!-- Research Focus -->
+<section class="paper-layer p-8 rotated-card relative opacity-0 animate-fade-in-up delay-200">
+<div class="absolute top-4 right-4 flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-amber-question animate-pulse"></span>
+<span class="font-mono-technical text-metadata text-stone-blue">Foco Activo</span>
+</div>
+<h2 class="font-headline-md text-headline-md text-primary mb-4 font-newsreader">Focus on crypto-rituals in emerging economies.</h2>
+<p class="font-body-reading text-body-reading text-on-surface-variant font-newsreader leading-relaxed">
+                    Initial observations suggest a correlation between economic instability and the adoption of decentralized consensus mechanisms not merely as tools, but as new forms of social truth-making.
+                </p>
+<div class="mt-6 flex justify-end">
+<span class="font-mono-technical text-metadata text-outline">SHA-256: 8f4e2...a1c9</span>
+</div>
+</section>
+<!-- Field Notes Entry (Peritaje vs Señal) -->
+<section class="space-y-6 pt-8 opacity-0 animate-fade-in-up delay-300">
+<div class="flex items-center gap-3 text-stone-blue mb-4">
+<span class="material-symbols-outlined text-sm">edit_note</span>
+<span class="font-mono-label text-metadata uppercase tracking-widest">Anotaciones de Campo</span>
+</div>
+<div class="space-y-6">
+<!-- Peritaje (Human) -->
+<div class="relative">
+<span class="absolute -left-6 top-2 text-stone-blue/50 text-xs material-symbols-outlined">person</span>
+<input class="w-full bg-transparent border-0 input-baseline font-body-reading text-body-reading text-primary placeholder:text-outline-variant py-2 font-newsreader leading-relaxed" placeholder="Observación humana (Peritaje)..." type="text"/>
+</div>
+<!-- Señal (AI) -->
+<div class="bg-surface-variant/30 p-4 rounded-md border border-outline-variant/20 relative">
+<span class="absolute -left-6 top-4 text-stone-blue/50 text-xs material-symbols-outlined">smart_toy</span>
+<input class="w-full bg-transparent border-0 input-baseline font-mono-technical text-mono-technical text-ink-blue placeholder:text-outline-variant py-2" placeholder="Señal algorítmica emergente..." type="text"/>
+</div>
+</div>
+<div class="flex gap-4 pt-4">
+<button class="h-touch-target px-6 rounded text-moss-green font-mono-technical text-mono-technical hover:bg-secondary-container transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">pulse</span>
+                        Validate Signal
+                    </button>
+<button class="h-touch-target px-6 rounded text-terracotta-alert font-mono-technical text-mono-technical hover:bg-error-container transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">cancel</span>
+                        Reject Noise
+                    </button>
+</div>
+</section>
+<!-- Saturation Indicator -->
+<section class="pt-12 opacity-0 animate-fade-in-up delay-400">
+<div class="flex items-center gap-3 text-stone-blue mb-4">
+<span class="material-symbols-outlined text-sm">waves</span>
+<span class="font-mono-label text-metadata uppercase tracking-widest">Estado de Saturación del Corpus</span>
+<div class="ml-auto flex items-center gap-2 opacity-60"><div class="w-3 h-3 rounded-full bg-primary animate-pulse"></div><span class="font-mono-label text-metadata uppercase tracking-widest">Organic Density: Active</span></div></div>
+<div class="flex flex-col items-center justify-center p-8 border border-outline-variant/20 rounded-xl bg-surface-container-lowest overflow-hidden relative min-h-[160px]">
+<!-- WebGL Shader Canvas -->
+<canvas class="absolute inset-0 w-full h-full opacity-60 mix-blend-multiply" id="saturationCanvas"></canvas>
+<div class="z-10 w-full flex justify-between mt-auto font-mono-technical text-metadata text-primary/80">
+<span>Initiation</span>
+<span>Saturation</span>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-gutter py-2 bg-surface dark:bg-tertiary border-t border-outline-variant/10 docked full-width bottom-0 rounded-t-xl transition-all duration-0">
+<a class="flex flex-col items-center justify-center text-stone-blue dark:text-on-tertiary-container w-touch-target h-touch-target hover:text-primary transition-colors duration-0" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="biotech">biotech</span>
+</a>
+<a class="flex flex-col items-center justify-center text-stone-blue dark:text-on-tertiary-container w-touch-target h-touch-target hover:text-primary transition-colors duration-0" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="science">science</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-primary-container/10 dark:bg-on-secondary-fixed-variant rounded-full w-touch-target h-touch-target hover:bg-primary-container/20 transition-colors duration-0" href="#">
+<span class="material-symbols-outlined text-primary dark:text-secondary-fixed-dim" data-icon="history_edu" data-weight="fill" style="font-variation-settings: 'FILL' 1;">history_edu</span>
+</a>
+<a class="flex flex-col items-center justify-center text-stone-blue dark:text-on-tertiary-container w-touch-target h-touch-target hover:text-primary transition-colors duration-0" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="menu_book">menu_book</span>
+</a>
+</nav>
+<script>
+        // Drawer Toggle Logic
+        const drawer = document.getElementById('nav-drawer');
+        const toggleBtn = document.getElementById('drawer-toggle');
+        const closeBtn = document.getElementById('drawer-close');
+
+        toggleBtn.addEventListener('click', () => {
+            drawer.classList.remove('-translate-x-full');
+        });
+
+        closeBtn.addEventListener('click', () => {
+            drawer.classList.add('-translate-x-full');
+        });
+        
+        // Input baseline dynamic style simulation
+        const inputs = document.querySelectorAll('.input-baseline');
+        inputs.forEach(input => {
+            input.addEventListener('focus', () => {
+                input.parentElement.classList.add('opacity-100');
+            });
+            input.addEventListener('blur', () => {
+                if(input.value === '') {
+                     input.parentElement.classList.remove('opacity-100');
+                }
+            });
+        });
+
+        // WebGL Saturation Shader
+        const canvas = document.getElementById('saturationCanvas');
+        if (canvas && typeof THREE !== 'undefined') {
+            const renderer = new THREE.WebGLRenderer({ canvas, alpha: true });
+            const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+            const scene = new THREE.Scene();
+
+            const geometry = new THREE.PlaneGeometry(2, 2);
+            
+            const fragmentShader = `
+                precision highp float;
+                uniform float u_time;
+                uniform vec2 u_resolution;
+                uniform vec2 u_mouse;
+
+                // Simplex 2D noise
+                vec3 permute(vec3 x) { return mod(((x*34.0)+1.0)*x, 289.0); }
+
+                float snoise(vec2 v){
+                  const vec4 C = vec4(0.211324865405187, 0.366025403784439,
+                           -0.577350269189626, 0.024390243902439);
+                  vec2 i  = floor(v + dot(v, vec2(C.y)) );
+                  vec2 x0 = v -   i + dot(i, vec2(C.x));
+                  vec2 x12 = x0.xyxy + vec4(C.x, C.y, C.z, C.w);
+                  vec2 i1;
+                  i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+                  x12.xy -= i1;
+                  i = mod(i, 289.0);
+                  vec3 p = permute( permute( i.y + vec3(0.0, i1.y, 1.0 ))
+                  + i.x + vec3(0.0, i1.x, 1.0 ));
+                  vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy),
+                    dot(x12.zw,x12.zw)), 0.0);
+                  m = m*m ;
+                  m = m*m ;
+                  vec3 x = 2.0 * fract(p * vec4(C.z).xxx) - 1.0;
+                  vec3 h = abs(x) - 0.5;
+                  vec3 a0 = x - floor(x + 0.5);
+                  vec3 g = a0 * vec3(m.x, m.y, m.z) + h * vec3(m.x, m.y, m.z);
+                  return 130.0 * dot(m, g);
+                }
+
+                void main() {
+                    vec2 uv = gl_FragCoord.xy / u_resolution.xy;
+                    float noise = snoise(uv * 3.0 + u_time * 0.1);
+                    float saturation = 0.65 + 0.15 * sin(u_time * 0.2); // Simulated organic saturation level
+                    
+                    // AntroSapiens V4 Colors: Surface (#FCFAED), Primary (#091426)
+                    vec3 colorA = vec3(0.988, 0.980, 0.929); // Parchment
+                    vec3 colorB = vec3(0.035, 0.078, 0.149); // Mineral Blue
+                    
+                    float f = step(saturation, noise * 0.5 + 0.5);
+                    vec3 finalColor = mix(colorA, colorB, f * 0.05); // Very subtle organic texture
+                    
+                    gl_FragColor = vec4(finalColor, 1.0);
+                }
+            `;
+
+            const material = new THREE.ShaderMaterial({
+                fragmentShader,
+                uniforms: {
+                    u_time: { value: 0 },
+                    u_resolution: { value: new THREE.Vector2() },
+                    u_mouse: { value: new THREE.Vector2() }
+                }
+            });
+
+            const mesh = new THREE.Mesh(geometry, material);
+            scene.add(mesh);
+
+            function resize() {
+                const width = canvas.clientWidth;
+                const height = canvas.clientHeight;
+                if (canvas.width !== width || canvas.height !== height) {
+                    renderer.setSize(width, height, false);
+                    material.uniforms.u_resolution.value.set(width, height);
+                }
+            }
+
+            function animate(time) {
+                resize();
+                material.uniforms.u_time.value = time * 0.001;
+                renderer.render(scene, camera);
+                requestAnimationFrame(animate);
+            }
+            requestAnimationFrame(animate);
+        }
+    </script>
+</body></html>

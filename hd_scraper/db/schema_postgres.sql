@@ -220,12 +220,15 @@ CREATE TABLE IF NOT EXISTS pipeline_comercial (
     notas            TEXT NOT NULL DEFAULT '',
     resultado        TEXT NOT NULL DEFAULT '',
     hash_dedup       TEXT NOT NULL UNIQUE,
+    candidato_id     TEXT,
     creado_en        TEXT NOT NULL,
     actualizado_en   TEXT NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_pipeline_etapa ON pipeline_comercial (etapa);
 CREATE INDEX IF NOT EXISTS idx_pipeline_org   ON pipeline_comercial (org_nombre);
+-- `idx_pipeline_candidato` se crea en `database._migrar_pipeline_candidato`
+-- DESPUÉS del ALTER (bases legacy no tienen la columna aún durante executescript).
 
 CREATE TABLE IF NOT EXISTS pipeline_transiciones (
     id              BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -239,6 +242,44 @@ CREATE TABLE IF NOT EXISTS pipeline_transiciones (
 
 CREATE INDEX IF NOT EXISTS idx_trans_pipeline ON pipeline_transiciones (pipeline_id);
 CREATE INDEX IF NOT EXISTS idx_trans_fecha    ON pipeline_transiciones (fecha);
+
+-- Reparación BC-I ↔ BC-II — Candidatos Comerciales (identidad referencial)
+-- Cada organización detectada por Motor A (BC-I) se materializa como un
+-- Candidato Comercial independiente y trazable (BC-II). Sustituye la unión
+-- NOMINAL por nombre/hash_dedup por una identidad referencial determinista:
+--   organización → candidato → prospecto → expediente → evidencia.
+CREATE TABLE IF NOT EXISTS candidatos (
+    id               BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    candidato_id     TEXT NOT NULL UNIQUE,
+    org_nombre       TEXT NOT NULL,
+    organizacion_id  INTEGER,
+    estado           TEXT NOT NULL DEFAULT 'detectado',
+    prospecto_id     BIGINT REFERENCES prospectos(id),
+    expediente_hash  TEXT,
+    hash_dedup       TEXT NOT NULL UNIQUE,
+    creado_en        TEXT NOT NULL,
+    actualizado_en   TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_candidatos_estado ON candidatos (estado);
+CREATE INDEX IF NOT EXISTS idx_candidatos_org    ON candidatos (org_nombre);
+
+CREATE TABLE IF NOT EXISTS candidato_transiciones (
+    id              BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    candidato_id    TEXT NOT NULL REFERENCES candidatos(candidato_id),
+    org_nombre      TEXT NOT NULL,
+    estado_desde    TEXT NOT NULL DEFAULT '',
+    estado_hasta    TEXT NOT NULL,
+    notas           TEXT NOT NULL DEFAULT '',
+    evidencia_id    BIGINT REFERENCES evidencias(id),
+    evidencia_url   TEXT,
+    evidencia_texto TEXT,
+    expediente_hash TEXT,
+    fecha           TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_candidato_trans_cand ON candidato_transiciones (candidato_id);
+CREATE INDEX IF NOT EXISTS idx_candidato_trans_fecha ON candidato_transiciones (fecha);
 
 -- =========================================================================
 -- Capa 12 — Gobernanza Científica, Auditoría Total y Reproducibilidad

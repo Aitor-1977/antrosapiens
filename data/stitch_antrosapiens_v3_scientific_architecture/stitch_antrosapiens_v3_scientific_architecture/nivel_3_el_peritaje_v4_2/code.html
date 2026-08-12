@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AntroSapiens - Nivel 3: El Peritaje</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&amp;family=JetBrains+Mono:wght@400&amp;family=Newsreader:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-primary": "#ffffff",
+                    "on-tertiary-fixed": "#0d1c2f",
+                    "on-secondary": "#ffffff",
+                    "tertiary-fixed": "#d5e3fd",
+                    "error": "#ba1a1a",
+                    "secondary-container": "#fe932c",
+                    "surface-tint": "#2b6954",
+                    "surface-container-low": "#f7f3e8",
+                    "surface-container-high": "#ece8dd",
+                    "on-secondary-fixed-variant": "#6e3900",
+                    "on-secondary-container": "#663500",
+                    "on-primary-fixed-variant": "#0b513d",
+                    "tertiary": "#212f42",
+                    "tertiary-fixed-dim": "#b9c7e0",
+                    "on-primary-fixed": "#002117",
+                    "background": "#fdf9ee",
+                    "surface": "#fdf9ee",
+                    "on-surface": "#1c1c15",
+                    "inverse-on-surface": "#f4f1e6",
+                    "surface-container-highest": "#e6e2d8",
+                    "on-tertiary-container": "#a4b2ca",
+                    "on-primary-container": "#80bea6",
+                    "inverse-surface": "#31312a",
+                    "primary-fixed": "#b0f0d6",
+                    "on-surface-variant": "#404944",
+                    "outline": "#707974",
+                    "secondary": "#904d00",
+                    "surface-bright": "#fdf9ee",
+                    "surface-dim": "#dddacf",
+                    "outline-variant": "#bfc9c3",
+                    "on-tertiary": "#ffffff",
+                    "on-error-container": "#93000a",
+                    "on-tertiary-fixed-variant": "#3a485c",
+                    "primary-container": "#064e3b",
+                    "on-error": "#ffffff",
+                    "surface-container-lowest": "#ffffff",
+                    "inverse-primary": "#95d3ba",
+                    "on-secondary-fixed": "#2f1500",
+                    "primary-fixed-dim": "#95d3ba",
+                    "secondary-fixed-dim": "#ffb77d",
+                    "surface-variant": "#e6e2d8",
+                    "on-background": "#1c1c15",
+                    "tertiary-container": "#374559",
+                    "surface-container": "#f1eee3",
+                    "secondary-fixed": "#ffdcc3",
+                    "error-container": "#ffdad6",
+                    "primary": "#003527"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "margin-mobile": "1.25rem",
+                    "gutter": "2rem",
+                    "stack-compact": "0.75rem",
+                    "margin-page": "4rem",
+                    "stack-loose": "2.5rem"
+            },
+            "fontFamily": {
+                    "display-lg": [
+                            "Newsreader"
+                    ],
+                    "label-sm": [
+                            "Inter"
+                    ],
+                    "headline-lg": [
+                            "Newsreader"
+                    ],
+                    "body-md": [
+                            "Newsreader"
+                    ],
+                    "mono-code": [
+                            "JetBrains Mono"
+                    ],
+                    "caption": [
+                            "Inter"
+                    ],
+                    "headline-lg-mobile": [
+                            "Newsreader"
+                    ],
+                    "body-lg": [
+                            "Newsreader"
+                    ]
+            },
+            "fontSize": {
+                    "display-lg": [
+                            "48px",
+                            {
+                                    "lineHeight": "1.1",
+                                    "letterSpacing": "-0.02em",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "label-sm": [
+                            "13px",
+                            {
+                                    "lineHeight": "1.4",
+                                    "letterSpacing": "0.05em",
+                                    "fontWeight": "600"
+                            }
+                    ],
+                    "headline-lg": [
+                            "32px",
+                            {
+                                    "lineHeight": "1.2",
+                                    "fontWeight": "500"
+                            }
+                    ],
+                    "body-md": [
+                            "17px",
+                            {
+                                    "lineHeight": "1.6",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "mono-code": [
+                            "14px",
+                            {
+                                    "lineHeight": "1.5",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "caption": [
+                            "14px",
+                            {
+                                    "lineHeight": "1.4",
+                                    "fontWeight": "400"
+                            }
+                    ],
+                    "headline-lg-mobile": [
+                            "28px",
+                            {
+                                    "lineHeight": "1.2",
+                                    "fontWeight": "500"
+                            }
+                    ],
+                    "body-lg": [
+                            "20px",
+                            {
+                                    "lineHeight": "1.6",
+                                    "fontWeight": "400"
+                            }
+                    ]
+            }
+    },
+        },
+      }
+    </script>
+<style>
+        /* Minimal custom CSS for things Tailwind doesn't cover natively or for specific tactile effects */
+        body {
+            background-image: url('data:image/svg+xml,%3Csvg width="100" height="100" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noise"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100" height="100" filter="url(%23noise)" opacity="0.05"/%3E%3C/svg%3E');
+            background-blend-mode: multiply;
+        }
+        
+        .deckled-edge {
+            /* Simulated subtle rough edge via border image or complex box shadow, keeping it simple here with border-radius */
+            border-radius: 2px 4px 1px 3px;
+        }
+        
+        .marginalia-line {
+            position: relative;
+        }
+        .marginalia-line::before {
+            content: '';
+            position: absolute;
+            left: -1rem;
+            top: 0;
+            bottom: 0;
+            width: 1px;
+            background-color: var(--color-outline);
+            opacity: 0.15;
+        }
+        
+        @media (min-width: 768px) {
+             .marginalia-line::before {
+                left: -2rem;
+            }
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface min-h-screen flex justify-center pb-24 md:pb-8 selection:bg-primary selection:text-on-primary antialiased">
+<!-- Mobile Top App Bar from JSON -->
+<header class="md:hidden flex justify-between items-center w-full px-margin-mobile py-4 bg-surface docked full-width top-0 border-b border-outline-variant opacity-20 flat no shadows z-40 fixed">
+<button class="text-primary hover:bg-surface-container-high transition-colors active:opacity-70 transition-opacity p-2 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="clinical_notes">clinical_notes</span>
+</button>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile font-semibold text-primary truncate px-2">Investigation ID: AS-2024-X</h1>
+<button class="text-primary hover:bg-surface-container-high transition-colors active:opacity-70 transition-opacity p-2 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="query_stats">query_stats</span>
+</button>
+</header>
+<!-- Main Well -->
+<main class="w-full max-w-[720px] px-margin-mobile md:px-margin-page pt-24 md:pt-16 flex flex-col gap-stack-loose relative">
+<!-- Desktop Header (simulated, usually top bar handles it but we need the context on desktop) -->
+<div class="hidden md:block pb-stack-compact border-b border-outline opacity-20">
+<div class="flex justify-between items-baseline">
+<h1 class="font-display-lg text-display-lg text-primary">Nivel 3: El Peritaje</h1>
+<span class="font-mono-code text-mono-code text-on-surface-variant">ID: AS-2024-X</span>
+</div>
+<p class="font-label-sm text-label-sm text-secondary uppercase tracking-widest mt-2 flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+                Estado: Redacción de Dictamen
+            </p>
+</div>
+<!-- Mobile Context Header -->
+<div class="md:hidden pb-4 border-b border-outline-variant opacity-40">
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile text-primary">Nivel 3: El Peritaje</h2>
+<p class="font-label-sm text-label-sm text-secondary uppercase tracking-widest mt-1 flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+                Redacción de Dictamen
+            </p>
+</div>
+<!-- Summary of the Alambique (Progress) -->
+<section class="flex flex-col gap-3 py-2">
+<h3 class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest">Trayectoria de Destilación</h3>
+<div class="flex items-center gap-2 w-full">
+<!-- Step 1 -->
+<div class="flex-1 flex flex-col items-center gap-1 opacity-50">
+<div class="w-8 h-8 rounded-full border border-outline-variant flex items-center justify-center bg-surface-container-lowest">
+<span class="material-symbols-outlined text-[16px]">sensors</span>
+</div>
+<span class="font-caption text-caption text-xs">Señales</span>
+</div>
+<div class="h-px bg-outline-variant flex-1 opacity-50"></div>
+<!-- Step 2 -->
+<div class="flex-1 flex flex-col items-center gap-1 opacity-50">
+<div class="w-8 h-8 rounded-full border border-outline-variant flex items-center justify-center bg-surface-container-lowest">
+<span class="material-symbols-outlined text-[16px]">category</span>
+</div>
+<span class="font-caption text-caption text-xs">Evidencia</span>
+</div>
+<div class="h-px bg-outline-variant flex-1 opacity-50"></div>
+<!-- Step 3 -->
+<div class="flex-1 flex flex-col items-center gap-1 opacity-50">
+<div class="w-8 h-8 rounded-full border border-outline-variant flex items-center justify-center bg-surface-container-lowest">
+<span class="material-symbols-outlined text-[16px]">compare_arrows</span>
+</div>
+<span class="font-caption text-caption text-xs">Tensiones</span>
+</div>
+<div class="h-px bg-primary flex-1 opacity-50"></div>
+<!-- Current Step -->
+<div class="flex-1 flex flex-col items-center gap-1">
+<div class="w-8 h-8 rounded-full border-2 border-primary flex items-center justify-center bg-primary-container text-on-primary-container">
+<span class="material-symbols-outlined text-[16px] font-bold" style="font-variation-settings: 'FILL' 1;">gavel</span>
+</div>
+<span class="font-caption text-caption text-xs font-semibold text-primary">Síntesis</span>
+</div>
+</div>
+</section>
+<!-- The 'Dictamen' Card - Artifact Style -->
+<article class="bg-surface-container-lowest border border-outline-variant/30 rounded-DEFAULT deckled-edge shadow-[0_2px_10px_rgba(0,0,0,0.02)] p-margin-mobile md:p-gutter relative overflow-hidden">
+<!-- Pinned accent -->
+<div class="absolute top-0 left-0 w-full h-1 bg-secondary opacity-80"></div>
+<header class="mb-stack-loose text-center relative z-10">
+<h2 class="font-headline-lg-mobile md:font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface mb-4 leading-tight">
+                    Dictamen de Deuda Cultural:<br/>
+<span class="text-primary italic">El Ritual del Silencio Digital</span>
+</h2>
+<div class="flex justify-center items-center gap-4 text-on-surface-variant">
+<div class="h-px w-12 bg-outline-variant/50"></div>
+<span class="material-symbols-outlined text-[20px] opacity-70">menu_book</span>
+<div class="h-px w-12 bg-outline-variant/50"></div>
+</div>
+</header>
+<div class="font-body-md text-body-md text-on-surface-variant flex flex-col gap-4 marginalia-line pl-4 md:pl-8">
+<p class="first-letter:text-5xl first-letter:font-display-lg first-letter:float-left first-letter:mr-3 first-letter:text-primary">
+                    El análisis de los artefactos recopilados revela una tensión sistémica entre los 'Rituales de Desconexión' y el imperativo del 'Digital Engagement'. A lo largo de la investigación AS-2024-X, se ha documentado un patrón emergente donde la ausencia voluntaria en plataformas digitales se ha transformado de un acto de ocio a una postura de resistencia cultural.
+                </p>
+<p>
+                    Las evidencias sugieren que la arquitectura de las interfaces actuales genera una deuda cognitiva. Los usuarios, en lugar de encontrar utilidad, experimentan una extracción de atención que intentan mitigar mediante <em class="text-on-surface">tácticas de silencio</em>. Estas tácticas no son meras desconexiones, sino rituales estructurados con alto valor simbólico.
+                </p>
+<blockquote class="pl-4 border-l-2 border-primary/40 italic font-body-lg text-body-lg text-primary my-4">
+                    "El silencio digital ya no es un vacío, es una declaración de soberanía sobre el tiempo propio."
+                </blockquote>
+<p>
+                    Concluimos que las organizaciones que ignoran estos rituales corren el riesgo de clasificar erróneamente la desconexión como desinterés, cuando en realidad representa una fatiga estructural ante el modelo extractivo.
+                </p>
+</div>
+<!-- Supporting Evidences Drawer/List -->
+<div class="mt-stack-loose pt-stack-compact border-t border-outline-variant/30">
+<h4 class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest mb-3">Evidencia Sustentatoria</h4>
+<div class="flex flex-wrap gap-2">
+<span class="inline-flex items-center gap-1 bg-surface-container-low border border-outline-variant/50 rounded-full px-3 py-1 font-mono-code text-mono-code text-xs text-on-surface">
+<span class="material-symbols-outlined text-[14px]">link</span>
+                        TGM-902
+                    </span>
+<span class="inline-flex items-center gap-1 bg-surface-container-low border border-outline-variant/50 rounded-full px-3 py-1 font-mono-code text-mono-code text-xs text-on-surface">
+<span class="material-symbols-outlined text-[14px]">link</span>
+                        REP-044
+                    </span>
+<span class="inline-flex items-center gap-1 bg-surface-container-low border border-outline-variant/50 rounded-full px-3 py-1 font-mono-code text-mono-code text-xs text-on-surface">
+<span class="material-symbols-outlined text-[14px]">link</span>
+                        OBS-112
+                    </span>
+</div>
+</div>
+<!-- Trazabilidad / Footer -->
+<footer class="mt-8 bg-surface-container p-4 rounded-sm border border-outline-variant/20 flex flex-col gap-2">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-on-surface uppercase">Certificación de Integridad</span>
+<span class="material-symbols-outlined text-[18px] text-primary" data-weight="fill">verified_user</span>
+</div>
+<div class="font-mono-code text-mono-code text-xs text-on-surface-variant break-all">
+                    SHA-256: 8f4e92a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0
+                </div>
+<div class="font-caption text-caption text-[11px] text-outline mt-1 text-right">
+                    Timestamp: 2024-10-27T14:32:01Z
+                </div>
+</footer>
+</article>
+<!-- Action Area -->
+<div class="flex justify-center pt-4 pb-12">
+<button class="bg-primary hover:bg-on-primary-fixed-variant text-on-primary font-label-sm text-label-sm uppercase tracking-wider px-8 py-4 rounded-DEFAULT transition-colors shadow-sm flex items-center gap-2 group">
+<span class="material-symbols-outlined group-hover:scale-110 transition-transform">approval</span>
+                Sellar y Certificar
+            </button>
+</div>
+</main>
+<!-- BottomNavBar from JSON -->
+<nav class="md:hidden fixed bottom-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-3 bg-surface-container-low border-t border-outline-variant docked full-width bottom-0 rounded-t-full flat no shadows">
+<!-- Journal - Inactive -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-5 py-1.5 hover:bg-surface-container-high rounded-full active:scale-95 transition-transform duration-200 ease-out" href="#">
+<span class="material-symbols-outlined" data-icon="book_5">book_5</span>
+<span class="font-label-sm text-label-sm mt-1">Journal</span>
+</a>
+<!-- Evidence - Inactive -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-5 py-1.5 hover:bg-surface-container-high rounded-full active:scale-95 transition-transform duration-200 ease-out" href="#">
+<span class="material-symbols-outlined" data-icon="database">database</span>
+<span class="font-label-sm text-label-sm mt-1">Evidence</span>
+</a>
+<!-- Relations - Inactive -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-5 py-1.5 hover:bg-surface-container-high rounded-full active:scale-95 transition-transform duration-200 ease-out" href="#">
+<span class="material-symbols-outlined" data-icon="hub">hub</span>
+<span class="font-label-sm text-label-sm mt-1">Relations</span>
+</a>
+<!-- Synthesis - Active -->
+<a class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-full px-5 py-1.5 hover:bg-surface-container-high active:scale-95 transition-transform duration-200 ease-out" href="#">
+<span class="material-symbols-outlined" data-icon="assignment_turned_in" style="font-variation-settings: 'FILL' 1;">assignment_turned_in</span>
+<span class="font-label-sm text-label-sm mt-1">Synthesis</span>
+</a>
+</nav>
+<!-- Desktop Side Nav Overlay Simulation (Visual hint of global structure for desktop) -->
+<aside class="hidden md:flex fixed left-0 top-0 bottom-0 w-16 flex-col items-center py-8 gap-8 border-r border-outline-variant/30 bg-surface z-40">
+<div class="text-primary font-bold font-headline-lg mb-8">A</div>
+<a class="text-on-surface-variant hover:text-primary transition-colors p-2" href="#" title="Journal">
+<span class="material-symbols-outlined">book_5</span>
+</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors p-2" href="#" title="Evidence">
+<span class="material-symbols-outlined">database</span>
+</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors p-2" href="#" title="Relations">
+<span class="material-symbols-outlined">hub</span>
+</a>
+<a class="text-primary bg-secondary-container/20 rounded-full p-2" href="#" title="Synthesis">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">assignment_turned_in</span>
+</a>
+</aside>
+</body></html>

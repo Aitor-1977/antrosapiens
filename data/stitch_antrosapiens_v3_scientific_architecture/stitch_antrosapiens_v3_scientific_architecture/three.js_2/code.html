@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width,initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+    }
+  </style>
+</head>
+<body>
+<!-- STITCH_THREEJS_START:ANIMATION_85 class="fixed inset-0 w-full h-full bg-transparent" -->
+<div class="fixed inset-0 w-full h-full bg-transparent" style="display:block;">
+<script src="https://ajax.googleapis.com/ajax/libs/threejs/r125/three.min.js"></script>
+<div id="threejs-container-ANIMATION_85" style="width:100%;height:100%"></div>
+<script>
+(function() {
+  const container = document.getElementById('threejs-container-ANIMATION_85');
+  const devicePixelRatio = window.devicePixelRatio || 1;
+  # Expediente Maestro: AntroSapiens V4 (Laboratorio de Indagación)
+**Documento Consolidado para Implementación Android**
+
+Este expediente reúne la Constitución Metodológica, el Blueprint Técnico y el Código Fuente de los cuatro niveles operativos del Laboratorio AntroSapiens V4.
+
+---
+
+## 1. DOCUMENTACIÓN TÉCNICA Y METODOLÓGICA
+
+### 1.1 Constitución Metodológica (Rigor Científico)
+AntroSapiens V4 es un **Instrumento Científico de Indagación**. Su arquitectura responde al **Ciclo de Cristalización de Sentido**:
+*   **Humano (Juicio):** Tipografía Newsreader. Jerarquía superior.
+*   **IA (Inferencia):** Tipografía JetBrains Mono. Estética técnica/mineral.
+*   **Ontología:** Señal → Evidencia → Tensión → Hipótesis → Dictamen.
+
+### 1.2 Blueprint de Implementación Android
+*   **Ergonomía:** Zona de pulgar activa en el tercio inferior. Targets táctiles de 48dp.
+*   **Superficies:** Fondos *Parchment* (#FCFAED) y *Parchment Dim*. Prohibido el blanco puro (#FFFFFF).
+*   **Regla G0:** Bloqueo de Nivel 3 si no hay evidencias (N1) o relaciones (N2).
+*   **Microinteracciones:** Sellado de peritaje mediante `onLongPress` (1000ms).
+
+---
+
+## 2. CÓDIGO FUENTE (ESTILOS Y ESTRUCTURA)
+
+### 2.1 Configuración Tailwind CSS
+```javascript
+module.exports = {
+  theme: {
+    extend: {
+      colors: {
+        'parchment': '#FCFAED',
+        'parchment-dim': '#DCDACE',
+        'mineral-blue': '#091426',
+        'clay': '#A75D5D',
+        'amber-mineral': '#D97706',
+        'olive-deep': '#374151',
+      },
+      fontFamily: {
+        'narrative': ['Newsreader', 'serif'],
+        'technical': ['JetBrains Mono', 'monospace'],
+        'ui': ['Inter', 'sans-serif'],
+      }
+    },
+  },
+}
+```
+
+### 2.2 Nivel 0: Cuaderno de Campo (Foco Reflexivo)
+```html
+<div class="bg-parchment min-h-screen font-ui">
+  <header class="sticky top-0 bg-parchment/90 border-b border-black/5 p-5">
+    <h1 class="font-narrative text-2xl text-mineral-blue">Cuaderno de Campo</h1>
+  </header>
+  <main class="p-5 max-w-[65ch] mx-auto">
+    <h2 class="font-narrative text-3xl italic mb-8">¿Cómo se construye la legitimidad social?</h2>
+    <!-- Observaciones... -->
+  </main>
+</div>
+```
+
+### 2.3 Nivel 1: Mesa de Evidencias (Feedback Mineral)
+*Incluye Shader de Saturación Orgánica (WebGL)*
+```html
+<div class="relative bg-parchment min-h-screen overflow-hidden">
+  <canvas id="mineral-shader" class="fixed inset-0 opacity-20 pointer-events-none"></canvas>
+  <main class="relative z-10 p-5">
+    <header class="mb-10 text-center">
+      <span class="font-technical text-[10px] tracking-widest uppercase">Nivel 1</span>
+      <h1 class="font-narrative text-4xl">Mesa de Evidencias</h1>
+    </header>
+  </main>
+</div>
+```
+
+### 2.4 Nivel 2: Mesa de Relaciones (Gramática de Hilos)
+```html
+<nav class="sticky top-0 z-50 bg-parchment border-b px-5 py-4">
+  <span class="font-technical text-[9px] uppercase text-clay">Pregunta Central</span>
+  <h3 class="font-narrative text-lg leading-tight">¿Resistencia pasiva en espacios comunes?</h3>
+</nav>
+```
+
+### 2.5 Nivel 3: El Peritaje (Sello de Rigor)
+```javascript
+// Lógica de Sellado (Long Press)
+let sealTimer;
+function startSeal() {
+  sealTimer = setTimeout(() => {
+    document.getElementById('seal-btn').innerText = 'DICTAMEN SELLADO ✓';
+  }, 1000);
+}
+```
+
+---
+**Certificado para el Laboratorio de Antropología de la Innovación.**
+})();
+</script>
+</div>
+<!-- STITCH_THREEJS_END:ANIMATION_85 -->
+</body>
+</html>

@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Constelación de Tensiones - AntroSapiens V4</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;family=Newsreader:opsz,wght@6..72,400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-container": "#f0eee2",
+                      "on-primary-fixed-variant": "#2c4c4c",
+                      "on-primary-container": "#9ec0bf",
+                      "surface-dim": "#dcdacf",
+                      "primary-fixed": "#c6e9e9",
+                      "secondary-container": "#fd6b36",
+                      "error-container": "#ffdad6",
+                      "outline": "#717878",
+                      "surface-container-lowest": "#ffffff",
+                      "background": "#fcfaed",
+                      "primary-container": "#2f4f4f",
+                      "tertiary-fixed-dim": "#bcc7df",
+                      "surface-container-high": "#eae8dd",
+                      "surface-bright": "#fcfaed",
+                      "on-background": "#1b1c15",
+                      "on-primary": "#ffffff",
+                      "primary-fixed-dim": "#abcdcd",
+                      "on-primary-fixed": "#002020",
+                      "inverse-on-surface": "#f3f1e5",
+                      "secondary": "#ac3400",
+                      "on-surface": "#1b1c15",
+                      "error": "#ba1a1a",
+                      "on-tertiary-fixed": "#111c2e",
+                      "primary": "#173838",
+                      "on-surface-variant": "#414848",
+                      "on-error": "#ffffff",
+                      "surface-container-highest": "#e5e3d7",
+                      "on-tertiary-fixed-variant": "#3d475b",
+                      "on-secondary-container": "#5d1900",
+                      "surface-tint": "#446464",
+                      "on-secondary-fixed-variant": "#832600",
+                      "surface-container-low": "#f6f4e8",
+                      "tertiary": "#293347",
+                      "inverse-primary": "#abcdcd",
+                      "inverse-surface": "#303129",
+                      "tertiary-fixed": "#d8e2fc",
+                      "on-tertiary-container": "#afbad2",
+                      "on-secondary": "#ffffff",
+                      "on-error-container": "#93000a",
+                      "secondary-fixed-dim": "#ffb59d",
+                      "on-secondary-fixed": "#390c00",
+                      "outline-variant": "#c1c8c7",
+                      "tertiary-container": "#404a5e",
+                      "secondary-fixed": "#ffdbd0",
+                      "surface": "#fcfaed",
+                      "surface-variant": "#e5e3d7",
+                      "on-tertiary": "#ffffff"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "gutter": "2rem",
+                      "stack-sm": "0.75rem",
+                      "stack-xl": "3rem",
+                      "margin-page": "4rem",
+                      "stack-md": "1.5rem",
+                      "margin-mobile": "1.5rem"
+              },
+              "fontFamily": {
+                      "label-md": [
+                              "Inter"
+                      ],
+                      "label-sm": [
+                              "Inter"
+                      ],
+                      "body-lg": [
+                              "Newsreader"
+                      ],
+                      "title-md": [
+                              "Newsreader"
+                      ],
+                      "display-lg": [
+                              "Newsreader"
+                      ],
+                      "headline-lg": [
+                              "Newsreader"
+                      ],
+                      "technical-mono": [
+                              "JetBrains Mono"
+                      ],
+                      "body-md": [
+                              "Newsreader"
+                      ],
+                      "headline-lg-mobile": [
+                              "Newsreader"
+                      ]
+              },
+              "fontSize": {
+                      "label-md": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "letterSpacing": "0.01em",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "label-sm": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-lg": [
+                              "19px",
+                              {
+                                      "lineHeight": "32px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "title-md": [
+                              "22px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "display-lg": [
+                              "48px",
+                              {
+                                      "lineHeight": "56px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "technical-mono": [
+                              "13px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "body-md": [
+                              "17px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-lg-mobile": [
+                              "28px",
+                              {
+                                      "lineHeight": "36px",
+                                      "fontWeight": "500"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<style>
+        .texture-bg {
+            background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+        }
+        .connection-cord {
+            stroke: #173838;
+            stroke-width: 3;
+            stroke-dasharray: none;
+        }
+        .connection-frayed {
+            stroke: #ac3400;
+            stroke-width: 2;
+            stroke-dasharray: 4 2;
+        }
+        .connection-dashed {
+            stroke: #414848;
+            stroke-width: 1.5;
+            stroke-dasharray: 8 4;
+        }
+      </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-background texture-bg min-h-screen font-body-md text-on-surface antialiased flex flex-col selection:bg-primary-fixed selection:text-on-primary-fixed">
+<!-- TopAppBar -->
+<header class="bg-surface dark:bg-surface border-b border-outline-variant/15 full-width top-0 z-50 flex justify-between items-center px-gutter w-full h-16 sticky top-0">
+<div class="flex items-center gap-4">
+<button class="hover:bg-surface-container-high/50 transition-colors rounded-full p-2 scale-95 active:bg-surface-container-highest flex items-center justify-center h-12 w-12">
+<span class="material-symbols-outlined text-on-surface-variant">menu</span>
+</button>
+<div class="flex flex-col"><div class="flex items-center gap-2 font-label-sm text-on-surface-variant"><span class="opacity-70">EVD-102</span><span class="material-symbols-outlined text-[12px]">chevron_right</span><span class="font-medium text-primary">DIC-044</span></div><h1 class="font-headline-lg-mobile md:font-headline-lg text-headline-lg-mobile md:text-headline-lg font-medium text-primary leading-tight">Field Inquiry</h1></div>
+</div>
+<button class="hover:bg-surface-container-high/50 transition-colors rounded-full p-2 scale-95 active:bg-surface-container-highest flex items-center justify-center h-12 w-12">
+<span class="material-symbols-outlined text-on-surface-variant">science</span>
+</button>
+</header>
+<!-- Main Canvas -->
+<main class="flex-grow relative overflow-hidden flex justify-center py-stack-xl px-margin-mobile md:px-margin-page">
+<!-- SVG Connections Layer -->
+<svg class="absolute inset-0 w-full h-full pointer-events-none" style="z-index: 0;">
+<!-- Dictamen to Minecraft -->
+<path class="connection-cord" d="M 50% 200 C 50% 350, 30% 350, 30% 500" fill="none"></path>
+<!-- Dictamen to Abandonment -->
+<path class="connection-frayed" d="M 50% 200 C 50% 350, 70% 350, 70% 500" fill="none"></path>
+<!-- Node to Minecraft -->
+<path class="connection-dashed" d="M 50% 750 C 50% 650, 30% 650, 30% 550" fill="none"></path>
+<!-- Node to Abandonment -->
+<path class="connection-dashed" d="M 50% 750 C 50% 650, 70% 650, 70% 550" fill="none"></path>
+</svg>
+<!-- Thinking Table Container -->
+<div class="relative w-full max-w-[900px] min-h-[1000px] z-10 flex flex-col items-center">
+<!-- Dictamen Card -->
+<article class="bg-surface-container-lowest border border-outline-variant/15 rounded shadow-sm w-full md:w-[600px] p-stack-md relative mt-12 rotate-[0.5deg] hover:rotate-0 transition-transform duration-300">
+<div class="absolute top-0 left-0 w-full h-1 bg-tertiary rounded-t"></div>
+<header class="flex justify-between items-start mb-4">
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">Dictamen</span>
+<span class="font-technical-mono text-technical-mono text-on-surface-variant/70">DIC-044</span>
+</header>
+<h2 class="font-title-md text-title-md text-on-surface mb-3">Desplazamiento del Ritual</h2>
+<p class="font-body-md text-body-md text-on-surface-variant leading-relaxed">
+                    La sacralidad no se extingue en el entorno digital, sino que migra hacia plataformas de construcción colectiva. El ritual abandona la piedra para codificarse en servidores privados.
+                </p>
+<footer class="mt-6 pt-4 border-t border-outline-variant/15 flex justify-between items-center">
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]">verified</span>
+<span class="font-label-sm text-label-sm">Verificado por Equipo A</span>
+</div>
+<span class="font-technical-mono text-technical-mono text-xs text-on-surface-variant/50">SHA: 7f8a9...</span>
+</footer>
+</article>
+<!-- Evidence Row -->
+<div class="flex flex-col md:flex-row gap-gutter w-full mt-48 justify-center relative">
+<!-- Tag: Refuerza -->
+<div class="absolute top-[-80px] left-[20%] bg-surface-container border border-primary px-3 py-1 rounded shadow-sm flex items-center gap-2 -rotate-[2deg] z-20">
+<span class="material-symbols-outlined text-[14px] text-primary">add_link</span>
+<span class="font-label-sm text-label-sm text-primary">Refuerza</span>
+</div>
+<!-- Tag: Contradice -->
+<div class="absolute top-[-80px] right-[20%] bg-surface-container border border-secondary px-3 py-1 rounded shadow-sm flex items-center gap-2 rotate-[3deg] z-20">
+<span class="material-symbols-outlined text-[14px] text-secondary">warning</span>
+<span class="font-label-sm text-label-sm text-secondary">Contradice</span>
+</div>
+<!-- Evidence 1: Minecraft -->
+<article class="bg-surface-container-lowest border border-outline-variant/15 rounded shadow-sm w-full md:w-[400px] p-stack-md relative -rotate-[1deg] hover:rotate-0 transition-transform duration-300 texture-bg">
+<div class="absolute top-0 left-0 w-full h-1 bg-primary rounded-t"></div>
+<header class="flex justify-between items-start mb-4">
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">Evidencia</span>
+<span class="font-technical-mono text-technical-mono text-on-surface-variant/70">EVD-102</span>
+</header>
+<h3 class="font-title-md text-title-md text-on-surface mb-3">Altares en Minecraft</h3>
+<div class="w-full h-32 mb-4 bg-surface-variant rounded border border-outline-variant/30 flex items-center justify-center overflow-hidden">
+<div class="w-full h-full bg-cover bg-center" data-alt="A pixelated, blocky digital altar constructed within a voxel-based game like Minecraft, illuminated by soft, warm virtual torchlight against a dark digital night sky. The altar is made of rare materials and features a central glowing artifact. Minimalist, academic documentary style." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuC25QLr4DeIEeRn9zfwZtVPTwUNbLD1qQFnvQ65c7R08rSK5qjewjySz1gDw1DZn-TRQMKC2ZJ4btqH1tOcHNcTohVbewjanCJqCo_ZKGzyF4-eOoZF1NuNYcMT5uF1T_3mgStaZe2iH_bpHpgXkwm7XiSGwo4Zn7wE4pkkI5WVtMqqRC2ZcVB2XdkfckiTF-xLU8rTg6f5VHB5xCY4VwtB5IA7ZeKS6Vy-wlhbKK1JYYDUv2a3O8gdSg')"></div>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant text-sm">
+                        Observación participante en el servidor 'Nuevo Edén'. Construcción comunitaria de un espacio sagrado digital con reglas de acceso estrictas.
+                    </p>
+</article>
+<!-- Evidence 2: Abandonment -->
+<article class="bg-surface-container-lowest border border-outline-variant/15 rounded shadow-sm w-full md:w-[400px] p-stack-md relative rotate-[1.5deg] hover:rotate-0 transition-transform duration-300 texture-bg">
+<div class="absolute top-0 left-0 w-full h-1 bg-secondary rounded-t"></div>
+<header class="flex justify-between items-start mb-4">
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant">Evidencia</span>
+<span class="font-technical-mono text-technical-mono text-on-surface-variant/70">EVD-108</span>
+</header>
+<h3 class="font-title-md text-title-md text-on-surface mb-3">Abandono de Templos</h3>
+<div class="w-full h-32 mb-4 bg-surface-variant rounded border border-outline-variant/30 flex items-center justify-center overflow-hidden">
+<div class="w-full h-full bg-cover bg-center" data-alt="A weathered, abandoned stone temple in a remote rural landscape. The structure is partially overgrown with vines and shows signs of long-term neglect. The lighting is muted and overcast, emphasizing a sense of forgotten history and the passage of time. High-contrast, stark documentary photography." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuAONkun0K6C0I3FoBKPH3JBO3gjq_HPcZ4Bv6N7S30Q-GzgKjeAjS4pjXsyiBfnvQpMb-QifcoDNhNpLjoJbmeZ9Lga48qfWqKYkgKnQx7xlUmPGF5onEi9VWKJziO4V9ApMP4xqsMHsGOyUuD908xCEWKacz08wOvqobTlCDsZ_WSbfWvvJEHuvcRHuxosMCFW6yhL-w_5FIUHhGYjxlOxJLTQt06Jx2Kt8o1h0mPp9yMdx8rFTniD1Q')"></div>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant text-sm">
+                        Registro fotográfico en la región sur. Descenso del 40% en asistencia presencial a rituales tradicionales en la última década.
+                    </p>
+</article>
+</div>
+<!-- Persona Nodo -->
+<article class="bg-surface-container-low border border-outline-variant/30 rounded-xl shadow-sm w-full md:w-[500px] p-stack-md relative mt-48 z-10 rotate-[0.5deg]">
+<!-- Tag: Matiza (Left) -->
+<div class="absolute top-[-60px] left-[10%] bg-surface-container border border-outline px-3 py-1 rounded-full shadow-sm flex items-center gap-2 -rotate-[1deg] z-20 h-12"><span class="material-symbols-outlined text-[18px] text-on-surface-variant">insights</span><span class="font-label-sm text-label-sm text-on-surface-variant">Matiza</span></div>
+<!-- Tag: Matiza (Right) -->
+<div class="absolute top-[-60px] right-[10%] bg-surface-container border border-outline px-3 py-1 rounded-full shadow-sm flex items-center gap-2 rotate-[2deg] z-20 h-12"><span class="material-symbols-outlined text-[18px] text-on-surface-variant">insights</span><span class="font-label-sm text-label-sm text-on-surface-variant">Matiza</span></div>
+<div class="flex items-center gap-4 mb-4">
+<div class="w-12 h-12 rounded-full bg-surface-variant border border-outline-variant/30 overflow-hidden flex-shrink-0">
+<div class="w-full h-full bg-cover bg-center" data-alt="A stark, high-contrast black and white portrait of a young individual, labeled 'The Digital Shaman', wearing modern streetwear combined with subtle traditional woven accessories. The subject looks directly into the camera with a serious, intense expression. Minimalist, academic documentary portrait style." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDviDMTjK9sZjJLXuRWsAD0b8t-h12evI-voyzEjiuN60MnmKstKqZgGnlF8sAfKRcYkYhvloa8tYuT86MrWtdGw9DomwFaH5e7YJRQC9cZiPfQzu74JzrOdPQIp57LL4O5TlX5Hfpeg7eYfWxfLrINc8LCUOohPswixTAqCtsRPvVUhxI0kIOsDC1KSfozToj2sJKEe-RCyrgkgU5kgw5_zFysEswo_wcJFvugecl-R2XGAfnumCxflg')"></div>
+</div>
+<div>
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-on-surface-variant block">Persona Nodo</span>
+<h3 class="font-title-md text-title-md text-on-surface">"The Digital Shaman"</h3>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-4 rounded border border-outline-variant/15 font-technical-mono text-technical-mono text-on-surface-variant">
+<p class="mb-2">"El templo de piedra es para los abuelos. El servidor es donde los dioses nos escuchan ahora, porque nosotros lo construimos bloque a bloque."</p>
+<span class="text-xs opacity-70">Extracto de Entrevista: ENT-089</span>
+</div>
+</article>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="md:hidden bg-surface-container dark:bg-inverse-surface border-t border-outline-variant/15 fixed bottom-0 w-full flex justify-around items-center px-4 py-2 pb-6 z-50">
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-container-highest transition-all p-2 rounded-lg h-12" href="#">
+<span class="material-symbols-outlined mb-1">history_edu</span>
+<span class="font-label-sm text-label-sm text-[10px]">Notebook</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-container-highest transition-all p-2 rounded-lg h-12" href="#">
+<span class="material-symbols-outlined mb-1">database</span>
+<span class="font-label-sm text-label-sm text-[10px]">Signals</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-full px-4 py-1 hover:bg-surface-container-highest transition-all h-12" href="#">
+<span class="material-symbols-outlined mb-1">hub</span>
+<span class="font-label-sm text-label-sm text-[10px]">Relations</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-container-highest transition-all p-2 rounded-lg h-12" href="#">
+<span class="material-symbols-outlined mb-1">menu_book</span>
+<span class="font-label-sm text-label-sm text-[10px]">Expertise</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-container-highest transition-all p-2 rounded-lg h-12" href="#">
+<span class="material-symbols-outlined mb-1">query_stats</span>
+<span class="font-label-sm text-label-sm text-[10px]">Query</span>
+</a>
+</nav>
+</body></html>

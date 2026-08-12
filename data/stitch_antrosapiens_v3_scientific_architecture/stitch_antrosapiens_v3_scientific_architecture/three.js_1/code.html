@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width,initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+    }
+  </style>
+</head>
+<body>
+<!-- STITCH_THREEJS_START:ANIMATION_84 class="fixed inset-0 w-full h-full bg-transparent" -->
+<div class="fixed inset-0 w-full h-full bg-transparent" style="display:block;">
+<script src="https://ajax.googleapis.com/ajax/libs/threejs/r125/three.min.js"></script>
+<div id="threejs-container-ANIMATION_84" style="width:100%;height:100%"></div>
+<script>
+(function() {
+  const container = document.getElementById('threejs-container-ANIMATION_84');
+  const devicePixelRatio = window.devicePixelRatio || 1;
+  # Expediente de Exportación de Código: AntroSapiens V4 (Android)
+
+Este documento contiene los bloques de código consolidados de los cuatro niveles operativos del Laboratorio AntroSapiens V4, diseñados bajo el rigor del Blueprint Técnico Final.
+
+---
+
+## 1. Configuración de Estilos (Tailwind CSS)
+
+```javascript
+// tailwind.config.js
+module.exports = {
+  theme: {
+    extend: {
+      colors: {
+        'parchment': '#FCFAED',
+        'parchment-dim': '#DCDACE',
+        'mineral-blue': '#091426',
+        'clay': '#A75D5D',
+        'amber-mineral': '#D97706',
+        'olive-deep': '#374151',
+        'surface-container': '#F3F4F6',
+        'outline-variant': 'rgba(0,0,0,0.1)',
+      },
+      fontFamily: {
+        'narrative': ['Newsreader', 'serif'],
+        'technical': ['JetBrains Mono', 'monospace'],
+        'ui': ['Inter', 'sans-serif'],
+      },
+      maxWidth: {
+        'editorial': '65ch',
+      },
+      spacing: {
+        'touch-target': '48px',
+        'margin-mobile': '20px',
+      }
+    },
+  },
+}
+```
+
+---
+
+## 2. Nivel 0: Cuaderno de Campo (Foco Reflexivo)
+
+```html
+<!-- Estructura simplificada del Nivel 0 -->
+<div class="bg-parchment min-h-screen font-ui">
+  <header class="sticky top-0 bg-parchment/90 backdrop-blur border-b border-outline-variant p-margin-mobile">
+    <h1 class="font-narrative text-2xl text-mineral-blue">Cuaderno de Campo</h1>
+    <p class="font-technical text-xs text-olive-deep opacity-60 uppercase tracking-widest mt-1">Nivel 0: Exploración</p>
+  </header>
+  
+  <main class="p-margin-mobile max-w-editorial mx-auto pt-8">
+    <h2 class="font-narrative text-3xl leading-tight text-mineral-blue mb-8 italic">
+      "¿Cómo se construye la legitimidad social en entornos de alta volatilidad financiera?"
+    </h2>
+    
+    <div class="space-y-12">
+      <!-- Bloque de Observación -->
+      <article class="relative pl-6 border-l border-mineral-blue/20">
+        <div class="absolute -left-[5px] top-2 w-2 h-2 rounded-full bg-mineral-blue"></div>
+        <header class="flex justify-between items-baseline mb-3">
+          <span class="font-technical text-[10px] text-olive-deep">#SEQ-994A</span>
+          <span class="font-technical text-[10px] text-olive-deep">10:42 AM • 14.11.23</span>
+        </header>
+        <p class="font-narrative text-lg text-mineral-blue leading-relaxed">
+          La observación inicial en el mercado de criptoactivos sugiere una fuerte correlación entre la narrativa de "descentralización" y la confianza del usuario...
+        </p>
+      </article>
+    </div>
+  </main>
+</div>
+```
+
+---
+
+## 3. Nivel 1: Mesa de Evidencias (Feedback Mineral)
+
+```html
+<!-- Integración del Shader de Saturación Orgánica en N1 -->
+<div class="relative bg-parchment min-h-screen overflow-hidden">
+  <!-- Capa de Shader (Feedback Mineral) -->
+  <div class="fixed inset-0 pointer-events-none opacity-20">
+    <canvas id="mineral-shader"></canvas>
+  </div>
+
+  <main class="relative z-10 p-margin-mobile">
+    <header class="mb-10 text-center">
+      <span class="font-technical text-[10px] uppercase tracking-[0.2em] text-olive-deep">Nivel 1</span>
+      <h1 class="font-narrative text-4xl text-mineral-blue mt-2">Mesa de Evidencias</h1>
+    </header>
+
+    <div class="grid gap-4">
+      <!-- Ficha de Evidencia -->
+      <div class="bg-mineral-blue p-6 rounded-2xl text-parchment shadow-lg">
+        <div class="flex justify-between items-center mb-4">
+          <span class="bg-parchment/10 px-3 py-1 rounded-full font-technical text-[10px]">Obs. 042</span>
+          <span class="font-technical text-[10px] opacity-60">14:02, 12 Oct</span>
+        </div>
+        <p class="font-narrative text-xl leading-snug">
+          Subject exhibited significant hesitation before interacting with the terminal interface...
+        </p>
+        <footer class="mt-6 pt-4 border-t border-parchment/10 flex justify-between">
+          <span class="font-technical text-[10px] opacity-40"># a8f2...9c4b</span>
+          <button class="text-parchment/60" onclick="revealHash()">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+          </button>
+        </footer>
+      </div>
+    </div>
+  </main>
+</div>
+```
+
+---
+
+## 4. Nivel 2: Mesa de Relaciones (Gramática de Hilos)
+
+```html
+<!-- Nivel 2: Sticky Header y Lógica de Hilos -->
+<div class="bg-parchment min-h-screen">
+  <!-- Sticky Header Colapsable (Pregunta Antropológica) -->
+  <nav class="sticky top-0 z-50 bg-parchment border-b border-outline-variant px-margin-mobile py-4 shadow-sm" onclick="toggleHeader()">
+    <span class="font-technical text-[9px] uppercase tracking-widest text-clay block mb-1">Pregunta Central</span>
+    <h3 id="question-header" class="font-narrative text-lg text-mineral-blue leading-tight transition-all duration-300">
+      ¿Cómo se manifiesta la resistencia pasiva en los espacios comunes?
+    </h3>
+  </nav>
+
+  <div class="p-margin-mobile space-y-12 py-10">
+    <!-- Nudo de Tensión -->
+    <div class="relative pl-12">
+      <div class="absolute left-4 top-0 bottom-0 w-[2px] bg-olive-deep/20"></div>
+      <div class="absolute left-0 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-parchment border-2 border-clay flex items-center justify-center text-clay font-bold">
+        !
+      </div>
+      <div class="bg-white p-6 rounded-xl border border-outline-variant shadow-sm rotate-[-1deg]">
+        <span class="font-technical text-[10px] text-olive-deep mb-2 block">EV-8f3a2</span>
+        <p class="font-narrative text-lg leading-relaxed text-mineral-blue">
+          Durante las asambleas, los residentes evitan deliberadamente el contacto visual...
+        </p>
+        <div class="mt-4 flex gap-2">
+          <span class="bg-clay/10 text-clay px-2 py-1 rounded font-ui text-[10px] font-bold uppercase tracking-tighter">Contradice</span>
+          <span class="bg-olive-deep/5 text-olive-deep px-2 py-1 rounded font-ui text-[10px]">Silencio Táctico</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+```
+
+---
+
+## 5. Nivel 3: El Peritaje (Sello de Rigor)
+
+```html
+<!-- Nivel 3: Microinteracción de Sellado (Long Press) -->
+<div class="bg-parchment min-h-screen flex flex-col">
+  <main class="flex-grow p-margin-mobile pt-10">
+    <h1 class="font-narrative text-4xl text-mineral-blue mb-8">Dictamen Antropológico Final</h1>
+    <p class="font-narrative text-xl leading-relaxed text-mineral-blue opacity-90 mb-12">
+      La apropiación del espacio público en la zona designada no obedece a una simple carencia de infraestructura...
+    </p>
+  </main>
+
+  <!-- Zona de Pulgar: Acción de Sellado -->
+  <footer class="p-margin-mobile pb-10 bg-gradient-to-t from-parchment to-transparent">
+    <div 
+      id="seal-button"
+      class="bg-olive-deep text-parchment w-full h-16 rounded-2xl flex items-center justify-center gap-3 transition-transform active:scale-95 touch-none"
+      onpointerdown="startSeal()"
+      onpointerup="cancelSeal()"
+    >
+      <div id="seal-progress" class="absolute inset-0 bg-white/10 origin-left scale-x-0"></div>
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-2.04l.054-.09A10.003 10.003 0 0012 3m0 0c.887 0 1.741.099 2.559.288M12 3v3m4.688-4.433l-.356 1.065m1.582 1.988l-1.065.356m2.427 4.774l-1.067-.355M18 12h3m-3.312 2.312l.355 1.066m-1.583 1.987l1.066.354m-2.427 4.774l1.067-.356"/></svg>
+      <span class="font-ui font-bold uppercase tracking-widest text-sm">Mantener pulsado para Sellar</span>
+    </div>
+  </footer>
+</div>
+
+<script>
+  let sealTimer;
+  function startSeal() {
+    const btn = document.getElementById('seal-button');
+    const progress = document.getElementById('seal-progress');
+    progress.style.transition = 'transform 1000ms linear';
+    progress.style.transform = 'scale-x(1)';
+    sealTimer = setTimeout(() => {
+      btn.innerHTML = 'DICTAMEN SELLADO ✓';
+      btn.classList.replace('bg-olive-deep', 'bg-mineral-blue');
+    }, 1000);
+  }
+  function cancelSeal() {
+    clearTimeout(sealTimer);
+    const progress = document.getElementById('seal-progress');
+    progress.style.transition = 'none';
+    progress.style.transform = 'scale-x(0)';
+  }
+</script>
+```
+
+---
+
+## 6. Algoritmo: Shader de Saturación (WebGL)
+
+```javascript
+// Fragment Shader simplificado (Saturación Orgánica)
+const fsSource = `
+  precision highp float;
+  varying vec2 v_texCoord;
+  uniform float u_time;
+  
+  float noise(vec2 p) {
+    return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+  }
+  
+  void main() {
+    vec2 uv = v_texCoord;
+    vec3 parchment = vec3(0.98, 0.98, 0.93); // #FCFAED
+    float n = noise(uv * 3.0 + u_time * 0.05);
+    vec3 color = mix(parchment, parchment * 0.96, n * 0.5);
+    gl_FragColor = vec4(color, 1.0);
+  }
+`;
+```
+})();
+
+</div>
+<!-- STITCH_THREEJS_END:ANIMATION_84 -->
+</body>
+</html>

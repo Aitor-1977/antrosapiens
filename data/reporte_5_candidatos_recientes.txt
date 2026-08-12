@@ -1,0 +1,134 @@
+REPORTE · 5 CANDIDATOS COMERCIALES RECIENTES
+============================================================
+Fecha de corrida    : 2026-08-11 20:21 UTC
+Entorno             : local (Termux · Linux)
+Base de datos       : ~/antrosapiens/data/hd_scraper.db (SQLite)
+Directorio temporal : /data/data/com.termux/files/home/antrosapiens/data  (regla de entorno: prohibido /tmp; TMPDIR/TMP/TEMP redirigidos + parche tempfile en runtime)
+Ingesta             : scripts.run_once (modo autónomo, Google News RSS · region=Toda LATAM)
+
+1. RESUMEN DE LA INGESTA
+------------------------------------------------------------
+  - Objetivos barridos por defecto: 52 organizaciones del directorio semilla curado (VC · Startup · Incubadora · Corporativo).
+  - Evidencias con estado=ok      : 3635
+  - Duplicadas (dedup hash_dedup) : 0
+  - Rechazadas (contrato Motor A) : 0
+  - Evidencias por conector       : google_news=3626, rss_fijos=9
+  - Ventana de captura            : 2026-08-11T19:02:26.297953+00:00 -> 2026-08-11T19:30:34.083023+00:00
+
+2. MATERIALIZACION DE CANDIDATOS COMERCIALES (BC-I -> BC-II)
+------------------------------------------------------------
+  - Candidatos materializados: 52 (uno por organizacion detectada con evidencia).
+  - Estados: Detectado=47, Observado=5.
+  - Regla Cero (G0): g0_permitido = 5 (solo dictamen VALIDADA/VALIDADA_PARCIAL habilita avanzar a 'observado').
+
+3. LOS 5 CANDIDATOS COMERCIALES RECIENTES
+------------------------------------------------------------
+Ordenados por la senal mas reciente capturada (fecha_publicacion maxima de la evidencia).
+
+[1] Angel Ventures
+    Categoria   : VC | Escala: 11-50 | Scoring: B | Score ICP: 65
+    Estado      : Detectado | Dictamen: BLOQUEADA | G0 permitido: False
+    Evidencias  : 43 total | ultima senal: 2026-08-11
+    Por tipo    : ronda=43
+    Mejor evidencia (confianza 1.0):
+      Texto   : José Manuel Moller vende su porcentaje en startup Fracción y lidera ronda en su empresa Algramo - Diario Financiero
+      Fuente  : Diario Financiero | fecha: 2023-11-03
+      URL     : https://news.google.com/rss/articles/CBMirgFBVV95cUxNM2RBSk5oTmpCazVXLWRLaXJLa1VRZjNIQkUxR1c3SjU0ai1IMTNsQVJTeUVBU0wzUlRzZ2ozZXlSOVpieWFqTkRRb0k3VHpPcWZKOE41VUVzcmx5X09SOGZ0LTFPdnhSQVhBbllYb0t5UTlVNllyVUNGMEJLbzE1V2ZEYWRidEplN3hBdWNUUWZGYVhfV2hYODI4Tk1yeWFsNXQxNjZvclJKa0VyYVE?oc=5
+    Senales mas recientes (evidencia_id -> fecha -> fuente):
+      id=406 | 2026-08-11 | El Ecosistema Startup | https://news.google.com/rss/articles/CBMiowFBVV95cUxPVmd3MWpScWhlWVY5YTFFUVU1cEI2TFpoTGZZdVlkR253dC03MXVFNkFnbGYxUmxqY2pVQlZ2dERWU2pZclczMXhCaTQ3Sy1XaHpUZk8zdEtPRXVDbzVZcHp2dnZCaHMyXzUwNGZZR0F1VWVOaWZBMlZOT19yWmVubC1CQ0VYWjUwZG5yU0lFQ3RlVVRhaENGSncyb2FiVFBpejQ4?oc=5
+      id=380 | 2026-08-11 | FintechExpert | https://news.google.com/rss/articles/CBMiekFVX3lxTFBUZExGUUl1LXFHMWMwRERkX2xaM3hOZVZJZHp6VGZFREdKSV9fMXk4NS16UWQxVThHUFM0ajdWRV93LUlLU3BEZmJJVW92Z3ZVaUVtdTJ2TGc2VzRqQ011Y29yaFBRNWltazNfR09Ycm8tcVAtb0JzbjlB?oc=5
+      id=410 | 2026-08-06 | El Ecosistema Startup | https://news.google.com/rss/articles/CBMikgFBVV95cUxPaUY0SkFNT1JtS3pWV3lfUFUyci05OXNkb2M0ck11elZxLURlTlFrUzRuck16dUxpX0ZUbkhKTkpfcW1SX1ExRFBKQ09HajZZdGE1aDJuT0F1WUdyQk01VmFpLTZzMk5QRk5xVHV1eHY0S2NqbHJGYnRyc3RwYzR3NmctUjlSUGtjMkpacWN1anBHUQ?oc=5
+    Trazabilidad:
+      candidato_id    : 0239a873e56c0b83e85bd0b64214033418e6a712b04a5904a97d93a7bb96578d
+      expediente_hash : a1632261dc8c16f32e7fc26da643b5c0708b3b0b823f34667ff8b5bfc42b5c82
+      prospecto       : id=7 (Angel Ventures · VC)
+      transiciones    : 1
+
+[2] Arca Continental
+    Categoria   : Corporativo | Escala: 501+ | Scoring: B | Score ICP: 65
+    Estado      : Detectado | Dictamen: BLOQUEADA | G0 permitido: False
+    Evidencias  : 96 total | ultima senal: 2026-08-11
+    Por tipo    : ronda=96
+    Mejor evidencia (confianza 1.0):
+      Texto   : Arca Continental lanza el programa Somos Locales en alianza con la UANL - Reporte Indigo
+      Fuente  : Reporte Indigo | fecha: 2026-05-11
+      URL     : https://news.google.com/rss/articles/CBMiygFBVV95cUxPTXdueWt3ZFgyOHRhVTc0NEZOQ0tSLU11UUZISjNvNDZJcE51VU5TWVRrUXlTRU5uZDc5NU45NFNhRkNacVVFS09iaEZGZWFQbU9iTkpPMTlBaHhoTEl5MFNzLWY3UlQzc0JaQmhQRFYyNnRKTDcyM0VKcWNWajd4ZFp5bUZvVGJOOFZ4TzRRRGFPZkxMcnAwRWVmdXd2WlJPM09QVjFxbmF6QlI2VEdkSXI5MjNkLVUtMzlaVW9vMzhBQUtCblpWcmVB0gHPAUFVX3lxTE5XQ0VYV2Y1YW5GRVBtM3FFMnRUek9lLU5JVVNLekhwd1p4SDJCcm1iWFhRSXFacWZLZXZfeHRfZngzOXZrUi0yNWJsMjNTNDRaV25rb2ZGT0x3QmlXR3dnNmlSQ1VRdnp6ODZaVTZKMG9XajczcFh6SHJvV3RZVEZ5dU5oc1NOUW5Oc1I4R2FzSGhPRnFGWmxIb0lxXzRnMXlGQXNVTmUwOWE0Vi1Bc2k0SF93MGVXMkVOVVBJeEdnNHdBd0dUbUVpWC1lYk16NA?oc=5
+    Senales mas recientes (evidencia_id -> fecha -> fuente):
+      id=3387 | 2026-08-11 | Reforma | https://news.google.com/rss/articles/CBMihAFBVV95cUxOWFJqaFp3MEZnMEpLeFhSUnBKdWdyOF9TYm01SGY5Z2p5RjFLcEhWaFU2REQ5Zl9hMUNoNW4tZjJvVDhieHJtTFZwZ1FkcGhtNjJtemRUbW42MGlSQTQ2ZnpSXzRhckUwTWltRWpmbUNLSU1LQ1U2Q204TkV0c2o1cWZ1MXY?oc=5
+      id=3416 | 2026-08-10 | Mercado Negro | https://news.google.com/rss/articles/CBMidEFVX3lxTE9GUGh6Rk1nZHpnTUpPRTQwU3pWTC1DV3B6YnpoVjMyWXY3cHhTUmowV3JucWgtZjVGUkRRRzZlc2ZHQl85cWEtVHlyMUxnYWEwZ3JGYy10S2tHcGhHclBDTjNBY3VXbFkwR0x2aERVdTROQ1NU?oc=5
+      id=3392 | 2026-08-10 | infobae.com | https://news.google.com/rss/articles/CBMigAJBVV95cUxOYVAtY1lzQ3VyRGNXZkt6c3Y0Y2lzUUVxM2pZZnQtSE9iaDZuMlhVN1dBbGdFcnFhVHNrdjI3c2dLSktxVlRjWGVWN1NmalFtWFFBVVBqUTRGYTJvZ0NIdFdqYVR6dm5sYWxxREhNTGRXeDJtR1ByT1p3YXFDbVdRRnMwY2lXRWFuQ2k0elpQSE81N0pzRzZrVG1aTkFUTmpUeUpCQ0VPTktpaC1ZNUR2bWpYYXVtT0xNVVYyLWdRVldrdmJYOWg1Z2dQdU9rZ0dxWUY5WTc3X0tuVU45NzM0LU9mOWZuSklQcDFxLUhiZ2UwemlVV3ExbmVGaTEzWmZF0gGAAkFVX3lxTE5hUC1jWXNDdXJEY1dmS3pzdjRjaXNRRXEzallmdC1IT2JoNm4yWFU3V0FsZ0VycWFUc2t2MjdzZ0tKS3FWVGNYZVY3U2ZqUW1YUUFVUGpRNEZhMm9nQ0h0V2phVHp2bmxhbHFESE1MZFd4Mm1HUHJPWndhcUNtV1FGczBjaVdFYW5DaTR6WlBITzU3SnNHNmtUbVpOQVROalR5SkJDRU9OS2loLVk1RHZtalhhdW1PTE1VVjItZ1FWV2t2Ylg5aDVnZ1B1T2tnR3FZRjlZNzdfS25VTjk3MzQtT2Y5Zm5KSVBwMXEtSGJnZTB6aVVXcTFuZUZpMTNaZkU?oc=5
+    Trazabilidad:
+      candidato_id    : 010ccd406963c8ecd30e76b9e78ea83d4e12277f1938546189c4044bbac66b30
+      expediente_hash : 27e7e57dd8ffd42c1ce86cb43bacf4a1909357dd90e2fac1006bee9f80bd2d89
+      prospecto       : id=51 (Arca Continental · Corporativo)
+      transiciones    : 1
+
+[3] BBVA México
+    Categoria   : Corporativo | Escala: 501+ | Scoring: A | Score ICP: 99
+    Estado      : Detectado | Dictamen: BLOQUEADA | G0 permitido: False
+    Evidencias  : 99 total | ultima senal: 2026-08-11
+    Por tipo    : ronda=99
+    Mejor evidencia (confianza 1.0):
+      Texto   : BBVA México y la AMAV firman alianza para digitalizar cobros y financiar a 500 agencias de viajes - BBVA
+      Fuente  : BBVA | fecha: 2026-02-12
+      URL     : https://news.google.com/rss/articles/CBMizwFBVV95cUxNQ0hTczdxc1dXLUl3OFY1eUZseHZzazBVM1NCbUZnOHd6RHZCc0pWVU5LWktMcHlTN3puZW9nSi1aaDl5NGxqcDhSYVZfM09LZGFvTEt4Yk1Pdmdlb1VjLVRsWVBBZm1lR2hSaXpSZE1fNEp6M2p1aUxTemZfTkZLTmpKRFRUTzIxQk1VYjlPUXVzNUgtRnVZTTJIbGxLdVRpamt3VmJsdk9ORVZSbkdNelREMkNkUDNRcVh4Sld2c3JRcFhtVzNUWG5vWm02YUU?oc=5
+    Senales mas recientes (evidencia_id -> fecha -> fuente):
+      id=3634 | 2026-08-11 | BBVA | https://news.google.com/rss/articles/CBMi1AFBVV95cUxOY2pieGhQc2RrVHA3TTVNNnpvRlo4U1BMYnNyVEg4UzBTbW9IUXBMSXktTnkyUEtCMnNESkNEbjNwLUxuak1vakU3MkQwRjNtbl9scWY5eWtCVUtJSGRZZ0JKNVIxaWd0TW1wSVNaUTA2azFhRnN3WmdxWFBtWnE2S2JkZkVhT3hSYlhoVHRBZ0JJOXFuSnRtWmFwUkJrX3A3RTlYN0xQNEVhNjM2NmFiWVVBb1luYXBXOV9WNDZqeUc2d1FqSTA5d3NrUGxkVTB3WGJORA?oc=5
+      id=3195 | 2026-08-11 | El Horizonte | https://news.google.com/rss/articles/CBMiqAFBVV95cUxOU2d5QXFtSTQzT21FdzhKeG1aUzRwbFF6ZFFGZ3lfVm12LU1ZNnN5Mkh3RHpNaXhXVndtNTNTMXBGTEVZT3B5aUlPS05pMmRsSmxzdUt5SUJZa3JBSG4yN2tZbjFPWXZDalUybUdBU3hyQ3FjQlFpRDRaZjdQcUluZUlZVW5Yd1ltOWFOOXRtYzJJSDJNOHk3NXdIUUJlalZHenRfdERKa2g?oc=5
+      id=3193 | 2026-08-11 | El Cronista | https://news.google.com/rss/articles/CBMipgJBVV95cUxONjJkbzU1bE4yNFB6eDhZanlVTGMwSVdTQmV0OTAzU083R3I5YVZBbEVVM1FHeUxyVzI3bFNPdl9PTG5MTkZOd2R3Mkt2QWxlWVhkV1hwX3FtNDJfRjlHdFRqRjlELXR1V2trNkhGYTNWWXhRaVlfalVhcEtNVHpLZ0oyZkItOVkyMFlucWp3MzBHLXdYM1BsRWxFQXUwdzZiTW4wajJhcmRObXd1U2pFYUtGZkRiaHI3VDMwby16N2U3YzN1U3ROX1dUZHpodkFEMmNNUlFsdjVxeEVYSGwwbl83bTR5V3VtSkVOeXRUTlJ5bkRyZzNjX1pfOXZYX3ROcElvcGNoSzBTQ3lSbWdfV1hNT1hjYThJbjlhVEdIbGx3ZkVSX3fSAaYCQVVfeXFMTjYyZG81NWxOMjRQeng4WWp5VUxjMElXU0JldDkwM1NPN0dyOWFWQWxFVTNRR3lMclcyN2xTT3ZfT0xuTE5GTndkdzJLdkFsZVlYZFdYcF9xbTQyX0Y5R3RUakY5RC10dVdrazZIRmEzVll4UWlZX2pVYXBLTVR6S2dKMmZCLTlZMjBZbnFqdzMwRy13WDNQbEVsRUF1MHc2Yk1uMGoyYXJkTm13dVNqRWFLRmZEYmhyN1QzMG8tejdlN2MzdVN0Tl9XVGR6aHZBRDJjTVJRbHY1cXhFWEhsMG5fN200eVd1bUpFTnl0VE5SeW5EcmczY19aXzl2WF90TnBJb3BjaEswU0N5Um1nX1dYTU9YY2E4SW45YVRHSGxsd2ZFUl93?oc=5
+    Trazabilidad:
+      candidato_id    : d9867778d98b858b7a44d4a4220efd5df2e3cb65e9c47e61d4f65cf3d966c96e
+      expediente_hash : 63de08d6b00f61ad68e48504b36b3613bcfd68ab5ec98b59376fcff0c7746b57
+      prospecto       : id=49 (BBVA México · Corporativo)
+      transiciones    : 1
+
+[4] Clara
+    Categoria   : Startup | Escala: 201-500 | Scoring: A | Score ICP: 100
+    Estado      : Observado | Dictamen: VALIDADA | G0 permitido: True
+    Evidencias  : 115 total | ultima senal: 2026-08-11
+    Por tipo    : ronda=115
+    Mejor evidencia (confianza 1.0):
+      Texto   : Galería de Expansión del Clara Resort Ibiúna / Studio DWG + Ponto de Apoio - 16 - ArchDaily
+      Fuente  : ArchDaily | fecha: 2026-08-06
+      URL     : https://news.google.com/rss/articles/CBMipgJBVV95cUxOcmpRVTF5b0NvZGVCUU8wd1RBdHVuT0hUVjhJX2JRVGoyT0R6YTR4YUcxRWt0emEya0FnblNTTmFjOGg1VExJNEQ5dzMzSUhsY1R2Uk1NNlZLWWdvZ2F4OTlMWGFWNjFtRXlFa0s2Yzd2U3JtX1BhU3hTUE00Y3pZVnE5UHFWRkt5S0R2MUpkSnpMZmVxSGpNakxteUxyWFROWGhlejU2SmktNWtFNzUzcHlDb3NiNXVVQTYzMGJGUk8tZDc4RWp5a2htU2pNSGpubzRYbHF2eEZiVlV5NF96SS1taUVtWG5COFByODQzbnB3bkpPVFFfTHIwby1UV1UzaktoZXNTN0Z2eTRJQlFObElVdzBlTDUyNmFRdWVRUUUyNFY2alE?oc=5
+    Senales mas recientes (evidencia_id -> fecha -> fuente):
+      id=3609 | 2026-08-11 | La Gaceta | https://news.google.com/rss/articles/CBMi1AFBVV95cUxQMGhub2NSWDZKTmdQUVlpUWU4dWx6UlNIS2VhRTlyb1FhLXV2c3FWQzBZc21aZEpFODJQNGpJZ201c2c1bmJwdGZkdG5ObVZYcjhUV1ZNakxNd3hmbjZ2MGtEa0pWZ1ltMmdVcEFHX0RwRzJnZy1rbGgwemRBMmt5RkxwOTA3TXR6ZWczeHcxd0UxZEoyTVA1elVac0Q0MzFFc1BVSXE2SWs3ZEUwWC1SS2lPTDAxc2tuRElzWWUzaWQ2T0tJVXBOTXpKVU5Da0U0bHlDcdIB2gFBVV95cUxQd2QyYmNlMTJsYVpTSDlIMlpBVFRBWTJqS3JJUllXUkF4Y1pfb0NFaHI0VlgyUmQ1UGdGQVlOSGg2YUN4T2xGWVh2WmZMM0pIUk5WQlYzVGtjcUNYNHVTWjlXZUpUbjAyc1Y3OFlpSUF2VlNsOFpBZXR4UzBONno0RWdSR3lWc2FDQ1NxVEZoS0RUWERKYWNwR3AyekFUSVlmZFpybll4QmNkSzJqYTFQaVc0Q0pHRmZvUU9waXRwWGM0c0FJb3E1bVQ5V3RuSnE0Y3RuNnNLTXlmZw?oc=5
+      id=3599 | 2026-08-11 | diariodelyaqui.mx | https://news.google.com/rss/articles/CBMizgFBVV95cUxQYy1xSWJFVTVjVW4wTDZmNWNJNk9OeTR1V090RHpIS1NTYnlvRGFnb0dZQkxTRk1BVXpQcHF1ODVmYmNSaFRTelNqVWJkS3pwanJJYUExeE1GRFp2bzBZMTFuYlNob2gwLTMxdmdtOXVJWXJvUXlUd2RWLXpqbUI4WlY4Ym9GeXdQcVJrTXpyLU5hM2VwNlVnTDJ5UTk3LVc4TkJTV1J2RjdmSmlva1Z4azNRcVd4bWt4VnRCcTFfRWxwRjVSR0QtRTlMTThHUQ?oc=5
+      id=3598 | 2026-08-11 | Imagen Zacatecas | https://news.google.com/rss/articles/CBMiuAFBVV95cUxPVDZBYjhTQ0RjdkRMaHQ4YmIyM05lYlhoZmhzTVJUTDdZS0FuZV9DY2lLSkFDQXZ3bVJRMWJWOXdkZE1ZNW1OOU52bUhMS1JOMS1UcVFzNlZOY0E2ZVVGQV8zekNyY1U3MDdiRVNmRkpBLWN5a09KMWsxU29GWkdkcUxQU0hWUEFvbDNFdVlBdVBuQklqRW9Jc0xqUVU3T3FRSnN3NG1TdWU1cDRFNmhZVGlhYURwUjAz?oc=5
+    Trazabilidad:
+      candidato_id    : 6e613b93e689bc91c5b329b5c1bca8aa78f4812fd0e767b687471a9a034c52f0
+      expediente_hash : c0c22830ce40c3659668bf1ca65b20bc633fc8390a4a7d2e94d9d123d8e51a73
+      prospecto       : id=17 (Clara · Startup)
+      transiciones    : 2
+
+[5] Clip
+    Categoria   : Startup | Escala: 501+ | Scoring: B | Score ICP: 65
+    Estado      : Detectado | Dictamen: BLOQUEADA | G0 permitido: False
+    Evidencias  : 101 total | ultima senal: 2026-08-11
+    Por tipo    : ronda=101
+    Mejor evidencia (confianza 1.0):
+      Texto   : CMF presenta los Clip Pro, sus primeros auriculares 'open-ear' con diseño de 'clip on' y autonomía de hasta 32,5 horas - infobae.com
+      Fuente  : infobae.com | fecha: 2026-08-04
+      URL     : https://news.google.com/rss/articles/CBMi-AFBVV95cUxQcnB6UFpRSzV2SGZUTWlrLUxvX0pqbkZpVmllTzZXYTBCZGo1elJjSU82ZGNSMktBTGd0SV9GWUJjSFVMNXhpdzJ6M1R2bmt0S3F4cEZOZ1NHcV9mTW5qTFdFTklRWV91OVYzOFdnT1dHeVdYUkxkeTlkQ2JKN2VPYlNYQWpGWDlEOFdheEVIbk5oclhHZXlKZ2x5UHo5Y3VsWmZfRjJwNFI0SFl1NXdZVFJ0emNSQzYwa19tdzJMazV2eVNQeWlmSHBCZDAtRWxxOTlQQzFXRnhzUEJLa2ZxdVRPSHJKd0Uxdll4OXVVNkJzaG8ybDgxddIBkwJBVV95cUxOX1RBQnVpMThSSG43WS0tT0pxWDRHenRQODg1Szc4cjBXZXJyYXBicE9ZcXVoT3psLThFdGFaeDl1SUs1SHRvOTNlZWVTNDhod25zOGhseWM2MDlmTnhCSDQ4cWJOYU9aODRiZEV0bjJiWS1tMEZERHZsX0dEbTJuSGRhd0xtdmZESldDekZEdjhTSy1aTGQ5SnlmNHVRNUFHM1l0LXhDb3lFWlZsb2ZVZ0ZxZjREVFBBXy1rR3ZYdmRjOUFZTnhfcDBSNlVNMlh0dUdTclU5NFl0MHdxZ3dERHUzVFp4MnEyb0M5bWh3YTlBVmVKTGhxWUpKc1lHczVKaE5hRlc0OFZaQURfZm1mbl9ldw?oc=5
+    Senales mas recientes (evidencia_id -> fecha -> fuente):
+      id=783 | 2026-08-11 | casag.org.br | https://news.google.com/rss/articles/CBMijwFBVV95cUxNWVpmd1dqbTBtUEtoTmRiMGxPZ255TjhDaERFc0R4UEIxY25HaU9vc3J0MmJLWnJ5TjVlOGd4djk4aE9Bd2lRQnZ1TDdIRTNXMWtlTjVCZzJ6V29SM2dhbXlFZmpESzltbDRsOFBia1hmakJRd3k4TWd4RGJyQnJ0eEZEYTA5Z0RfUHN1aTlvaw?oc=5
+      id=782 | 2026-08-11 | No es cine todo lo que reluce | https://news.google.com/rss/articles/CBMirwFBVV95cUxQT2FMMDVjRmJWa0lqSnNDbmRLR0FWRlZWb3VTcGF3YW8tZFNkNEdDSkN3b3ZZSXBjVEZQSk1kTDNwSlBKUVY0N0NTTENUV2tud3Q2ZEJOYV9BZmxycFFoa3RwbklJMF9MN0g4QmF0RllMX0h6cDVaOXR6SW44T3ZMTEpFOUVsZHFHcUY2OXptY0QydHk3ejRTTHdXa3BVZzFwWFF6bUhIZENGQ0ItQ29F?oc=5
+      id=772 | 2026-08-11 | casag.org.br | https://news.google.com/rss/articles/CBMijwFBVV95cUxQWF9rOG8tNXUzY0hFMzhjYm1FRk9Ea1hYUkFkdnhaV3RGTFMzWDlBd3o2eU5tY185VTFndEdiUnVDNHpTd2JQTjdRaVVHS05hcVRJbUR4cmFnVGNtYk9VOWxqUVN5TUZESHpEdHZqYzY0UGItbGlWdlIwMHE3ZU94U0hneHdiZjM3RDlyZFlNZw?oc=5
+    Trazabilidad:
+      candidato_id    : f7770b7dd36ad6a6cc3c2ee142fef00528435fecd56447568492883d4dee0173
+      expediente_hash : 510bf4bacac8207c3f99112a42cef2cdf2c4c2f0887b930715a1221bebb2c064
+      prospecto       : id=15 (Clip · Startup)
+      transiciones    : 1
+
+4. NOTAS DE TRAZABILIDAD Y CALIDAD
+------------------------------------------------------------
+  - Regla Cero activa: los candidatos con dictamen distinto de VALIDADA/VALIDADA_PARCIAL
+    permanecen en 'detectado'. La decision de avanzar/descartar corresponde al operador vía
+    RadarHD (Motor B); Motor A solo registra deteccion y observacion.
+  - Determinismo: candidato_id (sha256 del nombre normalizado) y expediente_hash son
+    reproducibles (mismo insumo => mismo resultado). Re-materializar no duplica filas ni transiciones.
+  - Cadena referencial verificable: organizacion -> candidato -> prospecto -> expediente -> evidencia
+    (scripts.trazabilidad, solo lectura).
+  - Dedup por hash_dedup: re-capturar la misma URL/empresa cuenta como 'duplicada', no como escrito nuevo.
+
+*Fin del reporte*
