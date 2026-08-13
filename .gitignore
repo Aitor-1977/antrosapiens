@@ -16,3 +16,5 @@ data/*.db-shm
 data/raw/
 .env
 .env.local
+data/pytest-of-*/
+data/pytest-of-*/
