@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<!-- viewport: ajuste correcto del teclado (Gboard). Sin user-scalable=no forzado
+     para no romper la selección/copia; height 100% para scroll con teclado. -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#111715" />
+<title>AntroSapiens · Investigación</title>
+<style>
+  :root{
+    --parchment:#f4efe6; --parchment-2:#ebe3d4; --ink:#2b2620; --ink-soft:#5b5347;
+    --mineral:#2E7D64; --mineral-d:#1f5a48; --line:#cdbfa6; --amber:#b9821f;
+    --danger:#9a3b2e; --bg-dark:#111715; --panel:#191f1c;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;
+    -webkit-user-select:text; user-select:text;}
+  html,body{margin:0; height:100%;}
+  body{
+    background:var(--bg-dark); color:var(--parchment);
+    font-family:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+    font-size:14px; display:flex; flex-direction:column; height:100%;
+    overscroll-behavior:contain;
+  }
+  .serif{font-family:"Newsreader",Georgia,"Times New Roman",serif;}
+  header{
+    padding:12px 16px; border-bottom:1px solid #2a322e; display:flex;
+    align-items:center; gap:10px; flex:0 0 auto; background:var(--bg-dark);
+  }
+  header .logo{font-family:"Newsreader",serif; font-size:19px; color:var(--mineral); letter-spacing:.5px;}
+  header .sub{color:var(--ink-soft); font-size:11px;}
+  main{flex:1 1 auto; overflow-y:auto; padding:14px 14px 90px; -webkit-overflow-scrolling:touch;}
+  .card{background:var(--panel); border:1px solid #2a322e; border-radius:12px;
+    padding:14px; margin-bottom:12px;}
+  .card h3{margin:0 0 8px; font-size:13px; color:var(--mineral); letter-spacing:.5px; text-transform:uppercase;}
+  label{display:block; font-size:11px; color:var(--ink-soft); margin:10px 0 4px;}
+  input,textarea,select{
+    width:100%; background:#0e1311; color:var(--parchment); border:1px solid #2a322e;
+    border-radius:10px; padding:11px 12px; font-size:14px; font-family:inherit;
+    /* Gboard: inputs reales (no contenteditable) + tamaño >=48dp táctil */
+    min-height:48px; outline:none;
+  }
+  textarea{min-height:72px; resize:vertical;}
+  input:focus,textarea:focus,select:focus{border-color:var(--mineral);}
+  button{
+    min-height:48px; border:none; border-radius:10px; padding:11px 16px;
+    font-family:inherit; font-size:13px; font-weight:600; cursor:pointer;
+    background:var(--mineral); color:#eafff6; letter-spacing:.3px;
+  }
+  button.ghost{background:transparent; color:var(--mineral); border:1px solid var(--mineral);}
+  button.danger{background:var(--danger); color:#fff;}
+  button.amber{background:var(--amber); color:#1b1408;}
+  .row{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;}
+  .row > *{flex:1 1 auto;}
+  .chip{display:inline-block; padding:3px 9px; border-radius:999px; font-size:11px;
+    border:1px solid var(--line); color:var(--ink-soft); margin:2px 4px 2px 0;}
+  .badge{font-size:10px; padding:2px 7px; border-radius:6px; letter-spacing:.4px;}
+  .b-senal{background:#3a3320; color:#e7c879;}
+  .b-ev{background:#1f5a48; color:#d7fff0;}
+  .b-desc{background:#3a2020; color:#f0b4ab;}
+  .b-ia{background:#243a52; color:#bcd8ff;}
+  .meta{color:var(--ink-soft); font-size:11px; line-height:1.5; word-break:break-word;}
+  .src-link{color:var(--mineral); text-decoration:underline; word-break:break-all;}
+  .estado{display:flex; gap:14px; flex-wrap:wrap; font-size:12px; color:var(--ink-soft);}
+  .estado b{color:var(--parchment);}
+  .empty{color:var(--ink-soft); font-style:italic; padding:10px 0;}
+  .tri{background:#0e1311; border:1px solid #2a322e; border-radius:10px; padding:10px; margin-top:8px;}
+  nav{position:fixed; left:0; right:0; bottom:0; display:flex; background:var(--panel);
+    border-top:1px solid #2a322e; padding:6px 4px calc(6px + env(safe-area-inset-bottom)); z-index:20;}
+  nav button{flex:1; background:transparent; color:var(--ink-soft); border-radius:10px;
+    font-size:10px; min-height:48px; display:flex; flex-direction:column; align-items:center; gap:2px;}
+  nav button.act{color:var(--mineral);}
+  .view{display:none;} .view.act{display:block;}
+  .toast{position:fixed; top:14px; left:50%; transform:translateX(-50%); background:#0e1311;
+    border:1px solid var(--mineral); color:var(--parchment); padding:10px 14px; border-radius:10px;
+    font-size:12px; z-index:50; max-width:90%; display:none;}
+  .rel-line{font-size:12px; padding:6px 0; border-bottom:1px dashed #2a322e;}
+  .rel-REFUERZA{color:#7fe0c0;} .rel-CONTRADICE{color:#f0a59a;} .rel-MATIZA{color:#e7c879;}
+  .modal{position:fixed; inset:0; background:rgba(0,0,0,.7); display:none; align-items:center;
+    justify-content:center; padding:18px; z-index:60;}
+  .modal.act{display:flex;} .modal .card{max-width:420px; width:100%;}
+  .x{position:absolute; right:14px; top:10px; color:var(--ink-soft); cursor:pointer; font-size:18px;}
+  .err{color:#f0a59a;} .ok{color:#7fe0c0;}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <div class="logo">AntroSapiens</div>
+    <div class="sub">Laboratorio de investigación antropológica</div>
+  </div>
+</header>
+
+<div class="toast" id="toast"></div>
+
+<main>
+  <!-- VISTA: INVESTIGACIONES -->
+  <section class="view act" id="v-inv">
+    <div class="card">
+      <h3>Nueva investigación</h3>
+      <label>Foco (organización o ecosistema)</label>
+      <input id="foco" placeholder="Ej: Nubank" />
+      <label>Pregunta antropológica</label>
+      <textarea id="pregunta" placeholder="Ej: ¿Cómo cambia la cultura de Nubank tras la última ronda?"></textarea>
+      <div class="row"><button id="btn-crear">Crear investigación</button></div>
+    </div>
+    <div class="card">
+      <h3>Investigaciones</h3>
+      <div id="lista-inv"><div class="empty">Sin investigaciones. Crea la primera arriba.</div></div>
+    </div>
+  </section>
+
+  <!-- VISTA: MESA DE SEÑALES -->
+  <section class="view" id="v-sen">
+    <div class="card" id="inv-head"></div>
+    <div class="card">
+      <h3>Radar / captura</h3>
+      <label>Consulta de búsqueda</label>
+      <input id="consulta" placeholder="Ej: Nubank ronda" />
+      <label>Tipo de evento</label>
+      <select id="tipo">
+        <option value="ronda">ronda</option>
+        <option value="contratacion">contratacion</option>
+        <option value="despido">despido</option>
+        <option value="lanzamiento">lanzamiento</option>
+        <option value="queja">queja</option>
+        <option value="cambio_sitio">cambio_sitio</option>
+      </select>
+      <label>Fuentes (separadas por coma)</label>
+      <input id="fuentes" value="google_news,gdelt,rss_fijos,job_boards" />
+      <div class="row">
+        <button id="btn-capturar">Ejecutar búsqueda</button>
+        <button class="ghost" id="btn-sug">Sugerir tensiones</button>
+      </div>
+      <div id="cap-estado" class="meta"></div>
+    </div>
+    <div class="card">
+      <h3>Señales capturadas</h3>
+      <div id="lista-sen"><div class="empty">Sin señales. Ejecuta una búsqueda.</div></div>
+    </div>
+  </section>
+
+  <!-- VISTA: RELACIONES -->
+  <section class="view" id="v-rel">
+    <div class="card">
+      <h3>Relaciones entre evidencias</h3>
+      <div id="lista-rel"><div class="empty">Sin relaciones.</div></div>
+    </div>
+    <div class="card">
+      <h3>Tensiones</h3>
+      <div id="lista-ten"><div class="empty">Sin tensiones.</div></div>
+    </div>
+  </section>
+
+  <!-- VISTA: PERITAJE -->
+  <section class="view" id="v-per">
+    <div class="card">
+      <h3>Triangulación</h3>
+      <div id="tri" class="tri">—</div>
+    </div>
+    <div class="card">
+      <h3>Hipótesis</h3>
+      <label><input type="checkbox" id="usar-ia" style="width:auto;min-height:0;vertical-align:middle;" /> Asistir con IA (NVIDIA) — queda marcada como INFERENCIA IA</label>
+      <div class="row">
+        <button id="btn-hip">Generar hipótesis</button>
+        <button class="amber" id="btn-cerrar">Cerrar peritaje</button>
+      </div>
+      <div id="lista-hip"><div class="empty">Sin hipótesis.</div></div>
+    </div>
+  </section>
+</main>
+
+<nav>
+  <button class="act" data-v="v-inv">◎<span>Foco</span></button>
+  <button data-v="v-sen">⌕<span>Señales</span></button>
+  <button data-v="v-rel">⇄<span>Relaciones</span></button>
+  <button data-v="v-per">✦<span>Peritaje</span></button>
+</nav>
+
+<!-- Modal curaduría / relación / tensión -->
+<div class="modal" id="modal">
+  <div class="card" style="position:relative;">
+    <span class="x" id="modal-x">✕</span>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+const $ = (s)=>document.querySelector(s);
+const $$ = (s)=>document.querySelectorAll(s);
+let INV = null; // investigación activa
+
+function toast(msg, ok){ const t=$('#toast'); t.textContent=msg; t.className='toast';
+  t.style.display='block'; t.style.borderColor = ok? 'var(--mineral)':'var(--danger)';
+  clearTimeout(t._t); t._t=setTimeout(()=>t.style.display='none',2600); }
+
+/* ---------- Cliente: puente JS (Android) o HTTP (escritorio) ---------- */
+async function api(method, args){
+  if (window.AntroBridge && typeof window.AntroBridge.call === 'function'){
+    return await new Promise((resolve)=>{
+      const id='cb'+Math.random().toString(36).slice(2);
+      window.__antroCbs = window.__antroCbs||{};
+      window.__antroCbs[id]=resolve;
+      window.AntroBridge.call(method, JSON.stringify(args||{}), id);
+    });
+  }
+  const base='/investigacion';
+  const routes={
+    crear:['POST',base+'/crear',args], pregunta:['POST',base+'/pregunta',args],
+    capturar:['POST',base+'/capturar',args], listar:['GET',base+'/',null],
+    estado:['GET',base+'/'+(args.inv_id||''),null], curar:['POST',base+'/curar',args],
+    relacionar:['POST',base+'/relacionar',args], tension:['POST',base+'/tension',args],
+    sugerir_tensiones:['GET',base+'/'+(args.inv_id)+'/tensiones/sugerir',null],
+    hipotesis:['POST',base+'/hipotesis',args],
+    triangulacion:['GET',base+'/'+(args.inv_id)+'/triangulacion',null],
+    cerrar:['POST',base+'/cerrar',args]
+  };
+  const [m,u,b]=routes[method];
+  const r=await fetch(u,{method:m,headers:{'Content-Type':'application/json'},
+    body:b?JSON.stringify(b):undefined});
+  const data=await r.json().catch(()=>({ok:false,error:'json'}));
+  return {ok:r.ok, data:r.ok?data:data};
+}
+
+/* Android invoca esto con el resultado del puente */
+window.AntroBridge = window.AntroBridge || {};
+window.AntroBridge.resolve = function(id, json){
+  const cb=window.__antroCbs && window.__antroCbs[id];
+  if(cb){ try{cb(JSON.parse(json));}catch(e){cb({ok:false,error:json});} delete window.__antroCbs[id]; }
+};
+
+const esc=(s)=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ---------- Navegación ---------- */
+$$('nav button').forEach(b=>b.addEventListener('click',()=>{
+  $$('nav button').forEach(x=>x.classList.remove('act'));
+  b.classList.add('act');
+  $$('.view').forEach(v=>v.classList.remove('act'));
+  $('#'+b.dataset.v).classList.add('act');
+}));
+
+/* ---------- Investigaciones ---------- */
+async function cargarInv(){
+  const r=await api('listar',{});
+  const box=$('#lista-inv');
+  if(!r.ok||!r.data.length){ box.innerHTML='<div class="empty">Sin investigaciones. Crea la primera arriba.</div>'; return; }
+  box.innerHTML=r.data.map(i=>`
+    <div class="card" style="margin-bottom:8px;">
+      <div class="serif" style="font-size:16px;color:var(--parchment)">${esc(i.foco)}</div>
+      <div class="meta">${esc(i.pregunta)}</div>
+      <div class="meta">Estado: <b>${esc(i.estado)}</b> · ${esc(i.creado_en)}</div>
+      <div class="row">
+        <button data-open="${esc(i.id)}">Abrir</button>
+        <button class="ghost" data-open="${esc(i.id)}">Señales →</button>
+      </div>
+    </div>`).join('');
+  $$('#lista-inv [data-open]').forEach(b=>b.addEventListener('click',()=>abrir(b.dataset.open)));
+}
+async function abrir(id){
+  const r=await api('estado',{inv_id:id});
+  if(!r.ok){ toast('No se pudo abrir: '+ (r.error||''),false); return; }
+  INV=r.data; pintarInv();
+  $$('nav button').forEach(x=>x.classList.remove('act'));
+  $('[data-v="v-sen"]').classList.add('act');
+  $$('.view').forEach(v=>v.classList.remove('act'));
+  $('#v-sen').classList.add('act');
+}
+$('#btn-crear').addEventListener('click',async()=>{
+  const foco=$('#foco').value.trim(), preg=$('#pregunta').value.trim();
+  if(!foco){ toast('Define un foco',false); return; }
+  const r=await api('crear',{foco, pregunta:preg||'(sin pregunta)'});
+  if(!r.ok){ toast('Error: '+(r.error||''),false); return; }
+  $('#foco').value=''; $('#pregunta').value=''; await cargarInv(); abrir(r.data.id);
+  toast('Investigación creada',true);
+});
+
+/* ---------- Pintar investigación activa ---------- */
+function pintarInv(){
+  if(!INV) return;
+  const i=INV.investigacion;
+  $('#inv-head').innerHTML=`
+    <h3>${esc(i.foco)}</h3>
+    <div class="meta serif">${esc(i.pregunta)}</div>
+    <div class="estado" style="margin-top:8px;">
+      <span>Señales: <b>${INV.conteos.senales}</b></span>
+      <span>Evidencias: <b>${INV.conteos.evidencias}</b></span>
+      <span>Descartadas: <b>${INV.conteos.descartadas}</b></span>
+      <span>Estado: <b>${esc(i.estado)}</b></span>
+    </div>`;
+  const sen=INV.senales.map(s=>`
+    <div class="card" style="margin-bottom:8px;" data-sid="${s.id}">
+      <div style="display:flex;justify-content:space-between;gap:8px;">
+        <div class="serif" style="font-size:15px;color:var(--parchment)">${esc(s.titulo)}</div>
+        <span class="badge ${s.estado_curaduria==='EVIDENCIA'?'b-ev':s.estado_curaduria==='DESCARTADA'?'b-desc':'b-senal'}">${s.estado_curaduria}</span>
+      </div>
+      <div class="meta">${esc(s.fuente)} · ${esc(s.fecha_publicacion||s.fecha_captura)} · <i>${esc(s.tipo_fuente)}</i></div>
+      <div class="meta">org: ${esc(s.organizacion)}</div>
+      <div class="meta">hash: <code>${esc(s.hash)}</code></div>
+      <div class="row">
+        <button class="ghost" data-acc="aceptar" data-sid="${s.id}">Aceptar evidencia</button>
+        <button class="ghost" data-acc="descartar" data-sid="${s.id}">Descartar</button>
+        <button class="ghost" data-acc="nota" data-sid="${s.id}">Nota</button>
+      </div>
+      <div class="row">
+        <button data-acc="rel" data-sid="${s.id}">Relacionar</button>
+        <button data-acc="tension" data-sid="${s.id}">Tensión</button>
+        <a class="src-link" href="${esc(s.url)}" target="_blank" rel="noopener">Fuente original ↗</a>
+      </div>
+      ${s.nota?`<div class="meta" style="margin-top:6px;">📝 ${esc(s.nota)}</div>`:''}
+    </div>`).join('');
+  $('#lista-sen').innerHTML = sen || '<div class="empty">Sin señales. Ejecuta una búsqueda.</div>';
+  $$('#lista-sen [data-acc]').forEach(b=>b.addEventListener('click',()=>accionSenal(b)));
+
+  // Relaciones + tensiones
+  $('#lista-rel').innerHTML = (INV.relaciones.length?INV.relaciones.map(r=>{
+    const a=tit(r.evidencia_a), b=tit(r.evidencia_b);
+    return `<div class="rel-line"><span class="rel-${r.tipo}">${r.tipo}</span> · ${esc(a)} ⇄ ${esc(b)}${r.nota?' — '+esc(r.nota):''}</div>`;
+  }).join(''):'<div class="empty">Sin relaciones.</div>');
+  $('#lista-ten').innerHTML = (INV.tensiones.length?INV.tensiones.map(t=>{
+    return `<div class="card" style="margin-bottom:8px;"><div class="meta"><b>${esc(tit(t.evidencia_a))}</b> ⇄ <b>${esc(tit(t.evidencia_b))}</b></div>
+      <div class="meta">${esc(t.explicacion)}</div><div class="meta">estado: ${esc(t.estado)}</div></div>`;
+  }).join(''):'<div class="empty">Sin tensiones.</div>');
+
+  // Triangulación + hipótesis
+  $('#tri').innerHTML = `<div>Evidencias: <b>${INV.triangulacion.n_evidencias}</b></div>
+    <div>Fuentes independientes: <b>${INV.triangulacion.fuentes_independientes}</b></div>
+    <div>Relaciones: <b>${INV.triangulacion.relaciones}</b></div>
+    <div>Contradicciones/tensiones: <b>${INV.triangulacion.contradicciones}</b></div>
+    <div>Veredicto científico: <b>${esc(INV.triangulacion.veredicto)}</b> (solidez ${INV.triangulacion.solidez}, suficiencia ${INV.triangulacion.suficiencia})</div>
+    ${INV.triangulacion.evidencia_faltante.length?`<div>Evidencia faltante: ${INV.triangulacion.evidencia_faltante.map(esc).join('; ')}</div>`:''}`;
+  $('#lista-hip').innerHTML = (INV.hipotesis.length?INV.hipotesis.map(h=>`
+    <div class="card" style="margin-bottom:8px;">
+      <span class="badge ${h.origen==='ia'?'b-ia':'b-ev'}">${h.origen.toUpperCase()}</span>
+      <span class="badge b-senal">${esc(h.estado)}</span>
+      <div class="meta serif" style="margin-top:6px;white-space:pre-wrap;">${esc(h.texto)}</div>
+    </div>`).join(''):'<div class="empty">Sin hipótesis.</div>');
+}
+function tit(id){ const s=INV && INV.senales.find(x=>x.id===id); return s? s.titulo : ('#' + id); }
+
+/* ---------- Captura ---------- */
+$('#btn-capturar').addEventListener('click',async()=>{
+  if(!INV){ toast('Abre o crea una investigación primero',false); return; }
+  const consulta=$('#consulta').value.trim();
+  if(!consulta){ toast('Escribe una consulta',false); return; }
+  const conectores=$('#fuentes').value.split(',').map(s=>s.trim()).filter(Boolean);
+  $('#cap-estado').textContent='Buscando… (puede requerir red)';
+  const r=await api('capturar',{inv_id:INV.investigacion.id, consulta,
+    tipo_evento:$('#tipo').value, conectores});
+  if(!r.ok){ $('#cap-estado').textContent='Error: '+(r.error||''); toast('Fallo la captura',false); return; }
+  $('#cap-estado').textContent=`Vistos ${r.data.vistos} · escritos ${r.data.escritos} · duplicados ${r.data.duplicados}`;
+  await refrescar();
+});
+$('#btn-sug').addEventListener('click',async()=>{
+  if(!INV) return;
+  const r=await api('sugerir_tensiones',{inv_id:INV.investigacion.id});
+  if(!r.ok){ toast('Error sugerencias',false); return; }
+  if(!r.data.length){ toast('Sin contradicciones detectadas (se necesitan evidencias)',true); return; }
+  const m=`<h3>Posibles tensiones detectadas</h3>`+r.data.map(s=>`
+    <div class="meta">⚠ ${esc(tit(s.evidencia_a))} ⇄ ${esc(tit(s.evidencia_b))}<br>${esc(s.razon)}</div>`).join('');
+  abrirModal(m+'<div class="row"><button id="m-ok">Entendido</button></div>');
+  $('#m-ok').onclick=cerrarModal;
+});
+
+/* ---------- Curaduría ---------- */
+async function accionSenal(b){
+  const sid=parseInt(b.dataset.sid,10), acc=b.dataset.acc;
+  if(acc==='nota'){
+    const nota=prompt('Nota del investigador:');
+    if(nota===null) return;
+    const r=await api('curar',{inv_id:INV.investigacion.id, senal_id:sid, accion:'nota', nota});
+    if(r.ok){ toast('Nota guardada',true); await refrescar(); }
+    return;
+  }
+  if(acc==='rel'){
+    const otras=INV.senales.filter(s=>s.id!==sid);
+    if(!otras.length){ toast('Necesitas al menos 2 señales',false); return; }
+    const opts=otras.map(s=>`<option value="${s.id}">${esc(s.titulo)}</option>`).join('');
+    abrirModal(`<h3>Relacionar evidencia</h3>
+      <label>Con</label><select id="rel-b">${opts}</select>
+      <label>Tipo</label>
+      <select id="rel-t"><option>REFUERZA</option><option>CONTRADICE</option><option>MATIZA</option></select>
+      <label>Nota (opcional)</label><input id="rel-n" placeholder="por qué"/>
+      <div class="row"><button id="rel-go">Relacionar</button></div>`);
+    $('#rel-go').onclick=async()=>{
+      const r=await api('relacionar',{inv_id:INV.investigacion.id, a:sid,
+        b:parseInt($('#rel-b').value,10), tipo:$('#rel-t').value, nota:$('#rel-n').value.trim()||null});
+      if(r.ok){ cerrarModal(); toast('Relación registrada',true); await refrescar(); }
+      else toast('Error: '+(r.error||''),false);
+    };
+    return;
+  }
+  if(acc==='tension'){
+    const otras=INV.senales.filter(s=>s.id!==sid);
+    const opts=otras.map(s=>`<option value="${s.id}">${esc(s.titulo)}</option>`).join('');
+    abrirModal(`<h3>Registrar tensión</h3>
+      <label>Evidencia B</label><select id="ten-b">${opts}</select>
+      <label>Explicación del investigador</label><textarea id="ten-e" placeholder="Por qué hay tensión entre ambas"></textarea>
+      <div class="row"><button id="ten-go" class="danger">Registrar tensión</button></div>`);
+    $('#ten-go').onclick=async()=>{
+      const r=await api('tension',{inv_id:INV.investigacion.id, a:sid,
+        b:parseInt($('#ten-b').value,10), explicacion:$('#ten-e').value.trim()});
+      if(r.ok){ cerrarModal(); toast('Tensión registrada',true); await refrescar(); }
+      else toast('Error: '+(r.error||''),false);
+    };
+    return;
+  }
+  // aceptar / descartar
+  const r=await api('curar',{inv_id:INV.investigacion.id, senal_id:sid, accion:acc});
+  if(r.ok){ toast(acc==='aceptar'?'Aceptada como evidencia':'Descartada',true); await refrescar(); }
+  else toast('Error: '+(r.error||''),false);
+}
+
+/* ---------- Hipótesis / cierre ---------- */
+$('#btn-hip').addEventListener('click',async()=>{
+  if(!INV) return;
+  const r=await api('hipotesis',{inv_id:INV.investigacion.id, usar_ia:$('#usar-ia').checked});
+  if(!r.ok){ toast('Error: '+(r.error||''),false); return; }
+  toast('Hipótesis generadas',true); await refrescar();
+});
+$('#btn-cerrar').addEventListener('click',async()=>{
+  if(!INV) return;
+  if(!confirm('¿Cerrar el peritaje? Se emite el dictamen científico.')) return;
+  const r=await api('cerrar',{inv_id:INV.investigacion.id});
+  if(!r.ok){ toast('Error: '+(r.error||''),false); return; }
+  toast('Peritaje cerrado: '+(r.data.veredicto||''),true); await refrescar();
+});
+
+async function refrescar(){
+  const r=await api('estado',{inv_id:INV.investigacion.id});
+  if(r.ok){ INV=r.data; pintarInv(); }
+}
+
+/* ---------- Modal ---------- */
+function abrirModal(html){ $('#modal-body').innerHTML=html; $('#modal').classList.add('act'); }
+function cerrarModal(){ $('#modal').classList.remove('act'); }
+$('#modal-x').addEventListener('click',cerrarModal);
+$('#modal').addEventListener('click',e=>{ if(e.target.id==='modal') cerrarModal(); });
+
+/* ---------- Arranque ---------- */
+cargarInv();
+</script>
+</body>
+</html>

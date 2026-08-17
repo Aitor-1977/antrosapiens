@@ -1,6 +1,10 @@
+import org.gradle.api.plugins.ExtensionAware
+import com.chaquo.python.PythonExtension
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("com.chaquo.python")
 }
 
 android {
@@ -13,6 +17,21 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
+
+        (this as ExtensionAware).extensions.getByName<PythonExtension>("python").pip.apply {
+            install("fastapi")
+            install("uvicorn")
+            install("httpx")
+            install("feedparser")
+            install("python-dateutil")
+            install("beautifulsoup4")
+            install("apscheduler")
+        install("pydantic<2")
+        }
+
+        ndk {
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
+        }
     }
 
     buildTypes {

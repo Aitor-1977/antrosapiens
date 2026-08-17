@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Antrosapiens V4 — Laboratorio</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui;background:#FCFAED;color:#1a1a1a;padding:1.5rem;max-width:600px;margin:0 auto}
+h1{font-size:1.4rem;margin-bottom:0.5rem}
+.status{padding:1rem;border-radius:10px;margin-bottom:1.5rem;font-size:0.9rem}
+.status.ok{background:#d4edda;color:#155724;border:1px solid #c3e6cb}
+.status.error{background:#f8d7da;color:#721c24;border:1px solid #f5c6cb}
+.status.loading{background:#fff3cd;color:#856404;border:1px solid #ffeaa7}
+button{display:block;width:100%;padding:1.2rem;margin-bottom:1rem;font-size:1.1rem;background:#1a1a1a;color:#FCFAED;border:none;border-radius:12px;cursor:pointer}
+button:active{background:#333}
+.data-box{background:#fff;border:1px solid #ddd;border-radius:10px;padding:1rem;margin-bottom:1.5rem;font-size:0.85rem;max-height:200px;overflow-y:auto}
+</style>
+</head>
+<body>
+<h1>🧿 Antrosapiens V4</h1>
+<div id="status" class="status loading">Conectando con el laboratorio…</div>
+
+<div class="data-box" id="data-box" style="display:none">
+  <strong>Estado del backend:</strong>
+  <pre id="json-data">Cargando…</pre>
+</div>
+
+<button onclick="location.href='nivel_0_cuaderno_de_campo_v4.html'">📓 Nivel 0 — Cuaderno de Campo</button>
+<button onclick="location.href='nivel_1_mesa_de_evidencias_v4.html'">📚 Nivel 1 — Mesa de Evidencias</button>
+<button onclick="location.href='nivel_2_mesa_de_relaciones_v4_1.html'">🕸️ Nivel 2 — Mesa de Relaciones</button>
+<button onclick="location.href='nivel_3_el_peritaje_v4_1.html'">⚖️ Nivel 3 — El Peritaje</button>
+
+<script>
+const API = "http://127.0.0.1:8000";
+
+async function checkBackend() {
+  const statusDiv = document.getElementById("status");
+  const dataBox = document.getElementById("data-box");
+  const jsonData = document.getElementById("json-data");
+  
+  try {
+    const res = await fetch(API + "/", {method: "GET"});
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+    
+    statusDiv.className = "status ok";
+    statusDiv.textContent = "✅ Laboratorio conectado — Backend activo";
+    dataBox.style.display = "block";
+    jsonData.textContent = JSON.stringify(data, null, 2);
+  } catch (e) {
+    statusDiv.className = "status error";
+    statusDiv.innerHTML = "❌ No se pudo conectar al laboratorio.<br><small>Asegúrate de que el servidor esté corriendo en Termux:<br><code>uvicorn hd_scraper.api.app:app --host 0.0.0.0 --port 8000</code></small>";
+  }
+}
+
+checkBackend();
+</script>
+</body>
+</html>

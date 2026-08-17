@@ -1856,7 +1856,7 @@ def _procesar_capa0(db, texto: str, url: str = "", timestamp: Optional[str] = No
     return {
         "senales_detectadas": len(señales), "senales_nuevas": nuevas,
         "score_total": score, "nivel_alerta": alerta,
-        "senales": [s.model_dump(mode="json") for s in señales],
+        "senales": [s.to_json_dict() for s in señales],
     }
 
 
