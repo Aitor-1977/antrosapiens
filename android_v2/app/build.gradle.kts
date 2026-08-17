@@ -18,7 +18,10 @@ android {
         versionCode = 1
         versionName = "1.0"
 
-        (this as ExtensionAware).extensions.getByName<PythonExtension>("python").pip.apply {
+        val python = (this as ExtensionAware).extensions.getByName<PythonExtension>("python")
+        python.version = "3.12"
+        python.buildPython = listOf("/data/data/com.termux/files/usr/bin/python3.11")
+        python.pip.apply {
             install("fastapi")
             install("uvicorn")
             install("httpx")
@@ -30,7 +33,7 @@ android {
         }
 
         ndk {
-            abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64")
+            abiFilters += listOf("arm64-v8a", "x86_64")
         }
     }
 
