@@ -1,0 +1,1 @@
+opencode run "La dirección oficial ES android_v2. Basado en el archivo local prompt.md, ejecuta la FASE C (Radar real): conecta los endpoints reales del backend de RadarHD a android_v2/ e inyecta la pantalla funcional del Radar. Al terminar, compila el APK con ./scripts/build-apk.sh y muestra el resultado."

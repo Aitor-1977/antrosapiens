@@ -30,6 +30,7 @@ android {
             install("beautifulsoup4")
             install("apscheduler")
             install("pydantic<2")
+            install("python-dotenv")
         }
 
         ndk {

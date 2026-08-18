@@ -2,13 +2,270 @@
 <html lang="es">
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AntrolabsHD</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+    <title>Radar HD · AntrolabsHD</title>
+    <style>
+        :root{
+            --bg:#FCFAED; --ink:#111715; --muted:#6b6a5e;
+            --card:#ffffff; --line:#e7e3d2; --accent:#1f6f54; --accent2:#b9912f;
+            --vc:#3a7bd5; --startup:#1f9d6b; --incubadora:#9b5de5; --corp:#e07a3f;
+            --A:#1f9d6b; --B:#b9912f; --C:#c0563f;
+        }
+        *{box-sizing:border-box}
+        body{margin:0;background:var(--bg);color:var(--ink);
+            font-family:-apple-system,system-ui,"Segoe UI",Roboto,sans-serif;}
+        header{position:sticky;top:0;z-index:5;background:var(--bg);
+            border-bottom:1px solid var(--line);padding:12px 16px;display:flex;
+            align-items:center;gap:10px;}
+        header h1{font-size:18px;margin:0;letter-spacing:.3px}
+        .dot{width:9px;height:9px;border-radius:50%;background:#bbb;flex:none}
+        .dot.on{background:var(--accent)} .dot.off{background:var(--C)}
+        .sub{font-size:12px;color:var(--muted)}
+        .wrap{padding:14px 16px 40px;max-width:920px;margin:0 auto}
+        .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+        input,select,button{font:inherit;padding:9px 11px;border-radius:10px;
+            border:1px solid var(--line);background:#fff;color:var(--ink)}
+        input{flex:1;min-width:160px}
+        button{background:var(--accent);color:#fff;border:none;cursor:pointer;font-weight:600}
+        button.sec{background:#fff;color:var(--accent);border:1px solid var(--accent)}
+        button:disabled{opacity:.5;cursor:default}
+        .chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+        .chip{padding:5px 11px;border-radius:999px;border:1px solid var(--line);
+            font-size:12px;cursor:pointer;background:#fff}
+        .chip.active{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+        .count{font-size:12px;color:var(--muted);margin-left:auto}
+        .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+        .card{background:var(--card);border:1px solid var(--line);border-radius:14px;
+            padding:12px;cursor:pointer;transition:.15s}
+        .card:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,0,0,.06)}
+        .card .nm{font-weight:600;font-size:14px;line-height:1.2}
+        .tag{display:inline-block;margin-top:8px;font-size:11px;padding:2px 8px;
+            border-radius:999px;color:#fff}
+        .tag.VC{background:var(--vc)} .tag.Startup{background:var(--startup)}
+        .tag.Incubadora{background:var(--incubadora)} .tag.Corporativo{background:var(--corp)}
+        .meta{font-size:11px;color:var(--muted);margin-top:6px}
+        .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;
+            padding:16px;margin-top:14px}
+        .panel h3{margin:0 0 8px;font-size:15px}
+        .kv{font-size:13px;margin:3px 0;color:var(--muted)}
+        .kv b{color:var(--ink)}
+        .score{display:inline-block;font-weight:700;color:#fff;padding:2px 9px;
+            border-radius:8px;font-size:12px}
+        .score.A{background:var(--A)} .score.B{background:var(--B)} .score.C{background:var(--C)}
+        .ev{font-size:12px;border-left:3px solid var(--line);padding:4px 0 4px 10px;
+            margin:6px 0;color:var(--ink)}
+        .ev a{color:var(--accent);text-decoration:none}
+        .ev .f{color:var(--muted);font-size:11px}
+        .json{white-space:pre-wrap;word-break:break-word;font-size:11px;
+            background:#111715;color:#d8f5e3;padding:12px;border-radius:10px;
+            max-height:340px;overflow:auto;margin:0}
+        .muted{color:var(--muted);font-size:13px}
+        .err{color:var(--C);font-size:13px}
+        .pill{font-size:11px;padding:2px 8px;border:1px solid var(--line);border-radius:999px}
+        .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+        .hidden{display:none}
+        hr{border:none;border-top:1px solid var(--line);margin:18px 0}
+        #loader{font-size:13px;color:var(--muted);padding:20px;text-align:center}
+    </style>
 </head>
-<body style="margin:0;background:#FCFAED;color:#111715;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;">
-    <div style="text-align:center;">
-        <h1>AntrolabsHD</h1>
-        <p>Laboratorio de Pensamiento Antropológico · Hamaca Digital</p>
+<body>
+<header>
+    <span id="status" class="dot off" title="estado del backend"></span>
+    <div>
+        <h1>Radar HD</h1>
+        <div class="sub">AntrolabsHD · backend real conectado</div>
     </div>
+</header>
+
+<div class="wrap">
+    <div class="bar">
+        <input id="q" placeholder="Buscar organización…" />
+        <select id="cat">
+            <option value="">Todos los ecosistemas</option>
+            <option>VC</option><option>Startup</option>
+            <option>Incubadora</option><option>Corporativo</option>
+        </select>
+        <button class="sec" id="refresh">Actualizar</button>
+    </div>
+
+    <div class="chips" id="cats"></div>
+
+    <div class="row" style="margin-bottom:12px">
+        <button id="runRadar">▶ Ejecutar Radar</button>
+        <span id="radarState" class="muted"></span>
+        <span class="count" id="total"></span>
+    </div>
+
+    <div id="loader">Conectando con el backend local…</div>
+    <div id="grid" class="grid hidden"></div>
+
+    <div id="detail" class="panel hidden"></div>
+
+    <hr/>
+    <div class="row">
+        <button class="sec" id="toggleExp">Ver Expedientes Vivos</button>
+        <button class="sec" id="toggleJson">Ver JSON crudo del backend</button>
+    </div>
+    <div id="expedientes" class="panel hidden" style="margin-top:12px"></div>
+    <div id="jsonBox" class="panel hidden" style="margin-top:12px">
+        <pre id="json" class="json"></pre>
+    </div>
+</div>
+
+<script>
+const API = "http://127.0.0.1:8000";
+const TOKEN = "android_v2_local";
+let RAW = {prospectos:null, categorias:null, expedientes:null};
+
+const $ = (s)=>document.querySelector(s);
+async function api(path, opts={}){
+    const r = await fetch(API+path, opts);
+    if(!r.ok) throw new Error(path+" → "+r.status);
+    return await r.json();
+}
+function esc(s){return (s==null?"":String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+async function ping(){
+    try{ await api("/prospectos?limite=1"); setStatus(true); return true; }
+    catch(e){ setStatus(false); return false; }
+}
+function setStatus(on){ $("#status").className = "dot "+(on?"on":"off"); }
+
+async function loadAll(){
+    $("#loader").classList.remove("hidden");
+    $("#grid").classList.add("hidden");
+    const ok = await ping();
+    if(!ok){ $("#loader").textContent="Backend no disponible. Reintentando…";
+        setTimeout(loadAll, 1500); return; }
+    try{
+        const [pros, cats, exp] = await Promise.all([
+            api("/prospectos?limite=500"),
+            api("/prospectos/categorias"),
+            api("/expedientes?limite=100").catch(()=>({total:0,expedientes:[]}))
+        ]);
+        RAW.prospectos=pros; RAW.categorias=cats; RAW.expedientes=exp;
+        renderCats(cats); renderGrid(); renderExpedientes();
+        $("#loader").classList.add("hidden");
+        $("#grid").classList.remove("hidden");
+    }catch(e){ $("#loader").textContent="Error: "+e.message; }
+}
+
+function renderCats(cats){
+    const c = cats && cats.categorias ? cats.categorias : {};
+    const ord=["VC","Startup","Incubadora","Corporativo"];
+    let html = `<span class="chip ${!$("#cat").value?'active':''}" data-c="">Todos (${totalPros()})</span>`;
+    ord.forEach(k=>{ html+=`<span class="chip" data-c="${k}">${k} (${c[k]||0})</span>`;});
+    $("#cats").innerHTML=html;
+    $("#cats").querySelectorAll(".chip").forEach(ch=>{
+        ch.onclick=()=>{ $("#cat").value=ch.dataset.c;
+            document.querySelectorAll("#cats .chip").forEach(x=>x.classList.remove("active"));
+            ch.classList.add("active"); renderGrid(); };
+    });
+}
+function totalPros(){return RAW.prospectos?RAW.prospectos.total:0;}
+
+function filtered(){
+    if(!RAW.prospectos) return [];
+    const q=$("#q").value.trim().toLowerCase(), cat=$("#cat").value;
+    return RAW.prospectos.items.filter(p=>{
+        if(cat && p.categoria!==cat) return false;
+        if(q && !p.nombre.toLowerCase().includes(q)) return false;
+        return true;
+    });
+}
+function renderGrid(){
+    const items=filtered();
+    $("#total").textContent = items.length+" organización(es)";
+    $("#grid").innerHTML = items.map(p=>`
+        <div class="card" data-id="${p.id}">
+            <div class="nm">${esc(p.nombre)}</div>
+            <span class="tag ${esc(p.categoria)}">${esc(p.categoria)}</span>
+            <div class="meta">${esc(p.vertical||"")} ${esc(p.escala&&p.escala!=='indeterminada'?'· '+p.escala:'')}</div>
+        </div>`).join("");
+    $("#grid").querySelectorAll(".card").forEach(c=>{
+        c.onclick=()=>showDetail(parseInt(c.dataset.id,10));
+    });
+}
+
+async function showDetail(id){
+    $("#detail").classList.remove("hidden");
+    $("#detail").innerHTML=`<div class="muted">Cargando organización…</div>`;
+    try{
+        const p = await api("/prospectos/"+id);
+        const disc = p.discurso_corporativo ? `<div class="kv" style="margin-top:8px"><b>Discurso:</b> ${esc(p.discurso_corporativo).slice(0,400)}</div>`:"";
+        $("#detail").innerHTML=`
+            <h3>${esc(p.nombre)}</h3>
+            <div class="row" style="margin-bottom:8px">
+                <span class="tag ${esc(p.categoria)}">${esc(p.categoria)}</span>
+                ${p.escala&&p.escala!=='indeterminada'?`<span class="pill">${esc(p.escala)}</span>`:""}
+                ${p.vertical?`<span class="pill">${esc(p.vertical)}</span>`:""}
+            </div>
+            <div class="kv"><b>Sitio:</b> ${p.sitio_web?`<a href="${esc(p.sitio_web)}" style="color:var(--accent)">${esc(p.sitio_web?p.sitio_web:p.sitio_web)}</a>`:"—"}</div>
+            <div class="kv"><b>LinkedIn:</b> ${p.linkedin?`<a href="${esc(p.linkedin)}" style="color:var(--accent)">ver</a>`:"—"}</div>
+            <div class="kv"><b>Tipo de discurso:</b> ${esc(p.tipo_discurso||"—")}</div>
+            <div class="kv"><b>Fuente:</b> ${esc(p.fuente_discurso||"—")}</div>
+            ${disc}
+            <button class="sec" id="closeD" style="margin-top:10px">Cerrar</button>`;
+        $("#closeD").onclick=()=>$("#detail").classList.add("hidden");
+    }catch(e){ $("#detail").innerHTML=`<div class="err">${esc(e.message)}</div>`; }
+}
+
+function renderExpedientes(){
+    const box=$("#expedientes");
+    if(!RAW.expedientes || !RAW.expedientes.expedientes.length){
+        box.innerHTML=`<h3>Expedientes Vivos</h3><div class="muted">Sin evidencias capturadas aún. Pulsa «Ejecutar Radar» para barrer fuentes.</div>`;
+        return;
+    }
+    const rs = RAW.expedientes.resumen_scoring||{};
+    let h=`<h3>Expedientes Vivos (${RAW.expedientes.total})</h3>
+        <div class="row" style="margin-bottom:10px">
+            <span class="score A">A: ${rs.A||0}</span>
+            <span class="score B">B: ${rs.B||0}</span>
+            <span class="score C">C: ${rs.C||0}</span></div>`;
+    RAW.expedientes.expedientes.forEach(e=>{
+        h+=`<div style="border-top:1px solid var(--line);padding:10px 0">
+            <div class="row"><b>${esc(e.nombre)}</b>
+                <span class="score ${e.scoring}">${e.scoring}</span>
+                <span class="pill">ICP ${e.score_icp||0}</span>
+                <span class="pill">${esc(e.categoria)}</span></div>
+            <div class="kv">Deuda: <b>${esc(e.tipo_deuda||"—")}</b> · ${esc(e.deuda_razon||"")}</div>
+            <div class="kv">Señal dominante: ${esc(e.senal_dominante||"—")} · Evidencias: ${e.total_evidencias}</div>
+            ${(e.evidencias||[]).slice(0,3).map(v=>`<div class="ev">${esc(v.texto||"")}<div class="f">${esc(v.fuente||"")} · ${esc(v.fecha||"")} · <a href="${esc(v.url||"#")}">fuente</a></div></div>`).join("")}
+        </div>`;
+    });
+    box.innerHTML=h;
+}
+
+$("#refresh").onclick=loadAll;
+$("#q").oninput=renderGrid;
+$("#cat").onchange=()=>{document.querySelectorAll("#cats .chip").forEach(x=>x.classList.remove("active"));renderGrid();};
+
+$("#toggleExp").onclick=()=>{ $("#expedientes").classList.toggle("hidden"); };
+$("#toggleJson").onclick=()=>{
+    const box=$("#jsonBox"); box.classList.toggle("hidden");
+    if(!box.classList.contains("hidden")){
+        $("#json").textContent = JSON.stringify(
+            {prospectos:RAW.prospectos, categorias:RAW.categorias, expedientes:RAW.expedientes}, null, 2);
+    }
+};
+
+$("#runRadar").onclick=async()=>{
+    const btn=$("#runRadar"); btn.disabled=true; $("#radarState").textContent="Ejecutando…";
+    try{
+        const body=JSON.stringify({region:"Toda LATAM",enfoque:[],tamanos:[],palabra_clave:""});
+        const r=await fetch(API+"/radar",{method:"POST",headers:{
+            "Content-Type":"application/json","x-ingest-token":TOKEN},body});
+        const data=await r.json();
+        $("#radarState").innerHTML=`<span class="pill">detención: ${esc(data.detencion||"?")}</span>
+            <span class="pill">escritos: ${data.total_escritos??0}</span>
+            <span class="pill">vistos: ${data.total_vistos??0}</span>
+            <span class="pill">expedientes: ${data.expedientes?data.expedientes.total:0}</span>`;
+        await loadAll();
+    }catch(e){ $("#radarState").innerHTML=`<span class="err">${esc(e.message)}</span>`; }
+    finally{ btn.disabled=false; }
+};
+
+loadAll();
+</script>
 </body>
 </html>

@@ -1,0 +1,5033 @@
+"""API interna de SOLO LECTURA (FastAPI).
+
+Expone la evidencia ya validada para que Radar (u otros consumidores) la lean.
+No hay endpoints de escritura: la extracción es responsabilidad del pipeline /
+scheduler, no de la API.
+
+Regla del contrato: la API SOLO sirve registros consumibles (estado = 'ok').
+Los registros ``no_fechado`` existen en la base pero NO son consumibles y no se
+devuelven por los endpoints de evidencia.
+"""
+from __future__ import annotations
+
+import csv
+import hmac
+import io
+import json
+import logging
+import os
+import time
+from pathlib import Path
+from typing import Optional
+
+from fastapi import Body, FastAPI, Header, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
+from starlette.middleware.base import BaseHTTPMiddleware
+from pydantic import BaseModel
+
+from ..config import settings
+from ..connectors import REGISTRY
+from ..db.database import get_db
+from ..db.models import CATEGORIAS, ESTADO_OK, TIPOS_EVENTO, QuerySpec, ahora_iso
+import httpx
+
+from .. import directorio, hunter
+from .. import candidato as _candidato
+from .. import drift as _drift
+from .. import drift_compare as _drift_compare
+from .. import onlife as _onlife
+from .. import pipeline_comercial as _pipeline
+from ..analisis import analizar
+from ..curaduria import curar
+from ..dictamen import generar_dictamen, generar_ranking
+from ..engine.rule_engine import RuleEngine
+from ..engine.schemas import Prospecto, SeñalCapa0
+from ..ingesta import noticias as _noticias
+from ..contacto import dominio_de, rutas_contacto
+from ..discovery import REGIONES, VERTICALES_HD, queries_para, region_clause
+from ..enrich import enriquecer, google_search_url, linkedin_search_url, sugerir_vertical
+from ..pipeline import run_connector
+from ..relevance import detectar_empresa, evaluar_relevancia
+from ..signals import detectar_keywords
+from ..prospectos import nuevo_prospecto, upsert_prospecto
+from ..perfil_fundacional import construir_perfil
+from ..lectura_estructural import leer_discurso
+from ..sintesis import sintetizar
+from ..nvidia_parser import NvidiaError as _NvidiaError
+from ..nvidia_parser import disponible as _nvidia_disponible
+from ..nvidia_parser import sintetizar as _sintetizar_llm
+from ..indagacion_profunda import indagar_profundo
+from ..validation.validator import validate_prospecto
+from .. import radar as _radar
+from ..filtros import (
+    ESCALAS as ESCALAS_FILTRO,
+    FiltrosRadar,
+    REGIONES as REGIONES_FILTRO,
+)
+
+logger = logging.getLogger(__name__)
+
+app = FastAPI(
+    title="hd-prospector API",
+    description=(
+        "Capa de evidencia + organizaciones de los cuatro ecosistemas. Extrae y "
+        "almacena; no interpreta. Evidencia: solo lectura. Organizaciones: lectura "
+        "pública + intake autenticada del operador."
+    ),
+    version="0.2.0",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=['*'],
+    allow_credentials=False,
+    allow_methods=['*'],
+    allow_headers=['*'],
+)
+
+
+class PrivateNetworkAccessMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        response.headers['Access-Control-Allow-Private-Network'] = 'true'
+        return response
+
+
+app.add_middleware(PrivateNetworkAccessMiddleware)
+
+
+# --- Intake de prospectos (escritura autenticada del operador) -----------
+
+class ProspectoIn(BaseModel):
+    nombre: str
+    categoria: str
+    vertical: Optional[str] = None
+    sitio_web: Optional[str] = None
+    linkedin: Optional[str] = None
+    discurso_corporativo: Optional[str] = None
+    tipo_discurso: Optional[str] = None
+    url_perfil: Optional[str] = None
+    fuente_discurso: Optional[str] = None
+    fecha_captura: Optional[str] = None
+
+
+def _exigir_token(token: Optional[str]) -> None:
+    """Autoriza la intake. Sin HD_INGEST_TOKEN configurado, la escritura se apaga."""
+    esperado = settings.ingest_token
+    if not esperado:
+        raise HTTPException(503, "intake deshabilitada: configura HD_INGEST_TOKEN")
+    if not token or not hmac.compare_digest(token, esperado):
+        raise HTTPException(401, "token de ingesta inválido")
+
+
+def _alta(payload: ProspectoIn) -> dict:
+    record = nuevo_prospecto(
+        payload.nombre, payload.categoria,
+        vertical=payload.vertical,
+        sitio_web=payload.sitio_web,
+        linkedin=payload.linkedin,
+        discurso_corporativo=payload.discurso_corporativo,
+        tipo_discurso=payload.tipo_discurso,
+        url_perfil=payload.url_perfil,
+        fuente_discurso=payload.fuente_discurso,
+        fecha_captura=payload.fecha_captura,
+    )
+    veredicto = validate_prospecto(record)
+    if not veredicto.ok:
+        raise HTTPException(400, veredicto.motivo)
+    return upsert_prospecto(get_db(), record)
+
+
+def _keywords(row) -> list:
+    try:
+        return json.loads(row["keywords"]) if row["keywords"] else []
+    except (ValueError, TypeError):
+        return []
+
+
+def _row_a_evidencia(row) -> dict:
+    return {
+        "id": row["id"],
+        "cita_textual": row["cita_textual"],
+        "fecha_publicacion": row["fecha_publicacion"],
+        "fecha_extraccion": row["fecha_extraccion"],
+        "url_fuente": row["url_fuente"],
+        "nombre_medio": row["nombre_medio"],
+        "empresa_mencionada": row["empresa_mencionada"],
+        "persona_citada": row["persona_citada"],
+        "cargo": row["cargo"],
+        "tipo_evento": row["tipo_evento"],
+        "origen_declaracion": row["origen_declaracion"],
+        "categoria": row["categoria"],
+        "keywords": _keywords(row),
+        "confianza": row["confianza"],
+        "calidad_captura": row["calidad_captura"],  # informativa (Captura Inteligente)
+        "hash_dedup": row["hash_dedup"],
+    }
+
+
+@app.get("/")
+def raiz() -> dict:
+    """Banner de bienvenida y mapa de endpoints (la raíz no sirve evidencia)."""
+    return {
+        "service": "hd-prospector",
+        "role": "evidence-extraction",
+        "descripcion": "Extrae, normaliza y almacena señales públicas. No interpreta.",
+        "estado": "vivo",
+        "ecosistemas": sorted(CATEGORIAS),
+        "endpoints": {
+            "GET /health": "estado del servicio",
+            "GET /evidencias": "evidencia consumible (filtros: empresa, tipo_evento, desde, hasta)",
+            "GET /evidencias/{id}": "una evidencia por id",
+            "GET /corpus": "corpus estable Motor A→B (empresa·fuente·fecha·texto·keywords·confianza)",
+            "GET /prospectos": "prospectos por ecosistema (filtros: categoria, q, con_discurso)",
+            "GET /prospectos/categorias": "conteo de prospectos por ecosistema",
+            "GET /prospectos/{id}": "un prospecto por id (incluye Thick Data)",
+            "GET /prospectos/export.csv": "descarga los prospectos en CSV (filtro: categoria)",
+            "GET /prospectos/export.md": "descarga los prospectos en Markdown (filtro: categoria)",
+            "GET /prospectos/export.json": "descarga los prospectos en JSON (filtro: categoria)",
+            "POST /prospectos": "alta de prospecto (requiere X-Ingest-Token)",
+            "POST /scrape": "rastreo bajo demanda de una empresa (requiere X-Ingest-Token)",
+            "POST /radar": "orquestador agéntico: filtra (región/enfoque/tamaño/palabra clave), barre, valida contacto y consolida (requiere X-Ingest-Token)",
+            "POST /enrich": "descubre web + discurso + enlaces de un nombre (requiere X-Ingest-Token)",
+            "GET /informe": "informe profundo: prioriza empresas por scoring + Deuda Cultural™ + Interés Analítico (filtro: categoria)",
+            "GET /informe.md": "descarga el informe profundo en Markdown (filtros: categoria|categorias)",
+            "GET /informe.csv": "descarga el informe profundo en CSV (filtros: categoria|categorias)",
+            "POST /informe/guardar": "genera y GUARDA la investigación de las categorías elegidas (requiere X-Ingest-Token)",
+            "GET /informes": "lista las investigaciones guardadas",
+            "GET /informes/{id}.md": "descarga una investigación guardada (Markdown)",
+            "DELETE /informes/{id}": "borra una investigación guardada (requiere X-Ingest-Token)",
+            "POST /analizar": "análisis profundo determinista de un título o señales (scoring/Deuda/Interés/decisor)",
+            "POST /verificar-contacto": "verifica el correo del decisor con Hunter (requiere X-Ingest-Token y HUNTER_API_KEY)",
+            "POST /directorio": "trae empresas reales de Wikidata (base pública) y las guarda como prospectos (requiere X-Ingest-Token)",
+            "POST /webhook/ingesta": "Capa 0: evalúa texto con el motor de reglas determinista y persiste señales (requiere X-Ingest-Token)",
+            "POST /ingesta/noticias": "Capa 0 EN LA APP: lee RSS (Google News o feed) y procesa cada nota (requiere X-Ingest-Token)",
+            "GET /senales-capa0": "lista las señales de Capa 0 registradas (filtro: nivel_alerta)",
+            "GET /admin": "panel web: buscar señales, revisar y dar de alta prospectos",
+            "GET /salud-fuentes": "salud por fuente/conector",
+            "GET /stats": "contadores agregados",
+            "GET /docs": "documentación interactiva (OpenAPI)",
+        },
+        "nota": "Lectura pública; escritura (prospectos/scrape) autenticada con X-Ingest-Token.",
+    }
+
+
+@app.get("/health")
+def health() -> dict:
+    # Expone el motor de base activo (postgres|sqlite) para diagnóstico.
+    # NO revela credenciales: solo el dialecto.
+    return {
+        "status": "ok",
+        "service": "hd-prospector",
+        "role": "evidence-extraction",
+        "db": get_db().dialect,
+    }
+
+
+@app.get("/evidencias")
+def listar_evidencias(
+    empresa: Optional[str] = Query(None, description="Filtra por empresa_mencionada"),
+    tipo_evento: Optional[str] = Query(None, description="Filtra por tipo_evento"),
+    categoria: Optional[str] = Query(None, description="Filtra por ecosistema (descubrimiento)"),
+    desde: Optional[str] = Query(None, description="fecha_publicacion >= (ISO 8601)"),
+    hasta: Optional[str] = Query(None, description="fecha_publicacion <= (ISO 8601)"),
+    limite: int = Query(50, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+    limpio: bool = Query(False, description="Deriva la organización del titular y omite ruido/basura (para la UI)"),
+) -> dict:
+    if tipo_evento is not None and tipo_evento not in TIPOS_EVENTO:
+        raise HTTPException(400, f"tipo_evento inválido: {tipo_evento}")
+    if categoria is not None and categoria not in CATEGORIAS:
+        raise HTTPException(400, f"categoria inválida: {categoria}")
+
+    # Solo consumibles: estado = 'ok' (excluye no_fechado por contrato).
+    where = ["estado = ?"]
+    params: list = [ESTADO_OK]
+    if empresa:
+        where.append("empresa_mencionada = ?")
+        params.append(empresa)
+    if tipo_evento:
+        where.append("tipo_evento = ?")
+        params.append(tipo_evento)
+    if categoria:
+        where.append("categoria = ?")
+        params.append(categoria)
+    if desde:
+        where.append("fecha_publicacion >= ?")
+        params.append(desde)
+    if hasta:
+        where.append("fecha_publicacion <= ?")
+        params.append(hasta)
+
+    clausula = " AND ".join(where)
+    db = get_db()
+    total = db.fetch_one(f"SELECT COUNT(*) AS n FROM evidencias WHERE {clausula}", params)["n"]
+    filas = db.fetch_all(
+        f"SELECT * FROM evidencias WHERE {clausula} "
+        f"ORDER BY fecha_publicacion DESC, id DESC LIMIT ? OFFSET ?",
+        params + [limite, offset],
+    )
+    # La organización real se DERIVA del titular (la evidencia). En datos viejos,
+    # empresa_mencionada podía ser el término de búsqueda; aquí se corrige para
+    # mostrar el sujeto correcto. Con ``limpio`` además se omite el ruido/basura
+    # que quedó en la base antes de reforzar los filtros (no altera la tabla).
+    items: list = []
+    for f in filas:
+        item = _row_a_evidencia(f)
+        titulo = item["cita_textual"]
+        org = detectar_empresa(titulo)
+        if limpio:
+            ok, _ = evaluar_relevancia(titulo, item.get("keywords") or [], bool(org),
+                                       exigir_evento=False)
+            if not org or not ok:
+                continue
+        item["organizacion"] = org or (item.get("empresa_mencionada") or "")
+        items.append(item)
+    return {
+        "total": total,
+        "limite": limite,
+        "offset": offset,
+        "items": items,
+    }
+
+
+@app.get("/evidencias/{evidencia_id}")
+def obtener_evidencia(evidencia_id: int) -> dict:
+    db = get_db()
+    row = db.fetch_one(
+        "SELECT * FROM evidencias WHERE id = ? AND estado = ?", (evidencia_id, ESTADO_OK)
+    )
+    if row is None:
+        raise HTTPException(404, "evidencia no encontrada o no consumible")
+    return _row_a_evidencia(row)
+
+
+def _row_a_corpus(row) -> dict:
+    """Contrato del corpus (Motor A → Motor B / RadarHD). Solo hechos objetivos.
+
+    ``calidad_captura`` es una extensión ADITIVA y retrocompatible del contrato
+    (misma versión ``motor_a.corpus.v1``): una etiqueta OBJETIVA de la captura
+    (Alta|Media|Baja), no una interpretación. Los consumidores previos que no la
+    esperan la ignoran; RadarHD la usa como contexto para reducir falsos
+    positivos. NO se añade Deuda Cultural™, Interés ni hipótesis (eso es Motor B).
+    """
+    return {
+        "empresa": row["empresa_mencionada"],
+        "fuente": row["nombre_medio"],
+        "fecha": row["fecha_publicacion"],
+        "texto": row["cita_textual"],
+        "url": row["url_fuente"],
+        "keywords": _keywords(row),
+        "confianza": row["confianza"],
+        "calidad_captura": row["calidad_captura"],
+        "categoria": row["categoria"],
+        "tipo_evento": row["tipo_evento"],
+        "hash": row["hash_dedup"],
+    }
+
+
+@app.get("/corpus")
+def corpus(
+    empresa: Optional[str] = Query(None),
+    categoria: Optional[str] = Query(None, description="Ecosistema (VC|Startup|Incubadora|Corporativo)"),
+    tipo_evento: Optional[str] = Query(None),
+    min_confianza: float = Query(0.0, ge=0.0, le=1.0, description="Confianza mínima"),
+    desde: Optional[str] = Query(None, description="fecha >= (ISO 8601)"),
+    hasta: Optional[str] = Query(None, description="fecha <= (ISO 8601)"),
+    limite: int = Query(100, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
+) -> dict:
+    """Corpus de evidencia verificable (Motor A). Contrato estable para RadarHD.
+
+    Solo hechos observables: empresa, fuente, fecha, texto, url, keywords
+    (señales Nivel 1 objetivas) y confianza. NO incluye Deuda Cultural™, Interés ni
+    hipótesis: eso lo aplica el Motor B (RadarHD) al consumir este corpus.
+    """
+    if categoria is not None and categoria not in CATEGORIAS:
+        raise HTTPException(400, f"categoria inválida: {categoria}")
+    if tipo_evento is not None and tipo_evento not in TIPOS_EVENTO:
+        raise HTTPException(400, f"tipo_evento inválido: {tipo_evento}")
+
+    where = ["estado = ?", "confianza >= ?"]
+    params: list = [ESTADO_OK, min_confianza]
+    for col, val in (("empresa_mencionada", empresa), ("categoria", categoria),
+                     ("tipo_evento", tipo_evento)):
+        if val:
+            where.append(f"{col} = ?")
+            params.append(val)
+    if desde:
+        where.append("fecha_publicacion >= ?")
+        params.append(desde)
+    if hasta:
+        where.append("fecha_publicacion <= ?")
+        params.append(hasta)
+
+    clausula = " AND ".join(where)
+    db = get_db()
+    total = db.fetch_one(f"SELECT COUNT(*) AS n FROM evidencias WHERE {clausula}", params)["n"]
+    filas = db.fetch_all(
+        f"SELECT * FROM evidencias WHERE {clausula} "
+        f"ORDER BY confianza DESC, fecha_publicacion DESC, id DESC LIMIT ? OFFSET ?",
+        params + [limite, offset],
+    )
+    return {"contrato": "motor_a.corpus.v1", "total": total, "limite": limite,
+            "offset": offset, "items": [_row_a_corpus(f) for f in filas]}
+
+
+@app.get("/salud-fuentes")
+def salud_fuentes() -> dict:
+    db = get_db()
+    filas = db.fetch_all("SELECT * FROM salud_fuentes ORDER BY fuente ASC")
+    return {"items": [dict(f) for f in filas]}
+
+
+def _row_a_prospecto(row) -> dict:
+    return {
+        "id": row["id"],
+        "nombre": row["nombre"],
+        "categoria": row["categoria"],
+        "vertical": row["vertical"],
+        "sitio_web": row["sitio_web"],
+        "linkedin": row["linkedin"],
+        "discurso_corporativo": row["discurso_corporativo"],
+        "tipo_discurso": row["tipo_discurso"],
+        "url_perfil": row["url_perfil"],
+        "fuente_discurso": row["fuente_discurso"],
+        "fecha_captura": row["fecha_captura"],
+        "escala": row["escala"],
+        "creado_en": row["creado_en"],
+        "actualizado_en": row["actualizado_en"],
+    }
+
+
+@app.get("/prospectos")
+def listar_prospectos(
+    categoria: Optional[str] = Query(None, description="Filtra por ecosistema (VC|Startup|Incubadora|Corporativo)"),
+    q: Optional[str] = Query(None, description="Búsqueda por nombre (subcadena)"),
+    escala: Optional[str] = Query(None, description="Filtra por banda de tamaño (1-10|11-50|51-200|201-500|501+)"),
+    con_discurso: Optional[bool] = Query(None, description="Solo con/sin Thick Data"),
+    limite: int = Query(50, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+) -> dict:
+    if categoria is not None and categoria not in CATEGORIAS:
+        raise HTTPException(400, f"categoria inválida: {categoria}")
+
+    where: list[str] = ["1 = 1"]
+    params: list = []
+    if categoria:
+        where.append("categoria = ?")
+        params.append(categoria)
+    if q:
+        where.append("LOWER(nombre) LIKE ?")
+        params.append(f"%{q.lower()}%")
+    if escala:
+        where.append("escala = ?")
+        params.append(escala)
+    if con_discurso is True:
+        where.append("discurso_corporativo IS NOT NULL AND TRIM(discurso_corporativo) <> ''")
+    elif con_discurso is False:
+        where.append("(discurso_corporativo IS NULL OR TRIM(discurso_corporativo) = '')")
+
+    clausula = " AND ".join(where)
+    db = get_db()
+    total = db.fetch_one(f"SELECT COUNT(*) AS n FROM prospectos WHERE {clausula}", params)["n"]
+    filas = db.fetch_all(
+        f"SELECT * FROM prospectos WHERE {clausula} ORDER BY nombre ASC LIMIT ? OFFSET ?",
+        params + [limite, offset],
+    )
+    return {"total": total, "limite": limite, "offset": offset,
+            "items": [_row_a_prospecto(f) for f in filas]}
+
+
+@app.get("/prospectos/categorias")
+def prospectos_por_categoria() -> dict:
+    db = get_db()
+    filas = db.fetch_all(
+        "SELECT categoria, COUNT(*) AS n FROM prospectos GROUP BY categoria")
+    conteo = {c: 0 for c in sorted(CATEGORIAS)}
+    for f in filas:
+        conteo[f["categoria"]] = f["n"]
+    return {"categorias": conteo}
+
+
+_EXPORT_COLS = ["id", "nombre", "categoria", "vertical", "sitio_web", "linkedin",
+                "tipo_discurso", "url_perfil", "fuente_discurso", "fecha_captura",
+                "discurso_corporativo", "creado_en", "actualizado_en"]
+
+
+def _prospectos_filtrados(categoria: Optional[str]) -> list:
+    if categoria is not None and categoria not in CATEGORIAS:
+        raise HTTPException(400, f"categoria inválida: {categoria}")
+    db = get_db()
+    if categoria:
+        return db.fetch_all(
+            "SELECT * FROM prospectos WHERE categoria = ? ORDER BY nombre ASC", (categoria,))
+    return db.fetch_all("SELECT * FROM prospectos ORDER BY categoria, nombre ASC")
+
+
+@app.get("/prospectos/export.csv")
+def export_csv(categoria: Optional[str] = Query(None, description="Filtra por ecosistema")) -> Response:
+    """Descarga los prospectos como CSV (abrible en Excel/Sheets)."""
+    filas = _prospectos_filtrados(categoria)
+    buf = io.StringIO()
+    buf.write("﻿")  # BOM: Excel abre bien el UTF-8
+    w = csv.writer(buf)
+    w.writerow(_EXPORT_COLS)
+    for f in filas:
+        w.writerow([f[c] if f[c] is not None else "" for c in _EXPORT_COLS])
+    nombre = f"prospectos_{categoria or 'todos'}.csv"
+    return Response(buf.getvalue(), media_type="text/csv; charset=utf-8",
+                    headers={"Content-Disposition": f'attachment; filename="{nombre}"'})
+
+
+@app.get("/prospectos/export.json")
+def export_json(categoria: Optional[str] = Query(None, description="Filtra por ecosistema")) -> Response:
+    """Descarga los prospectos como JSON."""
+    filas = _prospectos_filtrados(categoria)
+    datos = [_row_a_prospecto(f) for f in filas]
+    nombre = f"prospectos_{categoria or 'todos'}.json"
+    return Response(json.dumps(datos, ensure_ascii=False, indent=2),
+                    media_type="application/json; charset=utf-8",
+                    headers={"Content-Disposition": f'attachment; filename="{nombre}"'})
+
+
+def _prospectos_a_markdown(filas: list) -> str:
+    out = ["# Organizaciones — hd-prospector", "",
+           f"_Exportado: {ahora_iso()}_ · {len(filas)} organización(es)", ""]
+    categoria_actual = None
+    for f in filas:
+        if f["categoria"] != categoria_actual:
+            categoria_actual = f["categoria"]
+            out += [f"## {categoria_actual}", ""]
+        out.append(f"### {f['nombre']}")
+        if f["vertical"]:
+            out.append(f"- **Vertical:** {f['vertical']}")
+        if f["sitio_web"]:
+            out.append(f"- **Web:** <{f['sitio_web']}>")
+        if f["linkedin"]:
+            out.append(f"- **LinkedIn:** <{f['linkedin']}>")
+        if f["tipo_discurso"]:
+            out.append(f"- **Tipo de discurso:** {f['tipo_discurso']}")
+        fuente, url = f["fuente_discurso"] or "", f["url_perfil"] or ""
+        if fuente or url:
+            detalle = " · ".join(x for x in (fuente, f"<{url}>" if url else "") if x)
+            out.append(f"- **Fuente:** {detalle}")
+        if f["fecha_captura"]:
+            out.append(f"- **Capturado:** {f['fecha_captura']}")
+        out.append("")
+        disc = (f["discurso_corporativo"] or "").strip()
+        if disc:
+            out += [f"> {linea}" for linea in disc.splitlines()] + [""]
+    return "\n".join(out)
+
+
+@app.get("/prospectos/export.md")
+def export_md(categoria: Optional[str] = Query(None, description="Filtra por ecosistema")) -> Response:
+    """Descarga los prospectos como documento Markdown (agrupado por ecosistema)."""
+    filas = _prospectos_filtrados(categoria)
+    nombre = f"prospectos_{categoria or 'todos'}.md"
+    return Response(_prospectos_a_markdown(filas), media_type="text/markdown; charset=utf-8",
+                    headers={"Content-Disposition": f'attachment; filename="{nombre}"'})
+
+
+@app.get("/prospectos/{prospecto_id}")
+def obtener_prospecto(prospecto_id: int) -> dict:
+    db = get_db()
+    row = db.fetch_one("SELECT * FROM prospectos WHERE id = ?", (prospecto_id,))
+    if row is None:
+        raise HTTPException(404, "prospecto no encontrado")
+    return _row_a_prospecto(row)
+
+
+@app.post("/prospectos", status_code=201)
+def crear_prospecto(payload: ProspectoIn,
+                    x_ingest_token: Optional[str] = Header(None)) -> dict:
+    """Alta/actualización de un prospecto (intake autenticada del operador)."""
+    _exigir_token(x_ingest_token)
+    return _alta(payload)
+
+
+@app.post("/prospectos/bulk", status_code=201)
+def crear_prospectos_bulk(payloads: list[ProspectoIn] = Body(...),
+                          x_ingest_token: Optional[str] = Header(None)) -> dict:
+    """Alta masiva de prospectos. Reporta el resultado por cada uno."""
+    _exigir_token(x_ingest_token)
+    resultados = []
+    for p in payloads:
+        try:
+            r = _alta(p)
+            resultados.append({"nombre": p.nombre, "categoria": p.categoria, **r})
+        except HTTPException as exc:
+            resultados.append({"nombre": p.nombre, "categoria": p.categoria,
+                               "ok": False, "accion": "rechazado", "motivo": exc.detail})
+    return {"total": len(payloads), "resultados": resultados}
+
+
+# --- Scraping bajo demanda (descubrimiento manual) -----------------------
+
+# Conectores rápidos aptos para correr dentro de una función serverless (una
+# petición HTTP por conector). Se excluyen los que consultan muchas fuentes
+# (rss_fijos) o requieren slug (job_boards) para no agotar el tiempo de la función.
+CONECTORES_SCRAPE = ("google_news", "gdelt")
+
+
+class ScrapeIn(BaseModel):
+    # Modo por nombre: empresa. Modo descubrimiento por ecosistema: categoria.
+    empresa: Optional[str] = None
+    categoria: Optional[str] = None
+    tipo_evento: str = "ronda"
+    vertical: str = "todas"   # vertical HD: fintech, edtech, healthtech, salud mental…
+    region: str = "LATAM"     # zona geográfica: LATAM (8 países) o un país
+    connectors: list[str] = list(CONECTORES_SCRAPE)
+
+
+def _correr_query(db, query, connectors) -> list[dict]:
+    salida = []
+    for cname in connectors:
+        cls = REGISTRY.get(cname)
+        if cls is None or cls.requires_slug or cname not in CONECTORES_SCRAPE:
+            salida.append({"connector": cname, "error": "no disponible para scraping bajo demanda"})
+            continue
+        with cls() as conn:
+            res = run_connector(db, conn, query)
+        salida.append({
+            "connector": cname, "consulta": query.empresa, "vistos": res.vistos,
+            "escritos": res.escritos, "no_fechados": res.no_fechados,
+            "duplicados": res.duplicados, "rechazados": res.rechazados,
+            "filtrados": res.filtrados,  # descartados por el filtro de relevancia
+            "errores": len(res.errores),
+        })
+    return salida
+
+
+@app.post("/scrape")
+def scrape(payload: ScrapeIn, x_ingest_token: Optional[str] = Header(None)) -> dict:
+    """Rastrea señales AL MOMENTO y las guarda (evidencia). Dos modos:
+
+    - Por ecosistema (``categoria``): corre las consultas temáticas declaradas
+      del ecosistema y etiqueta la evidencia con esa categoría. Para descubrir.
+    - Por nombre (``empresa``): rastrea una empresa concreta. Para profundizar.
+    """
+    _exigir_token(x_ingest_token)
+    if payload.region not in REGIONES:
+        raise HTTPException(400, f"region inválida: {payload.region}")
+    zona = region_clause(payload.region)  # p. ej. (México OR Colombia OR …)
+    db = get_db()
+    resultados: list[dict] = []
+
+    if payload.categoria:
+        if payload.categoria not in CATEGORIAS:
+            raise HTTPException(400, f"categoria inválida: {payload.categoria}")
+        if payload.tipo_evento not in TIPOS_EVENTO:
+            raise HTTPException(400, f"tipo_evento inválido: {payload.tipo_evento}")
+        if payload.vertical not in VERTICALES_HD:
+            raise HTTPException(400, f"vertical inválida: {payload.vertical}")
+        # Descubrimiento: Google News sobre ecosistema + vertical (HD) + señal,
+        # acotado a la zona geográfica (terminos).
+        #
+        # Presupuesto de tiempo: cada consulta es una llamada de red. En serverless
+        # la función tiene un límite corto; si nos pasamos, el navegador recibe un
+        # "Internal Server Error" en TEXTO (no JSON) y la UI truena. Por eso cortamos
+        # las consultas restantes al agotar el presupuesto y devolvemos lo logrado
+        # con parcial=True (siempre JSON válido).
+        presupuesto_s = float(os.getenv("HD_SCRAPE_BUDGET_S", "7"))
+        t0 = time.monotonic()
+        parcial = False
+        consultas = queries_para(payload.categoria, payload.tipo_evento, payload.vertical)
+        for i, (termino, tipo) in enumerate(consultas):
+            if i > 0 and time.monotonic() - t0 > presupuesto_s:
+                parcial = True
+                break
+            query = QuerySpec(empresa=termino, tipo_evento=tipo, terminos=zona,
+                              categoria=payload.categoria, exact=False)
+            resultados += _correr_query(db, query, ["google_news"])
+        modo = {"modo": "categoria", "categoria": payload.categoria,
+                "tipo_evento": payload.tipo_evento, "vertical": payload.vertical,
+                "region": payload.region, "parcial": parcial}
+    elif payload.empresa and payload.empresa.strip():
+        if payload.tipo_evento not in TIPOS_EVENTO:
+            raise HTTPException(400, f"tipo_evento inválido: {payload.tipo_evento}")
+        query = QuerySpec(empresa=payload.empresa.strip(), tipo_evento=payload.tipo_evento,
+                          terminos=zona)
+        resultados += _correr_query(db, query, payload.connectors)
+        modo = {"modo": "empresa", "empresa": payload.empresa.strip(),
+                "tipo_evento": payload.tipo_evento, "region": payload.region}
+    else:
+        raise HTTPException(400, "indica una empresa o una categoria")
+
+    total = sum(r.get("escritos", 0) for r in resultados)
+    return {**modo, "total_escritos": total, "resultados": resultados}
+
+
+# --- Investigación Automática (un solo clic = ciclo completo) ---------------
+
+ALL_CATEGORIAS = ("VC", "Startup", "Incubadora", "Corporativo")
+ALL_TIPOS_SCRAPE = ("queja", "ronda", "contratacion", "despido", "lanzamiento", "cambio_sitio")
+
+
+class InvestigacionIn(BaseModel):
+    query: str
+    region: str = "LATAM"
+    vertical: str = "todas"
+    presupuesto_s: float = 55.0
+
+
+@app.post("/investigacion")
+def investigacion_automatica(payload: InvestigacionIn,
+                             x_ingest_token: Optional[str] = Header(None)) -> dict:
+    """Investigación Automática: un clic = ciclo completo de inteligencia.
+
+    1. Recorre las 4 categorías (VC, Startup, Incubadora, Corporativo)
+    2. Ejecuta todos los tipos de señal en cada categoría
+    3. Ingiere noticias via RSS/Google News
+    4. Consolida, deduplica, construye Expedientes Vivos
+    5. Ejecuta scoring, Dolor Cultural, pipeline
+    6. Devuelve informe consolidado
+
+    El usuario solo escribe un territorio de búsqueda (ej: "fintech México")
+    y presiona un botón. El sistema hace el resto.
+    """
+    _exigir_token(x_ingest_token)
+    query_text = payload.query.strip()
+    if not query_text:
+        raise HTTPException(400, "query vacía")
+    if payload.region not in REGIONES:
+        raise HTTPException(400, f"region inválida: {payload.region}")
+
+    detected_vertical = payload.vertical
+    if detected_vertical == "todas":
+        qt = query_text.lower()
+        for v_key, v_clause in VERTICALES_HD.items():
+            if v_key != "todas" and v_key in qt:
+                detected_vertical = v_key
+                break
+
+    zona = region_clause(payload.region)
+    db = get_db()
+    presupuesto = min(max(payload.presupuesto_s, 10.0), 120.0)
+    t0 = time.monotonic()
+    parcial = False
+
+    etapas: list[dict] = []
+    total_escritos = 0
+    total_vistos = 0
+
+    # ── Paso 1: Scrape todas las categorías × todos los tipos de señal ──
+    for cat in ALL_CATEGORIAS:
+        if parcial:
+            break
+        cat_escritos = 0
+        cat_vistos = 0
+        for tipo in ALL_TIPOS_SCRAPE:
+            if time.monotonic() - t0 > presupuesto:
+                parcial = True
+                break
+            consultas = queries_para(cat, tipo, detected_vertical)
+            for i, (termino, tipo_ev) in enumerate(consultas):
+                if i > 0 and time.monotonic() - t0 > presupuesto:
+                    parcial = True
+                    break
+                q = QuerySpec(empresa=termino, tipo_evento=tipo_ev,
+                              terminos=zona, categoria=cat, exact=False)
+                resultados = _correr_query(db, q, ["google_news"])
+                for r in resultados:
+                    cat_escritos += r.get("escritos", 0)
+                    cat_vistos += r.get("vistos", 0)
+        total_escritos += cat_escritos
+        total_vistos += cat_vistos
+        etapas.append({"etapa": f"scrape_{cat}", "escritos": cat_escritos,
+                       "vistos": cat_vistos})
+
+    # ── Paso 2: Búsqueda directa por nombre (el query como empresa) ──
+    if not parcial and time.monotonic() - t0 < presupuesto:
+        q_nombre = QuerySpec(empresa=query_text, tipo_evento="queja",
+                             terminos=zona)
+        res_nombre = _correr_query(db, q_nombre, list(CONECTORES_SCRAPE))
+        nombre_escritos = sum(r.get("escritos", 0) for r in res_nombre)
+        nombre_vistos = sum(r.get("vistos", 0) for r in res_nombre)
+        total_escritos += nombre_escritos
+        total_vistos += nombre_vistos
+        etapas.append({"etapa": "scrape_nombre", "escritos": nombre_escritos,
+                       "vistos": nombre_vistos})
+
+    # ── Paso 3: Ingesta de noticias (RSS / Google News vía Capa 0) ──
+    noticias_senales = 0
+    if not parcial and time.monotonic() - t0 < presupuesto:
+        try:
+            def _procesar_noticia(p: dict) -> dict:
+                ok, _ = evaluar_relevancia(p.get("texto", ""), [], True,
+                                           exigir_evento=False)
+                if not ok:
+                    return {"senales_detectadas": 0}
+                return _procesar_capa0(db, p.get("texto", ""), p.get("url", ""),
+                                       None, None, p.get("org_name"))
+            res_noticias = _noticias.correr(query=query_text, limite=25,
+                                             enviar_fn=_procesar_noticia)
+            noticias_senales = res_noticias.get("senales_detectadas", 0)
+        except Exception:
+            noticias_senales = 0
+        etapas.append({"etapa": "noticias_capa0", "senales": noticias_senales})
+
+    # ── Paso 4: Construir Expedientes Vivos consolidados ──
+    exp_data = _construir_expedientes(None, limite=50)
+    expedientes = exp_data.get("expedientes", [])
+    etapas.append({"etapa": "expedientes", "total": len(expedientes)})
+
+    # ── Paso 5: Dictamen Antropológico + Ranking TOP 10 ──
+    tiempo_total = round(time.monotonic() - t0, 1)
+    dictamen = generar_dictamen(
+        expedientes,
+        query=query_text,
+        region=payload.region,
+        vertical=detected_vertical,
+        tiempo_s=tiempo_total,
+        total_escritos=total_escritos,
+        total_vistos=total_vistos,
+        noticias_senales=noticias_senales,
+    )
+    etapas.append({"etapa": "dictamen", "hallazgos": len(dictamen["hallazgos"]),
+                   "alertas": len(dictamen["alertas"])})
+
+    # ── Paso 6: Curaduría Antropológica (Capa 10) ──
+    curaduria = curar(
+        expedientes,
+        query=query_text,
+        region=payload.region,
+        vertical=detected_vertical,
+    )
+    etapas.append({"etapa": "curaduria",
+                   "convergencias": len(curaduria["convergencias"]),
+                   "orgs_curadas": len(curaduria["organizaciones_curadas"])})
+
+    scoring_a = sum(1 for e in expedientes if e["scoring"] == "A")
+    scoring_b = sum(1 for e in expedientes if e["scoring"] == "B")
+    scoring_c = sum(1 for e in expedientes if e["scoring"] == "C")
+
+    return {
+        "query": query_text,
+        "vertical_detectada": detected_vertical,
+        "region": payload.region,
+        "parcial": parcial,
+        "tiempo_s": tiempo_total,
+        "total_escritos": total_escritos,
+        "total_vistos": total_vistos,
+        "noticias_senales": noticias_senales,
+        "curaduria": curaduria,
+        "dictamen": dictamen,
+        "expedientes": {
+            "total": len(expedientes),
+            "scoring": {"A": scoring_a, "B": scoring_b, "C": scoring_c},
+            "items": expedientes[:30],
+        },
+        "etapas": etapas,
+    }
+
+
+# --- Corpus: población sistemática de 5 verticales LATAM -------------------
+
+CORPUS_VERTICALES = ("fintech", "healthtech", "hrtech", "saas_b2b", "climatetech")
+CORPUS_TIPOS = ("queja", "ronda", "contratacion", "despido", "lanzamiento")
+CORPUS_ETAPA = ("Seed", "A", "B")
+
+
+class CorpusIn(BaseModel):
+    verticales: Optional[list[str]] = None
+    region: str = "LATAM"
+    categoria: str = "Startup"
+    presupuesto_s: float = 55.0
+
+
+@app.post("/corpus/poblar")
+def corpus_poblar(payload: CorpusIn,
+                  x_ingest_token: Optional[str] = Header(None)) -> dict:
+    """Población sistemática del corpus: 5 verticales × señales × LATAM.
+
+    Recorre cada vertical y tipo de señal, lanza consultas de descubrimiento
+    por Google News y acumula resultados. Respeta un presupuesto de tiempo
+    global para no reventar la función serverless.
+    """
+    _exigir_token(x_ingest_token)
+    if payload.region not in REGIONES:
+        raise HTTPException(400, f"region inválida: {payload.region}")
+    if payload.categoria not in CATEGORIAS:
+        raise HTTPException(400, f"categoria inválida: {payload.categoria}")
+    zona = region_clause(payload.region)
+    db = get_db()
+
+    verts = payload.verticales or list(CORPUS_VERTICALES)
+    for v in verts:
+        if v not in VERTICALES_HD:
+            raise HTTPException(400, f"vertical inválida: {v}")
+
+    presupuesto = min(max(payload.presupuesto_s, 5.0), 120.0)
+    t0 = time.monotonic()
+    parcial = False
+    progreso: list[dict] = []
+    total_escritos = 0
+    total_vistos = 0
+
+    for vert in verts:
+        if parcial:
+            break
+        for tipo in CORPUS_TIPOS:
+            if time.monotonic() - t0 > presupuesto:
+                parcial = True
+                break
+            consultas = queries_para(payload.categoria, tipo, vert)
+            ronda_escritos = 0
+            ronda_vistos = 0
+            for i, (termino, tipo_ev) in enumerate(consultas):
+                if i > 0 and time.monotonic() - t0 > presupuesto:
+                    parcial = True
+                    break
+                etapa_kw = " ".join(f'"{e}"' for e in CORPUS_ETAPA)
+                termino_etapa = f"{termino} ({etapa_kw})"
+                query = QuerySpec(
+                    empresa=termino_etapa, tipo_evento=tipo_ev,
+                    terminos=zona, categoria=payload.categoria, exact=False,
+                )
+                resultados = _correr_query(db, query, ["google_news"])
+                for r in resultados:
+                    ronda_escritos += r.get("escritos", 0)
+                    ronda_vistos += r.get("vistos", 0)
+            total_escritos += ronda_escritos
+            total_vistos += ronda_vistos
+            progreso.append({
+                "vertical": vert, "tipo": tipo,
+                "escritos": ronda_escritos, "vistos": ronda_vistos,
+            })
+
+    return {
+        "modo": "corpus",
+        "verticales": verts,
+        "region": payload.region,
+        "categoria": payload.categoria,
+        "total_escritos": total_escritos,
+        "total_vistos": total_vistos,
+        "parcial": parcial,
+        "tiempo_s": round(time.monotonic() - t0, 1),
+        "progreso": progreso,
+    }
+
+
+# --- Radar: orquestador agéntico (filtros inteligentes + contacto) ---------
+
+class RadarIn(BaseModel):
+    region: str = "Toda LATAM"         # del vocabulario de filtros.py (región/país)
+    enfoque: list[str] = []            # ecosistemas (VC|Startup|Incubadora|Corporativo)
+    tamanos: list[str] = []            # bandas de escala (1-10|11-50|51-200|201-500|501+)
+    palabra_clave: str = ""            # término extra de la búsqueda
+    presupuesto_s: float = _radar.PRESUPUESTO_DEFAULT_S
+    max_rondas: int = _radar.MAX_RONDAS_DEFAULT
+    limite_expedientes: int = _radar.LIMITE_EXPEDIENTES
+    conectores: list[str] = list(_radar.CONECTORES_RADAR)
+
+
+@app.post("/radar")
+def radar_agente(payload: RadarIn,
+                 x_ingest_token: Optional[str] = Header(None)) -> dict:
+    """Orquestador agéntico del radar: filtra, barre, valida y consolida.
+
+    Ciclo determinista (sin IA): los filtros (región, enfoque, tamaño, palabra
+    clave) definen el plan; el loop ejecuta lotes acotados por presupuesto,
+    observa los Expedientes Vivos (con Dictamen Científico y gobernanza),
+    valida los correos de contacto (estructura + dominio oficial) y se detiene
+    por SATURACIÓN cuando una ronda no aporta señal nueva. Autenticado porque
+    escribe evidencia. Motor A barre y valida; no decide contacto ni acción.
+    """
+    _exigir_token(x_ingest_token)
+    for c in payload.enfoque:
+        if c not in CATEGORIAS:
+            raise HTTPException(400, f"enfoque inválido: {c}")
+    for t in payload.tamanos:
+        if t not in ESCALAS_FILTRO:
+            raise HTTPException(400, f"tamaño inválido: {t}")
+    if payload.region not in REGIONES_FILTRO:
+        raise HTTPException(
+            400, f"region inválida: {payload.region} "
+                 f"(vocabulario: {', '.join(sorted(REGIONES_FILTRO))})")
+
+    conectores = [c for c in payload.conectores if c in CONECTORES_SCRAPE] \
+        or list(CONECTORES_SCRAPE)
+
+    filtros = FiltrosRadar(
+        region=payload.region,
+        categorias=tuple(dict.fromkeys(payload.enfoque)),
+        escalas=tuple(dict.fromkeys(payload.tamanos)),
+        palabra_clave=payload.palabra_clave.strip(),
+    )
+    return _radar.radar_loop(
+        filtros,
+        db=get_db(),
+        ejecutar_fn=_correr_query,
+        expedientes_fn=_construir_expedientes,
+        conectores=conectores,
+        presupuesto_s=max(5.0, min(payload.presupuesto_s, 120.0)),
+        max_rondas=max(1, min(payload.max_rondas, 6)),
+        limite_expedientes=max(5, min(payload.limite_expedientes, 100)),
+        materializar_fn=_candidato.materializar_candidatos,
+    )
+
+
+# --- Reparación BC-I ↔ BC-II: Candidatos Comerciales --------------------------
+#
+# Cada organización detectada por Motor A se materializa como un Candidato
+# Comercial independiente y trazable (identidad referencial determinista). La
+# Regla Cero (G0) gatea la transición detectado → observado: sin peritaje
+# validado originado en BC-I, el candidato no avanza.
+
+class CandidatoTransicionIn(BaseModel):
+    org_nombre: str
+    notas: str = ""
+    evidencia_id: Optional[int] = None
+    evidencia_url: str = ""
+    evidencia_texto: str = ""
+
+
+@app.post("/candidatos/materializar")
+def candidatos_materializar(
+    x_ingest_token: Optional[str] = Header(None),
+) -> dict:
+    """Materializa cada organización detectada como Candidato Comercial (BC-I→BC-II).
+
+    Idempotente: reprocesar produce los mismos candidato_id sin duplicar.
+    Registra la transición inicial ``→ detectado`` con la evidencia que la
+    sustenta. Autenticado (escribe Candidatos).
+    """
+    _exigir_token(x_ingest_token)
+    exp_data = _construir_expedientes(None, limite=100)
+    return _candidato.materializar_candidatos(
+        get_db(), exp_data.get("expedientes", []))
+
+
+@app.post("/candidatos/observar")
+def candidato_observar(
+    payload: CandidatoTransicionIn,
+    x_ingest_token: Optional[str] = Header(None),
+) -> dict:
+    """Pone un candidato bajo observación. Gateado por la Regla Cero (G0).
+
+    Sin dictamen científico validado (veredicto VALIDADA/VALIDADA_PARCIAL y sin
+    hipótesis bloqueada) devuelve 409: el candidato no avanza. La transición
+    conserva la referencia a la evidencia que la sustenta.
+    """
+    _exigir_token(x_ingest_token)
+    org = payload.org_nombre.strip()
+    if not org:
+        raise HTTPException(400, "org_nombre vacío")
+    try:
+        exp, val, huella = _paquete_cientifico(org)
+        exp["validacion_cientifica"] = val["dictamen_cientifico"]
+        exp["huella"] = huella["hash"]
+    except Exception:  # pragma: no cover - sin expediente el G0 deniega
+        exp = None
+    evidencia = {"id": payload.evidencia_id, "url": payload.evidencia_url,
+                 "texto": payload.evidencia_texto}
+    try:
+        return _candidato.observar(get_db(), org, exp=exp, evidencia=evidencia,
+                                   notas=payload.notas)
+    except _candidato.G0Denied as e:
+        raise HTTPException(409, f"Regla Cero: {e}")
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@app.post("/candidatos/descartar")
+def candidato_descartar(
+    payload: CandidatoTransicionIn,
+    x_ingest_token: Optional[str] = Header(None),
+) -> dict:
+    """Descarta un candidato (decisión del operador, siempre con motivo y evidencia)."""
+    _exigir_token(x_ingest_token)
+    org = payload.org_nombre.strip()
+    if not org:
+        raise HTTPException(400, "org_nombre vacío")
+    evidencia = {"id": payload.evidencia_id, "url": payload.evidencia_url,
+                 "texto": payload.evidencia_texto}
+    try:
+        return _candidato.descartar(get_db(), org, notas=payload.notas,
+                                    evidencia=evidencia)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@app.get("/candidatos")
+def candidatos_listar(estado: str | None = Query(None)) -> dict:
+    """Lista los Candidatos Comerciales, opcionalmente por estado."""
+    try:
+        return _candidato.listar_candidatos(get_db(), estado)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@app.get("/candidatos/{org_nombre}")
+def candidato_detalle(org_nombre: str) -> dict:
+    """Detalle de un candidato con su cadena referencial completa.
+
+    organización → candidato → prospecto → expediente → evidencia.
+    """
+    result = _candidato.obtener_candidato(get_db(), org_nombre)
+    if not result:
+        raise HTTPException(404, f"No hay candidato para '{org_nombre}'")
+    return result
+
+
+# --- Centro de Inteligencia Comercial --------------------------------------
+
+@app.get("/centro")
+def centro_inteligencia() -> dict:
+    """Centro de Inteligencia Comercial: tablero diario con 6 respuestas clave.
+
+    1. ¿Qué organizaciones entraron hoy?
+    2. ¿Cuáles cambiaron su narrativa (drift)?
+    3. ¿Cuáles muestran mayor Dolor Cultural?
+    4. ¿Cuáles califican para Peritaje Cualitativo?
+    5. ¿Cuáles califican para DolorMap Sprint?
+    6. ¿Cuáles necesitan seguimiento esta semana?
+    """
+    db = get_db()
+    hoy = ahora_iso()[:10]
+
+    nuevas_hoy_rows = db.fetch_all(
+        "SELECT DISTINCT empresa_mencionada FROM evidencias "
+        "WHERE estado = ? AND creado_en >= ? ORDER BY empresa_mencionada",
+        (ESTADO_OK, hoy),
+    )
+    nuevas_hoy = [r["empresa_mencionada"] for r in nuevas_hoy_rows]
+
+    drift_recientes = db.fetch_all(
+        "SELECT DISTINCT org_nombre FROM drift_evidencias "
+        "WHERE detectado_en >= ? ORDER BY org_nombre",
+        (hoy,),
+    )
+    cambio_narrativa = [r["org_nombre"] for r in drift_recientes]
+
+    exp_data = _construir_expedientes(None, limite=100)
+    expedientes = exp_data.get("expedientes", [])
+
+    mayor_dolor = [
+        {
+            "nombre": e["nombre"],
+            "scoring": e["scoring"],
+            "tipo_deuda": e["tipo_deuda"],
+            "intensidad": e["intensidad"],
+            "score_icp": e["score_icp"],
+            "angulo_conversacion": e["angulo_conversacion"],
+            "decisor_sugerido": e["decisor_sugerido"],
+        }
+        for e in expedientes
+        if e["scoring"] == "A"
+    ]
+
+    califican_peritaje = []
+    califican_dolormap = []
+    pipeline_rows = db.fetch_all(
+        "SELECT org_nombre, etapa, actualizado_en FROM pipeline_comercial "
+        "ORDER BY actualizado_en DESC",
+    )
+    pipeline_map = {r["org_nombre"].lower(): dict(r) for r in pipeline_rows}
+
+    for e in expedientes:
+        key = e["nombre"].lower()
+        pipe = pipeline_map.get(key)
+        etapa = pipe["etapa"] if pipe else None
+        info = {
+            "nombre": e["nombre"],
+            "scoring": e["scoring"],
+            "score_icp": e["score_icp"],
+            "tipo_deuda": e["tipo_deuda"],
+            "etapa_actual": etapa,
+        }
+        if e["scoring"] in ("A", "B") and e["score_icp"] >= 40:
+            if etapa in (None, "observacion", "vigilancia"):
+                califican_peritaje.append(info)
+        if e["scoring"] == "A" and e["score_icp"] >= 50:
+            if etapa in (None, "observacion", "vigilancia", "peritaje"):
+                califican_dolormap.append(info)
+
+    siete_dias_atras = ahora_iso()[:10]
+    import datetime as _dt
+    hace_7 = (_dt.date.fromisoformat(hoy) - _dt.timedelta(days=7)).isoformat()
+    seguimiento_rows = db.fetch_all(
+        "SELECT org_nombre, etapa, notas, actualizado_en FROM pipeline_comercial "
+        "WHERE etapa NOT IN ('cerrado') AND actualizado_en < ? "
+        "ORDER BY actualizado_en ASC LIMIT 20",
+        (hace_7,),
+    )
+    seguimiento = [
+        {
+            "nombre": r["org_nombre"],
+            "etapa": r["etapa"],
+            "dias_sin_mover": (_dt.date.fromisoformat(hoy) - _dt.date.fromisoformat(r["actualizado_en"][:10])).days,
+            "notas": r["notas"],
+        }
+        for r in seguimiento_rows
+    ]
+
+    return {
+        "fecha": hoy,
+        "nuevas_hoy": {"total": len(nuevas_hoy), "organizaciones": nuevas_hoy[:30]},
+        "cambio_narrativa": {"total": len(cambio_narrativa), "organizaciones": cambio_narrativa[:20]},
+        "mayor_dolor": {"total": len(mayor_dolor), "organizaciones": mayor_dolor[:20]},
+        "califican_peritaje": {"total": len(califican_peritaje), "organizaciones": califican_peritaje[:20]},
+        "califican_dolormap": {"total": len(califican_dolormap), "organizaciones": califican_dolormap[:20]},
+        "seguimiento_semanal": {"total": len(seguimiento), "organizaciones": seguimiento[:20]},
+        "resumen": {
+            "total_expedientes": len(expedientes),
+            "scoring_a": sum(1 for e in expedientes if e["scoring"] == "A"),
+            "scoring_b": sum(1 for e in expedientes if e["scoring"] == "B"),
+            "scoring_c": sum(1 for e in expedientes if e["scoring"] == "C"),
+            "en_pipeline": len(pipeline_rows),
+        },
+    }
+
+
+# --- PWA: instalable como app (base para generar el APK con PWABuilder) ---
+
+_STATIC = Path(__file__).resolve().parent / "static"
+
+_MANIFEST = {
+    "name": "hd-prospector · Radar",
+    "short_name": "Radar",
+    "description": "Descubre y cura organizaciones de VC, Startup, Incubadora y Corporativo.",
+    "start_url": "/admin",
+    "scope": "/",
+    "display": "standalone",
+    "orientation": "portrait",
+    "background_color": "#0b0c0e",
+    "theme_color": "#2563eb",
+    "icons": [
+        {"src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+        {"src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"},
+    ],
+}
+
+_SW_JS = (
+    "self.addEventListener('install', e => self.skipWaiting());\n"
+    "self.addEventListener('activate', e => self.clients.claim());\n"
+    "self.addEventListener('fetch', e => {});\n"
+)
+
+
+@app.get("/manifest.webmanifest")
+def manifest() -> Response:
+    import json as _json
+    return Response(_json.dumps(_MANIFEST), media_type="application/manifest+json")
+
+
+@app.get("/sw.js")
+def service_worker() -> Response:
+    return Response(_SW_JS, media_type="application/javascript")
+
+
+@app.get("/icon-192.png")
+def icon_192() -> FileResponse:
+    return FileResponse(_STATIC / "icon-192.png", media_type="image/png")
+
+
+@app.get("/icon-512.png")
+def icon_512() -> FileResponse:
+    return FileResponse(_STATIC / "icon-512.png", media_type="image/png")
+
+
+@app.get("/apple-touch-icon.png")
+def apple_icon() -> FileResponse:
+    return FileResponse(_STATIC / "apple-touch-icon.png", media_type="image/png")
+
+
+class EnrichIn(BaseModel):
+    nombre: str
+
+
+@app.post("/enrich")
+def enrich(payload: EnrichIn, x_ingest_token: Optional[str] = Header(None)) -> dict:
+    """Enriquece un prospecto: descubre su web, extrae su discurso y da enlaces.
+
+    Best-effort: nunca falla; devuelve lo que logre más enlaces a LinkedIn/Google.
+    LinkedIn NO se raspa (términos): solo se da un enlace de búsqueda.
+    """
+    _exigir_token(x_ingest_token)
+    if not payload.nombre.strip():
+        raise HTTPException(400, "nombre vacío")
+
+    with httpx.Client(timeout=settings.request_timeout_s,
+                      headers={"User-Agent": settings.user_agent},
+                      follow_redirects=True) as client:
+        def http_get(url: str) -> str:
+            r = client.get(url)
+            r.raise_for_status()
+            return r.text
+        return enriquecer(payload.nombre.strip(), http_get)
+
+
+# --- Análisis profundo (INTERPRETACIÓN determinista, sin IA ni red) --------
+#
+# El operador pidió que hd-prospector, además de capturar, entregue análisis
+# profundo (scoring A/B/C, Deuda Cultural™, ICP, decisor). Se hace de forma
+# determinista sobre las señales YA capturadas (ver hd_scraper/analisis.py).
+
+_ORDEN_SCORING = {"A": 0, "B": 1, "C": 2}
+
+
+def _analizar_evidencia(row, sitios: Optional[dict] = None) -> dict:
+    """Aplica el análisis profundo a una fila de evidencia y arma la tarjeta.
+
+    ``sitios`` (opcional): mapa {empresa_lower: sitio_web} de prospectos ya
+    guardados, para derivar dominio y rutas de contacto (hipótesis).
+    """
+    kws = _keywords(row)
+    titulo = row["cita_textual"] or ""
+    empresa = (row["empresa_mencionada"] or "").strip() or (detectar_empresa(titulo) or "")
+    vertical = sugerir_vertical(titulo) or ""
+    a = analizar(
+        kws, vertical=vertical, confianza=row["confianza"] or 0.0,
+        calidad=row["calidad_captura"] or "Baja", categoria=row["categoria"] or "",
+    )
+    # Rutas de contacto (hipótesis): si tenemos el sitio del prospecto, usamos su
+    # dominio; el nombre del decisor no se conoce aún, así que van buzones genéricos.
+    sitio = (sitios or {}).get(empresa.lower(), "") if empresa else ""
+    contacto = rutas_contacto(sitio, "") if sitio else {
+        "dominio": "", "emails_candidatos": [], "email_sugerido": "",
+        "verificado": False, "nota": "sin sitio confirmado; usa LinkedIn/Google o enriquece el prospecto",
+    }
+    return {
+        "empresa": empresa,
+        "categoria": row["categoria"],
+        "vertical": vertical,
+        "titulo": titulo,
+        "url_fuente": row["url_fuente"],
+        "nombre_medio": row["nombre_medio"],
+        "fecha_publicacion": (row["fecha_publicacion"] or "")[:10],
+        "keywords": kws,
+        "confianza": row["confianza"],
+        "calidad_captura": row["calidad_captura"],
+        **a,
+        "contacto": contacto,
+        "linkedin": linkedin_search_url(empresa) if empresa else "",
+        "google": google_search_url(empresa) if empresa else "",
+    }
+
+
+def _analizar_prospecto(row) -> dict:
+    """Analiza un prospecto guardado (p. ej. del directorio): empresa real sin
+    evento de prensa. Deriva señales de su descripción; Interés por vertical; contacto
+    por su sitio. Scoring típico C (sin dolor), pero es una empresa REAL con datos."""
+    nombre = (row["nombre"] or "").strip()
+    discurso = row["discurso_corporativo"] or ""
+    vertical = (row["vertical"] or "") or (sugerir_vertical(f"{nombre} {discurso}") or "")
+    kws = detectar_keywords(discurso)
+    a = analizar(kws, vertical=vertical, confianza=0.4, calidad="Baja")
+    sitio = row["sitio_web"] or ""
+    contacto = rutas_contacto(sitio, "") if sitio else {
+        "dominio": "", "emails_candidatos": [], "email_sugerido": "",
+        "verificado": False, "nota": "sin sitio; enriquece el prospecto"}
+    return {
+        "empresa": nombre, "categoria": row["categoria"], "vertical": vertical,
+        "titulo": (discurso[:140] or f"{nombre} — empresa del directorio"),
+        "url_fuente": sitio, "nombre_medio": (row["fuente_discurso"] or "directorio"),
+        "fecha_publicacion": (row["fecha_captura"] or "")[:10],
+        "keywords": kws, "confianza": 0.4, "calidad_captura": "Baja",
+        **a, "contacto": contacto,
+        "linkedin": linkedin_search_url(nombre) if nombre else "",
+        "google": google_search_url(nombre) if nombre else "",
+    }
+
+
+def _cats_validas(categoria: Optional[str], categorias: Optional[str]) -> list[str]:
+    """Lista de ecosistemas pedidos (una, varias por coma, o todas si vacío). Valida."""
+    crudas: list[str] = []
+    if categorias:
+        crudas = [c.strip() for c in categorias.split(",") if c.strip()]
+    elif categoria:
+        crudas = [categoria]
+    for c in crudas:
+        if c not in CATEGORIAS:
+            raise HTTPException(400, f"categoria inválida: {c}")
+    # dedup preservando orden
+    return list(dict.fromkeys(crudas))
+
+
+def _construir_informe(categorias: Optional[list[str]], limite: int) -> dict:
+    """Calcula el informe profundo (compartido por /informe y las exportaciones).
+
+    ``categorias`` vacío/None = todos los ecosistemas; si trae varios, filtra por
+    todos ellos (IN).
+    """
+    db = get_db()
+    cats = list(categorias or [])
+    if cats:
+        marc = ",".join("?" for _ in cats)
+        clausula = f"estado = ? AND categoria IN ({marc})"
+        params: list = [ESTADO_OK, *cats]
+    else:
+        clausula, params = "estado = ?", [ESTADO_OK]
+    filas = db.fetch_all(
+        f"SELECT * FROM evidencias WHERE {clausula} ORDER BY creado_en DESC LIMIT 500",
+        tuple(params),
+    )
+
+    # Sitios web de prospectos ya guardados (para derivar dominio/contacto).
+    sitios: dict[str, str] = {}
+    for p in db.fetch_all("SELECT nombre, sitio_web FROM prospectos WHERE sitio_web IS NOT NULL AND sitio_web <> ''"):
+        sitios[(p["nombre"] or "").strip().lower()] = p["sitio_web"]
+
+    # Una tarjeta por empresa: nos quedamos con la de mejor scoring y luego ICP.
+    mejor: dict[str, dict] = {}
+    for row in filas:
+        t = _analizar_evidencia(row, sitios)
+        clave = (t["empresa"] or t["titulo"]).lower()
+        prev = mejor.get(clave)
+        if prev is None or (
+            (_ORDEN_SCORING.get(t["scoring"], 9), -t["score_icp"])
+            < (_ORDEN_SCORING.get(prev["scoring"], 9), -prev["score_icp"])
+        ):
+            mejor[clave] = t
+
+    # Empresas del DIRECTORIO (prospectos sin noticia): dan volumen real. Se
+    # añaden si no aparecieron ya por una noticia (esas tienen prioridad, traen evento).
+    if cats:
+        marc = ",".join("?" for _ in cats)
+        pclaus, pparams = f"categoria IN ({marc})", list(cats)
+    else:
+        pclaus, pparams = "1=1", []
+    for p in db.fetch_all(
+        f"SELECT * FROM prospectos WHERE {pclaus} ORDER BY creado_en DESC LIMIT 500",
+        tuple(pparams),
+    ):
+        t = _analizar_prospecto(p)
+        clave = (t["empresa"] or t["titulo"]).lower()
+        if clave not in mejor:
+            mejor[clave] = t
+
+    tarjetas = sorted(
+        mejor.values(),
+        key=lambda x: (_ORDEN_SCORING.get(x["scoring"], 9), -x["score_icp"]),
+    )[:limite]
+
+    resumen = {"A": 0, "B": 0, "C": 0}
+    for t in tarjetas:
+        resumen[t["scoring"]] = resumen.get(t["scoring"], 0) + 1
+
+    return {
+        "categorias": cats or sorted(CATEGORIAS),
+        "categoria": ", ".join(cats) if cats else "Todas",
+        "total": len(tarjetas),
+        "resumen_scoring": resumen,
+        "prospectos": tarjetas,
+    }
+
+
+@app.get("/informe")
+def informe(
+    categoria: Optional[str] = Query(None, description="Un ecosistema (VC|Startup|Incubadora|Corporativo)"),
+    categorias: Optional[str] = Query(None, description="Varios ecosistemas separados por coma"),
+    limite: int = Query(50, ge=1, le=200),
+) -> dict:
+    """Informe profundo: prioriza las empresas capturadas por scoring + Deuda + ICP.
+
+    Interpreta (de forma determinista) la evidencia consumible: una tarjeta por
+    empresa (la señal más fuerte gana), ordenada A→B→C y por Interés Analítico. Acepta una
+    o varias categorías (o todas si no se indica).
+    """
+    return _construir_informe(_cats_validas(categoria, categorias), limite)
+
+
+def _informe_a_markdown(inf: dict) -> str:
+    s = inf["resumen_scoring"]
+    lineas = [
+        "# Informe profundo — hd-prospector",
+        "",
+        f"- Ecosistema(s): **{inf.get('categoria') or 'Todas'}**",
+        f"- Empresas: **{inf['total']}**  ·  A: {s.get('A',0)}  ·  B: {s.get('B',0)}  ·  C: {s.get('C',0)}",
+        "",
+        "> Análisis determinista sobre hechos capturados. Los correos son "
+        "hipótesis **sin verificar**.",
+        "",
+    ]
+    for i, t in enumerate(inf["prospectos"], 1):
+        c = t.get("contacto") or {}
+        lineas += [
+            f"## {i}. {t['empresa'] or '(sin nombre)'} · {t['scoring']} · Interés {t['score_icp']} · intensidad {t.get('intensidad','')}",
+            f"- Titular: {t['titulo']}",
+        ]
+        if t.get("tipo_deuda"):
+            sec = f" (secundaria: {t['deuda_secundaria']})" if t.get("deuda_secundaria") else ""
+            lineas.append(f"- Hipótesis de Deuda Cultural™: **{t['tipo_deuda']}**{sec} — {t.get('deuda_razon','')}")
+        if t.get("angulo_conversacion"):
+            lineas.append(f"- Ángulo de conversación: {t['angulo_conversacion']}")
+        lineas.append(f"- Decisor sugerido: **{t['decisor_sugerido']}**")
+        if c.get("email_sugerido"):
+            lineas.append(f"- Correo candidato (sin verificar): `{c['email_sugerido']}`")
+        meta = " · ".join(x for x in (t.get("nombre_medio",""), t.get("vertical",""), t.get("categoria",""), t.get("fecha_publicacion","")) if x)
+        if meta:
+            lineas.append(f"- {meta}")
+        if t.get("url_fuente"):
+            lineas.append(f"- Fuente: {t['url_fuente']}")
+        lineas.append("")
+    return "\n".join(lineas)
+
+
+@app.get("/informe.md")
+def informe_md(
+    categoria: Optional[str] = Query(None),
+    categorias: Optional[str] = Query(None),
+    limite: int = Query(50, ge=1, le=200),
+) -> Response:
+    """Descarga el informe profundo como Markdown."""
+    md = _informe_a_markdown(_construir_informe(_cats_validas(categoria, categorias), limite))
+    return Response(md, media_type="text/markdown; charset=utf-8",
+                    headers={"Content-Disposition": 'attachment; filename="informe-hd.md"'})
+
+
+@app.get("/informe.csv")
+def informe_csv(
+    categoria: Optional[str] = Query(None),
+    categorias: Optional[str] = Query(None),
+    limite: int = Query(50, ge=1, le=200),
+) -> Response:
+    """Descarga el informe profundo como CSV."""
+    inf = _construir_informe(_cats_validas(categoria, categorias), limite)
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["empresa", "scoring", "score_icp", "intensidad", "tipo_deuda",
+                "deuda_secundaria", "angulo_conversacion", "decisor_sugerido",
+                "email_candidato", "email_verificado", "vertical", "categoria",
+                "titulo", "fecha_publicacion", "fuente", "url_fuente"])
+    for t in inf["prospectos"]:
+        c = t.get("contacto") or {}
+        w.writerow([
+            t.get("empresa",""), t.get("scoring",""), t.get("score_icp",""),
+            t.get("intensidad",""), t.get("tipo_deuda",""), t.get("deuda_secundaria",""),
+            t.get("angulo_conversacion",""), t.get("decisor_sugerido",""),
+            c.get("email_sugerido",""), "no", t.get("vertical",""), t.get("categoria",""),
+            t.get("titulo",""), t.get("fecha_publicacion",""), t.get("nombre_medio",""),
+            t.get("url_fuente",""),
+        ])
+    return Response(buf.getvalue(), media_type="text/csv; charset=utf-8",
+                    headers={"Content-Disposition": 'attachment; filename="informe-hd.csv"'})
+
+
+class GuardarInformeIn(BaseModel):
+    categorias: Optional[str] = None   # coma-separadas; vacío = todas
+    limite: int = 50
+
+
+@app.post("/informe/guardar")
+def guardar_informe(payload: GuardarInformeIn,
+                    x_ingest_token: Optional[str] = Header(None)) -> dict:
+    """Genera el informe de las categorías pedidas y lo GUARDA (snapshot con su
+    Markdown). Autenticado (escribe). Devuelve el id para recuperarlo/descargarlo."""
+    _exigir_token(x_ingest_token)
+    cats = _cats_validas(None, payload.categorias)
+    inf = _construir_informe(cats, payload.limite)
+    md = _informe_a_markdown(inf)
+    titulo = f"Investigación · {inf['categoria']} · {inf['total']} empresas"
+    db = get_db()
+    rid = db.insert_returning_id(
+        """INSERT INTO informes_guardados
+             (titulo, categorias, total, resumen_json, markdown, creado_en)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        (titulo, ", ".join(inf["categorias"]), inf["total"],
+         json.dumps(inf["resumen_scoring"]), md, ahora_iso()),
+    )
+    return {"id": rid, "titulo": titulo, "total": inf["total"],
+            "resumen_scoring": inf["resumen_scoring"]}
+
+
+@app.get("/informes")
+def listar_informes(limite: int = Query(50, ge=1, le=200)) -> dict:
+    """Lista las investigaciones guardadas (sin el cuerpo Markdown)."""
+    db = get_db()
+    filas = db.fetch_all(
+        "SELECT id, titulo, categorias, total, resumen_json, creado_en "
+        "FROM informes_guardados ORDER BY id DESC LIMIT ?", (limite,))
+    items = []
+    for f in filas:
+        d = dict(f)
+        try:
+            d["resumen_scoring"] = json.loads(d.pop("resumen_json") or "{}")
+        except (ValueError, TypeError):
+            d["resumen_scoring"] = {}
+        items.append(d)
+    return {"total": len(items), "items": items}
+
+
+@app.get("/informes/{informe_id}.md")
+def descargar_informe_guardado(informe_id: int) -> Response:
+    """Descarga el Markdown de una investigación guardada."""
+    row = get_db().fetch_one(
+        "SELECT markdown FROM informes_guardados WHERE id = ?", (informe_id,))
+    if not row:
+        raise HTTPException(404, "investigación no encontrada")
+    return Response(row["markdown"] or "", media_type="text/markdown; charset=utf-8",
+                    headers={"Content-Disposition": f'attachment; filename="investigacion-{informe_id}.md"'})
+
+
+@app.delete("/informes/{informe_id}")
+def borrar_informe_guardado(informe_id: int,
+                            x_ingest_token: Optional[str] = Header(None)) -> dict:
+    """Borra una investigación guardada. Autenticado (escribe)."""
+    _exigir_token(x_ingest_token)
+    db = get_db()
+    if not db.fetch_one("SELECT id FROM informes_guardados WHERE id = ?", (informe_id,)):
+        raise HTTPException(404, "investigación no encontrada")
+    db.execute("DELETE FROM informes_guardados WHERE id = ?", (informe_id,))
+    return {"ok": True, "id": informe_id}
+
+
+class AnalizarIn(BaseModel):
+    titulo: Optional[str] = None
+    keywords: Optional[list[str]] = None
+    vertical: str = ""
+    confianza: float = 0.0
+    calidad: str = "Baja"
+    categoria: str = ""
+    dominio: str = ""            # opcional: para rutas de contacto (hipótesis)
+    nombre_decisor: str = ""     # opcional: afina los patrones de correo
+
+
+@app.post("/analizar")
+def analizar_endpoint(payload: AnalizarIn) -> dict:
+    """Análisis profundo bajo demanda de un título o de señales dadas.
+
+    Público (solo interpreta datos que se le pasan; no escribe ni raspa). Si se
+    da ``titulo`` y no ``keywords``, deriva las señales del título de forma
+    determinista. Devuelve scoring, Deuda Cultural™ (hipótesis), Interés Analítico, decisor y,
+    si se da ``dominio``, correos candidatos (sin verificar).
+    """
+    kws = payload.keywords
+    if kws is None:
+        kws = detectar_keywords(payload.titulo or "")
+    vertical = payload.vertical or (sugerir_vertical(payload.titulo or "") or "")
+    a = analizar(kws, vertical=vertical, confianza=payload.confianza,
+                 calidad=payload.calidad, categoria=payload.categoria)
+    salida = {"keywords": kws, "vertical": vertical, **a}
+    if payload.dominio:
+        salida["contacto"] = rutas_contacto(payload.dominio, payload.nombre_decisor)
+    return salida
+
+
+class LecturaIn(BaseModel):
+    empresa: str = ""
+    discurso: Optional[str] = None   # discurso ya extraído (preferido)
+    dominio: str = ""                # opcional: rastrea el sitio propio si falta discurso
+
+
+@app.post("/lectura")
+def lectura_estructural_endpoint(payload: LecturaIn) -> dict:
+    """Pre-peritaje de Capa 0: lectura estructural PRELIMINAR de Deuda Cultural™
+    sobre el discurso que la propia organización declara.
+
+    Público y determinista (no escribe). Fuentes del discurso, por prioridad:
+    1) ``discurso`` explícito; 2) el discurso ya guardado del prospecto (por
+    nombre); 3) rastreo del ``dominio`` propio (perfil fundacional). Si no hay
+    discurso o no exhibe marcadores ⇒ estado ``requiere_campo`` (nunca fabrica).
+    """
+    discurso = (payload.discurso or "").strip() or None
+    empresa = payload.empresa.strip()
+
+    # 2) discurso ya guardado del prospecto (por nombre normalizado).
+    if not discurso and empresa:
+        fila = get_db().fetch_one(
+            "SELECT discurso_corporativo FROM prospectos WHERE LOWER(nombre) = ?",
+            (empresa.lower(),),
+        )
+        if fila and fila["discurso_corporativo"]:
+            discurso = fila["discurso_corporativo"]
+
+    # 3) rastreo del sitio propio (sólo dominio; cero prensa). Funciona fuera del
+    #    sandbox; si la red falla, `construir_perfil` devuelve perfil vacío.
+    if not discurso and payload.dominio:
+        try:
+            perfil = construir_perfil(empresa or payload.dominio, payload.dominio)
+            discurso = perfil.discurso_corporativo
+        except Exception:
+            discurso = None
+
+    return leer_discurso(discurso, empresa=empresa)
+
+
+class IndagarIn(BaseModel):
+    empresa: str = ""
+    dominio: str = ""       # opcional: habilita la lectura del discurso propio
+    vertical: str = ""      # opcional: afina el ICP (si falta, se toma del prospecto)
+
+
+@app.post("/indagar")
+def indagar_endpoint(payload: IndagarIn) -> dict:
+    """Indagación PROFUNDA bajo demanda (Fase B): corre los conectores de prensa
+    en modo lectura, extrae EVENTOS reales (fechados y citables) y los cruza con
+    el discurso para un peritaje preliminar de Deuda Cultural™.
+
+    Público y READ-ONLY (no escribe). Grounded: sin eventos ni marcadores ⇒
+    ``requiere_campo``. Nota de entorno: si el egress bloquea las fuentes, la
+    indagación degrada a la lectura del discurso y lo reporta en salud_fuentes.
+    """
+    empresa = payload.empresa.strip()
+    if not empresa:
+        raise HTTPException(400, "empresa requerida")
+    dominio = payload.dominio.strip()
+    vertical = payload.vertical.strip()
+    # Completa dominio/vertical desde el prospecto si no vinieron.
+    if not dominio or not vertical:
+        fila = get_db().fetch_one(
+            "SELECT sitio_web, vertical FROM prospectos WHERE LOWER(nombre) = ?",
+            (empresa.lower(),),
+        )
+        if fila:
+            dominio = dominio or (fila["sitio_web"] or "")
+            vertical = vertical or (fila["vertical"] or "")
+    return indagar_profundo(empresa, dominio=dominio or None, vertical=vertical)
+
+
+class VerificarContactoIn(BaseModel):
+    dominio: str = ""
+    sitio_web: str = ""          # alternativa: se deriva el dominio del sitio
+    nombre_decisor: str = ""
+
+
+@app.post("/verificar-contacto")
+def verificar_contacto(payload: VerificarContactoIn,
+                       x_ingest_token: Optional[str] = Header(None)) -> dict:
+    """Verifica el correo del decisor con Hunter (BAJO DEMANDA, consume cuota).
+
+    Autenticado (X-Ingest-Token) porque gasta cuota de pago. Devuelve el correo
+    verificado si Hunter lo confirma; si no hay clave o falla, cae a la HIPÓTESIS
+    determinista (correos candidatos sin verificar) para no dejar al operador sin
+    nada. Nunca lanza por fallos de Hunter.
+    """
+    _exigir_token(x_ingest_token)
+    dominio = dominio_de(payload.dominio or payload.sitio_web) or (payload.dominio or "").strip().lower()
+    hipotesis = rutas_contacto(dominio, payload.nombre_decisor)
+
+    if not hunter.disponible(settings.hunter_api_key):
+        return {"verificado": False, "modo": "hipotesis",
+                "nota": "verificación no configurada (falta HUNTER_API_KEY); se muestran candidatos sin verificar)",
+                "hipotesis": hipotesis}
+
+    with httpx.Client(timeout=settings.request_timeout_s,
+                      headers={"User-Agent": settings.user_agent},
+                      follow_redirects=True) as client:
+        def http_get_json(url: str) -> dict:
+            r = client.get(url)
+            r.raise_for_status()
+            return r.json()
+        res = hunter.enriquecer_contacto(dominio, payload.nombre_decisor,
+                                         settings.hunter_api_key, http_get_json)
+    return {"modo": "hunter", **res, "hipotesis": hipotesis}
+
+
+class DirectorioIn(BaseModel):
+    region: str = "México"       # país (un QID de Wikidata; LATAM no aplica aquí)
+    categoria: str = "Startup"   # ecosistema al que se asignan (VC|Startup|…)
+    vertical: str = "todas"
+    limite: int = 40
+
+
+@app.post("/directorio")
+def directorio_endpoint(payload: DirectorioIn,
+                        x_ingest_token: Optional[str] = Header(None)) -> dict:
+    """Trae EMPRESAS REALES de Wikidata (base pública, gratis) y las guarda como
+    prospectos. Da VOLUMEN sin depender de que haya una noticia fresca.
+
+    Autenticado (escribe prospectos). Cada empresa entra con su vertical sugerida,
+    sitio web y descripción; se deduplica por nombre+categoría. Zona = un país.
+    """
+    _exigir_token(x_ingest_token)
+    qids, _es_pais = directorio._qids_de_region(payload.region)
+    if not qids:
+        raise HTTPException(400, f"region debe ser un país o '{directorio.REGION_LATAM}': "
+                                 f"{sorted(directorio.PAIS_QID)}")
+    if payload.categoria not in CATEGORIAS:
+        raise HTTPException(400, f"categoria inválida: {payload.categoria}")
+    if payload.vertical not in VERTICALES_HD:
+        raise HTTPException(400, f"vertical inválida: {payload.vertical}")
+
+    limite = max(1, min(int(payload.limite or 40), 100))
+    db = get_db()
+    with httpx.Client(timeout=settings.request_timeout_s,
+                      headers={"User-Agent": directorio.USER_AGENT,
+                               "Accept": "application/sparql-results+json"},
+                      follow_redirects=True) as client:
+        def http_get_json(url: str) -> dict:
+            r = client.get(url)
+            r.raise_for_status()
+            return r.json()
+        res = directorio.buscar_empresas_cascada(
+            payload.region, payload.vertical, http_get_json, db=db, limite=limite)
+
+    # Fallo de red tras el reintento: aviso claro (no se llegó a resultados).
+    if res.get("error"):
+        return {
+            "region": payload.region, "categoria": payload.categoria,
+            "vertical": payload.vertical, "fuente": "Wikidata",
+            "encontradas": 0, "nuevos": 0, "actualizados": 0, "ampliado": False,
+            "nota": ("Wikidata no respondió (falló también el reintento). "
+                     "Intenta de nuevo en un momento."),
+        }
+
+    empresas = res["empresas"]
+    nuevos = actualizados = 0
+    # Cliente compartido para el perfilado orgánico (perfil fundacional desde el
+    # sitio propio de cada organización): aporta escala/tamaño y, si el sitio es
+    # más rico que Wikidata, discurso y URL de perfil. Determinista y best-effort
+    # (sin red -> escala 'indeterminada' y se conserva la descripción de Wikidata).
+    with httpx.Client(timeout=settings.request_timeout_s,
+                      headers={"User-Agent": settings.user_agent},
+                      follow_redirects=True) as _cli_perfil:
+        for e in empresas:
+            sitio = e.get("sitio_web") or ""
+            perfil = construir_perfil(e["nombre"], sitio, client=_cli_perfil) if sitio else None
+            discurso_organico = perfil.discurso_corporativo if perfil else None
+            rec = nuevo_prospecto(
+                e["nombre"], payload.categoria,
+                vertical=e.get("vertical_sugerida") or (payload.vertical if payload.vertical != "todas" else None),
+                sitio_web=sitio or None,
+                discurso_corporativo=(discurso_organico or e.get("descripcion")) or None,
+                url_perfil=(perfil.url_perfil if perfil else None),
+                fuente_discurso=("perfil_fundacional" if discurso_organico else "directorio:wikidata"),
+                fecha_captura=ahora_iso(),
+                escala=(perfil.escala if perfil else "indeterminada"),
+            )
+            r = upsert_prospecto(db, rec)
+            if r.get("accion") == "insertado":
+                nuevos += 1
+            elif r.get("accion") == "actualizado":
+                actualizados += 1
+
+    if not empresas:
+        nota = ("0 empresas para esa zona/vertical, incluso ampliando el filtro. "
+                "Wikidata tiene cobertura limitada de micro-startups; prueba otro país.")
+    elif res.get("ampliado"):
+        nota = f"filtro ampliado automáticamente ({res.get('nivel','')}) para traer resultados."
+    elif res.get("cache"):
+        nota = "resultados servidos desde caché (consulta reciente)."
+    else:
+        nota = ""
+
+    return {
+        "region": payload.region, "categoria": payload.categoria,
+        "vertical": payload.vertical, "fuente": "Wikidata",
+        "encontradas": len(empresas), "nuevos": nuevos, "actualizados": actualizados,
+        "ampliado": bool(res.get("ampliado")), "nivel": res.get("nivel", ""),
+        "cache": bool(res.get("cache")), "nota": nota,
+    }
+
+
+# --- Capa 0: motor de reglas determinista sobre texto (ingesta) ------------
+#
+# Punto de entrada para señales de texto/transcripción (los conectores de
+# noticias RSS / yt-dlp postean aquí). Evalúa con RuleEngine, puntúa y persiste. No
+# interpreta cualitativamente (eso es Motor B): solo registra matches auditables.
+
+_rule_engine = RuleEngine()
+
+
+def normalizar_texto(texto: str) -> str:
+    """Normalización mínima para el match determinista (minúsculas, sin bordes)."""
+    return " ".join((texto or "").lower().split())
+
+
+class IngestaIn(BaseModel):
+    texto: str
+    url: str = ""
+    timestamp: Optional[str] = None
+    org_id: Optional[str] = None
+    org_name: Optional[str] = None
+
+
+def _guardar_senales_capa0(db, prospecto: Prospecto) -> int:
+    """Persiste las señales de un prospecto (dedup por id determinista). Devuelve nuevas."""
+    nuevas = 0
+    for s in prospecto.señales:
+        cur = db.execute(
+            """INSERT INTO senales_capa0
+                 (id, url, timestamp_video, fragmento_literal, tipo_senal, score_deuda,
+                  motivo_match, org_id, org_nombre, score_total, nivel_alerta, creado_en)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+               ON CONFLICT (id) DO NOTHING""",
+            (s.id, s.url, s.timestamp_video, s.fragmento_literal, s.tipo_señal,
+             s.score_deuda, s.motivo_match, prospecto.id, prospecto.nombre_organizacion,
+             prospecto.score_total, prospecto.nivel_alerta, s.creado_en.isoformat()),
+        )
+        if getattr(cur, "rowcount", 0):
+            nuevas += 1
+    return nuevas
+
+
+def _procesar_capa0(db, texto: str, url: str = "", timestamp: Optional[str] = None,
+                    org_id: Optional[str] = None, org_name: Optional[str] = None) -> dict:
+    """Núcleo Capa 0 (compartido): evalúa reglas, puntúa y persiste. Sin red."""
+    limpio = normalizar_texto(texto)
+    if not limpio:
+        return {"senales_detectadas": 0, "senales_nuevas": 0, "score_total": 0.0,
+                "nivel_alerta": "Normal", "senales": []}
+    señales: list[SeñalCapa0] = _rule_engine.evaluar(limpio, url, timestamp)
+    score, alerta = _rule_engine.calcular_alerta(señales)
+    nuevas = 0
+    if señales:
+        prospecto = Prospecto(
+            id=org_id or (url or limpio[:40]),
+            nombre_organizacion=org_name or "(organización sin nombre)",
+            señales=señales, score_total=score, nivel_alerta=alerta,
+        )
+        nuevas = _guardar_senales_capa0(db, prospecto)
+    return {
+        "senales_detectadas": len(señales), "senales_nuevas": nuevas,
+        "score_total": score, "nivel_alerta": alerta,
+        "senales": [s.to_json_dict() for s in señales],
+    }
+
+
+@app.post("/webhook/ingesta")
+def ingesta_capa0(payload: IngestaIn, x_ingest_token: Optional[str] = Header(None)) -> dict:
+    """Ingesta de texto para la Capa 0: evalúa reglas, puntúa y persiste señales.
+
+    Autenticado (escribe). Determinista: mismo texto → mismas señales. Si no hay
+    match, no persiste nada. Devuelve el resumen y las señales detectadas.
+    """
+    _exigir_token(x_ingest_token)
+    if not normalizar_texto(payload.texto):
+        raise HTTPException(400, "texto vacío")
+    return {"status": "procesado", **_procesar_capa0(
+        get_db(), payload.texto, payload.url, payload.timestamp,
+        payload.org_id, payload.org_name)}
+
+
+class IngestaNoticiasIn(BaseModel):
+    query: Optional[str] = None
+    feed: Optional[str] = None
+    limite: int = 25
+
+
+@app.post("/ingesta/noticias")
+def ingesta_noticias(payload: IngestaNoticiasIn,
+                     x_ingest_token: Optional[str] = Header(None)) -> dict:
+    """Ingesta de noticias EN LA APP: el servidor lee el RSS (Google News gratis o
+    un feed) y procesa cada nota con la Capa 0. Sin depender de scripts externos.
+    """
+    _exigir_token(x_ingest_token)
+    if not (payload.query or payload.feed):
+        raise HTTPException(400, "indica 'query' (Google News) o 'feed' (URL de RSS)")
+    db = get_db()
+
+    def procesar(p: dict) -> dict:
+        # Descarta ruido/gigantes/geo antes de la Capa 0 (calidad de la señal).
+        ok, _ = evaluar_relevancia(p.get("texto", ""), [], True, exigir_evento=False)
+        if not ok:
+            return {"senales_detectadas": 0}
+        return _procesar_capa0(db, p.get("texto", ""), p.get("url", ""),
+                               None, None, p.get("org_name"))
+
+    try:
+        res = _noticias.correr(query=payload.query, feed_url=payload.feed,
+                               limite=payload.limite, enviar_fn=procesar)
+    except Exception as exc:
+        raise HTTPException(502, f"no se pudo leer el feed: {exc}")
+    return res
+
+
+@app.get("/senales-capa0")
+def listar_senales_capa0(
+    nivel_alerta: Optional[str] = Query(None, description="Filtra por Normal|Crítica"),
+    limite: int = Query(50, ge=1, le=500),
+) -> dict:
+    """Lista las señales de Capa 0 registradas (lectura pública)."""
+    db = get_db()
+    where, params = "1=1", []
+    if nivel_alerta:
+        where, params = "nivel_alerta = ?", [nivel_alerta]
+    filas = db.fetch_all(
+        f"SELECT * FROM senales_capa0 WHERE {where} ORDER BY creado_en DESC LIMIT ?",
+        params + [limite],
+    )
+    return {"total": len(filas), "items": [dict(f) for f in filas]}
+
+
+# --- Expedientes Vivos: evidencia agrupada por organización ----------------
+#
+# Cada expediente agrupa TODAS las evidencias de una organización, corre el
+# análisis determinista sobre las señales combinadas, detecta patrones
+# (COMBINACIONES de señales) y genera la hipótesis de Dolor Cultural.
+
+from ..analisis import COMBINACIONES, DEUDA_POR_SENAL, ANGULO_POR_DEUDA
+from ..validacion_cientifica import emitir_dictamen_cientifico, validar_expediente
+from ..gobernanza import (
+    auditar_expediente,
+    emitir_certificado,
+    generar_huella_digital,
+    validar_integridad,
+    verificar_consistencia,
+)
+from .. import gobernanza_store
+from .. import memoria_store
+from ..memoria import construir_timeline, emitir_historial
+from ..comparador import (
+    comparar_ecosistemas,
+    comparar_organizaciones,
+    comparar_periodos,
+    generar_matriz,
+)
+from ..predictivo import (
+    calcular_tendencia,
+    calcular_volatilidad,
+    emitir_proyeccion,
+    proyectar_escenarios,
+    serie_temporal,
+)
+from ..observatorio import (
+    analizar_vertical,
+    calcular_indicadores,
+    calidad_corpus,
+    contexto_ecosistemico,
+    detectar_centinelas,
+    detectar_clusters,
+    detectar_outliers,
+    emitir_reporte_regional,
+    identificar_tensiones,
+    madurez_ecosistema,
+    oportunidades,
+    panel_ecosistemico,
+    panorama_ecosistemico,
+    prioridades,
+    ranking_hd,
+    riesgos_culturales,
+)
+from .. import expediente_vivo as _exp_vivo
+from ..relevance import _sin_acentos
+from ..publicador import (
+    generar_csv,
+    generar_html,
+    generar_informe,
+    generar_pdf,
+    generar_peritaje,
+)
+from ..laboratorio import (
+    estado_capas,
+    estado_corpus,
+    estado_general,
+    estado_gobernanza,
+    estado_observatorio,
+    estado_pipeline,
+    estado_validacion,
+)
+
+
+def _detectar_patrones(keywords: list[str]) -> list[dict]:
+    """Detecta patrones (combinaciones de 2+ señales) presentes en los keywords."""
+    ks = set(keywords or [])
+    patrones = []
+    for tags, label, razon in COMBINACIONES:
+        if tags <= ks:
+            patrones.append({"patron": label, "razonamiento": razon,
+                             "senales": sorted(tags)})
+    return patrones
+
+
+def _construir_expedientes(categorias: list[str] | None, limite: int = 30) -> dict:
+    """Agrupa evidencia por organización y enriquece con análisis completo."""
+    db = get_db()
+    cats = list(categorias or [])
+    if cats:
+        marc = ",".join("?" for _ in cats)
+        clausula = f"estado = ? AND categoria IN ({marc})"
+        params: list = [ESTADO_OK, *cats]
+    else:
+        clausula, params = "estado = ?", [ESTADO_OK]
+
+    filas = db.fetch_all(
+        f"SELECT * FROM evidencias WHERE {clausula} ORDER BY creado_en DESC LIMIT 500",
+        tuple(params),
+    )
+
+    orgs: dict[str, dict] = {}
+    for row in filas:
+        titulo = row["cita_textual"] or ""
+        org = detectar_empresa(titulo) or (row["empresa_mencionada"] or "").strip()
+        if not org:
+            continue
+        kws = _keywords(row)
+        ok, _ = evaluar_relevancia(titulo, kws, bool(org), exigir_evento=False)
+        if not ok:
+            continue
+        key = org.lower()
+        if key not in orgs:
+            orgs[key] = {"nombre": org, "evidencias_raw": [],
+                         "keywords_set": set(),
+                         "categoria": row["categoria"] or "",
+                         "mejor_confianza": 0.0, "mejor_calidad": "Baja"}
+        orgs[key]["evidencias_raw"].append(row)
+        orgs[key]["keywords_set"].update(kws)
+        c = row["confianza"] or 0.0
+        if c > orgs[key]["mejor_confianza"]:
+            orgs[key]["mejor_confianza"] = c
+            orgs[key]["mejor_calidad"] = row["calidad_captura"] or "Baja"
+
+    sitios: dict[str, str] = {}
+    for p in db.fetch_all(
+        "SELECT nombre, sitio_web FROM prospectos "
+        "WHERE sitio_web IS NOT NULL AND sitio_web <> ''"
+    ):
+        sitios[(p["nombre"] or "").strip().lower()] = p["sitio_web"]
+
+    expedientes = []
+    for key, data in orgs.items():
+        all_kws = list(data["keywords_set"])
+        vertical = ""
+        for row in data["evidencias_raw"]:
+            v = sugerir_vertical(row["cita_textual"] or "")
+            if v:
+                vertical = v
+                break
+
+        a = analizar(
+            all_kws, vertical=vertical,
+            confianza=data["mejor_confianza"],
+            calidad=data["mejor_calidad"],
+            categoria=data["categoria"],
+        )
+
+        evidencias = []
+        for row in data["evidencias_raw"]:
+            evidencias.append({
+                "texto": row["cita_textual"],
+                "fuente": row["nombre_medio"],
+                "fecha": (row["fecha_publicacion"] or "")[:10],
+                "url": row["url_fuente"],
+                "tipo_evento": row["tipo_evento"],
+                "confianza": row["confianza"],
+            })
+
+        patrones = _detectar_patrones(all_kws)
+
+        sitio = sitios.get(key, "")
+        contacto = rutas_contacto(sitio, "") if sitio else {
+            "dominio": "", "email_sugerido": "", "verificado": False}
+
+        expediente = {
+            "nombre": data["nombre"],
+            "categoria": data["categoria"],
+            "vertical": vertical,
+            "scoring": a["scoring"],
+            "score_icp": a["score_icp"],
+            "intensidad": a["intensidad"],
+            "profundidad_dolor": a.get("profundidad_dolor", 0),
+            "viabilidad": a.get("viabilidad", ""),
+            "tipo_deuda": a["tipo_deuda"],
+            "deuda_razon": a["deuda_razon"],
+            "deuda_secundaria": a.get("deuda_secundaria", ""),
+            "angulo_conversacion": a["angulo_conversacion"],
+            "decisor_sugerido": a["decisor_sugerido"],
+            "senal_dominante": a.get("senal_dominante", ""),
+            "evidencias": evidencias,
+            "total_evidencias": len(evidencias),
+            "patrones": patrones,
+            "keywords": all_kws,
+            "contacto": contacto,
+            "linkedin": linkedin_search_url(data["nombre"]),
+            "google": google_search_url(data["nombre"]),
+        }
+
+        # Capa 11 — Validación Científica: cada expediente se somete al Dictamen
+        # Científico. Si la evidencia es insuficiente, la hipótesis se bloquea
+        # automáticamente (Motor A avisa; Motor B decide sobre lo validado).
+        val = validar_expediente(expediente)
+        dictamen = val["dictamen_cientifico"]
+        expediente["validacion_cientifica"] = dictamen
+        expediente["hipotesis_bloqueada"] = dictamen["hipotesis_bloqueada"]
+
+        # Capa 12 — Gobernanza Científica (último paso del pipeline): sella el
+        # expediente con su huella digital reproducible, integridad y
+        # consistencia. No reinterpreta nada: solo lo hace auditable.
+        huella = generar_huella_digital(expediente, val)
+        expediente["gobernanza"] = {
+            "huella_digital": huella,
+            "integridad": validar_integridad(expediente, huella),
+            "consistencia": verificar_consistencia(expediente, val),
+        }
+        expediente["huella"] = huella["hash"]
+        expediente["version"] = huella["version"]
+
+        expedientes.append(expediente)
+
+    expedientes.sort(
+        key=lambda x: (_ORDEN_SCORING.get(x["scoring"], 9), -x["score_icp"]))
+
+    resumen = {"A": 0, "B": 0, "C": 0}
+    for e in expedientes:
+        resumen[e["scoring"]] = resumen.get(e["scoring"], 0) + 1
+
+    return {
+        "total": len(expedientes[:limite]),
+        "resumen_scoring": resumen,
+        "expedientes": expedientes[:limite],
+    }
+
+
+@app.get("/expedientes")
+def listar_expedientes(
+    categoria: str | None = Query(None),
+    categorias: str | None = Query(None),
+    limite: int = Query(30, ge=1, le=100),
+) -> dict:
+    """Expedientes Vivos: evidencia agrupada por organización + análisis completo.
+
+    Cada expediente incluye todas las evidencias de esa organización, patrones
+    detectados, hipótesis de Dolor Cultural, scoring, Interés Analítico y decisor sugerido.
+    """
+    return _construir_expedientes(_cats_validas(categoria, categorias), limite)
+
+
+# --- Capa 11: Validación Científica del Peritaje Antropológico ---------------
+#
+# Somete la hipótesis de Dolor Cultural de una organización a la batería de
+# controles epistémicos deterministas (trazabilidad, suficiencia, solidez,
+# contradicciones, vacíos, reproducibilidad) y emite el Dictamen Científico.
+# Motor A valida; Motor B decide sobre lo validado.
+
+def _expediente_para_validacion(nombre: str) -> dict:
+    """Construye el expediente completo de UNA organización para validarlo.
+
+    Agrupa TODAS sus evidencias OK (sin el recorte de listado) y corre el
+    análisis determinista. Reutiliza la interpretación de ``analizar`` — no la
+    duplica — y deja las evidencias en la forma que espera la Capa 11.
+    """
+    db = get_db()
+    nombre = (nombre or "").strip()
+    filas = db.fetch_all(
+        "SELECT * FROM evidencias WHERE empresa_mencionada = ? AND estado = ? "
+        "ORDER BY creado_en DESC LIMIT 500",
+        (nombre, ESTADO_OK),
+    )
+
+    keywords_set: set[str] = set()
+    mejor_confianza, mejor_calidad = 0.0, "Baja"
+    categoria, vertical = "", ""
+    evidencias: list[dict] = []
+    for row in filas:
+        kws = _keywords(row)
+        keywords_set.update(kws)
+        if not categoria and row["categoria"]:
+            categoria = row["categoria"]
+        if not vertical:
+            v = sugerir_vertical(row["cita_textual"] or "")
+            if v:
+                vertical = v
+        c = row["confianza"] or 0.0
+        if c > mejor_confianza:
+            mejor_confianza = c
+            mejor_calidad = row["calidad_captura"] or "Baja"
+        evidencias.append({
+            "texto": row["cita_textual"],
+            "fuente": row["nombre_medio"],
+            "fecha": (row["fecha_publicacion"] or "")[:10],
+            "url": row["url_fuente"],
+            "tipo_evento": row["tipo_evento"],
+            "confianza": row["confianza"],
+        })
+
+    all_kws = sorted(keywords_set)
+    a = analizar(all_kws, vertical=vertical, confianza=mejor_confianza,
+                 calidad=mejor_calidad, categoria=categoria)
+
+    return {
+        "nombre": nombre,
+        "categoria": categoria,
+        "vertical": vertical,
+        "scoring": a["scoring"],
+        "score_icp": a["score_icp"],
+        "intensidad": a["intensidad"],
+        "profundidad_dolor": a.get("profundidad_dolor", 0),
+        "viabilidad": a.get("viabilidad", ""),
+        "tipo_deuda": a["tipo_deuda"],
+        "deuda_razon": a["deuda_razon"],
+        "deuda_secundaria": a.get("deuda_secundaria", ""),
+        "senal_dominante": a.get("senal_dominante", ""),
+        "evidencias": evidencias,
+        "total_evidencias": len(evidencias),
+        "patrones": _detectar_patrones(all_kws),
+        "keywords": all_kws,
+    }
+
+
+def _paquete_cientifico(org_nombre: str, fecha: str | None = None) -> tuple[dict, dict, dict]:
+    """Construye (expediente, validación, huella) de una organización.
+
+    Punto único de reutilización para las capas 13–18: evita reconstruir la
+    misma cadena Inferencia→Validación→Gobernanza en cada endpoint.
+    """
+    expediente = _expediente_para_validacion(org_nombre)
+    val = validar_expediente(expediente)
+    huella = generar_huella_digital(expediente, val, fecha or ahora_iso())
+    return expediente, val, huella
+
+
+@app.get("/validacion/{org_nombre}")
+def validacion_cientifica_org(org_nombre: str) -> dict:
+    """Validación Científica completa de la hipótesis de una organización.
+
+    Devuelve el informe detallado (trazabilidad, fechado, suficiencia, solidez,
+    contradicciones, vacíos, reproducibilidad, nivel de evidencia, bloqueo) y el
+    Dictamen Científico con su veredicto. Lectura pública, 100% determinista.
+    """
+    expediente = _expediente_para_validacion(org_nombre)
+    return validar_expediente(expediente)
+
+
+# --- Capa 19: Síntesis Estructural por organización (alerta estructural) -----
+#
+# Reordenamiento determinista de las señales Nivel 1 ya extraídas para que el
+# consumidor (la app Radar) deje de recibir noticias crudas y reciba una
+# estructura mínima: [patrón, tensión/dolor, actores, sustancia] + evidencias.
+# Autorizado por el operador el 2026-08-04 (CLAUDE.md → Frontera de
+# Interpretación). Determinista, grounded, sin IA; NO clasifica Deuda Cultural™.
+
+@app.get("/sintesis/{org_nombre}")
+def sintesis_org(org_nombre: str):
+    """Síntesis Estructural (Capa 19) de una organización.
+
+    Con ``NVIDIA_API_KEY`` configurada intenta enriquecerla con el LLM (NVIDIA
+    NIM); ante cualquier fallo (red, timeout, JSON inválido) o sin clave,
+    degrada a la síntesis determinista. Salida SIEMPRE preliminar, grounded y
+    con ``metodo`` (llm_nvidia | determinista). Nunca colapsa: un fallo
+    inesperado devuelve un error HTTP estructurado.
+    """
+    try:
+        db = get_db()
+        nombre = (org_nombre or "").strip()
+        filas = db.fetch_all(
+            "SELECT * FROM evidencias WHERE empresa_mencionada = ? AND estado = ? "
+            "ORDER BY creado_en DESC LIMIT 500",
+            (nombre, ESTADO_OK),
+        )
+        evidencias = [_row_a_evidencia(r) for r in filas]
+        base = sintetizar(evidencias, nombre)
+        return _sintesis_resuelta(nombre, evidencias, base)
+    except Exception as error:
+        logger.exception("síntesis falló para %s", org_nombre)
+        return JSONResponse(
+            status_code=500,
+            content={
+                "error": {
+                    "tipo": "sintesis",
+                    "org": org_nombre,
+                    "mensaje": str(error),
+                }
+            },
+        )
+
+
+def _sintesis_resuelta(nombre: str, evidencias: list[dict], base: dict) -> dict:
+    """Intenta el LLM de NVIDIA y degrada a la base determinista ante fallos."""
+    if not _nvidia_disponible():
+        base["metodo"] = "determinista"
+        return base
+    try:
+        resultado = _sintetizar_llm(evidencias, nombre)
+        resultado["metodo"] = "llm_nvidia"
+        return resultado
+    except _NvidiaError as error:
+        logger.warning("fallback determinista para %s: %s", nombre, error.mensaje)
+        base["metodo"] = "determinista"
+        base["nota"] = (
+            f"{base['nota']} Fallback determinista: LLM no disponible ({error.mensaje})."
+        )
+        return base
+
+
+# --- Capa 12: Gobernanza Científica, Auditoría Total y Reproducibilidad ------
+#
+# Último paso del pipeline. Garantiza que toda conclusión sea auditable,
+# reproducible y explicable. No genera hipótesis ni reinterpreta: envuelve lo
+# ya producido con huella digital, bitácora, auditoría y certificado. La
+# persistencia en las tablas de gobernanza es idempotente y determinista.
+
+@app.get("/auditoria/{org_nombre}")
+def auditoria_org(org_nombre: str) -> dict:
+    """Auditoría total y reproducible del expediente de una organización.
+
+    Devuelve resumen, historial, versionado, bitácora, cambios, huellas
+    digitales, trazabilidad, integridad, consistencia, reproducibilidad y
+    certificado. Persiste el paquete de gobernanza (idempotente por hash).
+    """
+    expediente = _expediente_para_validacion(org_nombre)
+    val = validar_expediente(expediente)
+    fecha = ahora_iso()
+    auditoria = auditar_expediente(expediente, val, fecha)
+    db = get_db()
+    gobernanza_store.persistir_gobernanza(db, expediente["nombre"], auditoria)
+    # Capa 13 — Memoria Científica: registra una versión inmutable del estado
+    # (idempotente: solo crea versión si el estado científico cambió).
+    huella = auditoria["huellas_digitales"][0]
+    memoria_store.guardar_version(db, expediente["nombre"], expediente, val, huella)
+    return auditoria
+
+
+@app.get("/certificado/{org_nombre}")
+def certificado_org(org_nombre: str) -> dict:
+    """Certificado científico del expediente de una organización.
+
+    Incluye fecha, id, hash, versión, estado, veredicto, nivel de evidencia,
+    nivel de confianza, solidez, suficiencia y firma determinista del Motor.
+    """
+    expediente = _expediente_para_validacion(org_nombre)
+    val = validar_expediente(expediente)
+    fecha = ahora_iso()
+    huella = generar_huella_digital(expediente, val, fecha)
+    certificado = emitir_certificado(expediente, val, huella, fecha)
+    db = get_db()
+    gobernanza_store.persistir_huella(db, expediente["nombre"], huella)
+    gobernanza_store.persistir_certificado(db, expediente["nombre"], certificado)
+    return certificado
+
+
+# --- Capa 13: Memoria Científica (historial longitudinal inmutable) ----------
+#
+# Cada expediente conserva TODAS sus versiones históricas (append-only). Los
+# endpoints de lectura aseguran que exista al menos la versión actual (guardado
+# idempotente por hash) antes de servir el historial.
+
+def _asegurar_version(org_nombre: str) -> tuple[str, "Database"]:
+    exp, val, huella = _paquete_cientifico(org_nombre)
+    db = get_db()
+    memoria_store.guardar_version(db, exp["nombre"], exp, val, huella)
+    return exp["nombre"], db
+
+
+@app.get("/historial/{org_nombre}")
+def historial_org(org_nombre: str) -> dict:
+    """Historial científico completo: timeline, evolución, cambios y versiones."""
+    nombre, db = _asegurar_version(org_nombre)
+    versiones = memoria_store.recuperar_historial(db, nombre)
+    return emitir_historial(nombre, versiones)
+
+
+@app.get("/timeline/{org_nombre}")
+def timeline_org(org_nombre: str) -> dict:
+    """Línea temporal científica de una organización (una entrada por versión)."""
+    nombre, db = _asegurar_version(org_nombre)
+    versiones = memoria_store.recuperar_historial(db, nombre)
+    return {"org": nombre, "total": len(versiones),
+            "timeline": construir_timeline(versiones)}
+
+
+@app.get("/versiones/{org_nombre}")
+def versiones_org(org_nombre: str) -> dict:
+    """Todas las versiones históricas inmutables de una organización."""
+    nombre, db = _asegurar_version(org_nombre)
+    versiones = memoria_store.recuperar_historial(db, nombre)
+    return {"org": nombre, "total": len(versiones), "versiones": versiones}
+
+
+# --- Capa 14: Comparador Temporal y Ecosistémico -----------------------------
+#
+# Compara organizaciones, ecosistemas (verticales), periodos y patrones. Nunca
+# interpreta: solo contrasta estructuras ya producidas.
+
+@app.get("/comparar")
+def comparar(a: str = Query(..., description="Organización A"),
+             b: str = Query(..., description="Organización B")) -> dict:
+    """Compara dos organizaciones campo a campo (más matriz de ambas)."""
+    exp_a = _expediente_para_validacion(a)
+    exp_b = _expediente_para_validacion(b)
+    return {
+        "comparacion": comparar_organizaciones(exp_a, exp_b),
+        "matriz": generar_matriz([exp_a, exp_b]),
+    }
+
+
+@app.get("/ecosistema/comparar")
+def ecosistema_comparar(a: str = Query(..., description="Vertical A"),
+                        b: str = Query(..., description="Vertical B")) -> dict:
+    """Compara dos ecosistemas (verticales) por agregados deterministas."""
+    todos = _construir_expedientes(None, limite=500)["expedientes"]
+    va = (a or "").strip().lower()
+    vb = (b or "").strip().lower()
+    exps_a = [e for e in todos if (e.get("vertical") or "").lower() == va]
+    exps_b = [e for e in todos if (e.get("vertical") or "").lower() == vb]
+    return comparar_ecosistemas(exps_a, exps_b, a, b)
+
+
+@app.get("/periodos")
+def periodos(org: str = Query(..., description="Organización"),
+             corte: str = Query(..., description="Fecha de corte ISO (YYYY-MM-DD)")) -> dict:
+    """Compara la evidencia de una organización antes y después de una fecha."""
+    exp = _expediente_para_validacion(org)
+    return comparar_periodos(exp, corte)
+
+
+# --- Capa 15: Motor Predictivo Antropológico ---------------------------------
+#
+# Trayectorias culturales futuras por reglas deterministas sobre evidencia
+# histórica. Sin IA, sin modelos opacos, sin aleatoriedad.
+
+@app.get("/proyeccion/{org_nombre}")
+def proyeccion_org(org_nombre: str) -> dict:
+    """Proyección antropológica: tendencia, estabilidad, volatilidad, riesgo,
+    madurez, inflexiones y escenarios, a partir de la evidencia histórica."""
+    exp = _expediente_para_validacion(org_nombre)
+    return emitir_proyeccion(exp)
+
+
+@app.get("/escenarios/{org_nombre}")
+def escenarios_org(org_nombre: str) -> dict:
+    """Escenarios (base/optimista/pesimista) del siguiente periodo."""
+    exp = _expediente_para_validacion(org_nombre)
+    serie = serie_temporal(exp)
+    return {
+        "org": exp["nombre"],
+        "serie": serie,
+        "tendencia": calcular_tendencia(serie["valores"]),
+        "volatilidad": calcular_volatilidad(serie["valores"]),
+        "escenarios": proyectar_escenarios(serie["valores"]),
+    }
+
+
+# --- Capa 16: Observatorio LATAM (inteligencia ecosistémica) -----------------
+#
+# De la organización individual al ecosistema: regiones, verticales, países.
+# Agregación determinista sobre expedientes ya producidos.
+
+def _menciona(exp: dict, termino: str) -> bool:
+    """True si alguna evidencia del expediente menciona el término (sin acentos)."""
+    t = _sin_acentos((termino or "").lower())
+    for ev in exp.get("evidencias", []) or []:
+        texto = ev.get("texto") or ev.get("cita_textual") or ""
+        if t in _sin_acentos(texto.lower()):
+            return True
+    return False
+
+
+@app.get("/latam")
+def latam() -> dict:
+    """Reporte ecosistémico LATAM completo (todas las organizaciones)."""
+    exps = _construir_expedientes(None, limite=500)["expedientes"]
+    return emitir_reporte_regional(exps, "LATAM")
+
+
+@app.get("/latam/{pais}")
+def latam_pais(pais: str) -> dict:
+    """Reporte ecosistémico de un país (evidencia que lo menciona)."""
+    exps = _construir_expedientes(None, limite=500)["expedientes"]
+    filtrados = [e for e in exps if _menciona(e, pais)]
+    return emitir_reporte_regional(filtrados, pais)
+
+
+@app.get("/vertical/{nombre}")
+def vertical_reporte(nombre: str) -> dict:
+    """Análisis ecosistémico de una vertical (fintech, edtech, ...)."""
+    exps = _construir_expedientes(None, limite=500)["expedientes"]
+    v = (nombre or "").strip().lower()
+    filtrados = [e for e in exps if (e.get("vertical") or "").lower() == v]
+    return {
+        "analisis": analizar_vertical(exps, nombre),
+        "reporte": emitir_reporte_regional(filtrados, f"vertical:{nombre}"),
+    }
+
+
+# --- Cutover Arquitectura 1.0: inteligencia ecosistémica en JSON para RadarHD --
+#
+# Motor A expone toda la inteligencia que RadarHD calculaba localmente. Todo
+# determinista (reutiliza análisis, validación, dictamen, predictivo). Sin IA.
+
+def _todos_expedientes(limite: int = 500) -> list[dict]:
+    return _construir_expedientes(None, limite=limite)["expedientes"]
+
+
+@app.get("/ecosistema")
+def ecosistema(limite: int = Query(10, ge=1, le=100)) -> dict:
+    """Panorama ecosistémico completo (JSON): indicadores, clusters, outliers,
+    centinelas, riesgos culturales, madurez, calidad del corpus, ranking,
+    oportunidades y prioridades. Reemplaza el cálculo local de RadarHD."""
+    return panorama_ecosistemico(_todos_expedientes(), limite)
+
+
+@app.get("/ecosistema/panel")
+def ecosistema_panel() -> dict:
+    """Panel ecosistémico con paridad de forma con RadarHD (interfaz Dashboard).
+
+    Permite que RadarHD redirija /api/radar/ecosistema/dashboard a Motor A sin
+    romper la UI. Determinista; `generado_en`/`cacheado` son metadatos de servicio.
+    """
+    panel = panel_ecosistemico(_todos_expedientes())
+    return {"generado_en": ahora_iso(), "cacheado": False, **panel}
+
+
+@app.get("/ecosistema/clusters")
+def ecosistema_clusters() -> dict:
+    """Clusters de organizaciones por deuda cultural + vertical (determinista)."""
+    clusters = detectar_clusters(_todos_expedientes())
+    return {"total": len(clusters), "clusters": clusters}
+
+
+@app.get("/ecosistema/outliers")
+def ecosistema_outliers() -> dict:
+    """Organizaciones atípicas del ecosistema (reglas deterministas)."""
+    outliers = detectar_outliers(_todos_expedientes())
+    return {"total": len(outliers), "outliers": outliers}
+
+
+@app.get("/ecosistema/centinelas")
+def ecosistema_centinelas() -> dict:
+    """Organizaciones-centinela: dolor profundo emergente que merece vigilancia."""
+    centinelas = detectar_centinelas(_todos_expedientes())
+    return {"total": len(centinelas), "centinelas": centinelas}
+
+
+@app.get("/ecosistema/riesgos")
+def ecosistema_riesgos(limite: int = Query(10, ge=1, le=100)) -> dict:
+    """Riesgos culturales agregados del ecosistema."""
+    return riesgos_culturales(_todos_expedientes(), limite)
+
+
+@app.get("/ecosistema/madurez")
+def ecosistema_madurez() -> dict:
+    """Madurez agregada del ecosistema."""
+    return madurez_ecosistema(_todos_expedientes())
+
+
+@app.get("/calidad-corpus")
+def endpoint_calidad_corpus() -> dict:
+    """Calidad del corpus agregado (fechado, fuentes, confianza, cobertura)."""
+    return calidad_corpus(_todos_expedientes())
+
+
+@app.get("/ranking")
+def ranking_hd_endpoint(limite: int = Query(10, ge=1, le=100)) -> dict:
+    """Ranking HD reutilizable: TOP organizaciones con prioridad, motivo,
+    evidencias y nivel de confianza. Reutiliza el ranking del Dictamen."""
+    r = ranking_hd(_todos_expedientes(), limite)
+    return {"total": len(r), "ranking": r}
+
+
+@app.get("/oportunidades")
+def oportunidades_endpoint(limite: int = Query(10, ge=1, le=100)) -> dict:
+    """Oportunidades de investigación (analíticas, sin recomendación comercial):
+    por qué, para quién, con qué evidencia y nivel de confianza."""
+    ops = oportunidades(_todos_expedientes(), limite)
+    return {"total": len(ops), "oportunidades": ops}
+
+
+@app.get("/prioridades")
+def prioridades_endpoint(limite: int = Query(10, ge=1, le=100)) -> dict:
+    """Prioridades HD: hipótesis validadas primero, luego por score compuesto."""
+    p = prioridades(_todos_expedientes(), limite)
+    return {"total": len(p), "prioridades": p}
+
+
+# --- Cutover Arquitectura 1.0: Expediente Vivo (paridad de forma para RadarHD) -
+#
+# Motor A emite las MISMAS formas que consumen los componentes tipados de RadarHD
+# para el "Radar de Organizaciones Observadas": OrganizacionObservada (listado),
+# Dossier (detalle) y Drift. Todo determinista. Los IDs de organización son
+# enteros estables (orden alfabético), compartidos entre listado y detalle.
+# Los campos comerciales (recomendación, dictamen pericial) son de Motor C y
+# viajan null: Motor A no decide ni ejecuta acción comercial (ADR-0001).
+
+@app.get("/organizaciones")
+def organizaciones_listado() -> dict:
+    """Expediente Vivo (listado): OrganizacionObservada[] con la forma exacta de
+    RadarHD. Permite redirigir GET /api/radar/organizaciones a Motor A sin
+    romper la UI. generado_en es metadato; el resto es determinista."""
+    return {"generado_en": ahora_iso(), **_exp_vivo.listado(_todos_expedientes())}
+
+
+@app.get("/organizaciones/{org_id}")
+def organizacion_detalle(org_id: int) -> dict:
+    """Expediente Vivo (detalle/Dossier) por id numérico determinista. Incluye
+    cadena de evidencia, fuentes y contexto ecosistémico. Onlife se resuelve
+    contra las señales onlife ya observadas; comercial (Motor C) va null."""
+    exps = _todos_expedientes()
+    nombre = _exp_vivo.nombre_de(exps, org_id)
+    tiene_onlife = bool(nombre) and _onlife.analisis_onlife(nombre).get("detectado", False)
+    d = _exp_vivo.detalle(exps, org_id, tiene_analisis_onlife=tiene_onlife)
+    if d is None:
+        raise HTTPException(404, "Organización no encontrada.")
+    return d
+
+
+@app.get("/organizaciones/{org_id}/drift")
+def organizacion_drift(org_id: int) -> dict:
+    """Drift narrativo por id numérico determinista, forma Drift de RadarHD.
+    Permite redirigir GET /api/radar/drift/{id} a Motor A sin romper la UI."""
+    d = _exp_vivo.drift(_todos_expedientes(), org_id)
+    if d is None:
+        raise HTTPException(404, "Organización no encontrada.")
+    return d
+
+
+# --- Capa 17: Publicador Científico ------------------------------------------
+#
+# Documentación científica (peritaje, informe, PDF) desde evidencia validada.
+# Nunca inventa: cada campo proviene del expediente, su validación y gobernanza.
+
+def _peritaje_de(org_nombre: str) -> dict:
+    exp, val, huella = _paquete_cientifico(org_nombre)
+    certificado = emitir_certificado(exp, val, huella, huella["fecha"])
+    return generar_peritaje(exp, val, huella, certificado)
+
+
+@app.get("/publicar/peritaje/{org_nombre}")
+def publicar_peritaje(org_nombre: str,
+                      formato: str = Query("json", description="json|csv|html")) -> Response:
+    """Peritaje científico firmado (formato json por defecto, o csv/html)."""
+    peritaje = _peritaje_de(org_nombre)
+    if formato == "csv":
+        return Response(generar_csv(peritaje), media_type="text/csv")
+    if formato == "html":
+        return HTMLResponse(generar_html(peritaje))
+    return Response(json.dumps(peritaje, ensure_ascii=False),
+                    media_type="application/json")
+
+
+@app.get("/publicar/informe/{org_nombre}")
+def publicar_informe(org_nombre: str) -> dict:
+    """Informe científico agregado centrado en una organización (firmado)."""
+    exp = _expediente_para_validacion(org_nombre)
+    return generar_informe([exp], titulo=f"Informe · {exp['nombre']}",
+                           vertical=exp.get("vertical", ""))
+
+
+@app.get("/publicar/pdf/{org_nombre}")
+def publicar_pdf(org_nombre: str) -> HTMLResponse:
+    """Peritaje en HTML imprimible como PDF (convención del repo)."""
+    return HTMLResponse(generar_pdf(_peritaje_de(org_nombre)))
+
+
+# --- Capa 18: Sistema Operativo del Laboratorio ------------------------------
+#
+# Integra todas las capas en un único flujo operativo: dashboard maestro con el
+# estado de motores, corpus, pipeline, validación, gobernanza y observatorio.
+
+def _count(db, tabla: str, where: str = "") -> int:
+    sql = f"SELECT COUNT(*) AS c FROM {tabla}"
+    if where:
+        sql += f" WHERE {where}"
+    row = db.fetch_one(sql)
+    return int(row["c"]) if row else 0
+
+
+def _conteos_laboratorio(db) -> dict:
+    return {
+        "evidencias_total": _count(db, "evidencias"),
+        "evidencias_ok": _count(db, "evidencias", "estado = 'ok'"),
+        "evidencias_no_fechado": _count(
+            db, "evidencias", "fecha_publicacion IS NULL OR fecha_publicacion = ''"),
+        "rechazos": _count(db, "rechazos"),
+        "prospectos": _count(db, "prospectos"),
+        "jobs": _count(db, "jobs"),
+        "pipeline_comercial": _count(db, "pipeline_comercial"),
+        "huellas": _count(db, "huellas_digitales"),
+        "certificados": _count(db, "certificados"),
+        "auditorias": _count(db, "auditoria_expedientes"),
+        "memoria": _count(db, "memoria_cientifica"),
+        "bitacora": _count(db, "bitacora_decisiones"),
+    }
+
+
+def _laboratorio_completo() -> dict:
+    db = get_db()
+    conteos = _conteos_laboratorio(db)
+    expedientes = _construir_expedientes(None, limite=500)["expedientes"]
+    corpus = estado_corpus(conteos)
+    validacion = estado_validacion(expedientes)
+    gobernanza = estado_gobernanza(conteos)
+    observatorio = estado_observatorio(expedientes)
+    return {
+        "general": estado_general(corpus, validacion, gobernanza, observatorio),
+        "capas": estado_capas(),
+        "corpus": corpus,
+        "pipeline": estado_pipeline(conteos),
+        "validacion": validacion,
+        "gobernanza": gobernanza,
+        "observatorio": observatorio,
+    }
+
+
+@app.get("/laboratorio")
+def laboratorio() -> dict:
+    """Dashboard maestro del laboratorio: estado integral de todas las capas."""
+    return _laboratorio_completo()
+
+
+@app.get("/estado")
+def estado() -> dict:
+    """Estado general del laboratorio (resumen ejecutivo)."""
+    return _laboratorio_completo()["general"]
+
+
+@app.get("/dashboard", response_class=HTMLResponse)
+def dashboard() -> HTMLResponse:
+    """Dashboard maestro en HTML (estado de motores, corpus, capas, validación)."""
+    lab = _laboratorio_completo()
+    g, corpus, val, gob = lab["general"], lab["corpus"], lab["validacion"], lab["gobernanza"]
+    capas_rows = "".join(
+        f"<tr><td>{c['numero']}</td><td>{_esc(c['nombre'])}</td>"
+        f"<td>{_esc(c['estado'])}</td></tr>" for c in lab["capas"]["capas"])
+    ver_rows = "".join(
+        f"<tr><td>{_esc(k)}</td><td>{v}</td></tr>"
+        for k, v in val["distribucion_veredicto"].items()) or "<tr><td>—</td><td>0</td></tr>"
+    html = f"""<!doctype html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Laboratorio · Antrosapiens</title>
+<style>body{{font-family:system-ui;max-width:900px;margin:2rem auto;padding:0 1rem}}
+h1{{border-bottom:3px solid #2563eb;padding-bottom:.3rem}}
+h2{{color:#2563eb;margin-top:1.5rem}} table{{width:100%;border-collapse:collapse}}
+th,td{{text-align:left;padding:.35rem .5rem;border-bottom:1px solid #e5e7eb}}
+.pill{{display:inline-block;padding:.2rem .6rem;border-radius:.4rem;background:#dbeafe;color:#2563eb;font-weight:700}}</style>
+</head><body>
+<h1>Sistema Operativo del Laboratorio · {_esc(g['motor'])}</h1>
+<p><span class="pill">Estado: {_esc(g['estado'])}</span>
+<span class="pill">{_esc(g['estado_metodologico'])}</span>
+<span class="pill">{_esc(g['estado_cientifico'])}</span></p>
+<h2>Motores</h2><table>
+<tr><td>Motor A</td><td>{_esc(g['motores']['A'])}</td></tr>
+<tr><td>Motor B</td><td>{_esc(g['motores']['B'])}</td></tr>
+<tr><td>Motor C</td><td>{_esc(g['motores']['C'])}</td></tr></table>
+<h2>Corpus</h2><table>
+<tr><td>Evidencias</td><td>{corpus['evidencias_total']}</td></tr>
+<tr><td>Consumibles (ok)</td><td>{corpus['evidencias_ok']}</td></tr>
+<tr><td>Rechazos</td><td>{corpus['rechazos']}</td></tr>
+<tr><td>Prospectos</td><td>{corpus['prospectos']}</td></tr></table>
+<h2>Validación Científica</h2><table><tr><th>Veredicto</th><th>Expedientes</th></tr>{ver_rows}</table>
+<h2>Gobernanza</h2><table>
+<tr><td>Huellas digitales</td><td>{gob['huellas_digitales']}</td></tr>
+<tr><td>Certificados</td><td>{gob['certificados']}</td></tr>
+<tr><td>Auditorías</td><td>{gob['auditorias']}</td></tr>
+<tr><td>Versiones en memoria</td><td>{gob['versiones_memoria']}</td></tr></table>
+<h2>Capas ({lab['capas']['operativas']}/{lab['capas']['total']} operativas)</h2>
+<table><tr><th>#</th><th>Capa</th><th>Estado</th></tr>{capas_rows}</table>
+</body></html>"""
+    return HTMLResponse(html)
+
+
+# --- Capa 6: Motor de Drift Narrativo (endpoints) --------------------------
+
+
+class DriftCapturarIn(BaseModel):
+    org_nombre: str
+    sitio_web: str
+
+
+@app.post("/drift/capturar")
+def drift_capturar(payload: DriftCapturarIn,
+                   x_ingest_token: Optional[str] = Header(None)) -> dict:
+    """Captura snapshots del discurso público de una organización.
+
+    Descarga las páginas públicas (homepage, about, misión, propuesta de valor,
+    manifiesto), limpia el HTML y almacena el texto. Si existe un snapshot
+    anterior, compara y genera evidencias narrativas. Autenticado (escribe).
+    """
+    _exigir_token(x_ingest_token)
+    nombre = payload.org_nombre.strip()
+    sitio = payload.sitio_web.strip()
+    if not nombre:
+        raise HTTPException(400, "org_nombre vacío")
+    if not sitio:
+        raise HTTPException(400, "sitio_web vacío")
+
+    with httpx.Client(timeout=settings.request_timeout_s,
+                      headers={"User-Agent": settings.user_agent},
+                      follow_redirects=True) as client:
+        def http_get(url: str) -> str:
+            r = client.get(url)
+            r.raise_for_status()
+            return r.text
+
+        snapshots = _drift.capturar_snapshot(nombre, sitio, http_get)
+
+    total_evidencias = 0
+    for snap in snapshots:
+        if snap.get("estado") != "ok" or not snap.get("id"):
+            continue
+        anterior = _drift.obtener_snapshot_anterior(
+            nombre, snap["tipo_pagina"], snap["id"])
+        if anterior is None:
+            continue
+        actual_row = get_db().fetch_one(
+            "SELECT * FROM drift_snapshots WHERE id = ?", (snap["id"],))
+        if not actual_row:
+            continue
+        evidencias = _drift_compare.comparar(dict(anterior), dict(actual_row))
+        if evidencias:
+            total_evidencias += _drift_compare.persistir_evidencias(evidencias)
+
+    return {
+        "org_nombre": nombre,
+        "sitio_web": sitio,
+        "snapshots": snapshots,
+        "total_snapshots": len(snapshots),
+        "evidencias_nuevas": total_evidencias,
+    }
+
+
+@app.get("/drift/{org_nombre}")
+def drift_timeline(org_nombre: str) -> dict:
+    """Timeline completo del drift narrativo de una organización.
+
+    Devuelve todos los snapshots y evidencias narrativas, ordenados
+    cronológicamente. Lectura pública.
+    """
+    return _drift.obtener_timeline(org_nombre)
+
+
+# --- Capa 7: Motor Onlife (endpoints) ----------------------------------------
+
+
+class OnlifeObservarIn(BaseModel):
+    org_nombre: str
+    org_github: Optional[str] = None
+    feed_url: Optional[str] = None
+
+
+@app.post("/onlife/observar")
+def onlife_observar(payload: OnlifeObservarIn,
+                    x_ingest_token: Optional[str] = Header(None)) -> dict:
+    """Observa comportamiento organizacional en espacios digitales.
+
+    Recorre fuentes onlife (GitHub, Hacker News, blog/changelog) y registra
+    señales conductuales. Autenticado (escribe).
+    """
+    _exigir_token(x_ingest_token)
+    nombre = payload.org_nombre.strip()
+    if not nombre:
+        raise HTTPException(400, "org_nombre vacío")
+
+    with httpx.Client(timeout=settings.request_timeout_s,
+                      headers={"User-Agent": settings.user_agent},
+                      follow_redirects=True) as client:
+        def http_get(url: str) -> str:
+            r = client.get(url)
+            r.raise_for_status()
+            return r.text
+
+        señales = _onlife.observar(
+            nombre, http_get,
+            org_github=payload.org_github.strip() if payload.org_github else None,
+            feed_url=payload.feed_url.strip() if payload.feed_url else None,
+        )
+
+    nuevas = _onlife.persistir_señales(señales) if señales else 0
+
+    return {
+        "org_nombre": nombre,
+        "total_señales": len(señales),
+        "señales_nuevas": nuevas,
+        "fuentes": list({s["fuente"] for s in señales}),
+        "señales": señales,
+    }
+
+
+@app.get("/onlife/{org_nombre}")
+def onlife_perfil(org_nombre: str) -> dict:
+    """Perfil onlife completo de una organización. Lectura pública."""
+    return _onlife.obtener_perfil(org_nombre)
+
+
+@app.get("/onlife/{org_nombre}/analisis")
+def onlife_analisis(org_nombre: str) -> dict:
+    """Análisis Onlife con paridad de forma para RadarHD (RespuestaOnlife).
+
+    Permite redirigir /api/radar/onlife/{org} a Motor A sin romper la UI. Sin
+    señales ⇒ {detectado:false}. Determinista; sin observación de campo inventada.
+    """
+    return _onlife.analisis_onlife(org_nombre)
+
+
+# --- Fase 4: DolorMap Visual (vista consolidada por organización) -------------
+
+
+@app.get("/dolormap/{org_nombre}")
+def dolormap(org_nombre: str) -> dict:
+    """DolorMap: vista consolidada de todas las capas para una organización.
+
+    Integra evidencias, drift narrativo, señales onlife, pipeline comercial
+    y análisis determinista en un solo expediente completo. Lectura pública.
+    """
+    db = get_db()
+    nombre = org_nombre.strip()
+
+    evidencias = db.fetch_all(
+        "SELECT * FROM evidencias WHERE empresa_mencionada = ? AND estado = ? "
+        "ORDER BY creado_en DESC LIMIT 50",
+        (nombre, ESTADO_OK),
+    )
+    ev_list = [dict(e) for e in evidencias]
+
+    all_kws: list[str] = []
+    for ev in ev_list:
+        all_kws.extend(_keywords(ev))
+    all_kws = sorted(set(all_kws))
+
+    a = analizar(all_kws, vertical="", confianza=0.5)
+    patrones = _detectar_patrones(all_kws)
+
+    drift_data = _drift.obtener_timeline(nombre)
+
+    onlife_data = _onlife.obtener_perfil(nombre)
+
+    pipeline_data = _pipeline.obtener_pipeline(nombre)
+
+    contacto = None
+    if ev_list:
+        primer_url = ev_list[0].get("url_fuente", "")
+        dom = dominio_de(primer_url) if primer_url else None
+        if dom:
+            contacto = {
+                "dominio": dom,
+                "rutas": rutas_contacto(dom),
+            }
+
+    return {
+        "org_nombre": nombre,
+        "scoring": a["scoring"],
+        "score_icp": a["score_icp"],
+        "tipo_deuda": a["tipo_deuda"],
+        "deuda_razon": a["deuda_razon"],
+        "deuda_secundaria": a.get("deuda_secundaria", ""),
+        "intensidad": a["intensidad"],
+        "angulo_conversacion": a["angulo_conversacion"],
+        "decisor_sugerido": a["decisor_sugerido"],
+        "senal_dominante": a.get("senal_dominante", ""),
+        "keywords": all_kws,
+        "patrones": patrones,
+        "evidencias": {
+            "total": len(ev_list),
+            "items": ev_list[:20],
+        },
+        "drift": {
+            "total_snapshots": drift_data["total_snapshots"],
+            "total_evidencias": drift_data["total_evidencias"],
+            "evidencias": drift_data["evidencias"][:10],
+            "snapshots": drift_data["snapshots"][:10],
+        },
+        "onlife": {
+            "total_señales": onlife_data["total_señales"],
+            "por_fuente": onlife_data["por_fuente"],
+            "señales": onlife_data["señales"][:10],
+        },
+        "pipeline": {
+            "etapa": pipeline_data["etapa"] if pipeline_data else None,
+            "etapa_label": pipeline_data["etapa_label"] if pipeline_data else None,
+            "transiciones": pipeline_data["transiciones"][:5] if pipeline_data else [],
+        },
+        "contacto": contacto,
+        "linkedin": linkedin_search_url(nombre),
+        "google": google_search_url(nombre),
+    }
+
+
+# --- Dossier de Inteligencia (reporte HTML imprimible por organización) --------
+
+def _dossier_json(org_nombre: str) -> dict:
+    """Dossier COMPLETO en JSON — fuente única de inteligencia para RadarHD.
+
+    Compone TODA la inteligencia (determinista) reutilizando dolormap, validación
+    (C11), gobernanza/auditoría (C12), curaduría (C10), dictamen (ranking) y
+    observatorio (clusters/outliers/contexto). No recalcula nada nuevo.
+    """
+    data = dolormap(org_nombre)
+    nombre = data["org_nombre"]
+    exp = _expediente_para_validacion(org_nombre)
+    fecha = ahora_iso()
+    val = validar_expediente(exp)
+    huella = generar_huella_digital(exp, val, fecha)
+    aud = auditar_expediente(exp, val, fecha)
+    cert = emitir_certificado(exp, val, huella, fecha)
+    cur = curar([exp], query=nombre)
+    dic = val["dictamen_cientifico"]
+
+    todos = _todos_expedientes()
+    ranking = ranking_hd(todos, len(todos))
+    pos = next((r for r in ranking if r["nombre"] == nombre), None)
+    contexto = contexto_ecosistemico(nombre, todos)
+    clusters_rel = contexto.get("cluster")
+    outliers_rel = [o for o in detectar_outliers(todos) if o["nombre"] == nombre]
+
+    return {
+        "org": nombre,
+        "contrato": "motor_a.dossier.v1",
+        "resumen_ejecutivo": {
+            "scoring": data["scoring"], "score_icp": data["score_icp"],
+            "veredicto": dic["veredicto"], "nivel_evidencia": dic["nivel_evidencia"],
+            "hipotesis_bloqueada": dic["hipotesis_bloqueada"],
+            "total_evidencias": data["evidencias"]["total"],
+        },
+        "narrativa_dominante": cur.get("narrativa", ""),
+        "hipotesis_central": data["tipo_deuda"],
+        "clasificacion_deuda_cultural": {
+            "tipo_deuda": data["tipo_deuda"], "razon": data["deuda_razon"],
+            "deuda_secundaria": data.get("deuda_secundaria", ""),
+            "senal_dominante": data.get("senal_dominante", ""),
+        },
+        "nivel_confianza": cert["nivel_confianza"],
+        "calidad_evidencia": val["fechado"],
+        "profundidad_friccion": exp.get("profundidad_dolor", 0),
+        "patrones": data["patrones"],
+        "contradicciones": val["contradicciones"],
+        "vacios": val["vacios"],
+        "drift": data["drift"],
+        "onlife": data["onlife"],
+        "dolormap": {
+            "keywords": data["keywords"], "intensidad": data["intensidad"],
+            "angulo_conversacion": data["angulo_conversacion"],
+            "decisor_sugerido": data["decisor_sugerido"],
+        },
+        "validacion_cientifica": val,
+        "gobernanza": {"huella_digital": huella, "integridad": aud["integridad"],
+                       "consistencia": aud["consistencia"], "certificado": cert},
+        "auditoria": aud["resumen"],
+        "cronologia": aud["historial"],
+        "cadena_evidencia": {"trazabilidad": val["trazabilidad"],
+                             "reproducibilidad": val["reproducibilidad"]},
+        "fuentes": sorted({(ev.get("fuente") or "") for ev in exp.get("evidencias", [])} - {""}),
+        "clusters_relacionados": clusters_rel,
+        "outliers_relacionados": outliers_rel,
+        "contexto_ecosistemico": {
+            "indicadores": contexto["indicadores_ecosistema"],
+            "tensiones": contexto["tensiones_ecosistema"],
+            "es_outlier": contexto["es_outlier"],
+            "es_centinela": contexto["es_centinela"],
+        },
+        "ranking": pos,
+        "prioridad_hd": (pos or {}).get("prioridad", ""),
+        "estado_pipeline": data["pipeline"],
+    }
+
+
+@app.get("/dossier/{org_nombre}")
+def dossier_org(org_nombre: str,
+                formato: str = Query("html", description="html|json")) -> Response:
+    """Dossier de inteligencia completo para una organización.
+
+    - `formato=html` (def.): documento HTML imprimible como PDF (compatibilidad).
+    - `formato=json`: dossier COMPLETO en JSON (fuente única para RadarHD).
+    """
+    if formato == "json":
+        return JSONResponse(_dossier_json(org_nombre))
+    data = dolormap(org_nombre)
+    nombre = data["org_nombre"]
+    a = data
+
+    html = f"""<!doctype html>
+<html lang="es"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dossier · {_esc(nombre)}</title>
+<style>
+  @media print {{ @page {{ margin: 1.5cm; }} }}
+  :root {{ color-scheme: light; }}
+  * {{ box-sizing: border-box; }}
+  body {{ font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 2rem;
+         max-width: 800px; margin-inline: auto; line-height: 1.5; color: #1a1a1a; }}
+  h1 {{ font-size: 1.5rem; margin: 0 0 .3rem; border-bottom: 3px solid #2563eb; padding-bottom: .3rem; }}
+  h2 {{ font-size: 1.1rem; margin: 1.5rem 0 .4rem; color: #2563eb; }}
+  h3 {{ font-size: .95rem; margin: 1rem 0 .3rem; }}
+  .sub {{ opacity: .7; font-size: .85rem; margin: .2rem 0 1.2rem; }}
+  .badge {{ display: inline-block; padding: .2rem .5rem; border-radius: .3rem; font-size: .8rem; font-weight: 700; }}
+  .badge-a {{ background: #dc2626; color: #fff; }}
+  .badge-b {{ background: #f59e0b; color: #000; }}
+  .badge-c {{ background: #6b7280; color: #fff; }}
+  .badge-interes {{ background: #dbeafe; color: #2563eb; }}
+  .meta {{ font-size: .82rem; opacity: .7; }}
+  .section {{ border: 1px solid #e5e7eb; border-radius: .5rem; padding: .8rem; margin: .6rem 0; }}
+  .section-purple {{ border-left: 4px solid #7c3aed; }}
+  .section-red {{ border-left: 4px solid #dc2626; }}
+  .section-blue {{ border-left: 4px solid #2563eb; }}
+  .section-green {{ border-left: 4px solid #16a34a; }}
+  .ev {{ border-left: 2px solid #d1d5db; padding: .3rem .5rem; margin: .4rem 0; font-size: .85rem; }}
+  table {{ width: 100%; border-collapse: collapse; font-size: .85rem; }}
+  th, td {{ text-align: left; padding: .4rem .5rem; border-bottom: 1px solid #e5e7eb; }}
+  th {{ font-weight: 600; }}
+  .footer {{ margin-top: 2rem; padding-top: .5rem; border-top: 1px solid #e5e7eb;
+             font-size: .78rem; opacity: .6; text-align: center; }}
+</style></head><body>
+<h1>Dossier de Inteligencia · {_esc(nombre)}</h1>
+<div class="sub">Generado por hd-prospector · Radar de Inteligencia Antropológica · {ahora_iso()[:16].replace('T', ' ')}</div>
+
+<div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin-bottom:1rem">
+  <span class="badge badge-{a['scoring'].lower()}">{a['scoring']}</span>
+  <span class="badge" style="background:#dbeafe;color:#2563eb">Interés {a['score_icp']}</span>
+  <span class="badge" style="background:#f3e8ff;color:#7c3aed">{_esc(a['intensidad'])}</span>
+  {('<span class="badge" style="background:#f0fdf4;color:#16a34a">' + _esc(a['pipeline']['etapa_label']) + '</span>') if a['pipeline'].get('etapa_label') else ''}
+</div>
+"""
+
+    # Dolor Cultural
+    if a.get("tipo_deuda"):
+        html += f"""<div class="section section-purple">
+<h2>Hipótesis de Dolor Cultural™</h2>
+<h3>Hipótesis: {_esc(a['tipo_deuda'])}</h3>
+<p>{_esc(a['deuda_razon'])}</p>
+{('<p class="meta">Deuda secundaria: ' + _esc(a['deuda_secundaria']) + '</p>') if a.get('deuda_secundaria') else ''}
+<p><b>Ángulo de conversación:</b> {_esc(a['angulo_conversacion'])}</p>
+<p><b>Decisor sugerido:</b> {_esc(a['decisor_sugerido'])}</p>
+<p><b>Señal dominante:</b> {_esc(a['senal_dominante'])}</p>
+</div>"""
+
+    # Patrones
+    if a.get("patrones"):
+        html += '<div class="section section-red"><h2>Patrones detectados</h2>'
+        for p in a["patrones"]:
+            html += f'<div class="ev"><b>{_esc(p["patron"])}</b><br><span class="meta">{_esc(p["razonamiento"])}</span></div>'
+        html += '</div>'
+
+    # Keywords
+    if a.get("keywords"):
+        html += '<div class="section"><h2>Señales clave</h2><p>'
+        html += ' · '.join(f'<b>{_esc(k)}</b>' for k in a["keywords"])
+        html += '</p></div>'
+
+    # Preguntas antropológicas
+    preguntas = _preguntas_antropologicas(a)
+    html += '<div class="section section-blue"><h2>Preguntas antropológicas para la reunión</h2><ol>'
+    for p in preguntas:
+        html += f'<li>{_esc(p)}</li>'
+    html += '</ol></div>'
+
+    # Evidencias
+    ev_data = a.get("evidencias", {})
+    html += f'<div class="section"><h2>Evidencias ({ev_data.get("total", 0)})</h2>'
+    for ev in ev_data.get("items", [])[:15]:
+        fecha = (ev.get("creado_en") or "")[:10]
+        html += f'<div class="ev">{_esc((ev.get("cita_textual") or "")[:200])}<br><span class="meta">{_esc(ev.get("nombre_medio", ""))} · {fecha}</span></div>'
+    html += '</div>'
+
+    # Drift
+    drift = a.get("drift", {})
+    if drift.get("total_evidencias", 0) > 0:
+        html += f'<div class="section section-purple"><h2>Drift Narrativo ({drift["total_evidencias"]} cambios)</h2>'
+        ICONOS = {"posicionamiento": "Posicionamiento", "audiencia": "Audiencia",
+                  "lenguaje": "Lenguaje", "identidad": "Identidad",
+                  "concepto_nuevo": "Concepto nuevo", "concepto_eliminado": "Concepto eliminado",
+                  "contradiccion": "Contradicción", "cambio_ontologico": "Cambio ontológico"}
+        for dev in drift.get("evidencias", []):
+            tc = ICONOS.get(dev.get("tipo_cambio", ""), dev.get("tipo_cambio", ""))
+            html += f'<div class="ev"><b>{_esc(tc)}</b> ({_esc(dev.get("tipo_pagina", ""))})<br><span class="meta">{_esc(dev.get("descripcion", ""))}</span></div>'
+        html += '</div>'
+
+    # Onlife
+    onlife = a.get("onlife", {})
+    if onlife.get("total_señales", 0) > 0:
+        html += f'<div class="section section-green"><h2>Señales Onlife ({onlife["total_señales"]})</h2>'
+        for s in onlife.get("señales", []):
+            html += f'<div class="ev"><b>{_esc(s.get("tipo_senal", ""))}</b> ({_esc(s.get("fuente", ""))})<br><span class="meta">{_esc(s.get("descripcion", ""))}</span></div>'
+        html += '</div>'
+
+    # Pipeline
+    pipe = a.get("pipeline", {})
+    if pipe.get("etapa"):
+        html += f'<div class="section"><h2>Pipeline Comercial</h2>'
+        html += f'<p>Etapa actual: <b>{_esc(pipe["etapa_label"])}</b></p>'
+        if pipe.get("transiciones"):
+            html += '<table><tr><th>Etapa</th><th>Fecha</th><th>Notas</th></tr>'
+            for t in pipe["transiciones"]:
+                html += f'<tr><td>{_esc(t.get("etapa", ""))}</td><td>{_esc((t.get("fecha", ""))[:16])}</td><td>{_esc(t.get("notas", ""))}</td></tr>'
+            html += '</table>'
+        html += '</div>'
+
+    # Validación Científica (Capa 11): sella el dossier con el veredicto sobre
+    # si la evidencia sostiene la hipótesis. Sin este sello, la hipótesis es
+    # solo una lectura; con él, es una lectura auditada.
+    exp_val = _expediente_para_validacion(nombre)
+    val = validar_expediente(exp_val)
+    dic = val["dictamen_cientifico"]
+    _VEREDICTO_COLOR = {
+        "VALIDADA": ("#16a34a", "#f0fdf4"),
+        "VALIDADA_PARCIAL": ("#f59e0b", "#fffbeb"),
+        "NO_VALIDADA": ("#dc2626", "#fef2f2"),
+        "BLOQUEADA": ("#6b7280", "#f3f4f6"),
+        "SIN_HIPOTESIS": ("#6b7280", "#f3f4f6"),
+    }
+    color, bg = _VEREDICTO_COLOR.get(dic["veredicto"], ("#6b7280", "#f3f4f6"))
+    html += f"""<div class="section" style="border-left:4px solid {color}">
+<h2>Validación Científica (Capa 11)</h2>
+<div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin-bottom:.6rem">
+  <span class="badge" style="background:{bg};color:{color}">{_esc(dic['veredicto'])}</span>
+  <span class="badge badge-interes">Solidez {dic['solidez']}/100</span>
+  <span class="badge badge-interes">Suficiencia {dic['suficiencia']}/100</span>
+  <span class="badge" style="background:#f3e8ff;color:#7c3aed">Evidencia nivel {_esc(val['nivel_evidencia']['nivel'])}</span>
+</div>
+<p>{_esc(dic['resumen'])}</p>
+<p><b>Recomendación metodológica:</b> {_esc(dic['recomendacion'])}</p>
+<table>
+  <tr><th>Control</th><th>Resultado</th></tr>
+  <tr><td>Trazabilidad</td><td>{val['trazabilidad']['trazables']}/{val['trazabilidad']['total']} evidencias trazables</td></tr>
+  <tr><td>Fechado (consumible por API)</td><td>{val['fechado']['fechadas']}/{val['fechado']['total']} fechadas</td></tr>
+  <tr><td>Fuentes independientes</td><td>{val['suficiencia_corpus']['fuentes_independientes']}</td></tr>
+  <tr><td>Contradicciones</td><td>{len(val['contradicciones'])}</td></tr>
+  <tr><td>Vacíos</td><td>{len(val['vacios'])}</td></tr>
+  <tr><td>Reproducibilidad</td><td>{'sí' if val['reproducibilidad']['reproducible'] else 'no'}</td></tr>
+  <tr><td>Hipótesis bloqueada</td><td>{'sí' if dic['hipotesis_bloqueada'] else 'no'}</td></tr>
+</table>"""
+    if dic["limitaciones"]:
+        html += '<h3>Limitaciones declaradas</h3><ul>'
+        for lim in dic["limitaciones"]:
+            html += f'<li>{_esc(lim)}</li>'
+        html += '</ul>'
+    if val["bloqueo"]["motivos"]:
+        html += '<h3>Motivos de bloqueo</h3><ul>'
+        for m in val["bloqueo"]["motivos"]:
+            html += f'<li>{_esc(m)}</li>'
+        html += '</ul>'
+    html += '</div>'
+
+    # Gobernanza Científica (Capa 12): sella el dossier con su huella digital,
+    # bitácora, auditoría y certificado. Convierte el documento en algo
+    # reconstruible y verificable, no solo legible.
+    aud = auditar_expediente(exp_val, val, ahora_iso())
+    huella = aud["huellas_digitales"][0]
+    cert = aud["certificado"]
+    bit = aud["bitacora"]["resumen"]
+    integ = aud["integridad"]
+    consis = aud["consistencia"]
+    html += f"""<div class="section" style="border-left:4px solid #0891b2">
+<h2>Gobernanza Científica (Capa 12)</h2>
+<h3>Huella Digital</h3>
+<table>
+  <tr><td>ID</td><td><code>{_esc(huella['id'])}</code></td></tr>
+  <tr><td>Hash</td><td><code>{_esc(huella['hash'])}</code></td></tr>
+  <tr><td>Versión gobernanza</td><td>{_esc(huella['version'])}</td></tr>
+  <tr><td>Motor</td><td>{_esc(huella['motor'])}</td></tr>
+  <tr><td>Integridad</td><td>{'íntegra' if integ['integra'] else 'comprometida'}</td></tr>
+  <tr><td>Consistencia</td><td>{'consistente' if consis['consistente'] else 'inconsistente'}</td></tr>
+</table>
+<h3>Versiones</h3>
+<table><tr><th>Componente</th><th>Versión</th></tr>"""
+    for comp, ver in huella["versiones"].items():
+        html += f'<tr><td>{_esc(comp)}</td><td>{_esc(ver)}</td></tr>'
+    html += f"""</table>
+<h3>Bitácora (resumen)</h3>
+<table>
+  <tr><td>Evidencia recibida</td><td>{bit['recibidas']}</td></tr>
+  <tr><td>Evidencia aceptada</td><td>{bit['aceptadas']}</td></tr>
+  <tr><td>Evidencia descartada</td><td>{bit['descartadas']}</td></tr>
+  <tr><td>Reglas ejecutadas</td><td>{bit['reglas_ejecutadas']}</td></tr>
+  <tr><td>Reglas que bloquearon</td><td>{bit['reglas_bloqueo']}</td></tr>
+</table>
+<h3>Auditoría</h3>
+<table>
+  <tr><td>Veredicto</td><td>{_esc(aud['resumen']['veredicto'])}</td></tr>
+  <tr><td>Reproducible</td><td>{'sí' if aud['resumen']['reproducible'] else 'no'}</td></tr>
+  <tr><td>Eventos en historial</td><td>{len(aud['historial'])}</td></tr>
+</table>
+<h3>Certificado Científico</h3>
+<table>
+  <tr><td>Certificado</td><td><code>{_esc(cert['certificado_id'])}</code></td></tr>
+  <tr><td>Estado</td><td>{_esc(cert['estado'])}</td></tr>
+  <tr><td>Nivel de evidencia</td><td>{_esc(cert['nivel_evidencia'])}</td></tr>
+  <tr><td>Nivel de confianza</td><td>{_esc(cert['nivel_confianza'])}</td></tr>
+  <tr><td>Solidez / Suficiencia</td><td>{cert['solidez']} / {cert['suficiencia']}</td></tr>
+  <tr><td>Firma del Motor</td><td><code>{_esc(cert['firma_motor'])}</code></td></tr>
+</table>
+</div>"""
+
+    # Footer
+    html += f"""
+<div class="footer">
+  Dossier generado por hd-prospector · Radar de Inteligencia Antropológica<br>
+  Hamaca Digital · {ahora_iso()[:10]}
+</div>
+</body></html>"""
+
+    return HTMLResponse(html)
+
+
+def _esc(s: str) -> str:
+    return (s or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+
+
+def _preguntas_antropologicas(data: dict) -> list[str]:
+    """Genera preguntas para reunión basadas en el perfil de la organización."""
+    preguntas = []
+    deuda = data.get("tipo_deuda", "")
+    senal = data.get("senal_dominante", "")
+
+    if "Relacional" in deuda:
+        preguntas.append("¿Qué historia cuenta el cliente que se fue? ¿Qué se rompió antes del churn?")
+        preguntas.append("¿Tienen un mapa de la experiencia emocional del cliente, no solo del journey funcional?")
+    elif "Moral" in deuda:
+        preguntas.append("¿Qué narrativa quedó en el equipo después de los recortes? ¿Miedo, alivio, confusión?")
+        preguntas.append("¿Cómo se comunicó la decisión internamente? ¿Hubo espacio para procesar?")
+    elif "Estructural" in deuda:
+        preguntas.append("¿Qué promesa dejó de sostener la operación? ¿Cuándo lo notaron?")
+        preguntas.append("¿El modelo operativo actual fue diseñado para la escala en la que están?")
+    elif "Gobernanza" in deuda:
+        preguntas.append("¿La cultura de cumplimiento va al ritmo del negocio o detrás?")
+        preguntas.append("¿Los equipos sienten que el compliance es un aliado o un freno?")
+    elif "Liderazgo" in deuda:
+        preguntas.append("¿Qué relato necesita la nueva dirección para alinear al equipo?")
+        preguntas.append("¿Hay claridad sobre qué se conserva y qué cambia con la transición?")
+    elif "Onboarding" in deuda:
+        preguntas.append("¿Cómo transmiten la cultura a las personas nuevas? ¿Hay un rito de paso?")
+        preguntas.append("¿La velocidad de contratación está alineada con la capacidad de integración?")
+    elif "Escalamiento" in deuda:
+        preguntas.append("¿Qué se está estirando más allá de su límite sano? ¿Procesos, cultura, personas?")
+        preguntas.append("¿La presión de crecer viene de adentro o del capital?")
+    elif "Integración" in deuda:
+        preguntas.append("¿Qué identidad común hace falta construir entre las organizaciones que se fusionan?")
+        preguntas.append("¿Qué narrativas compiten internamente? ¿Hay un 'nosotros' o siguen siendo 'ellos y nosotros'?")
+    else:
+        preguntas.append("¿Cuál es la tensión principal que sienten hoy como organización?")
+        preguntas.append("¿Hay algo que los datos no les expliquen sobre su situación actual?")
+
+    if "friccion_retencion" in (senal or ""):
+        preguntas.append("¿Cuántos clientes perdieron en el último trimestre? ¿Saben por qué se fueron?")
+    if "ronda_inversion" in (senal or ""):
+        preguntas.append("¿El capital nuevo viene con expectativas de crecimiento que la cultura puede sostener?")
+    if "cambio_liderazgo" in (senal or ""):
+        preguntas.append("¿La transición de liderazgo fue planificada o reactiva?")
+
+    preguntas.append("¿Qué harían distinto si pudieran ver lo que su organización no puede ver de sí misma?")
+
+    return preguntas[:6]
+
+
+# --- Alertas de Inteligencia --------------------------------------------------
+
+@app.get("/alertas")
+def alertas_inteligencia() -> dict:
+    """Alertas inteligentes: organizaciones que merecen atención inmediata."""
+    exp_data = _construir_expedientes(None, limite=100)
+    expedientes = exp_data.get("expedientes", [])
+    from ..dictamen import _generar_alertas
+    alertas = _generar_alertas(expedientes)
+    return {
+        "total": len(alertas),
+        "alertas": alertas,
+    }
+
+
+# --- Capa 9: Pipeline Comercial (endpoints) ----------------------------------
+
+
+class PipelineIn(BaseModel):
+    org_nombre: str
+    etapa: str = "observacion"
+    notas: str = ""
+    resultado: str = ""
+
+
+@app.post("/pipeline/registrar")
+def pipeline_registrar(payload: PipelineIn,
+                       x_ingest_token: Optional[str] = Header(None)) -> dict:
+    """Registra o actualiza una organización en el pipeline comercial. Autenticado."""
+    _exigir_token(x_ingest_token)
+    nombre = payload.org_nombre.strip()
+    if not nombre:
+        raise HTTPException(400, "org_nombre vacío")
+    try:
+        return _pipeline.registrar_org(nombre, payload.etapa, payload.notas)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@app.post("/pipeline/avanzar")
+def pipeline_avanzar(payload: PipelineIn,
+                     x_ingest_token: Optional[str] = Header(None)) -> dict:
+    """Mueve una organización a una nueva etapa del pipeline. Autenticado."""
+    _exigir_token(x_ingest_token)
+    nombre = payload.org_nombre.strip()
+    if not nombre:
+        raise HTTPException(400, "org_nombre vacío")
+    try:
+        return _pipeline.avanzar(nombre, payload.etapa, payload.notas, payload.resultado)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@app.get("/pipeline")
+def pipeline_listar(etapa: str | None = Query(None)) -> dict:
+    """Lista organizaciones en el pipeline comercial. Lectura pública."""
+    return _pipeline.listar_pipeline(etapa)
+
+
+@app.get("/pipeline/funnel")
+def pipeline_funnel() -> dict:
+    """Resumen tipo funnel del pipeline comercial. Lectura pública."""
+    return _pipeline.resumen_funnel()
+
+
+@app.get("/pipeline/{org_nombre}")
+def pipeline_detalle(org_nombre: str) -> dict:
+    """Detalle del pipeline de una organización con historial de transiciones."""
+    result = _pipeline.obtener_pipeline(org_nombre)
+    if not result:
+        raise HTTPException(404, f"Organización '{org_nombre}' no está en el pipeline")
+    return result
+
+
+@app.get("/admin", response_class=HTMLResponse)
+def admin_form() -> str:
+    """Pantalla de descubrimiento (scraping) y alta de prospectos (PWA instalable)."""
+    return _ADMIN_HTML
+
+
+_ADMIN_HTML = """<!doctype html>
+<html lang="es"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>hd-prospector · Radar</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#2563eb">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Radar">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="/icon-192.png">
+<style>
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; }
+  body { font-family: system-ui, -apple-system, sans-serif; margin: 0;
+         padding: 1.2rem; max-width: 680px; margin-inline: auto; line-height: 1.4; }
+  h1 { font-size: 1.3rem; margin: 0 0 .2rem; }
+  h2 { font-size: 1.05rem; margin: 1.6rem 0 .4rem; }
+  p.sub { margin: 0 0 1rem; opacity: .7; font-size: .9rem; }
+  section { border: 1px solid rgba(128,128,128,.25); border-radius: .7rem;
+    padding: .9rem 1rem 1.1rem; margin-top: 1.1rem; }
+  label { display: block; font-weight: 600; margin: .7rem 0 .25rem; font-size: .9rem; }
+  input, select, textarea { width: 100%; padding: .6rem .7rem; border-radius: .5rem;
+    border: 1px solid rgba(128,128,128,.4); background: transparent; color: inherit;
+    font-size: 1rem; font-family: inherit; }
+  textarea { min-height: 100px; resize: vertical; }
+  .req::after { content: " *"; color: #e11; }
+  button { margin-top: 1rem; width: 100%; padding: .8rem; border: 0; border-radius: .5rem;
+    background: #2563eb; color: #fff; font-size: 1rem; font-weight: 600; cursor: pointer; }
+  button.sec { background: transparent; color: inherit; border: 1px solid rgba(128,128,128,.5);
+    margin-top: .5rem; padding: .5rem; font-weight: 500; font-size: .85rem; }
+  button:disabled { opacity: .5; }
+  .msg { margin-top: .8rem; padding: .7rem; border-radius: .5rem; display: none; font-size: .9rem; }
+  .msg.ok { background: rgba(22,163,74,.15); border: 1px solid rgba(22,163,74,.5); display: block; }
+  .msg.err { background: rgba(220,38,38,.15); border: 1px solid rgba(220,38,38,.5); display: block; }
+  .counts { display: flex; gap: .5rem; flex-wrap: wrap; margin: .6rem 0 0; }
+  .chip { padding: .3rem .6rem; border-radius: 1rem; border: 1px solid rgba(128,128,128,.4); font-size: .85rem; }
+  .hint { font-size: .8rem; opacity: .65; margin-top: .2rem; }
+  .card { border: 1px solid rgba(128,128,128,.25); border-radius: .5rem; padding: .6rem .7rem; margin-top: .6rem; }
+  .card .meta { font-size: .78rem; opacity: .7; margin-top: .25rem; }
+  .card a { color: #3b82f6; text-decoration: none; }
+  .row { display: flex; gap: .5rem; }
+  .row > * { flex: 1; }
+  .cats { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; margin-top: .6rem; }
+  .cat { margin-top: 0; background: transparent; color: inherit; border: 1px solid #2563eb; font-weight: 600; }
+  .dir { margin-top: 0; background: transparent; color: inherit; border: 1px solid #16a34a; font-weight: 600; }
+  .org { font-size: 1.05rem; margin-bottom: .25rem; }
+  .chips-sel { display: flex; flex-wrap: wrap; gap: .8rem; margin: .6rem 0; }
+  .chips-sel label { display: inline-flex; align-items: center; gap: .3rem; font-size: .95rem; }
+  .dl { display: block; text-align: center; text-decoration: none; color: inherit;
+    padding: .7rem; border: 1px solid rgba(128,128,128,.5); border-radius: .5rem; font-weight: 600; }
+  /* Expediente Vivo styles */
+  .exp { border: 1px solid rgba(128,128,128,.25); border-radius: .7rem; padding: .8rem; margin-top: .8rem; }
+  .exp-a { border-left: 4px solid #dc2626; }
+  .exp-b { border-left: 4px solid #f59e0b; }
+  .exp-c { border-left: 4px solid #6b7280; }
+  .exp-header { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin-bottom: .4rem; }
+  .exp-header .org-name { font-size: 1.1rem; font-weight: 700; }
+  .badge { display: inline-block; padding: .15rem .45rem; border-radius: .3rem; font-size: .75rem; font-weight: 700; }
+  .badge-a { background: #dc2626; color: #fff; }
+  .badge-b { background: #f59e0b; color: #000; }
+  .badge-c { background: #6b7280; color: #fff; }
+  .badge-interes { background: rgba(37,99,235,.15); color: #2563eb; border: 1px solid rgba(37,99,235,.3); }
+  .badge-int { background: rgba(128,128,128,.12); }
+  .badge-deuda { background: rgba(168,85,247,.12); color: #7c3aed; border: 1px solid rgba(168,85,247,.3); }
+  .deuda-box { background: rgba(168,85,247,.06); border: 1px solid rgba(168,85,247,.2); border-radius: .5rem; padding: .5rem .6rem; margin: .4rem 0; }
+  .deuda-title { font-weight: 700; color: #7c3aed; font-size: .9rem; }
+  .deuda-reason { font-size: .82rem; opacity: .8; margin-top: .15rem; }
+  .angulo { font-size: .82rem; margin-top: .3rem; padding: .3rem .5rem; background: rgba(37,99,235,.06); border-radius: .4rem; border: 1px solid rgba(37,99,235,.15); }
+  .patron-box { background: rgba(245,158,11,.08); border: 1px solid rgba(245,158,11,.2); border-radius: .4rem; padding: .35rem .5rem; margin-top: .3rem; font-size: .82rem; }
+  .ev-toggle { cursor: pointer; font-size: .82rem; color: #3b82f6; margin-top: .4rem; display: inline-block; }
+  .ev-list { display: none; margin-top: .3rem; }
+  .ev-list.open { display: block; }
+  .ev-item { font-size: .8rem; padding: .3rem .4rem; border-left: 2px solid rgba(128,128,128,.3); margin: .3rem 0 .3rem .3rem; }
+  .ev-item a { font-size: .78rem; }
+  .exp-actions { display: flex; gap: .4rem; flex-wrap: wrap; margin-top: .5rem; }
+  .exp-actions button, .exp-actions a { font-size: .8rem; padding: .35rem .6rem; margin-top: 0; width: auto; }
+  .resumen-bar { display: flex; gap: .6rem; flex-wrap: wrap; align-items: center; margin: .5rem 0; }
+  .resumen-bar .chip { font-weight: 700; }
+  /* Drift timeline */
+  #drift_timeline h3 { color: #7c3aed; }
+  /* Investigación Automática — progress */
+  .inv-btn { background: #16a34a !important; font-size: 1.1rem !important; padding: 1rem !important; }
+  .inv-btn:disabled { background: #16a34a !important; }
+  .progress-container { margin: .8rem 0; display: none; }
+  .progress-bar { height: .6rem; background: rgba(128,128,128,.15); border-radius: .3rem; overflow: hidden; }
+  .progress-fill { height: 100%; background: #2563eb; border-radius: .3rem; transition: width .4s ease; width: 0; }
+  .progress-stages { display: flex; flex-direction: column; gap: .25rem; margin-top: .5rem; }
+  .stage { display: flex; align-items: center; gap: .4rem; font-size: .82rem; opacity: .4; transition: opacity .3s; }
+  .stage.active { opacity: 1; font-weight: 600; color: #2563eb; }
+  .stage.done { opacity: .75; }
+  .stage .dot { width: .45rem; height: .45rem; border-radius: 50%; background: rgba(128,128,128,.4); flex-shrink: 0; }
+  .stage.active .dot { background: #2563eb; animation: pulse 1s infinite; }
+  .stage.done .dot { background: #16a34a; }
+  @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.5); } }
+  .inv-resumen { border: 1px solid rgba(22,163,74,.3); border-left: 4px solid #16a34a; border-radius: .5rem; padding: .7rem .8rem; margin-top: .6rem; }
+  /* Dictamen Antropológico */
+  .dictamen { margin-top: 1rem; }
+  .dictamen-seccion { border: 1px solid rgba(128,128,128,.2); border-radius: .6rem; padding: .7rem .8rem; margin-top: .7rem; }
+  .dictamen-seccion h3 { font-size: .95rem; margin: 0 0 .4rem; }
+  .curaduria-tension { background: linear-gradient(135deg, rgba(255,193,7,.08), rgba(255,87,34,.08)); border-color: rgba(255,152,0,.3); }
+  .curaduria-tension h3 { color: #ff9800; }
+  .curaduria-narrativa { background: rgba(33,150,243,.05); border-color: rgba(33,150,243,.2); }
+  .curaduria-narrativa p { line-height: 1.6; font-size: .92rem; }
+  .curaduria-convergencia { background: rgba(156,39,176,.05); border-color: rgba(156,39,176,.2); }
+  .curaduria-preguntas { background: rgba(0,150,136,.05); border-color: rgba(0,150,136,.2); }
+  .curaduria-preguntas li { margin-bottom: .3rem; }
+  .curaduria-siguiente { background: rgba(76,175,80,.08); border-color: rgba(76,175,80,.3); }
+  .dictamen-hipotesis { background: rgba(168,85,247,.06); border-color: rgba(168,85,247,.25); }
+  .dictamen-hipotesis .confianza { display: inline-block; padding: .15rem .4rem; border-radius: .3rem; font-size: .75rem; font-weight: 700; }
+  .confianza-alta { background: #16a34a; color: #fff; }
+  .confianza-media { background: #f59e0b; color: #000; }
+  .confianza-baja { background: #6b7280; color: #fff; }
+  .dictamen-ranking { border-color: rgba(37,99,235,.25); }
+  .ranking-item { display: flex; gap: .5rem; align-items: flex-start; padding: .5rem 0; border-bottom: 1px solid rgba(128,128,128,.1); }
+  .ranking-item:last-child { border-bottom: 0; }
+  .ranking-pos { font-size: 1.3rem; font-weight: 800; color: #2563eb; min-width: 1.8rem; text-align: center; }
+  .ranking-body { flex: 1; }
+  .ranking-body .org-name { font-weight: 700; font-size: .95rem; }
+  .ranking-motivos { font-size: .78rem; opacity: .7; margin-top: .15rem; }
+  .dictamen-alertas { border-color: rgba(220,38,38,.25); background: rgba(220,38,38,.03); }
+  .alerta-item { padding: .4rem 0; border-bottom: 1px solid rgba(220,38,38,.1); font-size: .85rem; }
+  .alerta-item:last-child { border-bottom: 0; }
+  .hallazgo-item { padding: .35rem 0; border-bottom: 1px solid rgba(128,128,128,.1); font-size: .85rem; }
+  .hallazgo-item:last-child { border-bottom: 0; }
+  .dossier-link { text-decoration: none; color: #7c3aed; font-weight: 600; font-size: .8rem; }
+</style></head><body>
+<h1>hd-prospector · Radar de Inteligencia Antropológica</h1>
+<p class="sub">① Un clic = investigación completa (4 ecosistemas × 6 señales × noticias) → ② <b>Expedientes Vivos</b> con <b>patrones</b>, <b>Dolor Cultural™</b> y <b>scoring A/B/C</b> → ③ auto-investiga y guarda Organización. Internet → Evidencia → Patrón → Dolor → Organización.</p>
+
+<label class="req">Token de acceso</label>
+<input id="token" type="password" placeholder="HD_INGEST_TOKEN" autocomplete="off">
+<div class="hint">Se guarda solo en este dispositivo. Es el valor que pusiste en Vercel.</div>
+<label>Región (zona geográfica)</label>
+<select id="region">
+  <option value="LATAM">Toda LATAM (8 países)</option>
+  <option value="México">México</option>
+  <option value="Colombia">Colombia</option>
+  <option value="Chile">Chile</option>
+  <option value="Perú">Perú</option>
+  <option value="Argentina">Argentina</option>
+  <option value="Brasil">Brasil</option>
+  <option value="Costa Rica">Costa Rica</option>
+  <option value="Panamá">Panamá</option>
+</select>
+<div class="counts" id="counts"></div>
+
+<section>
+  <h2>🎯 Centro de Inteligencia Comercial</h2>
+  <div class="hint">Tablero diario: una sola pantalla con las 6 preguntas que importan. Actualiza cada vez que lo abres.</div>
+  <div class="row">
+    <button id="centro_cargar" class="sec">📊 Actualizar Centro</button>
+    <button id="corpus_btn" class="sec">🌎 Poblar Corpus (5 verticales LATAM)</button>
+  </div>
+  <div class="msg" id="centro_msg"></div>
+  <div class="msg" id="corpus_msg"></div>
+  <div id="centro_contenido"></div>
+</section>
+
+<section>
+  <h2>① Investigación Automática</h2>
+  <div class="hint">Escribe qué quieres investigar y el sistema recorre <b>los 4 ecosistemas</b> (VC, Startup, Incubadora, Corporativo) × <b>6 tipos de señal</b> (fricción, rondas, contratación, despidos, lanzamientos, pivotes), ingiere noticias RSS, construye <b>Expedientes Vivos</b> y calcula <b>Dolor Cultural™</b>. Un clic = investigación completa.</div>
+  <label class="req">Territorio de búsqueda</label>
+  <div class="row">
+    <input id="inv_query" placeholder="Ej: fintech México, Nubank, healthtech Chile" style="flex:2">
+    <select id="inv_vertical" style="flex:1">
+      <option value="todas">Auto-detectar vertical</option>
+      <option value="fintech">Fintech</option>
+      <option value="healthtech">Healthtech</option>
+      <option value="hrtech">HRTech</option>
+      <option value="saas_b2b">SaaS B2B</option>
+      <option value="climatetech">ClimateTech</option>
+      <option value="edtech">Edtech</option>
+      <option value="salud mental">Salud mental</option>
+      <option value="logística agrícola">Logística agrícola</option>
+      <option value="identidad">Identidad</option>
+    </select>
+  </div>
+  <button id="inv_btn" class="inv-btn">🚀 Investigación Automática</button>
+  <div class="progress-container" id="inv_progress">
+    <div class="progress-bar"><div class="progress-fill" id="inv_fill"></div></div>
+    <div class="progress-stages" id="inv_stages"></div>
+  </div>
+  <div class="msg" id="inv_msg"></div>
+  <div id="inv_resultado"></div>
+
+  <h2 style="margin-top:1.4rem">…o buscar por nombre (individual)</h2>
+  <div class="hint">Busca una empresa específica sin recorrer todos los ecosistemas.</div>
+  <label>Empresa</label>
+  <input id="s_empresa" placeholder="p. ej. Nubank">
+  <div class="row">
+    <div>
+      <label>Tipo de señal</label>
+      <select id="s_tipo">
+        <option value="ronda">ronda</option>
+        <option value="contratacion">contratación</option>
+        <option value="despido">despido</option>
+        <option value="lanzamiento">lanzamiento</option>
+        <option value="queja">queja</option>
+        <option value="cambio_sitio">cambio_sitio</option>
+      </select>
+    </div>
+    <div>
+      <label>Fuentes</label>
+      <select id="s_fuentes">
+        <option value="google_news,gdelt">Google News + GDELT</option>
+        <option value="google_news">Google News</option>
+        <option value="gdelt">GDELT</option>
+      </select>
+    </div>
+  </div>
+  <button id="s_btn">🔎 Buscar por nombre</button>
+  <div class="msg" id="s_msg"></div>
+
+  <div class="hint" style="margin-top:1rem">¿Pocas noticias? Trae <b>empresas reales</b> de una base pública (Wikidata) para tener volumen.</div>
+  <div class="row">
+    <div>
+      <label>Vertical (HD)</label>
+      <select id="c_vertical">
+        <option value="todas">Todas</option>
+        <option value="fintech">Fintech</option>
+        <option value="healthtech">Healthtech</option>
+        <option value="hrtech">HRTech</option>
+        <option value="saas_b2b">SaaS B2B</option>
+        <option value="climatetech">ClimateTech</option>
+        <option value="edtech">Edtech</option>
+        <option value="salud mental">Salud mental</option>
+        <option value="logística agrícola">Logística agrícola</option>
+        <option value="identidad">Identidad</option>
+      </select>
+    </div>
+  </div>
+  <div class="cats">
+    <button class="dir" data-cat="VC">🏢 Empresas → VC</button>
+    <button class="dir" data-cat="Startup">🏢 Empresas → Startup</button>
+    <button class="dir" data-cat="Incubadora">🏢 Empresas → Incubadora</button>
+    <button class="dir" data-cat="Corporativo">🏢 Empresas → Corporativo</button>
+  </div>
+  <div class="msg" id="d_msg"></div>
+</section>
+
+<section>
+  <h2>② Expedientes Vivos</h2>
+  <div class=”hint”>Cada tarjeta es un <b>expediente de organización</b> construido a partir de <b>múltiples evidencias</b>. Las señales se combinan para detectar <b>patrones</b> y generar una <b>hipótesis de Dolor Cultural™</b> (tipo + intensidad + razonamiento). A = Mayor Interés Analítico · B = Observación activa · C = Archivo.</div>
+  <div class=”chips-sel” id=”exp_filtros” style=”align-items:center”>
+    <label style=”font-size:.82rem;font-weight:600;margin:0”>Filtrar:</label>
+    <label><input type=”checkbox” class=”exp-cat” value=”VC” checked> VC</label>
+    <label><input type=”checkbox” class=”exp-cat” value=”Startup” checked> Startup</label>
+    <label><input type=”checkbox” class=”exp-cat” value=”Incubadora” checked> Incubadora</label>
+    <label><input type=”checkbox” class=”exp-cat” value=”Corporativo” checked> Corporativo</label>
+    <button class=”sec” id=”exp_cargar” style=”margin-top:0;width:auto;padding:.35rem .7rem;font-size:.82rem”>🔄 Cargar expedientes</button>
+  </div>
+  <div class=”resumen-bar” id=”exp_resumen”></div>
+  <div id=”expedientes”></div>
+</section>
+
+<section>
+  <h2>⑤ Drift Narrativo</h2>
+  <div class=”hint”>Observación <b>longitudinal</b>: captura cómo cambia el discurso público de una organización a lo largo del tiempo. Compara snapshots de homepage, about, misión, propuesta de valor y manifiesto. Solo registra cambios objetivos — <b>no interpreta</b>.</div>
+  <div class=”row”>
+    <input id=”drift_org” placeholder=”Nombre de la organización”>
+    <input id=”drift_sitio” placeholder=”https://sitio-web.com”>
+  </div>
+  <div class=”row” style=”margin-top:.4rem”>
+    <button id=”drift_capturar” class=”sec”>📡 Capturar Drift</button>
+    <button id=”drift_ver” class=”sec”>👁️ Ver timeline</button>
+  </div>
+  <div class=”msg” id=”drift_msg”></div>
+  <div id=”drift_timeline”></div>
+</section>
+
+<section>
+  <h2>⑦ Motor Onlife</h2>
+  <div class=”hint”>Observa <b>comportamiento</b> organizacional donde realmente ocurre: repositorios, foros técnicos, changelogs. No observa discurso (eso es Drift) — observa <b>acción</b>.</div>
+  <div class=”row”>
+    <input id=”onlife_org” placeholder=”Nombre de la organización”>
+    <input id=”onlife_github” placeholder=”Org/user en GitHub (opcional)”>
+  </div>
+  <div class=”row” style=”margin-top:.4rem”>
+    <input id=”onlife_feed” placeholder=”URL del blog/changelog RSS (opcional)” style=”flex:2”>
+  </div>
+  <div class=”row” style=”margin-top:.4rem”>
+    <button id=”onlife_observar” class=”sec”>🔬 Observar</button>
+    <button id=”onlife_ver” class=”sec”>👁️ Ver perfil</button>
+  </div>
+  <div class=”msg” id=”onlife_msg”></div>
+  <div id=”onlife_perfil”></div>
+</section>
+
+<section>
+  <h2>⑨ Pipeline Comercial</h2>
+  <div class=”hint”>Flujo antropológico: <b>Observación → Vigilancia → Peritaje → DolorMap → Alianza → Cerrado</b>. Cada avance se basa en evidencia acumulada, no en intención de venta.</div>
+  <div class=”row”>
+    <input id=”pipe_org” placeholder=”Nombre de la organización”>
+    <select id=”pipe_etapa”>
+      <option value=”observacion”>Observación</option>
+      <option value=”vigilancia”>Vigilancia</option>
+      <option value=”peritaje”>Peritaje Cualitativo</option>
+      <option value=”dolormap”>DolorMap Sprint</option>
+      <option value=”alianza”>Alianza</option>
+      <option value=”cerrado”>Cerrado</option>
+    </select>
+  </div>
+  <div class=”row” style=”margin-top:.4rem”>
+    <input id=”pipe_notas” placeholder=”Notas / motivo (opcional)” style=”flex:2”>
+    <select id=”pipe_resultado” style=”display:none”>
+      <option value=””>—</option>
+      <option value=”ganado”>Ganado</option>
+      <option value=”descartado”>Descartado</option>
+      <option value=”pausado”>Pausado</option>
+    </select>
+  </div>
+  <div class=”row” style=”margin-top:.4rem”>
+    <button id=”pipe_registrar” class=”sec”>📋 Registrar</button>
+    <button id=”pipe_avanzar” class=”sec”>⏩ Avanzar etapa</button>
+    <button id=”pipe_ver” class=”sec”>👁️ Ver pipeline</button>
+    <button id=”pipe_funnel” class=”sec”>📊 Funnel</button>
+  </div>
+  <div class=”msg” id=”pipe_msg”></div>
+  <div id=”pipe_contenido”></div>
+</section>
+
+<section>
+  <h2>🗺️ DolorMap Visual</h2>
+  <div class=”hint”>Vista <b>consolidada</b> de una organización: integra evidencias, drift narrativo, señales onlife, pipeline comercial y análisis de Dolor Cultural™ en un solo expediente.</div>
+  <div class=”row”>
+    <input id=”dm_org” placeholder=”Nombre de la organización”>
+    <button id=”dm_ver” class=”sec”>🗺️ Ver DolorMap</button>
+  </div>
+  <div class=”msg” id=”dm_msg”></div>
+  <div id=”dm_contenido”></div>
+</section>
+
+<section>
+  <h2>②·⁵ Informe profundo (análisis)</h2>
+  <div class="hint">Lee lo capturado y lo <b>prioriza</b>: para cada empresa calcula scoring A/B/C, hipótesis de <b>Deuda Cultural™</b>, Interés Analítico y a qué <b>decisor</b> contactar. Determinista (sin IA): mismos hechos, mismo resultado.</div>
+  <div class="hint" style="margin-top:.4rem">Elige <b>categorías</b> (todas o las que quieras) y luego <b>genera</b>, <b>guarda</b> o <b>exporta</b> la investigación.</div>
+  <div class="chips-sel" id="inf_cats">
+    <label><input type="checkbox" id="inf_todas" checked> Todas</label>
+    <label><input type="checkbox" class="inf-cat" value="VC"> VC</label>
+    <label><input type="checkbox" class="inf-cat" value="Startup"> Startup</label>
+    <label><input type="checkbox" class="inf-cat" value="Incubadora"> Incubadora</label>
+    <label><input type="checkbox" class="inf-cat" value="Corporativo"> Corporativo</label>
+  </div>
+  <div class="row">
+    <button id="inf_btn" class="sec">📊 Generar</button>
+    <button id="inf_guardar" class="sec">💾 Guardar</button>
+    <a id="inf_md" class="sec" href="#" style="display:none">⬇︎ Markdown</a>
+    <a id="inf_csv" class="sec" href="#" style="display:none">⬇︎ CSV</a>
+  </div>
+  <div id="inf_resumen" class="hint"></div>
+  <div id="informe"></div>
+  <div class="hint" style="margin-top:.8rem"><b>Investigaciones guardadas</b> <button id="inf_ver_guardadas" class="sec">🔄 Actualizar</button></div>
+  <div id="inf_guardadas"></div>
+</section>
+
+<section>
+  <h2>②·⁷ Capa 0 — Señales de Deuda (en la app)</h2>
+  <div class="hint">Corre <b>dentro de la app</b>: el servidor lee noticias (RSS gratis) o analiza el texto que pegues, con el motor de reglas determinista (Operativa/Discursiva/Rescate). No necesitas terminal.</div>
+  <div class="row">
+    <input id="cap_query" placeholder="Ej. fintech México ronda">
+    <button id="cap_noticias" class="sec">📡 Ingerir noticias</button>
+  </div>
+  <label style="margin-top:.6rem">…o pega un texto / transcripción</label>
+  <textarea id="cap_texto" placeholder="Pega aquí una transcripción de video, un post o cualquier texto…"></textarea>
+  <div class="row">
+    <input id="cap_org" placeholder="Organización (opcional)">
+    <button id="cap_analizar" class="sec">🔬 Analizar texto</button>
+    <button id="cap_ver" class="sec">👁️ Ver señales</button>
+  </div>
+  <div id="cap_msg" class="msg"></div>
+  <div id="cap_lista"></div>
+</section>
+
+<section>
+  <h2>③ Expediente de la Organización (auto-investigado)</h2>
+  <div class="hint">Toca <b>Enriquecer</b> (o promueve una observación) y web, tesis y vertical se llenan solos. Tú revisas y ajustas antes de guardar.</div>
+  <label class="req">Nombre</label>
+  <input id="nombre" placeholder="p. ej. Kaszek">
+  <label class="req">Categoría (ecosistema)</label>
+  <select id="categoria">
+    <option value="VC">VC — fondo / venture capital</option>
+    <option value="Startup">Startup</option>
+    <option value="Incubadora">Incubadora / Aceleradora</option>
+    <option value="Corporativo">Corporativo</option>
+  </select>
+
+  <button id="enrich_btn" class="sec">🔎 Enriquecer (buscar web + tesis)</button>
+  <div class="msg" id="e_msg"></div>
+  <div id="e_links" style="margin:.4rem 0; font-size:.85rem"></div>
+
+  <label>Vertical / sector</label>
+  <input id="vertical" placeholder="fintech, salud, logística…">
+  <label>Sitio web</label>
+  <input id="sitio_web" placeholder="https://…">
+  <label>LinkedIn</label>
+  <input id="linkedin" placeholder="https://www.linkedin.com/…">
+
+  <label>Discurso corporativo (Thick Data)</label>
+  <textarea id="discurso" placeholder="Tesis de inversión, promesa de valor, programa, comunicado…"></textarea>
+  <label>Tipo de discurso</label>
+  <input id="tipo_discurso" placeholder="tesis_inversion | promesa_valor | programa…">
+  <label>URL / perfil de origen</label>
+  <input id="url_perfil" placeholder="https://…">
+  <label>Fuente del discurso</label>
+  <input id="fuente_discurso" placeholder="sitio_oficial, linkedin, prensa…">
+  <button id="enviar">Guardar Organización</button>
+  <div class="msg" id="msg"></div>
+
+  <h2 style="margin-top:1.3rem">Exportar</h2>
+  <div class="hint">Descarga tus organizaciones guardadas (todos los ecosistemas).</div>
+  <div class="row" style="margin-top:.6rem">
+    <a class="dl" href="/prospectos/export.csv">⬇️ CSV</a>
+    <a class="dl" href="/prospectos/export.md">⬇️ Markdown</a>
+    <a class="dl" href="/prospectos/export.json">⬇️ JSON</a>
+  </div>
+</section>
+
+<script>
+  const $ = id => document.getElementById(id);
+  const esc = s => (s||"").replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const safeUrl = u => /^https?:\\/\\//i.test(u||"") ? u : "#";   // solo http(s) en enlaces
+  $("token").value = localStorage.getItem("hd_ingest_token") || "";
+  const tok = () => { const t = $("token").value.trim(); localStorage.setItem("hd_ingest_token", t); return t; };
+
+  // Lee la respuesta con tolerancia: si el servidor devolvió TEXTO (p. ej. un
+  // "Internal Server Error" por timeout del serverless), no revienta con
+  // "SyntaxError: is not valid JSON"; devuelve un mensaje entendible.
+  async function leerJson(r) {
+    const cuerpo = await r.text();
+    try { return { ok: r.ok, status: r.status, data: JSON.parse(cuerpo) }; }
+    catch (e) {
+      const esTimeout = /timeout|timed out|internal server error|gateway|504|FUNCTION_INVOCATION/i.test(cuerpo);
+      const msg = esTimeout
+        ? "la búsqueda tardó demasiado y el servidor la cortó. Intenta de nuevo, elige un solo país (zona) o una vertical más específica."
+        : ("respuesta inesperada del servidor (" + r.status + ").");
+      return { ok: false, status: r.status, data: null, error: msg };
+    }
+  }
+
+  async function refrescarConteo() {
+    try {
+      const d = await (await fetch("/prospectos/categorias")).json();
+      $("counts").innerHTML = Object.entries(d.categorias)
+        .map(([k, v]) => `<span class="chip">${k}: <b>${v}</b></span>`).join("");
+    } catch (e) {}
+  }
+  refrescarConteo();
+
+  const region = () => $("region").value;
+
+  // ① Investigación Automática — un clic = ciclo completo
+  const INV_STAGES = [
+    "Buscando organizaciones en VC…",
+    "Buscando organizaciones en Startup…",
+    "Buscando organizaciones en Incubadora…",
+    "Buscando organizaciones en Corporativo…",
+    "Ingiriendo noticias RSS…",
+    "Concentrando evidencia…",
+    "Generando Expedientes Vivos…",
+    "Calculando Dolor Cultural™…",
+    "Actualizando Pipeline…",
+    "Finalizado ✓"
+  ];
+  function mostrarProgreso(idx) {
+    const cont = $("inv_progress"), fill = $("inv_fill"), stages = $("inv_stages");
+    cont.style.display = "block";
+    fill.style.width = Math.min(Math.round(((idx + 1) / INV_STAGES.length) * 100), 100) + "%";
+    stages.innerHTML = INV_STAGES.map((s, i) => {
+      const cls = i < idx ? "stage done" : i === idx ? "stage active" : "stage";
+      const ic = i < idx ? "✓" : i === idx ? "⏳" : "○";
+      return '<div class="' + cls + '"><span class="dot"></span> ' + ic + ' ' + esc(s) + '</div>';
+    }).join("");
+  }
+  function renderCuraduria(d) {
+    const cur = d.curaduria || {};
+    const dict = d.dictamen || {};
+    const re = dict.resumen_ejecutivo || {};
+    const sc = re.scoring || {};
+    const exp = d.expedientes || {};
+    const meta = cur.meta || {};
+    let h = '<div class="dictamen">';
+
+    // ═══ CURADURÍA: conclusiones primero ═══
+
+    // Tensión central del ecosistema
+    const tension = cur.tension_central || {};
+    if (tension.titulo) {
+      h += '<div class="dictamen-seccion curaduria-tension">';
+      h += '<h3>' + esc(tension.titulo) + '</h3>';
+      h += '<div style="font-size:.9rem">' + esc(tension.descripcion || '') + '</div>';
+      h += '<div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.4rem">';
+      h += '<span class="chip">' + (meta.total_organizaciones || 0) + ' organizaciones</span>';
+      if (meta.con_dolor) h += '<span class="badge badge-a">' + meta.con_dolor + ' con dolor</span>';
+      if (meta.con_cambio) h += '<span class="badge badge-b">' + meta.con_cambio + ' con cambio</span>';
+      if (meta.con_convergencia) h += '<span class="badge badge-deuda">' + meta.con_convergencia + ' convergentes</span>';
+      h += '</div></div>';
+    }
+
+    // Narrativa ecosistémica
+    if (cur.narrativa) {
+      h += '<div class="dictamen-seccion curaduria-narrativa">';
+      h += '<h3>Lectura del Ecosistema</h3>';
+      h += '<div style="font-size:.9rem;line-height:1.6">' + esc(cur.narrativa) + '</div>';
+      h += '</div>';
+    }
+
+    // Lectura antropológica
+    if (cur.lectura_antropologica) {
+      h += '<div class="dictamen-seccion dictamen-hipotesis">';
+      h += '<h3>Lectura Antropológica</h3>';
+      h += '<div style="font-size:.9rem;line-height:1.6">' + esc(cur.lectura_antropologica) + '</div>';
+      h += '</div>';
+    }
+
+    // Organizaciones curadas (TOP 5 con lectura interpretativa)
+    const orgs = cur.organizaciones_curadas || [];
+    if (orgs.length) {
+      h += '<div class="dictamen-seccion dictamen-ranking">';
+      h += '<h3>Organizaciones de Mayor Interés (' + orgs.length + ')</h3>';
+      h += orgs.map(function(o, i) {
+        const bcls = o.scoring === 'A' ? 'badge-a' : o.scoring === 'B' ? 'badge-b' : 'badge-c';
+        const viab = o.viabilidad_hd || {};
+        const vcls = viab.nivel === 'alta' ? 'badge-a' : viab.nivel === 'media' ? 'badge-b' : 'badge-c';
+        const evc = o.evidencia_curada || {};
+        return '<div class="ranking-item">' +
+          '<div class="ranking-pos">' + (i + 1) + '</div>' +
+          '<div class="ranking-body">' +
+            '<div><span class="org-name">' + esc(o.nombre) + '</span> ' +
+              '<span class="badge ' + bcls + '">' + o.scoring + '</span> ' +
+              '<span class="badge badge-interes">Interés ' + o.interes + '</span>' +
+              (viab.nivel ? ' <span class="badge ' + vcls + '">Viabilidad: ' + viab.nivel + '</span>' : '') +
+              (o.hipotesis_deuda ? ' <span class="badge badge-deuda">Hipótesis: ' + esc(o.hipotesis_deuda) + '</span>' : '') +
+              ' <a class="dossier-link" href="/dossier/' + encodeURIComponent(o.nombre) + '" target="_blank">Dossier ↗</a>' +
+            '</div>' +
+            '<div style="font-size:.85rem;margin-top:.2rem;line-height:1.5">' + esc(o.lectura) + '</div>' +
+            (evc.hipotesis_deuda ? '<div style="font-size:.78rem;margin-top:.2rem;color:#ff9800;font-style:italic">' + esc(evc.hipotesis_deuda) + '</div>' : '') +
+            (viab.razon ? '<div style="font-size:.78rem;margin-top:.15rem;opacity:.7">' + esc(viab.razon) + '</div>' : '') +
+            (o.angulo ? '<div class="angulo" style="margin-top:.2rem;font-size:.78rem">💬 ' + esc(o.angulo) + '</div>' : '') +
+          '</div></div>';
+      }).join('');
+      h += '</div>';
+    }
+
+    // Convergencias (dolor + cambio simultáneo)
+    const conv = cur.convergencias || [];
+    if (conv.length) {
+      h += '<div class="dictamen-seccion curaduria-convergencia">';
+      h += '<h3>Convergencias: Dolor + Cambio Simultáneo (' + conv.length + ')</h3>';
+      h += '<div class="hint" style="margin-bottom:.4rem">Organizaciones donde las señales de dolor y crecimiento coexisten — los puntos de inflexión más relevantes.</div>';
+      h += conv.map(function(c) {
+        const bcls = c.scoring === 'A' ? 'badge-a' : c.scoring === 'B' ? 'badge-b' : 'badge-c';
+        return '<div class="hallazgo-item" style="padding:.5rem 0">' +
+          '<div><b>' + esc(c.nombre) + '</b> <span class="badge ' + bcls + '">' + c.scoring + '</span>' +
+          (c.hipotesis_deuda ? ' <span class="badge badge-deuda">Hipótesis: ' + esc(c.hipotesis_deuda) + '</span>' : '') + '</div>' +
+          '<div style="font-size:.85rem;margin-top:.2rem">' + esc(c.lectura) + '</div>' +
+        '</div>';
+      }).join('');
+      h += '</div>';
+    }
+
+    // Preguntas abiertas
+    const preg = cur.preguntas_abiertas || [];
+    if (preg.length) {
+      h += '<div class="dictamen-seccion curaduria-preguntas">';
+      h += '<h3>Preguntas Abiertas</h3>';
+      h += '<ol style="margin:0;padding-left:1.2rem">';
+      h += preg.map(function(p) { return '<li style="font-size:.85rem;margin:.3rem 0;line-height:1.5">' + esc(p) + '</li>'; }).join('');
+      h += '</ol></div>';
+    }
+
+    // Siguiente paso
+    if (cur.siguiente_paso) {
+      h += '<div class="dictamen-seccion curaduria-siguiente">';
+      h += '<h3>Siguiente Paso</h3>';
+      h += '<div style="font-size:.9rem">' + esc(cur.siguiente_paso) + '</div>';
+      h += '</div>';
+    }
+
+    // ═══ DICTAMEN: detalle técnico (colapsable) ═══
+    const hall = dict.hallazgos || [];
+    const rank = dict.ranking || [];
+    const alertas = dict.alertas || [];
+    const hip = dict.hipotesis || {};
+    const hayDetalle = hall.length || rank.length || alertas.length || hip.texto;
+
+    if (hayDetalle) {
+      h += '<details style="margin:.8rem 0 0"><summary style="cursor:pointer;font-weight:600;font-size:.9rem">Dictamen técnico (hallazgos, ranking, alertas)</summary>';
+
+      if (hip.texto) {
+        const ccls = hip.confianza === 'alta' ? 'confianza-alta' : hip.confianza === 'media' ? 'confianza-media' : 'confianza-baja';
+        h += '<div class="dictamen-seccion dictamen-hipotesis" style="margin-top:.5rem">';
+        h += '<h3>Hipótesis Central <span class="confianza ' + ccls + '">' + esc(hip.confianza || '') + '</span></h3>';
+        h += '<div style="font-size:.9rem">' + esc(hip.texto) + '</div>';
+        if (hip.distribucion) {
+          const dd = Object.entries(hip.distribucion);
+          if (dd.length > 1) h += '<div style="font-size:.78rem;opacity:.6;margin-top:.3rem">Distribución: ' + dd.map(function(x){return esc(x[0]) + ' (' + x[1] + ')';}).join(', ') + '</div>';
+        }
+        h += '</div>';
+      }
+
+      if (hall.length) {
+        h += '<div class="dictamen-seccion"><h3>Hallazgos Ecosistémicos</h3>';
+        h += hall.map(function(x) { return '<div class="hallazgo-item">' + esc(x.hallazgo) + '</div>'; }).join('');
+        h += '</div>';
+      }
+
+      if (rank.length) {
+        h += '<div class="dictamen-seccion dictamen-ranking"><h3>Ranking TOP ' + rank.length + '</h3>';
+        h += rank.map(function(r) {
+          const bcls = r.scoring === 'A' ? 'badge-a' : r.scoring === 'B' ? 'badge-b' : 'badge-c';
+          return '<div class="ranking-item"><div class="ranking-pos">' + r.posicion + '</div><div class="ranking-body">' +
+            '<div><span class="org-name">' + esc(r.nombre) + '</span> <span class="badge ' + bcls + '">' + r.scoring + '</span> <span class="badge badge-interes">Interés ' + r.score_icp + '</span>' +
+            (r.tipo_deuda ? ' <span class="badge badge-deuda">Hipótesis: ' + esc(r.tipo_deuda) + '</span>' : '') +
+            ' <a class="dossier-link" href="/dossier/' + encodeURIComponent(r.nombre) + '" target="_blank">Dossier ↗</a></div>' +
+            (r.motivos && r.motivos.length ? '<div class="ranking-motivos">' + r.motivos.map(function(m){return esc(m);}).join(' · ') + '</div>' : '') +
+          '</div></div>';
+        }).join('');
+        h += '</div>';
+      }
+
+      if (alertas.length) {
+        h += '<div class="dictamen-seccion dictamen-alertas"><h3>Alertas (' + alertas.length + ')</h3>';
+        h += alertas.map(function(a) {
+          return '<div class="alerta-item"><b>' + esc(a.nombre) + '</b> <span class="badge badge-' + (a.scoring||'c').toLowerCase() + '">' + esc(a.scoring||'') + '</span> ' +
+            (a.tipo_deuda ? '<span class="badge badge-deuda">Hipótesis: ' + esc(a.tipo_deuda) + '</span> ' : '') +
+            '<div class="hint">' + (a.razones||[]).map(function(r){return esc(r);}).join(' · ') + '</div>' +
+            '<div style="font-size:.78rem;color:#2563eb">' + esc(a.accion_sugerida||'') + '</div></div>';
+        }).join('');
+        h += '</div>';
+      }
+
+      h += '</details>';
+    }
+
+    // Cifras y etapas (colapsado)
+    h += '<details style="margin:.4rem 0 0"><summary style="cursor:pointer;font-size:.82rem;opacity:.4">Cifras de captura</summary>';
+    h += '<div class="hint" style="display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.3rem">';
+    h += '<span class="chip">' + (re.organizaciones_analizadas || exp.total || 0) + ' org.</span>';
+    h += '<span class="chip">' + (re.evidencias_procesadas || 0) + ' evidencias</span>';
+    if (sc.A) h += '<span class="badge badge-a">A: ' + sc.A + '</span>';
+    if (sc.B) h += '<span class="badge badge-b">B: ' + sc.B + '</span>';
+    if (sc.C) h += '<span class="badge badge-c">C: ' + sc.C + '</span>';
+    h += '</div>';
+    if (d.etapas && d.etapas.length) {
+      h += d.etapas.map(function(e) { return '<div class="hint">' + esc(e.etapa) + ': ' + (e.escritos !== undefined ? e.escritos + ' escritos, ' + e.vistos + ' vistos' : e.senales !== undefined ? e.senales + ' señales' : e.total !== undefined ? e.total + ' expedientes' : e.hallazgos !== undefined ? e.hallazgos + ' hallazgos, ' + e.alertas + ' alertas' : e.convergencias !== undefined ? e.convergencias + ' convergencias, ' + e.orgs_curadas + ' orgs curadas' : '') + '</div>'; }).join('');
+    }
+    h += '</details>';
+
+    h += '</div>';
+    return h;
+  }
+
+  $("inv_btn").addEventListener("click", async () => {
+    const query = $("inv_query").value.trim();
+    const m = $("inv_msg"), token = tok(), resultado = $("inv_resultado");
+    if (!token) { m.className = "msg err"; m.style.display = "block"; m.textContent = "Falta el token."; return; }
+    if (!query) { m.className = "msg err"; m.style.display = "block"; m.textContent = "Escribe qué quieres investigar."; return; }
+    document.querySelectorAll("button").forEach(b => b.disabled = true);
+    m.className = "msg"; m.style.display = "block"; m.textContent = "Investigación en curso… esto puede tardar hasta 1 minuto.";
+    resultado.innerHTML = "";
+    let cur = 0;
+    mostrarProgreso(0);
+    const si = setInterval(() => { if (cur < INV_STAGES.length - 2) { cur++; mostrarProgreso(cur); } }, 6000);
+    try {
+      const r = await fetch("/investigacion", { method: "POST",
+        headers: { "Content-Type": "application/json", "X-Ingest-Token": token },
+        body: JSON.stringify({ query, vertical: $("inv_vertical").value, region: region() }) });
+      clearInterval(si);
+      const res = await leerJson(r);
+      if (!res.ok) {
+        mostrarProgreso(INV_STAGES.length - 1);
+        m.className = "msg err"; m.textContent = "Error: " + (res.error || (res.data && res.data.detail) || r.status);
+        return;
+      }
+      mostrarProgreso(INV_STAGES.length - 1);
+      const d = res.data;
+      const nota = d.parcial ? " (parcial: se agotó el presupuesto de tiempo)" : "";
+      m.className = "msg ok";
+      m.textContent = "✓ Investigación completa en " + d.tiempo_s + "s · " + d.total_escritos + " evidencias nuevas · " + d.total_vistos + " titulares · " + d.noticias_senales + " señales RSS" + nota;
+      resultado.innerHTML = renderCuraduria(d);
+      cargarExpedientes({});
+    } catch (e) { clearInterval(si); m.className = "msg err"; m.textContent = "Error de red: " + e; }
+    finally { document.querySelectorAll("button").forEach(b => b.disabled = false); }
+  });
+
+  // Búsqueda individual por nombre (secundaria)
+  async function scrapear(body, etiqueta, cargar) {
+    const m = $("s_msg"), token = tok();
+    if (!token) { m.className = "msg err"; m.textContent = "Falta el token."; return; }
+    document.querySelectorAll("button").forEach(b => b.disabled = true);
+    m.className = "msg"; m.style.display = "block"; m.textContent = "Rastreando " + etiqueta + "… (unos segundos)";
+    try {
+      const r = await fetch("/scrape", { method: "POST",
+        headers: { "Content-Type": "application/json", "X-Ingest-Token": token },
+        body: JSON.stringify(body) });
+      const res = await leerJson(r);
+      if (!res.ok) { m.className = "msg err"; m.textContent = "Error: " + (res.error || (res.data && res.data.detail) || r.status); return; }
+      const d = res.data;
+      const vistas = (d.resultados||[]).reduce((a,x)=>a+(x.vistos||0),0);
+      const dup = (d.resultados||[]).reduce((a,x)=>a+(x.duplicados||0),0);
+      const nota = d.parcial ? " (parcial: se agotó el tiempo)" : "";
+      m.className = "msg ok";
+      m.textContent = "✓ " + d.total_escritos + " nuevas · " + vistas + " titulares · " + dup + " repetidas — " + etiqueta + nota + ".";
+      if (vistas === 0) { m.className = "msg err"; m.textContent = "⚠️ Sin titulares para «" + etiqueta + "»" + nota + ". Prueba otra señal o país."; }
+      cargar();
+    } catch (e) { m.className = "msg err"; m.textContent = "Error de red: " + e; }
+    finally { document.querySelectorAll("button").forEach(b => b.disabled = false); }
+  }
+
+  // Directorio: trae empresas reales (Wikidata) como prospectos (volumen).
+  document.querySelectorAll(".dir").forEach(btn => btn.addEventListener("click", async () => {
+    const cat = btn.dataset.cat, vert = $("c_vertical").value, m = $("d_msg"), token = tok();
+    if (!token) { m.className = "msg err"; m.style.display = "block"; m.textContent = "Falta el token."; return; }
+    document.querySelectorAll("button").forEach(b => b.disabled = true);
+    m.className = "msg"; m.style.display = "block"; m.textContent = `Trayendo empresas reales de ${region()} (${cat})…`;
+    try {
+      const r = await fetch("/directorio", { method: "POST",
+        headers: { "Content-Type": "application/json", "X-Ingest-Token": token },
+        body: JSON.stringify({ region: region(), categoria: cat, vertical: vert, limite: 40 }) });
+      const out = await leerJson(r);
+      if (!out.ok) { m.className = "msg err"; m.textContent = "Error: " + (out.error || (out.data && out.data.detail) || r.status); return; }
+      const d = out.data;
+      if (d.encontradas === 0) { m.className = "msg err"; m.textContent = "⚠️ " + (d.nota || "Sin empresas para esa zona/vertical."); }
+      else { m.className = "msg ok"; m.textContent = `✓ ${d.nuevos} nuevas · ${d.actualizados} actualizadas · ${d.encontradas} de ${d.fuente} — ${cat} · ${region()}.` + (d.nota ? " " + d.nota : "") + " Míralas en el Informe profundo."; }
+      refrescarConteo();
+    } catch (e) { m.className = "msg err"; m.textContent = "Error de red: " + e; }
+    finally { document.querySelectorAll("button").forEach(b => b.disabled = false); }
+  }));
+
+  $("s_btn").addEventListener("click", () => {
+    const empresa = $("s_empresa").value.trim();
+    if (!empresa) { const m = $("s_msg"); m.className = "msg err"; m.style.display = "block"; m.textContent = "Escribe una empresa."; return; }
+    $("nombre").value = empresa;                       // precarga para ③
+    scrapear({ empresa, tipo_evento: $("s_tipo").value, region: region(), connectors: $("s_fuentes").value.split(",") },
+             empresa, () => cargarExpedientes({ empresa }));
+  });
+
+  // ② Cargar Expedientes Vivos (agrupados por organización, con análisis)
+  let _expId = 0;
+  async function cargarExpedientes(filtro) {
+    const cont = $("expedientes"), res = $("exp_resumen");
+    cont.innerHTML = '<div class="hint">Cargando expedientes…</div>';
+    const qs = new URLSearchParams({ limite: "30", ...filtro });
+    try {
+      const d = await (await fetch("/expedientes?" + qs)).json();
+      if (!d.expedientes || !d.expedientes.length) {
+        cont.innerHTML = '<div class="hint">Sin expedientes todavía. Rastrea un ecosistema arriba.</div>';
+        res.innerHTML = "";
+        return;
+      }
+      const s = d.resumen_scoring || {};
+      res.innerHTML = `<span class="chip">${d.total} org.</span>` +
+        (s.A ? `<span class="chip badge badge-a">A: ${s.A}</span>` : "") +
+        (s.B ? `<span class="chip badge badge-b">B: ${s.B}</span>` : "") +
+        (s.C ? `<span class="chip badge badge-c">C: ${s.C}</span>` : "");
+      cont.innerHTML = d.expedientes.map(e => {
+        const sc = (e.scoring||"C").toUpperCase();
+        const bcls = sc === "A" ? "badge-a" : sc === "B" ? "badge-b" : "badge-c";
+        const ecls = sc === "A" ? "exp-a" : sc === "B" ? "exp-b" : "exp-c";
+        const uid = "ev_" + (++_expId);
+
+        let deudaHtml = "";
+        if (e.tipo_deuda) {
+          deudaHtml = `<div class="deuda-box">
+            <div class="deuda-title">🧩 Hipótesis: ${esc(e.tipo_deuda)}${e.deuda_secundaria ? ' <span style="font-weight:400;opacity:.7">+ ' + esc(e.deuda_secundaria) + '</span>' : ''}</div>
+            <div class="deuda-reason">${esc(e.deuda_razon)}</div>
+            <div class="hint" style="margin-top:.2rem;font-size:.72rem">Señal narrativa — requiere convergencia operativa para confirmación.</div>
+          </div>`;
+        }
+
+        let anguloHtml = "";
+        if (e.angulo_conversacion) {
+          anguloHtml = `<div class="angulo">💬 <b>Ángulo:</b> ${esc(e.angulo_conversacion)}</div>`;
+        }
+
+        let patronesHtml = "";
+        if (e.patrones && e.patrones.length) {
+          patronesHtml = e.patrones.map(p =>
+            `<div class="patron-box">🔗 <b>${esc(p.patron)}</b> — ${esc(p.razonamiento)}</div>`
+          ).join("");
+        }
+
+        const evItems = (e.evidencias || []).map(ev =>
+          `<div class="ev-item">
+            ${esc(ev.texto)}
+            <div><b>${esc(ev.fuente)}</b>${ev.fecha ? " · " + esc(ev.fecha) : ""}${ev.tipo_evento ? " · " + esc(ev.tipo_evento) : ""}
+            ${ev.url ? ' · <a href="' + esc(safeUrl(ev.url)) + '" target="_blank" rel="noopener">fuente ↗</a>' : ""}</div>
+          </div>`
+        ).join("");
+
+        return `
+        <div class="exp ${ecls}">
+          <div class="exp-header">
+            <span class="org-name">🏢 ${esc(e.nombre)}</span>
+            <span class="badge ${bcls}">${sc}</span>
+            <span class="badge badge-interes">Interés ${e.score_icp}</span>
+            <span class="badge badge-int">${esc(e.intensidad||"")}</span>
+            ${e.categoria ? '<span class="chip">' + esc(e.categoria) + '</span>' : ""}
+            ${e.vertical ? '<span class="chip">' + esc(e.vertical) + '</span>' : ""}
+          </div>
+          ${deudaHtml}
+          ${patronesHtml}
+          ${anguloHtml}
+          <div class="meta" style="margin-top:.3rem">🎯 Decisor: <b>${esc(e.decisor_sugerido)}</b>${e.contacto && e.contacto.email_sugerido ? " · ✉️ " + esc(e.contacto.email_sugerido) : ""}</div>
+          <span class="ev-toggle" onclick="document.getElementById('${uid}').classList.toggle('open');this.textContent=this.textContent.includes('▶')? '▼ Ocultar evidencias (${e.total_evidencias})':'▶ Ver evidencias (${e.total_evidencias})'">▶ Ver evidencias (${e.total_evidencias})</span>
+          <div id="${uid}" class="ev-list">${evItems}</div>
+          <div class="exp-actions">
+            <button class="sec" onclick="prefill(this.dataset.n)" data-n="${esc(e.nombre)}">➕ Guardar y auto-investigar</button>
+            <button class="sec" onclick="capturarDriftDesdeExp(this)" data-org="${esc(e.nombre)}">📡 Drift</button>
+            <button class="sec" onclick="observarOnlifeDesdeExp(this)" data-org="${esc(e.nombre)}">🔬 Onlife</button>
+            <button class="sec" onclick="registrarPipelineDesdeExp(this)" data-org="${esc(e.nombre)}">📋 Pipeline</button>
+            <button class="sec" onclick="verDolorMapDesdeExp(this)" data-org="${esc(e.nombre)}">🗺️ DolorMap</button>
+            <a class="sec dossier-link" href="/dossier/${encodeURIComponent(e.nombre)}" target="_blank" rel="noopener">📄 Dossier</a>
+            ${e.linkedin ? '<a class="sec" href="' + esc(safeUrl(e.linkedin)) + '" target="_blank" rel="noopener">LinkedIn ↗</a>' : ""}
+            ${e.contacto && e.contacto.dominio ? '<button class="sec" onclick="verificarCorreo(this)" data-dom="' + esc(e.contacto.dominio) + '">✓ Verificar correo</button> <span class="vres"></span>' : ""}
+          </div>
+        </div>`; }).join("");
+    } catch (e) { cont.innerHTML = '<div class="hint">Error al cargar expedientes: ' + esc(String(e)) + '</div>'; }
+  }
+
+  // Filtro de categorías para expedientes (post-filtro)
+  function expCatsFiltro() {
+    const sel = [...document.querySelectorAll(".exp-cat:checked")].map(c => c.value);
+    return sel.length && sel.length < 4 ? { categoria: sel.join(",") } : {};
+  }
+  $("exp_cargar").addEventListener("click", () => cargarExpedientes(expCatsFiltro()));
+
+  window.prefill = (nombre) => {
+    $("nombre").value = nombre;
+    $("nombre").scrollIntoView({ behavior: "smooth" });
+    $("enrich_btn").click();
+  };
+
+  // ⑤ Drift Narrativo
+  window.capturarDriftDesdeExp = (btn) => {
+    const org = btn.dataset.org || "";
+    $("drift_org").value = org;
+    $("drift_sitio").value = "";
+    $("drift_sitio").scrollIntoView({ behavior: "smooth" });
+    $("drift_sitio").focus();
+  };
+
+  $("drift_capturar").addEventListener("click", async () => {
+    const m = $("drift_msg"), token = tok();
+    const org = $("drift_org").value.trim(), sitio = $("drift_sitio").value.trim();
+    if (!token) { m.className = "msg err"; m.style.display = "block"; m.textContent = "Falta el token."; return; }
+    if (!org) { m.className = "msg err"; m.style.display = "block"; m.textContent = "Escribe el nombre de la organización."; return; }
+    if (!sitio) { m.className = "msg err"; m.style.display = "block"; m.textContent = "Escribe el sitio web."; return; }
+    $("drift_capturar").disabled = true;
+    m.className = "msg"; m.style.display = "block"; m.textContent = "Capturando snapshots de " + org + "…";
+    try {
+      const r = await fetch("/drift/capturar", { method: "POST",
+        headers: { "Content-Type": "application/json", "X-Ingest-Token": token },
+        body: JSON.stringify({ org_nombre: org, sitio_web: sitio }) });
+      const o = await leerJson(r);
+      if (!o.ok) { m.className = "msg err"; m.textContent = "Error: " + (o.error || (o.data && o.data.detail) || r.status); return; }
+      const d = o.data;
+      const estados = (d.snapshots||[]).map(s => s.estado).join(", ");
+      m.className = "msg ok";
+      m.textContent = "✓ " + d.total_snapshots + " snapshot(s) · " + d.evidencias_nuevas + " evidencia(s) narrativa(s) nuevas. Estados: " + estados;
+      cargarDriftTimeline(org);
+    } catch (e) { m.className = "msg err"; m.textContent = "Error de red: " + e; }
+    finally { $("drift_capturar").disabled = false; }
+  });
+
+  $("drift_ver").addEventListener("click", () => {
+    const org = $("drift_org").value.trim();
+    if (!org) { const m = $("drift_msg"); m.className = "msg err"; m.style.display = "block"; m.textContent = "Escribe el nombre de la organización."; return; }
+    cargarDriftTimeline(org);
+  });
+
+  async function cargarDriftTimeline(org) {
+    const cont = $("drift_timeline");
+    cont.innerHTML = '<div class="hint">Cargando…</div>';
+    try {
+      const d = await (await fetch("/drift/" + encodeURIComponent(org))).json();
+      if (!d.snapshots.length && !d.evidencias.length) {
+        cont.innerHTML = '<div class="hint">Sin snapshots para ' + esc(org) + '. Captura primero.</div>';
+        return;
+      }
+      let html = '<div style="margin-top:.5rem"><b>' + esc(org) + '</b> — ' + d.total_snapshots + ' snapshot(s) · ' + d.total_evidencias + ' evidencia(s)</div>';
+
+      if (d.evidencias.length) {
+        html += '<h3 style="font-size:.95rem;margin:1rem 0 .3rem">Evidencias Narrativas</h3>';
+        html += d.evidencias.map(ev => {
+          const ICONOS = {posicionamiento:"🎯",audiencia:"👥",lenguaje:"✍️",identidad:"🏷️",concepto_nuevo:"🆕",concepto_eliminado:"🗑️",contradiccion:"⚡",cambio_ontologico:"🔄"};
+          const icono = ICONOS[ev.tipo_cambio] || "📋";
+          return '<div class="card">' +
+            '<div>' + icono + ' <b>' + esc(ev.tipo_cambio) + '</b> <span class="chip">' + esc(ev.tipo_pagina) + '</span> <span class="meta">' + esc((ev.detectado_en||"").slice(0,10)) + '</span></div>' +
+            '<div class="meta">' + esc(ev.descripcion) + '</div>' +
+            (ev.fragmento_antes ? '<div class="ev-item" style="border-left-color:#dc2626"><b>Antes:</b> ' + esc(ev.fragmento_antes.slice(0,200)) + '</div>' : '') +
+            (ev.fragmento_despues ? '<div class="ev-item" style="border-left-color:#16a34a"><b>Después:</b> ' + esc(ev.fragmento_despues.slice(0,200)) + '</div>' : '') +
+          '</div>';
+        }).join("");
+      }
+
+      if (d.snapshots.length) {
+        html += '<h3 style="font-size:.95rem;margin:1rem 0 .3rem">Snapshots</h3>';
+        html += d.snapshots.map(s =>
+          '<div class="card"><div><b>' + esc(s.tipo_pagina) + '</b> <span class="chip">' + esc(s.estado_observable) + '</span> <span class="meta">' + esc((s.capturado_en||"").slice(0,16).replace("T"," ")) + '</span></div>' +
+          '<div class="meta">' + esc(s.url) + (s.hash_contenido ? ' · hash: ' + esc(s.hash_contenido.slice(0,12)) + '…' : '') + '</div></div>'
+        ).join("");
+      }
+
+      cont.innerHTML = html;
+    } catch (e) { cont.innerHTML = '<div class="hint">Error: ' + esc(String(e)) + '</div>'; }
+  }
+
+  // ⑦ Motor Onlife
+  window.observarOnlifeDesdeExp = (btn) => {
+    const org = btn.dataset.org || "";
+    $("onlife_org").value = org;
+    $("onlife_org").scrollIntoView({ behavior: "smooth" });
+  };
+
+  $("onlife_observar").addEventListener("click", async () => {
+    const m = $("onlife_msg"), token = tok();
+    const org = $("onlife_org").value.trim();
+    const gh = $("onlife_github").value.trim();
+    const feed = $("onlife_feed").value.trim();
+    if (!token) { m.className = "msg err"; m.style.display = "block"; m.textContent = "Falta el token."; return; }
+    if (!org) { m.className = "msg err"; m.style.display = "block"; m.textContent = "Escribe el nombre de la organización."; return; }
+    $("onlife_observar").disabled = true;
+    m.className = "msg"; m.style.display = "block"; m.textContent = "Observando " + org + "…";
+    try {
+      const body = { org_nombre: org };
+      if (gh) body.org_github = gh;
+      if (feed) body.feed_url = feed;
+      const r = await fetch("/onlife/observar", { method: "POST",
+        headers: { "Content-Type": "application/json", "X-Ingest-Token": token },
+        body: JSON.stringify(body) });
+      const o = await leerJson(r);
+      if (!o.ok) { m.className = "msg err"; m.textContent = "Error: " + (o.error || (o.data && o.data.detail) || r.status); return; }
+      const d = o.data;
+      m.className = "msg ok";
+      m.textContent = "✓ " + d.total_señales + " señal(es) observada(s), " + d.señales_nuevas + " nueva(s). Fuentes: " + (d.fuentes||[]).join(", ");
+      cargarOnlifePerfil(org);
+    } catch (e) { m.className = "msg err"; m.textContent = "Error de red: " + e; }
+    finally { $("onlife_observar").disabled = false; }
+  });
+
+  $("onlife_ver").addEventListener("click", () => {
+    const org = $("onlife_org").value.trim();
+    if (!org) { const m = $("onlife_msg"); m.className = "msg err"; m.style.display = "block"; m.textContent = "Escribe el nombre de la organización."; return; }
+    cargarOnlifePerfil(org);
+  });
+
+  async function cargarOnlifePerfil(org) {
+    const cont = $("onlife_perfil");
+    cont.innerHTML = '<div class="hint">Cargando…</div>';
+    try {
+      const d = await (await fetch("/onlife/" + encodeURIComponent(org))).json();
+      if (!d.total_señales) {
+        cont.innerHTML = '<div class="hint">Sin señales onlife para ' + esc(org) + '. Observa primero.</div>';
+        return;
+      }
+      const ICONOS_F = {github:"🐙",hackernews:"🟠",blog_changelog:"📝"};
+      const ICONOS_T = {actividad_tech:"⚙️",lanzamiento:"🚀",comunidad:"💬",contratacion:"👔",presencia:"📢"};
+      let html = '<div style="margin-top:.5rem"><b>' + esc(org) + '</b> — ' + d.total_señales + ' señal(es) · Fuentes: ' + d.fuentes_observadas.map(f => (ICONOS_F[f]||"📋") + " " + esc(f)).join(", ") + '</div>';
+      html += d.señales.map(s => {
+        const ic = ICONOS_T[s.tipo_senal] || "📋";
+        const icf = ICONOS_F[s.fuente] || "📋";
+        return '<div class="card">' +
+          '<div>' + ic + ' <b>' + esc(s.tipo_senal) + '</b> ' + icf + ' <span class="chip">' + esc(s.fuente) + '</span> <span class="meta">' + esc((s.fecha_observacion||"").slice(0,16).replace("T"," ")) + '</span></div>' +
+          '<div class="meta">' + esc(s.descripcion) + '</div>' +
+          (s.url ? '<div class="meta"><a href="' + esc(safeUrl(s.url)) + '" target="_blank" rel="noopener">' + esc(s.url.slice(0,80)) + '</a></div>' : '') +
+        '</div>';
+      }).join("");
+      cont.innerHTML = html;
+    } catch (e) { cont.innerHTML = '<div class="hint">Error: ' + esc(String(e)) + '</div>'; }
+  }
+
+  // 🗺️ DolorMap Visual
+  window.verDolorMapDesdeExp = (btn) => {
+    const org = btn.dataset.org || "";
+    $("dm_org").value = org;
+    $("dm_ver").click();
+  };
+
+  $("dm_ver").addEventListener("click", async () => {
+    const m = $("dm_msg"), cont = $("dm_contenido");
+    const org = $("dm_org").value.trim();
+    if (!org) { m.className = "msg err"; m.style.display = "block"; m.textContent = "Escribe el nombre de la organización."; return; }
+    m.className = "msg"; m.style.display = "block"; m.textContent = "Cargando DolorMap de " + org + "…";
+    cont.innerHTML = "";
+    try {
+      const d = await (await fetch("/dolormap/" + encodeURIComponent(org))).json();
+      if (d.detail) { m.className = "msg err"; m.textContent = d.detail; return; }
+      m.style.display = "none";
+
+      const SCLASE_DM = { A: "msg ok", B: "msg", C: "msg" };
+      const sc = d.scoring || "C";
+      const bcls = sc === "A" ? "badge-a" : sc === "B" ? "badge-b" : "badge-c";
+
+      let html = '<div class="card" style="border-left:4px solid ' + (sc==="A"?"#16a34a":sc==="B"?"#ca8a04":"#6b7280") + '">';
+      html += '<div style="display:flex;justify-content:space-between;align-items:center">';
+      html += '<h3 style="margin:0;font-size:1.1rem">🗺️ ' + esc(d.org_nombre) + '</h3>';
+      html += '<span class="badge ' + bcls + '">' + sc + '</span></div>';
+
+      // Dolor Cultural
+      if (d.tipo_deuda) {
+        html += '<div style="margin:.5rem 0;padding:.5rem;background:var(--bg2,#f3f4f6);border-radius:.375rem">';
+        html += '<div><b>🔴 Hipótesis: ' + esc(d.tipo_deuda) + '</b> <span class="chip">' + esc(d.intensidad) + '</span></div>';
+        html += '<div class="meta">' + esc(d.deuda_razon) + '</div>';
+        if (d.deuda_secundaria) html += '<div class="meta" style="margin-top:.2rem">↳ ' + esc(d.deuda_secundaria) + '</div>';
+        html += '<div class="meta" style="margin-top:.3rem">💬 <b>Ángulo:</b> ' + esc(d.angulo_conversacion) + '</div>';
+        html += '<div class="meta">🎯 <b>Decisor:</b> ' + esc(d.decisor_sugerido) + '</div>';
+        html += '</div>';
+      }
+
+      // Patrones
+      if (d.patrones && d.patrones.length) {
+        html += '<div style="margin:.4rem 0"><b>Patrones detectados:</b></div>';
+        html += d.patrones.map(p => '<div class="ev-item" style="border-left-color:#7c3aed"><b>' + esc(p.patron) + '</b><br><span class="meta">' + esc(p.razonamiento) + '</span></div>').join("");
+      }
+
+      // Keywords
+      if (d.keywords && d.keywords.length) {
+        html += '<div style="margin:.4rem 0">' + d.keywords.map(k => '<span class="chip">' + esc(k) + '</span>').join(" ") + '</div>';
+      }
+
+      // Pipeline
+      if (d.pipeline && d.pipeline.etapa) {
+        const ICONOS_E = {observacion:"👀",vigilancia:"🔍",peritaje:"🔬",dolormap:"🗺️",alianza:"🤝",cerrado:"✅"};
+        html += '<div style="margin:.5rem 0;padding:.4rem;background:var(--bg2,#f3f4f6);border-radius:.375rem">';
+        html += '<b>📋 Pipeline:</b> ' + (ICONOS_E[d.pipeline.etapa]||"") + ' ' + esc(d.pipeline.etapa_label);
+        html += '</div>';
+      }
+
+      // Evidencias
+      html += '<details style="margin:.5rem 0"><summary style="cursor:pointer;font-weight:600">📰 Evidencias (' + d.evidencias.total + ')</summary>';
+      if (d.evidencias.items.length) {
+        html += d.evidencias.items.map(ev => '<div class="ev-item"><a href="' + esc(safeUrl(ev.url_fuente)) + '" target="_blank" rel="noopener">' + esc((ev.cita_textual||"").slice(0,120)) + '</a> <span class="meta">' + esc(ev.nombre_medio) + ' · ' + esc((ev.creado_en||"").slice(0,10)) + '</span></div>').join("");
+      } else { html += '<div class="hint">Sin evidencias capturadas.</div>'; }
+      html += '</details>';
+
+      // Drift
+      html += '<details style="margin:.5rem 0"><summary style="cursor:pointer;font-weight:600">📡 Drift Narrativo (' + d.drift.total_evidencias + ' cambios, ' + d.drift.total_snapshots + ' snapshots)</summary>';
+      if (d.drift.evidencias.length) {
+        const DI = {posicionamiento:"🎯",audiencia:"👥",lenguaje:"✍️",identidad:"🏷️",concepto_nuevo:"🆕",concepto_eliminado:"🗑️",contradiccion:"⚡",cambio_ontologico:"🔄"};
+        html += d.drift.evidencias.map(ev => '<div class="ev-item">' + (DI[ev.tipo_cambio]||"📋") + ' <b>' + esc(ev.tipo_cambio) + '</b> <span class="chip">' + esc(ev.tipo_pagina) + '</span><br><span class="meta">' + esc(ev.descripcion) + '</span></div>').join("");
+      } else { html += '<div class="hint">Sin cambios narrativos registrados.</div>'; }
+      html += '</details>';
+
+      // Onlife
+      html += '<details style="margin:.5rem 0"><summary style="cursor:pointer;font-weight:600">🔬 Señales Onlife (' + d.onlife.total_señales + ')</summary>';
+      if (d.onlife.señales.length) {
+        const OI = {actividad_tech:"⚙️",lanzamiento:"🚀",comunidad:"💬",contratacion:"👔",presencia:"📢"};
+        html += d.onlife.señales.map(s => '<div class="ev-item">' + (OI[s.tipo_senal]||"📋") + ' <b>' + esc(s.tipo_senal) + '</b> <span class="chip">' + esc(s.fuente) + '</span><br><span class="meta">' + esc(s.descripcion) + '</span>' + (s.url ? '<br><a href="' + esc(safeUrl(s.url)) + '" target="_blank" rel="noopener" class="meta">' + esc(s.url.slice(0,60)) + '</a>' : '') + '</div>').join("");
+      } else { html += '<div class="hint">Sin señales onlife. Usa el Motor Onlife para observar.</div>'; }
+      html += '</details>';
+
+      // Links
+      html += '<div style="margin-top:.5rem">';
+      if (d.linkedin) html += '<a class="sec" href="' + esc(safeUrl(d.linkedin)) + '" target="_blank" rel="noopener">LinkedIn ↗</a> ';
+      if (d.google) html += '<a class="sec" href="' + esc(safeUrl(d.google)) + '" target="_blank" rel="noopener">Google ↗</a>';
+      html += '</div>';
+
+      html += '</div>';
+      cont.innerHTML = html;
+    } catch (e) { m.className = "msg err"; m.textContent = "Error: " + e; }
+  });
+
+  // ⑨ Pipeline Comercial
+  window.registrarPipelineDesdeExp = (btn) => {
+    const org = btn.dataset.org || "";
+    $("pipe_org").value = org;
+    $("pipe_org").scrollIntoView({ behavior: "smooth" });
+  };
+
+  $("pipe_etapa").addEventListener("change", () => {
+    $("pipe_resultado").style.display = $("pipe_etapa").value === "cerrado" ? "" : "none";
+  });
+
+  $("pipe_registrar").addEventListener("click", async () => {
+    const m = $("pipe_msg"), token = tok();
+    const org = $("pipe_org").value.trim(), etapa = $("pipe_etapa").value;
+    const notas = $("pipe_notas").value.trim();
+    if (!token) { m.className = "msg err"; m.style.display = "block"; m.textContent = "Falta el token."; return; }
+    if (!org) { m.className = "msg err"; m.style.display = "block"; m.textContent = "Escribe el nombre de la organización."; return; }
+    $("pipe_registrar").disabled = true;
+    m.className = "msg"; m.style.display = "block"; m.textContent = "Registrando…";
+    try {
+      const r = await fetch("/pipeline/registrar", { method: "POST",
+        headers: { "Content-Type": "application/json", "X-Ingest-Token": token },
+        body: JSON.stringify({ org_nombre: org, etapa, notas }) });
+      const o = await leerJson(r);
+      if (!o.ok) { m.className = "msg err"; m.textContent = "Error: " + (o.error || (o.data && o.data.detail) || r.status); return; }
+      m.className = "msg ok";
+      m.textContent = "✓ " + o.data.org_nombre + " — " + o.data.accion + " en etapa " + o.data.etapa;
+    } catch (e) { m.className = "msg err"; m.textContent = "Error de red: " + e; }
+    finally { $("pipe_registrar").disabled = false; }
+  });
+
+  $("pipe_avanzar").addEventListener("click", async () => {
+    const m = $("pipe_msg"), token = tok();
+    const org = $("pipe_org").value.trim(), etapa = $("pipe_etapa").value;
+    const notas = $("pipe_notas").value.trim(), resultado = $("pipe_resultado").value;
+    if (!token) { m.className = "msg err"; m.style.display = "block"; m.textContent = "Falta el token."; return; }
+    if (!org) { m.className = "msg err"; m.style.display = "block"; m.textContent = "Escribe el nombre de la organización."; return; }
+    $("pipe_avanzar").disabled = true;
+    m.className = "msg"; m.style.display = "block"; m.textContent = "Avanzando…";
+    try {
+      const body = { org_nombre: org, etapa, notas };
+      if (resultado) body.resultado = resultado;
+      const r = await fetch("/pipeline/avanzar", { method: "POST",
+        headers: { "Content-Type": "application/json", "X-Ingest-Token": token },
+        body: JSON.stringify(body) });
+      const o = await leerJson(r);
+      if (!o.ok) { m.className = "msg err"; m.textContent = "Error: " + (o.error || (o.data && o.data.detail) || r.status); return; }
+      m.className = "msg ok";
+      m.textContent = "✓ " + o.data.org_nombre + ": " + (o.data.etapa_anterior||"—") + " → " + o.data.etapa;
+    } catch (e) { m.className = "msg err"; m.textContent = "Error de red: " + e; }
+    finally { $("pipe_avanzar").disabled = false; }
+  });
+
+  $("pipe_ver").addEventListener("click", async () => {
+    const cont = $("pipe_contenido");
+    const etapa = $("pipe_etapa").value;
+    cont.innerHTML = '<div class="hint">Cargando…</div>';
+    try {
+      const url = "/pipeline" + (etapa ? "?etapa=" + encodeURIComponent(etapa) : "");
+      const d = await (await fetch(url)).json();
+      if (!d.total) { cont.innerHTML = '<div class="hint">Sin organizaciones en el pipeline.</div>'; return; }
+      const ICONOS_E = {observacion:"👀",vigilancia:"🔍",peritaje:"🔬",dolormap:"🗺️",alianza:"🤝",cerrado:"✅"};
+      let html = '<div style="margin-top:.5rem"><b>' + d.total + '</b> organización(es)</div>';
+      html += d.organizaciones.map(o => {
+        const ic = ICONOS_E[o.etapa] || "📋";
+        return '<div class="card">' +
+          '<div>' + ic + ' <b>' + esc(o.org_nombre) + '</b> <span class="chip">' + esc(o.etapa) + '</span>' +
+          (o.resultado ? ' <span class="chip">' + esc(o.resultado) + '</span>' : '') +
+          ' <span class="meta">' + esc((o.actualizado_en||"").slice(0,16).replace("T"," ")) + '</span></div>' +
+          (o.notas ? '<div class="meta">' + esc(o.notas) + '</div>' : '') +
+        '</div>';
+      }).join("");
+      cont.innerHTML = html;
+    } catch (e) { cont.innerHTML = '<div class="hint">Error: ' + esc(String(e)) + '</div>'; }
+  });
+
+  $("pipe_funnel").addEventListener("click", async () => {
+    const cont = $("pipe_contenido");
+    cont.innerHTML = '<div class="hint">Cargando…</div>';
+    try {
+      const d = await (await fetch("/pipeline/funnel")).json();
+      const ICONOS_E = {observacion:"👀",vigilancia:"🔍",peritaje:"🔬",dolormap:"🗺️",alianza:"🤝",cerrado:"✅"};
+      let html = '<div style="margin-top:.5rem"><b>Funnel Comercial</b> — ' + d.total_organizaciones + ' organización(es)</div>';
+      html += '<div style="margin-top:.5rem">';
+      const maxVal = Math.max(...d.funnel.map(f => f.total), 1);
+      html += d.funnel.map(f => {
+        const pct = Math.round((f.total / maxVal) * 100);
+        const ic = ICONOS_E[f.etapa] || "📋";
+        return '<div style="margin:.3rem 0">' +
+          '<div style="display:flex;align-items:center;gap:.5rem">' +
+          '<span style="min-width:10rem">' + ic + ' ' + esc(f.label) + '</span>' +
+          '<div style="flex:1;background:var(--bg2,#e5e7eb);border-radius:.25rem;height:1.2rem">' +
+          '<div style="width:' + pct + '%;background:var(--accent,#2563eb);height:100%;border-radius:.25rem;min-width:' + (f.total ? '1rem' : '0') + '"></div></div>' +
+          '<b>' + f.total + '</b></div></div>';
+      }).join("");
+      html += '</div>';
+      cont.innerHTML = html;
+    } catch (e) { cont.innerHTML = '<div class="hint">Error: ' + esc(String(e)) + '</div>'; }
+  });
+
+  // ②·⁵ Informe profundo: análisis determinista de lo capturado.
+  const SCLASE = { A: "msg ok", B: "msg", C: "msg" };
+  // "Todas" y las casillas por categoría se excluyen entre sí.
+  $("inf_todas").addEventListener("change", () => {
+    if ($("inf_todas").checked) document.querySelectorAll(".inf-cat").forEach(c => c.checked = false);
+  });
+  document.querySelectorAll(".inf-cat").forEach(c => c.addEventListener("change", () => {
+    if (document.querySelector(".inf-cat:checked")) $("inf_todas").checked = false;
+    else $("inf_todas").checked = true;
+  }));
+  function catsSeleccionadas() {
+    return [...document.querySelectorAll(".inf-cat:checked")].map(c => c.value);
+  }
+  function qsCats() {
+    const cats = catsSeleccionadas();
+    return cats.length ? "?categorias=" + encodeURIComponent(cats.join(",")) : "";
+  }
+  $("inf_btn").addEventListener("click", async () => {
+    const cont = $("informe"), res = $("inf_resumen");
+    res.textContent = "Analizando lo capturado…"; cont.innerHTML = "";
+    const q = qsCats();
+    $("inf_md").href = "/informe.md" + q; $("inf_md").style.display = "inline-block";
+    $("inf_csv").href = "/informe.csv" + q; $("inf_csv").style.display = "inline-block";
+    try {
+      const r = await fetch("/informe" + q);
+      const out = await leerJson(r);
+      if (!out.ok) { res.className = "msg err"; res.textContent = "Error: " + (out.error || r.status); return; }
+      const d = out.data, s = d.resumen_scoring || {};
+      res.className = "hint";
+      res.textContent = `${d.total} empresa(s) — A: ${s.A||0} · B: ${s.B||0} · C: ${s.C||0} (A = Mayor Interés Analítico).`;
+      if (!d.prospectos.length) { cont.innerHTML = '<div class="hint">Aún no hay nada capturado para analizar. Haz una búsqueda por ecosistema arriba.</div>'; return; }
+      cont.innerHTML = d.prospectos.map(t => {
+        const c = t.contacto || {};
+        const email = c.email_sugerido
+          ? ` · ✉️ <b>${esc(c.email_sugerido)}</b> <span class="chip">sin verificar</span>`
+          : "";
+        return `
+        <div class="card">
+          <div><b>${esc(t.empresa || "(sin nombre)")}</b> <span class="chip">${esc(t.scoring)}</span> <span class="chip">Interés ${t.score_icp}</span> <span class="chip">intensidad ${esc(t.intensidad||"")}</span>${t.tipo_deuda ? ' <span class="chip">' + esc(t.tipo_deuda) + '</span>' : ''}</div>
+          <div>${esc(t.titulo)}</div>
+          <div class="meta">${t.tipo_deuda ? "🧩 Hipótesis: " + esc(t.tipo_deuda) + " — " + esc(t.deuda_razon) + (t.deuda_secundaria ? " · secundaria: " + esc(t.deuda_secundaria) : "") + "<br>" : ""}
+            ${t.angulo_conversacion ? "💬 Ángulo: " + esc(t.angulo_conversacion) + "<br>" : ""}
+            🎯 Decisor sugerido: <b>${esc(t.decisor_sugerido)}</b>${email}<br>📌 ${esc(t.razon)}</div>
+          <div class="meta">${esc(t.nombre_medio||"")}${t.vertical ? " · " + esc(t.vertical) : ""}${t.categoria ? " · " + esc(t.categoria) : ""}${t.fecha_publicacion ? " · " + esc(t.fecha_publicacion) : ""}
+            ${t.url_fuente ? ' · <a href="' + esc(safeUrl(t.url_fuente)) + '" target="_blank" rel="noopener">fuente ↗</a>' : ""}
+            ${t.linkedin ? ' · <a href="' + esc(safeUrl(t.linkedin)) + '" target="_blank" rel="noopener">LinkedIn ↗</a>' : ""}</div>
+          <button class="sec" onclick="prefill(this.dataset.n)" data-n="${esc(t.empresa)}">➕ Guardar y auto-investigar</button>
+          ${c.dominio ? '<button class="sec" onclick="verificarCorreo(this)" data-dom="' + esc(c.dominio) + '">✓ Verificar correo (Hunter)</button> <span class="vres"></span>' : ""}
+        </div>`; }).join("");
+    } catch (e) { res.className = "msg err"; res.textContent = "Error de red: " + e; }
+  });
+
+  // Guardar la investigación (snapshot) de las categorías elegidas.
+  $("inf_guardar").addEventListener("click", async () => {
+    const res = $("inf_resumen"), token = tok();
+    if (!token) { res.className = "msg err"; res.style.display = "block"; res.textContent = "Falta el token para guardar."; return; }
+    const cats = catsSeleccionadas();
+    res.className = "hint"; res.textContent = "Guardando investigación…";
+    try {
+      const r = await fetch("/informe/guardar", { method: "POST",
+        headers: { "Content-Type": "application/json", "X-Ingest-Token": token },
+        body: JSON.stringify({ categorias: cats.join(",") }) });
+      const o = await leerJson(r);
+      if (!o.ok) { res.className = "msg err"; res.textContent = "Error: " + (o.error || (o.data && o.data.detail) || r.status); return; }
+      res.className = "msg ok"; res.textContent = `✓ Guardada: ${o.data.titulo}.`;
+      verGuardadas();
+    } catch (e) { res.className = "msg err"; res.textContent = "Error de red: " + e; }
+  });
+
+  async function verGuardadas() {
+    const cont = $("inf_guardadas");
+    try {
+      const d = await (await fetch("/informes")).json();
+      if (!d.items.length) { cont.innerHTML = '<div class="hint">Aún no hay investigaciones guardadas.</div>'; return; }
+      cont.innerHTML = d.items.map(g => {
+        const s = g.resumen_scoring || {};
+        return `<div class="card">
+          <div><b>${esc(g.titulo || "Investigación")}</b></div>
+          <div class="meta">${esc(g.categorias || "Todas")} · ${g.total} empresas · A:${s.A||0} B:${s.B||0} C:${s.C||0} · ${(g.creado_en||"").slice(0,16).replace("T"," ")}</div>
+          <a class="sec" href="/informes/${g.id}.md" target="_blank" rel="noopener">⬇︎ Descargar</a>
+          <button class="sec" onclick="borrarInvestigacion(${g.id})">🗑 Borrar</button>
+        </div>`; }).join("");
+    } catch (e) { cont.innerHTML = '<div class="hint">No se pudieron cargar.</div>'; }
+  }
+  $("inf_ver_guardadas").addEventListener("click", verGuardadas);
+  window.borrarInvestigacion = async (id) => {
+    const res = $("inf_resumen"), token = tok();
+    if (!token) { res.className = "msg err"; res.style.display = "block"; res.textContent = "Falta el token para borrar."; return; }
+    if (!confirm("¿Borrar esta investigación guardada?")) return;
+    try {
+      const r = await fetch("/informes/" + id, { method: "DELETE",
+        headers: { "X-Ingest-Token": token } });
+      const o = await leerJson(r);
+      if (!o.ok) { res.className = "msg err"; res.style.display = "block"; res.textContent = "Error al borrar: " + (o.error || (o.data && o.data.detail) || r.status); return; }
+      res.className = "msg ok"; res.style.display = "block"; res.textContent = "🗑 Investigación borrada.";
+      verGuardadas();
+    } catch (e) { res.className = "msg err"; res.style.display = "block"; res.textContent = "Error de red: " + e; }
+  };
+
+  // Verificar correo del decisor con Hunter (bajo demanda, consume cuota).
+  window.verificarCorreo = async (btn) => {
+    const dom = btn.dataset.dom, out = btn.nextElementSibling, token = tok();
+    if (!token) { out.textContent = " Falta el token."; return; }
+    btn.disabled = true; out.textContent = " Verificando con Hunter…";
+    try {
+      const r = await fetch("/verificar-contacto", { method: "POST",
+        headers: { "Content-Type": "application/json", "X-Ingest-Token": token },
+        body: JSON.stringify({ dominio: dom }) });
+      const o = await leerJson(r);
+      if (!o.ok) { out.textContent = " Error: " + (o.error || r.status); return; }
+      const d = o.data;
+      if (d.modo === "hipotesis" || d.verificado === false && d.status === "sin_clave") {
+        const h = d.hipotesis || {};
+        out.innerHTML = " ⚠️ Sin HUNTER_API_KEY. Candidato: <b>" + esc(h.email_sugerido||"—") + "</b> (sin verificar).";
+      } else if (d.verificado) {
+        out.innerHTML = " ✅ <b>" + esc(d.email_verificado) + "</b> — verificado por Hunter.";
+      } else {
+        const h = d.hipotesis || {};
+        out.innerHTML = " 🟠 " + esc(d.nota || "no verificado") + (h.email_sugerido ? " · candidato: " + esc(h.email_sugerido) : "");
+      }
+    } catch (e) { out.textContent = " Error de red: " + e; }
+    finally { btn.disabled = false; }
+  };
+
+  // ②·⁷ Capa 0: ingesta de noticias y análisis de texto EN LA APP.
+  function pintarSenales(items) {
+    const cont = $("cap_lista");
+    if (!items || !items.length) { cont.innerHTML = '<div class="hint">Aún no hay señales de Capa 0.</div>'; return; }
+    cont.innerHTML = items.map(s => `
+      <div class="card">
+        <div><b>${esc(s.org_nombre || "(sin org)")}</b> <span class="chip">${esc(s.tipo_senal||"")}</span> <span class="chip">${esc(s.nivel_alerta||"")}</span> <span class="chip">score ${s.score_deuda}</span></div>
+        <div class="meta">${esc(s.motivo_match||"")}</div>
+        <div class="meta">${esc((s.fragmento_literal||"").slice(0,160))}${s.url ? ' · <a href="'+esc(safeUrl(s.url))+'" target="_blank" rel="noopener">fuente ↗</a>' : ""}${s.timestamp_video ? " · ⏱ "+esc(s.timestamp_video) : ""}</div>
+      </div>`).join("");
+  }
+  async function verSenales() {
+    try { const d = await (await fetch("/senales-capa0?limite=50")).json(); pintarSenales(d.items); }
+    catch (e) { $("cap_lista").innerHTML = '<div class="hint">No se pudieron cargar.</div>'; }
+  }
+  $("cap_ver").addEventListener("click", verSenales);
+  $("cap_noticias").addEventListener("click", async () => {
+    const m = $("cap_msg"), token = tok(), query = $("cap_query").value.trim();
+    if (!token) { m.className = "msg err"; m.style.display = "block"; m.textContent = "Falta el token."; return; }
+    if (!query) { m.className = "msg err"; m.style.display = "block"; m.textContent = "Escribe una búsqueda."; return; }
+    document.querySelectorAll("button").forEach(b => b.disabled = true);
+    m.className = "msg"; m.style.display = "block"; m.textContent = "Leyendo noticias y analizando…";
+    try {
+      const r = await fetch("/ingesta/noticias", { method: "POST",
+        headers: { "Content-Type": "application/json", "X-Ingest-Token": token },
+        body: JSON.stringify({ query, limite: 25 }) });
+      const o = await leerJson(r);
+      if (!o.ok) { m.className = "msg err"; m.textContent = "Error: " + (o.error || (o.data && o.data.detail) || r.status); return; }
+      const d = o.data;
+      m.className = "msg ok";
+      m.textContent = `✓ ${d.items} notas leídas · ${d.senales_detectadas} señal(es) de Capa 0 detectada(s).` + (d.senales_detectadas === 0 ? " (Las reglas buscan lenguaje de founder/operación; una noticia rara vez las dispara.)" : "");
+      verSenales();
+    } catch (e) { m.className = "msg err"; m.textContent = "Error de red: " + e; }
+    finally { document.querySelectorAll("button").forEach(b => b.disabled = false); }
+  });
+  $("cap_analizar").addEventListener("click", async () => {
+    const m = $("cap_msg"), token = tok(), texto = $("cap_texto").value.trim();
+    if (!token) { m.className = "msg err"; m.style.display = "block"; m.textContent = "Falta el token."; return; }
+    if (!texto) { m.className = "msg err"; m.style.display = "block"; m.textContent = "Pega un texto primero."; return; }
+    $("cap_analizar").disabled = true; m.className = "msg"; m.style.display = "block"; m.textContent = "Analizando…";
+    try {
+      const r = await fetch("/webhook/ingesta", { method: "POST",
+        headers: { "Content-Type": "application/json", "X-Ingest-Token": token },
+        body: JSON.stringify({ texto, org_name: $("cap_org").value.trim() || null }) });
+      const o = await leerJson(r);
+      if (!o.ok) { m.className = "msg err"; m.textContent = "Error: " + (o.error || (o.data && o.data.detail) || r.status); return; }
+      const d = o.data;
+      m.className = "msg ok";
+      m.textContent = `✓ ${d.senales_detectadas} señal(es) · alerta ${d.nivel_alerta} · score ${d.score_total}.`;
+      verSenales();
+    } catch (e) { m.className = "msg err"; m.textContent = "Error de red: " + e; }
+    finally { $("cap_analizar").disabled = false; }
+  });
+
+  // ③ Enriquecer: descubre web + tesis y precarga
+  $("enrich_btn").addEventListener("click", async () => {
+    const m = $("e_msg"), token = tok(), nombre = $("nombre").value.trim();
+    if (!token) { m.className = "msg err"; m.textContent = "Falta el token."; return; }
+    if (!nombre) { m.className = "msg err"; m.textContent = "Escribe el nombre primero."; return; }
+    $("enrich_btn").disabled = true; m.className = "msg"; m.style.display = "block"; m.textContent = "Buscando web y discurso…";
+    try {
+      const r = await fetch("/enrich", { method: "POST",
+        headers: { "Content-Type": "application/json", "X-Ingest-Token": token },
+        body: JSON.stringify({ nombre }) });
+      const res = await leerJson(r);
+      if (!res.ok) { m.className = "msg err"; m.textContent = "Error: " + (res.error || (res.data && res.data.detail) || r.status); return; }
+      const d = res.data;
+      if (d.sitio_web) { $("sitio_web").value = d.sitio_web; if (!$("url_perfil").value) $("url_perfil").value = d.sitio_web; }
+      if (d.linkedin) $("linkedin").value = d.linkedin;
+      if (d.vertical_sugerida && !$("vertical").value.trim()) $("vertical").value = d.vertical_sugerida;
+      if (d.discurso && !$("discurso").value.trim()) { $("discurso").value = d.discurso; $("fuente_discurso").value = "sitio_oficial"; }
+      const vsug = d.vertical_sugerida ? ` · vertical sugerida: ${d.vertical_sugerida} (confírmala)` : "";
+      // Nivel de confianza del sitio resuelto (evita un único mensaje para todos).
+      const TIER = { confirmada: "🟢 Web oficial confirmada", probable: "🟡 Dominio probable (confírmalo)", no_confirmada: "🟠 No se pudo confirmar; usa los enlaces" };
+      const etiqueta = TIER[d.sitio_confianza] || TIER.no_confirmada;
+      m.className = (d.sitio_confianza === "no_confirmada") ? "msg" : "msg ok"; m.style.display = "block";
+      m.textContent = `${etiqueta}${d.sitio_web ? ": " + d.sitio_web : ""}${vsug}`;
+      $("e_links").innerHTML =
+        `<a href="${esc(safeUrl(d.linkedin))}" target="_blank" rel="noopener">LinkedIn ↗</a> · ` +
+        `<a href="${esc(safeUrl(d.google))}" target="_blank" rel="noopener">Google ↗</a>` +
+        (d.sitio_web ? ` · <a href="${esc(safeUrl(d.sitio_web))}" target="_blank" rel="noopener">Web ↗</a>` : "");
+    } catch (e) { m.className = "msg err"; m.textContent = "Error de red: " + e; }
+    finally { $("enrich_btn").disabled = false; }
+  });
+
+  // ③ Alta prospecto
+  $("enviar").addEventListener("click", async () => {
+    const m = $("msg"), token = tok();
+    const body = { nombre: $("nombre").value.trim(), categoria: $("categoria").value,
+      vertical: $("vertical").value.trim() || null,
+      sitio_web: $("sitio_web").value.trim() || null,
+      linkedin: $("linkedin").value.trim() || null,
+      discurso_corporativo: $("discurso").value.trim() || null,
+      tipo_discurso: $("tipo_discurso").value.trim() || null,
+      url_perfil: $("url_perfil").value.trim() || null,
+      fuente_discurso: $("fuente_discurso").value.trim() || null };
+    if (!token) { m.className = "msg err"; m.textContent = "Falta el token."; return; }
+    if (!body.nombre) { m.className = "msg err"; m.textContent = "Falta el nombre."; return; }
+    $("enviar").disabled = true;
+    try {
+      const r = await fetch("/prospectos", { method: "POST",
+        headers: { "Content-Type": "application/json", "X-Ingest-Token": token }, body: JSON.stringify(body) });
+      const d = await r.json();
+      if (r.ok) { m.className = "msg ok"; m.textContent = `✓ ${body.nombre} [${body.categoria}] — ${d.accion}.`;
+        ["discurso","tipo_discurso","url_perfil","fuente_discurso","vertical","sitio_web","linkedin"].forEach(id => $(id).value = "");
+        $("e_links").innerHTML = "";
+        refrescarConteo();
+      } else { m.className = "msg err"; m.textContent = "Error: " + (d.detail || r.status); }
+    } catch (e) { m.className = "msg err"; m.textContent = "Error de red: " + e; }
+    finally { $("enviar").disabled = false; }
+  });
+
+  // 🎯 Centro de Inteligencia Comercial
+  $("centro_cargar").addEventListener("click", async () => {
+    const m = $("centro_msg"), cont = $("centro_contenido");
+    m.className = "msg"; m.style.display = "block"; m.textContent = "Cargando centro de inteligencia…";
+    cont.innerHTML = "";
+    try {
+      const d = await (await fetch("/centro")).json();
+      m.style.display = "none";
+
+      let html = '<div style="margin-top:.6rem">';
+
+      // Resumen general
+      html += '<div class="card" style="border-left:4px solid #2563eb">';
+      html += '<div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">';
+      html += '<b>📅 ' + esc(d.fecha) + '</b>';
+      html += '<span class="chip">' + d.resumen.total_expedientes + ' org.</span>';
+      html += '<span class="badge badge-a">A: ' + d.resumen.scoring_a + '</span>';
+      html += '<span class="badge badge-b">B: ' + d.resumen.scoring_b + '</span>';
+      html += '<span class="badge badge-c">C: ' + d.resumen.scoring_c + '</span>';
+      html += '<span class="chip">Pipeline: ' + d.resumen.en_pipeline + '</span>';
+      html += '</div></div>';
+
+      // 1. Nuevas hoy
+      html += '<details style="margin:.5rem 0" ' + (d.nuevas_hoy.total ? 'open' : '') + '><summary style="cursor:pointer;font-weight:600">🆕 Organizaciones nuevas hoy (' + d.nuevas_hoy.total + ')</summary>';
+      if (d.nuevas_hoy.organizaciones.length) {
+        html += '<div style="display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.3rem">';
+        html += d.nuevas_hoy.organizaciones.map(o => '<span class="chip">' + esc(o) + '</span>').join("");
+        html += '</div>';
+      } else { html += '<div class="hint">Ninguna organización nueva hoy.</div>'; }
+      html += '</details>';
+
+      // 2. Cambio narrativa
+      html += '<details style="margin:.5rem 0" ' + (d.cambio_narrativa.total ? 'open' : '') + '><summary style="cursor:pointer;font-weight:600">📡 Cambiaron narrativa hoy (' + d.cambio_narrativa.total + ')</summary>';
+      if (d.cambio_narrativa.organizaciones.length) {
+        html += '<div style="display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.3rem">';
+        html += d.cambio_narrativa.organizaciones.map(o => '<span class="chip" style="border-color:#7c3aed">' + esc(o) + '</span>').join("");
+        html += '</div>';
+      } else { html += '<div class="hint">Sin cambios narrativos detectados hoy.</div>'; }
+      html += '</details>';
+
+      // 3. Mayor dolor
+      html += '<details style="margin:.5rem 0" open><summary style="cursor:pointer;font-weight:600">🔴 Mayor Dolor Cultural — scoring A (' + d.mayor_dolor.total + ')</summary>';
+      if (d.mayor_dolor.organizaciones.length) {
+        html += d.mayor_dolor.organizaciones.map(o =>
+          '<div class="card exp-a" style="padding:.5rem .6rem">' +
+          '<div class="exp-header"><span class="org-name">' + esc(o.nombre) + '</span>' +
+          '<span class="badge badge-a">A</span>' +
+          '<span class="badge badge-interes">Interés ' + o.score_icp + '</span>' +
+          '<span class="badge badge-int">' + esc(o.intensidad) + '</span></div>' +
+          (o.tipo_deuda ? '<div class="deuda-title" style="font-size:.82rem">🧩 Hipótesis: ' + esc(o.tipo_deuda) + '</div>' : '') +
+          '<div class="meta">💬 ' + esc(o.angulo_conversacion) + '</div>' +
+          '<div class="meta">🎯 ' + esc(o.decisor_sugerido) + '</div>' +
+          '<div class="exp-actions"><button class="sec" onclick="verDolorMapDesdeExp(this)" data-org="' + esc(o.nombre) + '">🗺️ DolorMap</button></div>' +
+          '</div>'
+        ).join("");
+      } else { html += '<div class="hint">Ninguna organización con scoring A todavía.</div>'; }
+      html += '</details>';
+
+      // 4. Califican peritaje
+      html += '<details style="margin:.5rem 0" ' + (d.califican_peritaje.total ? 'open' : '') + '><summary style="cursor:pointer;font-weight:600">🔬 Califican para Peritaje (' + d.califican_peritaje.total + ')</summary>';
+      if (d.califican_peritaje.organizaciones.length) {
+        html += d.califican_peritaje.organizaciones.map(o =>
+          '<div class="card" style="padding:.4rem .5rem"><b>' + esc(o.nombre) + '</b> ' +
+          '<span class="badge badge-' + o.scoring.toLowerCase() + '">' + esc(o.scoring) + '</span> ' +
+          '<span class="badge badge-interes">Interés ' + o.score_icp + '</span>' +
+          (o.etapa_actual ? ' <span class="chip">' + esc(o.etapa_actual) + '</span>' : ' <span class="chip" style="border-color:#f59e0b">sin pipeline</span>') +
+          (o.tipo_deuda ? '<div class="meta">🧩 Hipótesis: ' + esc(o.tipo_deuda) + '</div>' : '') +
+          '<div class="exp-actions"><button class="sec" onclick="registrarPipelineDesdeExp(this)" data-org="' + esc(o.nombre) + '">📋 → Peritaje</button></div></div>'
+        ).join("");
+      } else { html += '<div class="hint">Ninguna organización califica aún (scoring A/B, Interés ≥ 40, etapa ≤ vigilancia).</div>'; }
+      html += '</details>';
+
+      // 5. Califican DolorMap sprint
+      html += '<details style="margin:.5rem 0" ' + (d.califican_dolormap.total ? 'open' : '') + '><summary style="cursor:pointer;font-weight:600">🗺️ Califican para DolorMap Sprint (' + d.califican_dolormap.total + ')</summary>';
+      if (d.califican_dolormap.organizaciones.length) {
+        html += d.califican_dolormap.organizaciones.map(o =>
+          '<div class="card" style="padding:.4rem .5rem"><b>' + esc(o.nombre) + '</b> ' +
+          '<span class="badge badge-a">A</span> ' +
+          '<span class="badge badge-interes">Interés ' + o.score_icp + '</span>' +
+          (o.etapa_actual ? ' <span class="chip">' + esc(o.etapa_actual) + '</span>' : ' <span class="chip" style="border-color:#dc2626">sin pipeline</span>') +
+          (o.tipo_deuda ? '<div class="meta">🧩 Hipótesis: ' + esc(o.tipo_deuda) + '</div>' : '') +
+          '<div class="exp-actions"><button class="sec" onclick="verDolorMapDesdeExp(this)" data-org="' + esc(o.nombre) + '">🗺️ DolorMap Sprint</button></div></div>'
+        ).join("");
+      } else { html += '<div class="hint">Ninguna califica aún (scoring A, Interés ≥ 50, etapa ≤ peritaje).</div>'; }
+      html += '</details>';
+
+      // 6. Seguimiento semanal
+      html += '<details style="margin:.5rem 0" ' + (d.seguimiento_semanal.total ? 'open' : '') + '><summary style="cursor:pointer;font-weight:600">📅 Necesitan seguimiento esta semana (' + d.seguimiento_semanal.total + ')</summary>';
+      if (d.seguimiento_semanal.organizaciones.length) {
+        html += d.seguimiento_semanal.organizaciones.map(o =>
+          '<div class="card" style="padding:.4rem .5rem"><b>' + esc(o.nombre) + '</b> ' +
+          '<span class="chip">' + esc(o.etapa) + '</span> ' +
+          '<span class="chip" style="border-color:#dc2626">' + o.dias_sin_mover + ' días sin mover</span>' +
+          (o.notas ? '<div class="meta">' + esc(o.notas) + '</div>' : '') +
+          '<div class="exp-actions"><button class="sec" onclick="registrarPipelineDesdeExp(this)" data-org="' + esc(o.nombre) + '">⏩ Avanzar</button></div></div>'
+        ).join("");
+      } else { html += '<div class="hint">Sin organizaciones pendientes de seguimiento.</div>'; }
+      html += '</details>';
+
+      html += '</div>';
+      cont.innerHTML = html;
+    } catch (e) { m.className = "msg err"; m.textContent = "Error: " + e; }
+  });
+
+  // 🌎 Poblar Corpus (5 verticales LATAM)
+  $("corpus_btn").addEventListener("click", async () => {
+    const m = $("corpus_msg"), token = tok();
+    if (!token) { m.className = "msg err"; m.style.display = "block"; m.textContent = "Falta el token."; return; }
+    $("corpus_btn").disabled = true;
+    m.className = "msg"; m.style.display = "block"; m.textContent = "Poblando corpus (5 verticales × señales × LATAM)… esto tarda hasta 1 min.";
+    try {
+      const r = await fetch("/corpus/poblar", { method: "POST",
+        headers: { "Content-Type": "application/json", "X-Ingest-Token": token },
+        body: JSON.stringify({ region: region() }) });
+      const o = await leerJson(r);
+      if (!o.ok) { m.className = "msg err"; m.textContent = "Error: " + (o.error || (o.data && o.data.detail) || r.status); return; }
+      const d = o.data;
+      m.className = "msg ok";
+      m.textContent = "✓ " + d.total_escritos + " evidencias nuevas · " + d.total_vistos + " titulares vistos · " + d.tiempo_s + "s" + (d.parcial ? " (parcial: se agotó el presupuesto; toca de nuevo)" : " (completo)");
+      cargarExpedientes({});
+    } catch (e) { m.className = "msg err"; m.textContent = "Error de red: " + e; }
+    finally { $("corpus_btn").disabled = false; }
+  });
+
+  // PWA: registra el service worker para que sea instalable como app.
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  }
+</script>
+</body></html>"""
+
+
+@app.get("/stats")
+def stats() -> dict:
+    db = get_db()
+    return {
+        "evidencias_consumibles": db.fetch_one(
+            "SELECT COUNT(*) AS n FROM evidencias WHERE estado = ?", (ESTADO_OK,))["n"],
+        "evidencias_no_fechadas": db.fetch_one(
+            "SELECT COUNT(*) AS n FROM evidencias WHERE estado = 'no_fechado'")["n"],
+        "prospectos": db.fetch_one("SELECT COUNT(*) AS n FROM prospectos")["n"],
+        "prospectos_por_categoria": prospectos_por_categoria()["categorias"],
+        "rechazos": db.fetch_one("SELECT COUNT(*) AS n FROM rechazos")["n"],
+        # Desglose de descartes por motivo (dedup/contrato/relevancia): observabilidad
+        # para la validación. Se calcula sobre la tabla `rechazos` ya existente.
+        "rechazos_por_motivo": {
+            r["motivo"]: r["n"]
+            for r in db.fetch_all(
+                "SELECT motivo, COUNT(*) AS n FROM rechazos GROUP BY motivo ORDER BY n DESC")
+        },
+        # Distribución de calidad_captura sobre evidencia consumible.
+        "calidad_captura": {
+            (r["calidad_captura"] or "sin_calidad"): r["n"]
+            for r in db.fetch_all(
+                "SELECT calidad_captura, COUNT(*) AS n FROM evidencias "
+                "WHERE estado = ? GROUP BY calidad_captura", (ESTADO_OK,))
+        },
+        "fuentes_en_alerta": db.fetch_one(
+            "SELECT COUNT(*) AS n FROM salud_fuentes WHERE alerta = 1")["n"],
+    }
+
+
+# ── Flujo de investigación antropológica (AntroSapiens) ─────────────────────
+# Reutiliza los motores existentes (captura, dedup, validación científica) tras
+# la capa de aplicación. Se añade sin tocar los endpoints previos.
+from ..api.investigacion_router import router as _investigacion_router  # noqa: E402
+
+app.include_router(_investigacion_router)

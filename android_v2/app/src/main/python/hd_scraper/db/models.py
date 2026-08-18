@@ -1,0 +1,304 @@
+"""Modelo de datos y contrato de evidencia.
+
+El contrato de datos es la pieza más importante de hd-scraper: define qué
+puede entrar a la tabla `evidencias`. El validador (ver
+``hd_scraper.validation.validator``) es el único guardián de este contrato.
+
+Recordatorio de invariante: hd-scraper NO interpreta. Los campos que podrían
+parecer "clasificación" (``tipo_evento``, ``origen_declaracion``) NO se
+infieren leyendo el contenido: se derivan de la ESTRUCTURA de la consulta o
+de la fuente (ver docstring de cada conector). Radar es quien interpreta.
+"""
+from __future__ import annotations
+
+import hashlib
+import re
+import unicodedata
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from typing import Optional
+from urllib.parse import urlsplit, urlunsplit
+
+# --- Vocabularios literales del contrato ---------------------------------
+
+# tipo_evento: valores literales permitidos. Cualquier otro valor es rechazado.
+TIPOS_EVENTO: frozenset[str] = frozenset(
+    {"ronda", "contratacion", "despido", "lanzamiento", "queja", "cambio_sitio"}
+)
+
+# origen_declaracion: quién emite la señal.
+ORIGENES_DECLARACION: frozenset[str] = frozenset(
+    {"operador", "inversor", "prensa", "usuario"}
+)
+
+# categoria de prospecto: los cuatro ecosistemas estratégicos del radar.
+# Es obligatoria en la tabla `prospectos`. La declara el operador al alta del
+# prospecto (estructural): NO se infiere leyendo el discurso corporativo.
+CATEGORIAS: frozenset[str] = frozenset(
+    {"VC", "Startup", "Incubadora", "Corporativo"}
+)
+
+# Estados de un registro dentro de evidencias.
+ESTADO_OK = "ok"              # completo y fechado: consumible por la API.
+ESTADO_NO_FECHADO = "no_fechado"  # completo pero sin fecha_publicacion: NO consumible.
+
+
+def ahora_iso() -> str:
+    """Timestamp actual en ISO 8601 con zona UTC."""
+    return datetime.now(timezone.utc).isoformat()
+
+
+def normalizar_url(url: str) -> str:
+    """URL normalizada para deduplicación.
+
+    Baja el host a minúsculas, descarta query string, fragmento y el slash
+    final del path. Es determinista: misma nota → misma URL normalizada.
+    """
+    if not url:
+        return ""
+    parts = urlsplit(url.strip())
+    host = parts.netloc.lower()
+    path = parts.path.rstrip("/")
+    return urlunsplit((parts.scheme.lower(), host, path, "", ""))
+
+
+def normalizar_empresa(empresa: str) -> str:
+    """Nombre de empresa normalizado para deduplicación (minúsculas, sin bordes)."""
+    return " ".join((empresa or "").lower().split())
+
+
+# --- Deduplicación robusta de contenido (Captura Inteligente) -------------
+#
+# El hash_dedup del contrato es sha256(empresa + url). En descubrimiento por
+# categoría la "empresa" es el TÉRMINO de la consulta (no una compañía real),
+# así que el MISMO artículo capturado por dos consultas distintas obtenía dos
+# hash_dedup distintos y se guardaba repetido. Para evitarlo se añade una
+# identidad de contenido independiente de la empresa, con esta cascada de
+# prioridad (la primera disponible gana), tal como se pidió:
+#
+#   1) URL canónica declarada por la fuente (rel=canonical / og:url), normalizada.
+#   2) URL normalizada (host en minúsculas, sin query -> descarta UTM y demás
+#      parámetros de rastreo- ni fragmento, sin slash final).
+#   3) hash del contenido (título normalizado) como respaldo, para colapsar el
+#      MISMO artículo publicado en URLs distintas.
+#
+# Es 100% determinista (sin IA): misma nota -> misma clave.
+
+def _sin_acentos(texto: str) -> str:
+    nfkd = unicodedata.normalize("NFKD", texto or "")
+    return "".join(c for c in nfkd if not unicodedata.combining(c))
+
+
+def normalizar_titulo(titulo: str) -> str:
+    """Título normalizado para el hash de contenido.
+
+    Quita el sufijo " - Medio" que añade Google News, los acentos y la
+    puntuación, baja a minúsculas y colapsa espacios. Determinista.
+    """
+    t = (titulo or "").strip()
+    sin_medio = re.sub(r"\s+[-–|]\s+[^-–|]+$", "", t).strip()
+    t = sin_medio or t
+    t = _sin_acentos(t).lower()
+    t = re.sub(r"[^a-z0-9]+", " ", t)
+    return " ".join(t.split())
+
+
+def hash_contenido(titulo: str) -> str:
+    """sha256 del título normalizado. Cadena vacía si no hay título utilizable."""
+    norm = normalizar_titulo(titulo)
+    return hashlib.sha256(norm.encode("utf-8")).hexdigest() if norm else ""
+
+
+def clave_contenido(url: str, meta: Optional[dict] = None, titulo: str = "") -> str:
+    """Clave de identidad de contenido para dedup robusto (ver cascada arriba)."""
+    meta = meta or {}
+    canonica = meta.get("canonical") or meta.get("og_url") or meta.get("url_canonica")
+    if canonica:
+        n = normalizar_url(canonica)
+        if n:
+            return f"url:{n}"
+    n = normalizar_url(url)
+    if n:
+        return f"url:{n}"
+    h = hash_contenido(titulo)
+    return f"txt:{h}" if h else ""
+
+
+def calcular_hash_dedup(empresa: str, url_fuente: str) -> str:
+    """hash_dedup = sha256(empresa_normalizada + url_normalizada). Único por registro."""
+    base = f"{normalizar_empresa(empresa)}|{normalizar_url(url_fuente)}"
+    return hashlib.sha256(base.encode("utf-8")).hexdigest()
+
+
+def calcular_hash_prospecto(nombre: str, categoria: str) -> str:
+    """hash_dedup de prospecto = sha256(nombre_normalizado + categoria). Único."""
+    base = f"{normalizar_empresa(nombre)}|{categoria}"
+    return hashlib.sha256(base.encode("utf-8")).hexdigest()
+
+
+@dataclass
+class QuerySpec:
+    """Especificación estructural de una consulta.
+
+    Encapsula la INTENCIÓN declarada por el operador. El ``tipo_evento`` viaja
+    aquí porque lo decide quien lanza la corrida (estructura), no el conector
+    leyendo el artículo (interpretación).
+    """
+    empresa: str
+    tipo_evento: str            # uno de TIPOS_EVENTO
+    terminos: Optional[str] = None   # términos extra opcionales para la búsqueda
+    slug: Optional[str] = None       # slug de empresa (para job boards)
+    categoria: Optional[str] = None  # ecosistema declarado (descubrimiento por categoría)
+    region: Optional[str] = None     # región del radar (gl/hl/ceid o sourcecountry)
+    exact: bool = True               # True: frase exacta (nombre); False: amplia (descubrimiento)
+
+    def to_dict(self) -> dict:
+        return {
+            "empresa": self.empresa,
+            "tipo_evento": self.tipo_evento,
+            "terminos": self.terminos,
+            "slug": self.slug,
+            "categoria": self.categoria,
+            "region": self.region,
+            "exact": self.exact,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "QuerySpec":
+        return cls(
+            empresa=d["empresa"],
+            tipo_evento=d["tipo_evento"],
+            terminos=d.get("terminos"),
+            slug=d.get("slug"),
+            categoria=d.get("categoria"),
+            region=d.get("region"),
+            exact=d.get("exact", True),
+        )
+
+
+@dataclass
+class RawItem:
+    """Payload crudo devuelto por ``search``/``fetch`` de un conector.
+
+    ``contenido`` es el crudo textual (RSS entry serializado, JSON, HTML) que
+    se retiene comprimido en disco. ``meta`` lleva campos ya extraídos de forma
+    estructural para que ``normalize`` no tenga que re-parsear.
+    """
+    url: str
+    contenido: str
+    formato: str = "json"            # json | xml | html
+    meta: dict = field(default_factory=dict)
+
+
+@dataclass
+class EvidenceRecord:
+    """Un registro candidato a la tabla `evidencias`.
+
+    Los campos obligatorios del contrato deben venir poblados para pasar el
+    validador. ``persona_citada`` y ``cargo`` son opcionales. ``fecha_publicacion``
+    puede faltar: en ese caso el registro se marca ``no_fechado`` y no es
+    consumible por la API (pero NO se rechaza).
+    """
+    # --- Contrato obligatorio ---
+    cita_textual: str
+    fecha_extraccion: str
+    url_fuente: str
+    nombre_medio: str
+    empresa_mencionada: str
+    tipo_evento: str
+    origen_declaracion: str
+    hash_dedup: str
+
+    # --- Opcionales del contrato ---
+    fecha_publicacion: Optional[str] = None
+    persona_citada: Optional[str] = None
+    cargo: Optional[str] = None
+
+    # --- Extracción objetiva Nivel 1 (Motor A) ---
+    keywords: list = field(default_factory=list)   # etiquetas de señal genéricas
+    confianza: float = 0.0                          # calidad objetiva de la extracción 0–1
+
+    # --- Captura Inteligente (objetiva, informativa; NO altera el scoring del Motor B) ---
+    clave_contenido: str = ""        # identidad de contenido para dedup robusto (url:/txt:)
+    hash_contenido: str = ""         # sha256 del título normalizado (dedup entre URLs distintas)
+    calidad_captura: Optional[str] = None  # Alta | Media | Baja (criterios objetivos)
+
+    # --- Metadatos internos (no forman parte del contrato público) ---
+    connector: str = ""
+    estado: str = ESTADO_OK
+    raw_hash: Optional[str] = None   # enlace al crudo retenido en disco
+    categoria: Optional[str] = None  # ecosistema (si viene de descubrimiento por categoría)
+    creado_en: str = field(default_factory=ahora_iso)
+
+    def campos_contrato(self) -> dict:
+        """Vista de solo los campos del contrato (para la API de lectura)."""
+        return {
+            "cita_textual": self.cita_textual,
+            "fecha_publicacion": self.fecha_publicacion,
+            "fecha_extraccion": self.fecha_extraccion,
+            "url_fuente": self.url_fuente,
+            "nombre_medio": self.nombre_medio,
+            "empresa_mencionada": self.empresa_mencionada,
+            "persona_citada": self.persona_citada,
+            "cargo": self.cargo,
+            "tipo_evento": self.tipo_evento,
+            "origen_declaracion": self.origen_declaracion,
+            "hash_dedup": self.hash_dedup,
+        }
+
+
+@dataclass
+class ProspectoRecord:
+    """Un prospecto: entidad objetivo de uno de los cuatro ecosistemas.
+
+    ``categoria`` es OBLIGATORIA y literal (VC | Startup | Incubadora |
+    Corporativo). La declara el operador al alta (estructural); NO se infiere
+    leyendo el discurso.
+
+    Campos "Thick Data" (``discurso_corporativo`` y compañía) almacenan el texto
+    del discurso corporativo extraído de URLs o perfiles: el motor lo GUARDA tal
+    cual, no lo interpreta ni lo puntúa.
+    """
+    # --- Identidad + categorización obligatoria ---
+    nombre: str
+    categoria: str                       # uno de CATEGORIAS (obligatorio)
+    hash_dedup: str                      # sha256(nombre_norm + categoria), único
+
+    # --- Perfil de la entidad ---
+    vertical: Optional[str] = None               # sector/vertical (declarado o del sitio)
+    sitio_web: Optional[str] = None              # URL del sitio oficial
+    linkedin: Optional[str] = None               # enlace a LinkedIn (búsqueda/perfil)
+
+    # --- Thick Data: discurso corporativo (texto largo) ---
+    discurso_corporativo: Optional[str] = None   # cuerpo de texto extraído
+    tipo_discurso: Optional[str] = None          # etiqueta estructural del discurso
+    url_perfil: Optional[str] = None             # URL/perfil de origen del discurso
+    fuente_discurso: Optional[str] = None        # nombre de la fuente/plataforma
+    fecha_captura: Optional[str] = None          # ISO 8601 de la captura del texto
+
+    # --- Escala/tamaño (parámetro estructural OBLIGATORIO) ---
+    # Banda de tamaño extraída de la fuente orgánica (dato objetivo, no juicio).
+    # 'indeterminada' cuando la fuente no la declara (patrón no_fechado).
+    escala: str = "indeterminada"
+
+    # --- Metadatos ---
+    creado_en: str = field(default_factory=ahora_iso)
+    actualizado_en: str = field(default_factory=ahora_iso)
+
+    def to_row(self) -> dict:
+        return {
+            "nombre": self.nombre,
+            "categoria": self.categoria,
+            "hash_dedup": self.hash_dedup,
+            "vertical": self.vertical,
+            "sitio_web": self.sitio_web,
+            "linkedin": self.linkedin,
+            "discurso_corporativo": self.discurso_corporativo,
+            "tipo_discurso": self.tipo_discurso,
+            "url_perfil": self.url_perfil,
+            "fuente_discurso": self.fuente_discurso,
+            "fecha_captura": self.fecha_captura,
+            "escala": self.escala,
+            "creado_en": self.creado_en,
+            "actualizado_en": self.actualizado_en,
+        }

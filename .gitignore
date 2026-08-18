@@ -19,3 +19,11 @@ data/raw/
 data/pytest-of-*/
 data/pytest-of-*/
 data/pytest-of-*/
+
+# android_v2 build artifacts
+android_v2/app/build/
+android_v2/.gradle/
+android_v2/local.properties
+*.apk
+.smoke/
+__pycache__/

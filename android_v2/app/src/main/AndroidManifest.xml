@@ -10,6 +10,7 @@
         android:roundIcon="@mipmap/ic_launcher"
         android:label="AntrolabsHD"
         android:supportsRtl="true"
+        android:usesCleartextTraffic="true"
         android:theme="@style/Theme.AntrolabsHD">
 
         <activity
