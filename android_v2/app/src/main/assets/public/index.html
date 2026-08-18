@@ -117,7 +117,7 @@
 // Backend remoto de Motor A (Vercel). La prospección NO corre embebida: este
 // cliente solo consume la API publicada. Configurable en caliente porque el
 // host puede cambiar entre despliegues; se persiste en el dispositivo.
-const API_DEFAULT = "https://prospector-flame.vercel.app";
+const API_DEFAULT = "https://hd-prospector.vercel.app";
 let API = (localStorage.getItem("hd_api_base") || API_DEFAULT).replace(/\/+$/, "");
 
 // El token de ingesta (X-Ingest-Token) NUNCA se incrusta en el APK: cualquiera

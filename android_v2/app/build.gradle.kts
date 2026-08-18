@@ -38,4 +38,7 @@ android {
 dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.appcompat:appcompat:1.7.0")
+    // WebViewAssetLoader: sirve los assets bajo un origen https real y
+    // autorizable por CORS, en lugar de file:// (origen `null`).
+    implementation("androidx.webkit:webkit:1.11.0")
 }

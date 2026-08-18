@@ -9,9 +9,11 @@ import android.webkit.ConsoleMessage
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.appcompat.app.AppCompatActivity
+import androidx.webkit.WebViewAssetLoader
 
 /**
  * AntrolabsHD V2 — cliente del Radar.
@@ -24,10 +26,17 @@ import androidx.appcompat.app.AppCompatActivity
 class MainActivity : AppCompatActivity() {
 
     private lateinit var web: WebView
+    private lateinit var assetLoader: WebViewAssetLoader
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Publica assets/ bajo el dominio reservado appassets.androidplatform.net,
+        // que Android resuelve localmente (no sale a la red).
+        assetLoader = WebViewAssetLoader.Builder()
+            .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(this))
+            .build()
 
         val fondo = Color.parseColor("#FCFAED")
 
@@ -54,6 +63,10 @@ class MainActivity : AppCompatActivity() {
             }
 
             webViewClient = object : WebViewClient() {
+                override fun shouldInterceptRequest(
+                    view: WebView, request: WebResourceRequest
+                ): WebResourceResponse? = assetLoader.shouldInterceptRequest(request.url)
+
                 override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: WebResourceError?) {
                     super.onReceivedError(view, request, error)
                     Log.e("HD_NET_ERROR", "URL: " + (request?.url) + " -- Error: " + (error?.description))
@@ -62,7 +75,11 @@ class MainActivity : AppCompatActivity() {
         }
 
         setContentView(web)
-        web.loadUrl("file:///android_asset/public/index.html")
+        // Se sirve desde https://appassets.androidplatform.net y NO desde
+        // file://: así la pantalla tiene un origen concreto que el backend puede
+        // autorizar por CORS (un origen file:// viaja como `null`, que sería
+        // indistinguible de cualquier HTML local y obligaría a abrir la lista).
+        web.loadUrl("https://appassets.androidplatform.net/assets/public/index.html")
     }
 
     override fun onBackPressed() {
