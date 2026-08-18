@@ -73,7 +73,7 @@
     <span id="status" class="dot off" title="estado del backend"></span>
     <div>
         <h1>Radar HD</h1>
-        <div class="sub">AntrolabsHD · backend real conectado</div>
+        <div class="sub">AntrolabsHD · Motor A remoto</div>
     </div>
 </header>
 
@@ -86,6 +86,7 @@
             <option>Incubadora</option><option>Corporativo</option>
         </select>
         <button class="sec" id="refresh">Actualizar</button>
+        <button class="sec" id="config" title="Configurar backend">⚙</button>
     </div>
 
     <div class="chips" id="cats"></div>
@@ -96,7 +97,7 @@
         <span class="count" id="total"></span>
     </div>
 
-    <div id="loader">Conectando con el backend local…</div>
+    <div id="loader">Conectando con el backend remoto…</div>
     <div id="grid" class="grid hidden"></div>
 
     <div id="detail" class="panel hidden"></div>
@@ -113,8 +114,18 @@
 </div>
 
 <script>
-const API = "http://127.0.0.1:8000";
-const TOKEN = "android_v2_local";
+// Backend remoto de Motor A (Vercel). La prospección NO corre embebida: este
+// cliente solo consume la API publicada. Configurable en caliente porque el
+// host puede cambiar entre despliegues; se persiste en el dispositivo.
+const API_DEFAULT = "https://prospector-flame.vercel.app";
+let API = (localStorage.getItem("hd_api_base") || API_DEFAULT).replace(/\/+$/, "");
+
+// El token de ingesta (X-Ingest-Token) NUNCA se incrusta en el APK: cualquiera
+// puede extraerlo con `unzip`. Lo introduce el operador y queda en el
+// almacenamiento local del dispositivo. Solo hace falta para escribir (/radar);
+// los endpoints de lectura son públicos.
+let TOKEN = localStorage.getItem("hd_ingest_token") || "";
+
 let RAW = {prospectos:null, categorias:null, expedientes:null};
 
 const $ = (s)=>document.querySelector(s);
@@ -125,9 +136,21 @@ async function api(path, opts={}){
 }
 function esc(s){return (s==null?"":String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 
+// Guarda el último fallo de red para poder mostrarlo en pantalla: sin esto un
+// error de conectividad se pierde y la UI solo dice "Backend no disponible",
+// que es exactamente lo que impidió diagnosticar la conexión durante días.
+let ULTIMO_ERROR = null;
+
+function detallarError(e){
+    if(!e) return "error desconocido";
+    const partes = [e.name || "Error", e.message || String(e)];
+    if(e.stack) partes.push(String(e.stack).split("\n").slice(0,3).join(" | "));
+    return partes.join(" · ");
+}
+
 async function ping(){
-    try{ await api("/prospectos?limite=1"); setStatus(true); return true; }
-    catch(e){ setStatus(false); return false; }
+    try{ await api("/prospectos?limite=1"); ULTIMO_ERROR=null; setStatus(true); return true; }
+    catch(e){ ULTIMO_ERROR = detallarError(e); setStatus(false); return false; }
 }
 function setStatus(on){ $("#status").className = "dot "+(on?"on":"off"); }
 
@@ -135,7 +158,10 @@ async function loadAll(){
     $("#loader").classList.remove("hidden");
     $("#grid").classList.add("hidden");
     const ok = await ping();
-    if(!ok){ $("#loader").textContent="Backend no disponible. Reintentando…";
+    if(!ok){
+        $("#loader").innerHTML = "Backend no disponible. Reintentando…"
+            + `<div class="err" style="margin-top:8px;word-break:break-word">${esc(ULTIMO_ERROR)}</div>`
+            + `<div class="muted" style="margin-top:4px">API: ${esc(API)}</div>`;
         setTimeout(loadAll, 1500); return; }
     try{
         const [pros, cats, exp] = await Promise.all([
@@ -237,6 +263,16 @@ function renderExpedientes(){
 }
 
 $("#refresh").onclick=loadAll;
+$("#config").onclick=()=>{
+    const base = prompt("URL del backend Motor A:", API);
+    if(base===null) return;
+    API = (base.trim() || API_DEFAULT).replace(/\/+$/, "");
+    localStorage.setItem("hd_api_base", API);
+    if(confirm("¿Borrar también el token de ingesta guardado?")){
+        localStorage.removeItem("hd_ingest_token"); TOKEN="";
+    }
+    loadAll();
+};
 $("#q").oninput=renderGrid;
 $("#cat").onchange=()=>{document.querySelectorAll("#cats .chip").forEach(x=>x.classList.remove("active"));renderGrid();};
 
@@ -250,18 +286,34 @@ $("#toggleJson").onclick=()=>{
 };
 
 $("#runRadar").onclick=async()=>{
+    // /radar escribe evidencia: exige X-Ingest-Token. Se pide al operador la
+    // primera vez y se guarda en el dispositivo (nunca viaja en el APK).
+    if(!TOKEN){
+        const t = prompt("Token de ingesta (X-Ingest-Token) del backend:");
+        if(!t){ $("#radarState").innerHTML='<span class="err">Se necesita el token de ingesta para ejecutar el Radar.</span>'; return; }
+        TOKEN = t.trim(); localStorage.setItem("hd_ingest_token", TOKEN);
+    }
     const btn=$("#runRadar"); btn.disabled=true; $("#radarState").textContent="Ejecutando…";
     try{
         const body=JSON.stringify({region:"Toda LATAM",enfoque:[],tamanos:[],palabra_clave:""});
         const r=await fetch(API+"/radar",{method:"POST",headers:{
             "Content-Type":"application/json","x-ingest-token":TOKEN},body});
+        if(!r.ok){
+            let detalle="";
+            try{ const j=await r.json(); detalle = j.detail ? " — "+j.detail : ""; }catch(_){}
+            if(r.status===401 || r.status===403){
+                localStorage.removeItem("hd_ingest_token"); TOKEN="";
+                throw new Error(`token rechazado (${r.status})${detalle}. Se borró el token guardado; vuelve a intentarlo.`);
+            }
+            throw new Error(`/radar → ${r.status}${detalle}`);
+        }
         const data=await r.json();
         $("#radarState").innerHTML=`<span class="pill">detención: ${esc(data.detencion||"?")}</span>
             <span class="pill">escritos: ${data.total_escritos??0}</span>
             <span class="pill">vistos: ${data.total_vistos??0}</span>
             <span class="pill">expedientes: ${data.expedientes?data.expedientes.total:0}</span>`;
         await loadAll();
-    }catch(e){ $("#radarState").innerHTML=`<span class="err">${esc(e.message)}</span>`; }
+    }catch(e){ $("#radarState").innerHTML=`<span class="err">${esc(detallarError(e))}</span>`; }
     finally{ btn.disabled=false; }
 };
 
