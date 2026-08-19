@@ -18,7 +18,7 @@ import androidx.webkit.WebViewAssetLoader
 /**
  * AntrolabsHD V2 — cliente del Radar.
  *
- * La app es un cliente del Motor A **remoto** (hd-prospector en Vercel): no
+ * La app es un cliente del Motor A **remoto** (antrosapiens-api-pro): no
  * embebe intérprete Python ni levanta servidor local. Carga la pantalla del
  * Radar (assets/public/index.html), que consume la API publicada por HTTPS.
  * El host y el token de ingesta se configuran desde la propia pantalla.
