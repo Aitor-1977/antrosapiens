@@ -2071,6 +2071,10 @@ def _construir_expedientes(categorias: list[str] | None, limite: int = 30) -> di
     ):
         sitios[(p["nombre"] or "").strip().lower()] = p["sitio_web"]
 
+    escalas: dict[str, str] = {}
+    for p in db.fetch_all("SELECT nombre, escala FROM prospectos"):
+        escalas[(p["nombre"] or "").strip().lower()] = p["escala"] or ""
+
     expedientes = []
     for key, data in orgs.items():
         all_kws = list(data["keywords_set"])
@@ -2109,6 +2113,7 @@ def _construir_expedientes(categorias: list[str] | None, limite: int = 30) -> di
             "nombre": data["nombre"],
             "categoria": data["categoria"],
             "vertical": vertical,
+            "escala": escalas.get(key, ""),
             "scoring": a["scoring"],
             "score_icp": a["score_icp"],
             "intensidad": a["intensidad"],

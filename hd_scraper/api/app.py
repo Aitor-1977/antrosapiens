@@ -21,8 +21,10 @@ from pathlib import Path
 from typing import Optional
 
 from fastapi import Body, FastAPI, Header, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from pydantic import BaseModel
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from ..config import settings
 from ..connectors import REGISTRY
@@ -75,6 +77,24 @@ app = FastAPI(
     ),
     version="0.2.0",
 )
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=['*'],
+    allow_credentials=False,
+    allow_methods=['*'],
+    allow_headers=['*'],
+)
+
+
+class PrivateNetworkAccessMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        response.headers['Access-Control-Allow-Private-Network'] = 'true'
+        return response
+
+
+app.add_middleware(PrivateNetworkAccessMiddleware)
 
 
 # --- Intake de prospectos (escritura autenticada del operador) -----------
@@ -2026,6 +2046,16 @@ def _construir_expedientes(categorias: list[str] | None, limite: int = 30) -> di
         titulo = row["cita_textual"] or ""
         org = detectar_empresa(titulo) or (row["empresa_mencionada"] or "").strip()
         if not org:
+            db.execute(
+                "INSERT INTO rechazos (connector, motivo, payload_json, creado_en) "
+                "VALUES (?, ?, ?, ?)",
+                (
+                    "api:_construir_expedientes",
+                    "sin_empresa_deteccion",
+                    json.dumps(dict(row), ensure_ascii=False, default=str),
+                    ahora_iso(),
+                ),
+            )
             continue
         kws = _keywords(row)
         ok, _ = evaluar_relevancia(titulo, kws, bool(org), exigir_evento=False)
@@ -2050,6 +2080,10 @@ def _construir_expedientes(categorias: list[str] | None, limite: int = 30) -> di
         "WHERE sitio_web IS NOT NULL AND sitio_web <> ''"
     ):
         sitios[(p["nombre"] or "").strip().lower()] = p["sitio_web"]
+
+    escalas: dict[str, str] = {}
+    for p in db.fetch_all("SELECT nombre, escala FROM prospectos"):
+        escalas[(p["nombre"] or "").strip().lower()] = p["escala"] or ""
 
     expedientes = []
     for key, data in orgs.items():
@@ -2089,6 +2123,7 @@ def _construir_expedientes(categorias: list[str] | None, limite: int = 30) -> di
             "nombre": data["nombre"],
             "categoria": data["categoria"],
             "vertical": vertical,
+            "escala": escalas.get(key, ""),
             "scoring": a["scoring"],
             "score_icp": a["score_icp"],
             "intensidad": a["intensidad"],
