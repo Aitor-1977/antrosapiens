@@ -173,6 +173,7 @@
   </style>
 </head>
 <body class="bg-surface text-on-surface min-h-screen flex flex-col font-ui-label selection:bg-primary-container selection:text-on-primary-container">
+<div id="screen-explorar">
 <!-- TopAppBar -->
 <header class="bg-surface dark:bg-surface-dim border-b border-outline/20 docked full-width top-0 z-40 fixed">
 <div class="flex justify-between items-center px-margin-mobile md:px-gutter h-16 w-full max-w-container-max mx-auto">
@@ -263,12 +264,12 @@
 <!-- BottomNavBar -->
 <nav class="bg-surface dark:bg-surface-container-lowest border-t border-outline/20 bg-surface/95 backdrop-blur-none fixed bottom-0 left-0 w-full flex items-center px-1 py-2 pb-safe md:max-w-container-max md:left-1/2 md:-translate-x-1/2 z-50">
 <!-- EXPLORAR (Active) -->
-<a class="flex-1 min-w-0 flex flex-col items-center justify-center text-primary dark:text-primary-fixed-dim bg-primary-container/10 rounded-xl py-1 active:scale-90 duration-200 ease-in-out transition-transform" href="#">
+<a id="btnExplorarNav" class="flex-1 min-w-0 flex flex-col items-center justify-center text-primary dark:text-primary-fixed-dim bg-primary-container/10 rounded-xl py-1 active:scale-90 duration-200 ease-in-out transition-transform" href="#">
 <span class="material-symbols-outlined filled" data-icon="explore" data-weight="fill">explore</span>
 <span class="font-ui-label leading-tight mt-1 text-[9px] text-center break-words">EXPLORAR</span>
 </a>
 <!-- OBSERVAR (Inactive) -->
-<a class="flex-1 min-w-0 flex flex-col items-center justify-center text-outline dark:text-outline-variant py-1 hover:text-secondary dark:hover:text-secondary-fixed active:scale-90 duration-200 ease-in-out transition-transform" href="#">
+<a id="btnObservarNav" class="flex-1 min-w-0 flex flex-col items-center justify-center text-outline dark:text-outline-variant py-1 hover:text-secondary dark:hover:text-secondary-fixed active:scale-90 duration-200 ease-in-out transition-transform" href="#">
 <span class="material-symbols-outlined" data-icon="visibility">visibility</span>
 <span class="font-ui-label leading-tight mt-1 text-[9px] text-center break-words">OBSERVAR</span>
 </a>
@@ -283,12 +284,72 @@
 <span class="font-ui-label leading-tight mt-1 text-[9px] text-center break-words">FIJAR</span>
 </a>
 </nav>
+</div>
+<div id="screen-observar" style="display:none">
+<header class="sticky top-0 z-50 bg-[#FCFAED]/95 backdrop-blur-sm border-b border-black/5 px-4 h-16 flex items-center justify-between">
+    <button id="btnVolverObservar" class="p-2">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+    </button>
+    <h1 class="font-newsreader text-xl font-medium uppercase tracking-wider text-[#091426]">AntroSapiens V3</h1>
+    <div class="w-10"></div>
+    </header>
+    <div id="observarBarra" class="sticky top-16 z-40 bg-[#FCFAED] border-b border-black/5 px-4 h-12 flex items-center">
+        <p class="font-mono text-xs text-slate-500 uppercase tracking-widest truncate" style="max-width:65ch;margin-inline:auto;width:100%">Observando: <span id="observarBarraNombre" class="text-[#091426]"></span></p>
+    </div>
+<main class="px-6 pt-8" style="max-width:65ch;margin-inline:auto">
+    <div class="mb-8">
+        <p id="observarExp" class="font-mono text-xs text-slate-500 uppercase tracking-widest mb-1"></p>
+        <h2 id="observarNombre" class="font-newsreader text-2xl md:text-4xl font-medium leading-tight mb-4 text-[#091426] break-words"></h2>
+    </div>
+    <div id="observarTimeline" class="relative pl-8 border-l border-slate-200 ml-2"></div>
+</main>
+</div>
 <script>
         const API = "https://antrosapiens-api-pro.vercel.app";
         let categoriaActiva = "";
         let verticalActiva = "";
         let escalaActiva = "";
         const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+        let expedienteActual = null;
+
+        function mostrarObservar(p) {
+            expedienteActual = p;
+            document.getElementById('observarExp').textContent = 'EXP. ' + (p.categoria || '') + ' · ' + (p.scoring || '?');
+            document.getElementById('observarNombre').textContent = p.nombre || '';
+            document.getElementById('observarBarraNombre').textContent = p.nombre || '';
+            const tl = document.getElementById('observarTimeline');
+            const val = p.validacion_cientifica || {};
+            const vacios = val.hipotesis_bloqueada ? (val.recomendacion || 'Evidencia insuficiente para validar.') : 'Sin vacios criticos registrados.';
+            tl.innerHTML = (p.evidencias || []).map(ev => `
+                <div class="mb-12 relative">
+                    <div class="absolute -left-10 top-2 w-4 h-4 rounded-full bg-slate-300 border-4 border-[#FCFAED]"></div>
+                    <p class="font-mono text-xs text-slate-500 mb-4">${esc(ev.fecha || '')}</p>
+                    <div class="bg-white/50 rounded-2xl border border-slate-200 overflow-hidden">
+                        <div class="p-6 bg-[#fef2e2]/30 border-b border-slate-100">
+                            <span class="font-mono text-xs font-bold text-[#2d5a27] uppercase tracking-wider">Lo que sabemos (Hecho)</span>
+                            <p class="text-slate-800 leading-relaxed mt-2">${esc(ev.texto || '')}</p>
+                            <div class="mt-4"><span class="font-mono text-[10px] bg-slate-200 px-2 py-1 rounded text-slate-600 uppercase">Fuente: ${esc(ev.fuente || '')}</span></div>
+                        </div>
+                        <div class="p-6 border-b border-slate-100 border-dashed">
+                            <span class="font-mono text-xs font-bold text-slate-500 uppercase tracking-wider">Lo que no sabemos (Vacios)</span>
+                            <p class="text-slate-600 mt-2">${esc(vacios)}</p>
+                        </div>
+                        <div class="p-6">
+                            <span class="font-mono text-xs font-bold text-[#2d5a27] uppercase tracking-wider">Tu Lectura (Interpretacion)</span>
+                            <textarea class="w-full mt-2 font-newsreader text-lg italic text-slate-800 bg-transparent border border-slate-200 rounded-lg p-3" rows="3" placeholder="Escribe tu interpretacion aqui..."></textarea>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            document.getElementById('screen-explorar').style.display = 'none';
+            document.getElementById('screen-observar').style.display = 'block';
+        }
+
+        document.getElementById('btnVolverObservar').addEventListener('click', () => {
+            document.getElementById('screen-observar').style.display = 'none';
+            document.getElementById('screen-explorar').style.display = 'block';
+        });
 
         // --- Filtro REGIÓN: comportamiento visual tipo radio (sin datos backend aún) ---
         document.querySelectorAll('section .flex-wrap').forEach(group => {
@@ -353,16 +414,16 @@
             else if (cont.id === 'escalaFilters') escalaActiva = val;
         }
 
-        // --- Filtros VERTICAL y ESCALA: se pueblan con valores únicos y conteos reales de /prospectos ---
+        // --- Filtros VERTICAL y ESCALA: se pueblan con valores únicos y conteos reales de /expedientes ---
         async function cargarFiltroProspectos(containerId, loadingId, campo) {
             const cont = document.getElementById(containerId);
             const loading = document.getElementById(loadingId);
             try {
-                const res = await fetch(`${API}/prospectos?limite=500`);
+                const res = await fetch(`${API}/expedientes?limite=100`);
                 const data = await res.json();
                 loading.remove();
                 const conteo = {};
-                (data.items || []).forEach(p => {
+                (data.expedientes || []).forEach(p => {
                     const v = String(p[campo] || "").trim();
                     if (!v) return;
                     conteo[v] = (conteo[v] || 0) + 1;
@@ -400,12 +461,16 @@
                 if (q) items = items.filter(p => (p.nombre || "").toLowerCase().includes(q));
                 count.textContent = `${items.length} expediente(s)`;
                 if (!items.length) {
-                    lista.innerHTML = `<p class="font-body-reading text-body-reading text-on-surface-variant">Sin expedientes curados con estos criterios todavía. El Radar sigue detectando; vuelve a intentar tras la próxima corrida.</p>`;
+                    const hayFiltros = categoriaActiva || verticalActiva || escalaActiva;
+                    lista.innerHTML = hayFiltros
+                        ? `<p class="font-body-reading text-body-reading text-on-surface-variant">Sin expedientes que combinen estos filtros específicos. Prueba quitando uno de los criterios (categoría, vertical o escala) para ver si aparecen resultados.</p>`
+                        : `<p class="font-body-reading text-body-reading text-on-surface-variant">Sin expedientes curados con estos criterios todavía. El Radar sigue detectando; vuelve a intentar tras la próxima corrida.</p>`;
                     return;
                 }
                 const badge = (s) => ({A:'bg-primary text-on-primary', B:'bg-tertiary-container text-on-tertiary-container', C:'bg-error-container text-on-error-container'}[s] || 'bg-surface-container-high text-on-surface-variant');
-                lista.innerHTML = items.slice(0, 30).map(p => `
-                    <div class="p-4 border border-outline-variant/30 rounded-lg flex flex-col gap-2">
+                window._items = items;
+                lista.innerHTML = items.slice(0, 30).map((p, idx) => `
+                    <div class="p-4 border border-outline-variant/30 rounded-lg flex flex-col gap-2 cursor-pointer hover:border-primary transition-colors" data-idx="${idx}">
                         <div class="flex items-center gap-2 flex-wrap">
                             <span class="font-headline-md-mobile text-on-surface text-lg">${esc(p.nombre)}</span>
                             <span class="px-2 py-0.5 rounded-full text-xs font-metadata-code ${badge(p.scoring)}">${esc(p.scoring || '?')}</span>
@@ -428,6 +493,9 @@
                         `).join('')}
                     </div>
                 `).join('');
+                lista.querySelectorAll('[data-idx]').forEach(el => {
+                    el.addEventListener('click', () => mostrarObservar(window._items[Number(el.dataset.idx)]));
+                });
             } catch (e) {
                 lista.innerHTML = `<p class="font-body-reading text-error">No se pudo conectar con el laboratorio. Intenta de nuevo.</p>`;
             }
@@ -436,5 +504,21 @@
         cargarCategorias();
         cargarFiltroProspectos('verticalFilters', 'verticalLoading', 'vertical');
         cargarFiltroProspectos('escalaFilters', 'escalaLoading', 'escala');
+
+        document.getElementById('btnExplorarNav').addEventListener('click', (e) => {
+            e.preventDefault();
+            document.getElementById('screen-observar').style.display = 'none';
+            document.getElementById('screen-explorar').style.display = 'block';
+        });
+
+        document.getElementById('btnObservarNav').addEventListener('click', (e) => {
+            e.preventDefault();
+            if (expedienteActual) {
+                document.getElementById('screen-explorar').style.display = 'none';
+                document.getElementById('screen-observar').style.display = 'block';
+            } else {
+                alert('Selecciona un hallazgo en Explorar primero');
+            }
+        });
     </script>
 </body></html>
