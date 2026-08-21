@@ -60,6 +60,9 @@
             background:#111715;color:#d8f5e3;padding:12px;border-radius:10px;
             max-height:340px;overflow:auto;margin:0}
         .muted{color:var(--muted);font-size:13px}
+        /* Descargo fijo bajo la señal: el motor detecta coincidencias de
+           palabras clave, no hallazgos. Sin autoridad visual. */
+        .descargo{color:var(--muted);font-size:11px;opacity:.85;margin:2px 0 4px}
         .err{color:var(--C);font-size:13px}
         .pill{font-size:11px;padding:2px 8px;border:1px solid var(--line);border-radius:999px}
         .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
@@ -254,8 +257,9 @@ function renderExpedientes(){
                 <span class="score ${e.scoring}">${e.scoring}</span>
                 <span class="pill">ICP ${e.score_icp||0}</span>
                 <span class="pill">${esc(e.categoria)}</span></div>
-            <div class="kv">Deuda: <b>${esc(e.tipo_deuda||"—")}</b> · ${esc(e.deuda_razon||"")}</div>
-            <div class="kv">Señal dominante: ${esc(e.senal_dominante||"—")} · Evidencias: ${e.total_evidencias}</div>
+            <div class="kv">Señal detectada: <b>${esc(e.senal_dominante||"—")}</b></div>
+            <div class="descargo">Coincidencia de palabras clave. Sin situación reconstruida. No constituye hallazgo.</div>
+            <div class="kv">Evidencias: ${e.total_evidencias}</div>
             ${(e.evidencias||[]).slice(0,3).map(v=>`<div class="ev">${esc(v.texto||"")}<div class="f">${esc(v.fuente||"")} · ${esc(v.fecha||"")} · <a href="${esc(v.url||"#")}">fuente</a></div></div>`).join("")}
         </div>`;
     });
