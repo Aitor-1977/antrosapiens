@@ -1,327 +1,568 @@
 <!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-    <title>Radar HD · AntrolabsHD</title>
-    <style>
-        :root{
-            --bg:#FCFAED; --ink:#111715; --muted:#6b6a5e;
-            --card:#ffffff; --line:#e7e3d2; --accent:#1f6f54; --accent2:#b9912f;
-            --vc:#3a7bd5; --startup:#1f9d6b; --incubadora:#9b5de5; --corp:#e07a3f;
-            --A:#1f9d6b; --B:#b9912f; --C:#c0563f;
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Explorar - Antrosapiens V3</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400&amp;family=Newsreader:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+                "on-tertiary-fixed-variant": "#703800",
+                "on-secondary": "#ffffff",
+                "on-secondary-container": "#007353",
+                "error-container": "#ffdad6",
+                "on-tertiary-container": "#ffb277",
+                "surface-bright": "#fff8f2",
+                "surface-tint": "#3b6934",
+                "surface-container-low": "#fef2e2",
+                "tertiary-fixed": "#ffdcc4",
+                "surface-variant": "#ece1d1",
+                "on-secondary-fixed-variant": "#00513a",
+                "on-primary": "#ffffff",
+                "inverse-surface": "#363025",
+                "tertiary-fixed-dim": "#ffb781",
+                "error": "#ba1a1a",
+                "surface-container-highest": "#ece1d1",
+                "tertiary-container": "#7e4000",
+                "on-surface": "#201b11",
+                "outline": "#72796e",
+                "secondary-fixed-dim": "#7bd8b1",
+                "on-secondary-fixed": "#002115",
+                "on-error-container": "#93000a",
+                "secondary-container": "#97f5cc",
+                "surface-dim": "#e4d9c9",
+                "inverse-primary": "#a1d494",
+                "primary-fixed": "#bcf0ae",
+                "on-primary-fixed": "#002201",
+                "secondary": "#006c4e",
+                "on-background": "#201b11",
+                "on-tertiary-fixed": "#2f1400",
+                "outline-variant": "#c2c9bb",
+                "surface": "#fff8f2",
+                "on-error": "#ffffff",
+                "on-primary-container": "#9dd090",
+                "on-surface-variant": "#42493e",
+                "primary-fixed-dim": "#a1d494",
+                "surface-container-high": "#f2e7d6",
+                "on-primary-fixed-variant": "#23501e",
+                "surface-container": "#f8ecdc",
+                "on-tertiary": "#ffffff",
+                "surface-container-lowest": "#ffffff",
+                "primary-container": "#2d5a27",
+                "primary": "#154212",
+                "tertiary": "#5c2d00",
+                "background": "#fff8f2",
+                "inverse-on-surface": "#fbefdf",
+                "secondary-fixed": "#97f5cc"
+        },
+        "borderRadius": {
+                "DEFAULT": "0.125rem",
+                "lg": "0.25rem",
+                "xl": "0.5rem",
+                "full": "0.75rem"
+        },
+        "spacing": {
+                "stack-sm": "8px",
+                "stack-lg": "32px",
+                "stack-md": "16px",
+                "gutter": "24px",
+                "container-max": "1120px",
+                "reading-width": "65ch",
+                "section-gap": "64px",
+                "margin-mobile": "16px"
+        },
+        "fontFamily": {
+                "metadata-code": [
+                        "JetBrains Mono"
+                ],
+                "ui-label": [
+                        "Inter"
+                ],
+                "headline-md-mobile": [
+                        "Newsreader"
+                ],
+                "body-reading": [
+                        "Newsreader"
+                ],
+                "display-lg": [
+                        "Newsreader"
+                ],
+                "headline-md": [
+                        "Newsreader"
+                ]
+        },
+        "fontSize": {
+                "metadata-code": [
+                        "13px",
+                        {
+                                "lineHeight": "18px",
+                                "fontWeight": "400"
+                        }
+                ],
+                "ui-label": [
+                        "14px",
+                        {
+                                "lineHeight": "20px",
+                                "letterSpacing": "0.01em",
+                                "fontWeight": "500"
+                        }
+                ],
+                "headline-md-mobile": [
+                        "24px",
+                        {
+                                "lineHeight": "32px",
+                                "fontWeight": "500"
+                        }
+                ],
+                "body-reading": [
+                        "20px",
+                        {
+                                "lineHeight": "32px",
+                                "fontWeight": "400"
+                        }
+                ],
+                "display-lg": [
+                        "48px",
+                        {
+                                "lineHeight": "56px",
+                                "letterSpacing": "-0.02em",
+                                "fontWeight": "600"
+                        }
+                ],
+                "headline-md": [
+                        "32px",
+                        {
+                                "lineHeight": "40px",
+                                "fontWeight": "500"
+                        }
+                ]
         }
-        *{box-sizing:border-box}
-        body{margin:0;background:var(--bg);color:var(--ink);
-            font-family:-apple-system,system-ui,"Segoe UI",Roboto,sans-serif;}
-        header{position:sticky;top:0;z-index:5;background:var(--bg);
-            border-bottom:1px solid var(--line);padding:12px 16px;display:flex;
-            align-items:center;gap:10px;}
-        header h1{font-size:18px;margin:0;letter-spacing:.3px}
-        .dot{width:9px;height:9px;border-radius:50%;background:#bbb;flex:none}
-        .dot.on{background:var(--accent)} .dot.off{background:var(--C)}
-        .sub{font-size:12px;color:var(--muted)}
-        .wrap{padding:14px 16px 40px;max-width:920px;margin:0 auto}
-        .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
-        input,select,button{font:inherit;padding:9px 11px;border-radius:10px;
-            border:1px solid var(--line);background:#fff;color:var(--ink)}
-        input{flex:1;min-width:160px}
-        button{background:var(--accent);color:#fff;border:none;cursor:pointer;font-weight:600}
-        button.sec{background:#fff;color:var(--accent);border:1px solid var(--accent)}
-        button:disabled{opacity:.5;cursor:default}
-        .chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
-        .chip{padding:5px 11px;border-radius:999px;border:1px solid var(--line);
-            font-size:12px;cursor:pointer;background:#fff}
-        .chip.active{background:var(--ink);color:var(--bg);border-color:var(--ink)}
-        .count{font-size:12px;color:var(--muted);margin-left:auto}
-        .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
-        .card{background:var(--card);border:1px solid var(--line);border-radius:14px;
-            padding:12px;cursor:pointer;transition:.15s}
-        .card:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,0,0,.06)}
-        .card .nm{font-weight:600;font-size:14px;line-height:1.2}
-        .tag{display:inline-block;margin-top:8px;font-size:11px;padding:2px 8px;
-            border-radius:999px;color:#fff}
-        .tag.VC{background:var(--vc)} .tag.Startup{background:var(--startup)}
-        .tag.Incubadora{background:var(--incubadora)} .tag.Corporativo{background:var(--corp)}
-        .meta{font-size:11px;color:var(--muted);margin-top:6px}
-        .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;
-            padding:16px;margin-top:14px}
-        .panel h3{margin:0 0 8px;font-size:15px}
-        .kv{font-size:13px;margin:3px 0;color:var(--muted)}
-        .kv b{color:var(--ink)}
-        .score{display:inline-block;font-weight:700;color:#fff;padding:2px 9px;
-            border-radius:8px;font-size:12px}
-        .score.A{background:var(--A)} .score.B{background:var(--B)} .score.C{background:var(--C)}
-        .ev{font-size:12px;border-left:3px solid var(--line);padding:4px 0 4px 10px;
-            margin:6px 0;color:var(--ink)}
-        .ev a{color:var(--accent);text-decoration:none}
-        .ev .f{color:var(--muted);font-size:11px}
-        .json{white-space:pre-wrap;word-break:break-word;font-size:11px;
-            background:#111715;color:#d8f5e3;padding:12px;border-radius:10px;
-            max-height:340px;overflow:auto;margin:0}
-        .muted{color:var(--muted);font-size:13px}
-        /* Descargo fijo bajo la señal: el motor detecta coincidencias de
-           palabras clave, no hallazgos. Sin autoridad visual. */
-        .descargo{color:var(--muted);font-size:11px;opacity:.85;margin:2px 0 4px}
-        .err{color:var(--C);font-size:13px}
-        .pill{font-size:11px;padding:2px 8px;border:1px solid var(--line);border-radius:999px}
-        .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-        .hidden{display:none}
-        hr{border:none;border-top:1px solid var(--line);margin:18px 0}
-        #loader{font-size:13px;color:var(--muted);padding:20px;text-align:center}
-    </style>
-</head>
-<body>
-<header>
-    <span id="status" class="dot off" title="estado del backend"></span>
-    <div>
-        <h1>Radar HD</h1>
-        <div class="sub">AntrolabsHD · Motor A remoto</div>
-    </div>
-</header>
-
-<div class="wrap">
-    <div class="bar">
-        <input id="q" placeholder="Buscar organización…" />
-        <select id="cat">
-            <option value="">Todos los ecosistemas</option>
-            <option>VC</option><option>Startup</option>
-            <option>Incubadora</option><option>Corporativo</option>
-        </select>
-        <button class="sec" id="refresh">Actualizar</button>
-        <button class="sec" id="config" title="Configurar backend">⚙</button>
-    </div>
-
-    <div class="chips" id="cats"></div>
-
-    <div class="row" style="margin-bottom:12px">
-        <button id="runRadar">▶ Ejecutar Radar</button>
-        <span id="radarState" class="muted"></span>
-        <span class="count" id="total"></span>
-    </div>
-
-    <div id="loader">Conectando con el backend remoto…</div>
-    <div id="grid" class="grid hidden"></div>
-
-    <div id="detail" class="panel hidden"></div>
-
-    <hr/>
-    <div class="row">
-        <button class="sec" id="toggleExp">Ver Expedientes Vivos</button>
-        <button class="sec" id="toggleJson">Ver JSON crudo del backend</button>
-    </div>
-    <div id="expedientes" class="panel hidden" style="margin-top:12px"></div>
-    <div id="jsonBox" class="panel hidden" style="margin-top:12px">
-        <pre id="json" class="json"></pre>
-    </div>
-</div>
-
-<script>
-// Backend remoto de Motor A (Vercel). La prospección NO corre embebida: este
-// cliente solo consume la API publicada. Configurable en caliente porque el
-// host puede cambiar entre despliegues; se persiste en el dispositivo.
-const API_DEFAULT = "https://antrosapiens-api-pro.vercel.app";
-let API = (localStorage.getItem("hd_api_base") || API_DEFAULT).replace(/\/+$/, "");
-
-// El token de ingesta (X-Ingest-Token) NUNCA se incrusta en el APK: cualquiera
-// puede extraerlo con `unzip`. Lo introduce el operador y queda en el
-// almacenamiento local del dispositivo. Solo hace falta para escribir (/radar);
-// los endpoints de lectura son públicos.
-let TOKEN = localStorage.getItem("hd_ingest_token") || "";
-
-let RAW = {prospectos:null, categorias:null, expedientes:null};
-
-const $ = (s)=>document.querySelector(s);
-async function api(path, opts={}){
-    const r = await fetch(API+path, opts);
-    if(!r.ok) throw new Error(path+" → "+r.status);
-    return await r.json();
-}
-function esc(s){return (s==null?"":String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
-
-// Guarda el último fallo de red para poder mostrarlo en pantalla: sin esto un
-// error de conectividad se pierde y la UI solo dice "Backend no disponible",
-// que es exactamente lo que impidió diagnosticar la conexión durante días.
-let ULTIMO_ERROR = null;
-
-function detallarError(e){
-    if(!e) return "error desconocido";
-    const partes = [e.name || "Error", e.message || String(e)];
-    if(e.stack) partes.push(String(e.stack).split("\n").slice(0,3).join(" | "));
-    return partes.join(" · ");
-}
-
-async function ping(){
-    try{ await api("/prospectos?limite=1"); ULTIMO_ERROR=null; setStatus(true); return true; }
-    catch(e){ ULTIMO_ERROR = detallarError(e); setStatus(false); return false; }
-}
-function setStatus(on){ $("#status").className = "dot "+(on?"on":"off"); }
-
-async function loadAll(){
-    $("#loader").classList.remove("hidden");
-    $("#grid").classList.add("hidden");
-    const ok = await ping();
-    if(!ok){
-        $("#loader").innerHTML = "Backend no disponible. Reintentando…"
-            + `<div class="err" style="margin-top:8px;word-break:break-word">${esc(ULTIMO_ERROR)}</div>`
-            + `<div class="muted" style="margin-top:4px">API: ${esc(API)}</div>`;
-        setTimeout(loadAll, 1500); return; }
-    try{
-        const [pros, cats, exp] = await Promise.all([
-            api("/prospectos?limite=500"),
-            api("/prospectos/categorias"),
-            api("/expedientes?limite=100").catch(()=>({total:0,expedientes:[]}))
-        ]);
-        RAW.prospectos=pros; RAW.categorias=cats; RAW.expedientes=exp;
-        renderCats(cats); renderGrid(); renderExpedientes();
-        $("#loader").classList.add("hidden");
-        $("#grid").classList.remove("hidden");
-    }catch(e){ $("#loader").textContent="Error: "+e.message; }
-}
-
-function renderCats(cats){
-    const c = cats && cats.categorias ? cats.categorias : {};
-    const ord=["VC","Startup","Incubadora","Corporativo"];
-    let html = `<span class="chip ${!$("#cat").value?'active':''}" data-c="">Todos (${totalPros()})</span>`;
-    ord.forEach(k=>{ html+=`<span class="chip" data-c="${k}">${k} (${c[k]||0})</span>`;});
-    $("#cats").innerHTML=html;
-    $("#cats").querySelectorAll(".chip").forEach(ch=>{
-        ch.onclick=()=>{ $("#cat").value=ch.dataset.c;
-            document.querySelectorAll("#cats .chip").forEach(x=>x.classList.remove("active"));
-            ch.classList.add("active"); renderGrid(); };
-    });
-}
-function totalPros(){return RAW.prospectos?RAW.prospectos.total:0;}
-
-function filtered(){
-    if(!RAW.prospectos) return [];
-    const q=$("#q").value.trim().toLowerCase(), cat=$("#cat").value;
-    return RAW.prospectos.items.filter(p=>{
-        if(cat && p.categoria!==cat) return false;
-        if(q && !p.nombre.toLowerCase().includes(q)) return false;
-        return true;
-    });
-}
-function renderGrid(){
-    const items=filtered();
-    $("#total").textContent = items.length+" organización(es)";
-    $("#grid").innerHTML = items.map(p=>`
-        <div class="card" data-id="${p.id}">
-            <div class="nm">${esc(p.nombre)}</div>
-            <span class="tag ${esc(p.categoria)}">${esc(p.categoria)}</span>
-            <div class="meta">${esc(p.vertical||"")} ${esc(p.escala&&p.escala!=='indeterminada'?'· '+p.escala:'')}</div>
-        </div>`).join("");
-    $("#grid").querySelectorAll(".card").forEach(c=>{
-        c.onclick=()=>showDetail(parseInt(c.dataset.id,10));
-    });
-}
-
-async function showDetail(id){
-    $("#detail").classList.remove("hidden");
-    $("#detail").innerHTML=`<div class="muted">Cargando organización…</div>`;
-    try{
-        const p = await api("/prospectos/"+id);
-        const disc = p.discurso_corporativo ? `<div class="kv" style="margin-top:8px"><b>Discurso:</b> ${esc(p.discurso_corporativo).slice(0,400)}</div>`:"";
-        $("#detail").innerHTML=`
-            <h3>${esc(p.nombre)}</h3>
-            <div class="row" style="margin-bottom:8px">
-                <span class="tag ${esc(p.categoria)}">${esc(p.categoria)}</span>
-                ${p.escala&&p.escala!=='indeterminada'?`<span class="pill">${esc(p.escala)}</span>`:""}
-                ${p.vertical?`<span class="pill">${esc(p.vertical)}</span>`:""}
-            </div>
-            <div class="kv"><b>Sitio:</b> ${p.sitio_web?`<a href="${esc(p.sitio_web)}" style="color:var(--accent)">${esc(p.sitio_web?p.sitio_web:p.sitio_web)}</a>`:"—"}</div>
-            <div class="kv"><b>LinkedIn:</b> ${p.linkedin?`<a href="${esc(p.linkedin)}" style="color:var(--accent)">ver</a>`:"—"}</div>
-            <div class="kv"><b>Tipo de discurso:</b> ${esc(p.tipo_discurso||"—")}</div>
-            <div class="kv"><b>Fuente:</b> ${esc(p.fuente_discurso||"—")}</div>
-            ${disc}
-            <button class="sec" id="closeD" style="margin-top:10px">Cerrar</button>`;
-        $("#closeD").onclick=()=>$("#detail").classList.add("hidden");
-    }catch(e){ $("#detail").innerHTML=`<div class="err">${esc(e.message)}</div>`; }
-}
-
-function renderExpedientes(){
-    const box=$("#expedientes");
-    if(!RAW.expedientes || !RAW.expedientes.expedientes.length){
-        box.innerHTML=`<h3>Expedientes Vivos</h3><div class="muted">Sin evidencias capturadas aún. Pulsa «Ejecutar Radar» para barrer fuentes.</div>`;
-        return;
-    }
-    const rs = RAW.expedientes.resumen_scoring||{};
-    let h=`<h3>Expedientes Vivos (${RAW.expedientes.total})</h3>
-        <div class="row" style="margin-bottom:10px">
-            <span class="score A">A: ${rs.A||0}</span>
-            <span class="score B">B: ${rs.B||0}</span>
-            <span class="score C">C: ${rs.C||0}</span></div>`;
-    RAW.expedientes.expedientes.forEach(e=>{
-        h+=`<div style="border-top:1px solid var(--line);padding:10px 0">
-            <div class="row"><b>${esc(e.nombre)}</b>
-                <span class="score ${e.scoring}">${e.scoring}</span>
-                <span class="pill">ICP ${e.score_icp||0}</span>
-                <span class="pill">${esc(e.categoria)}</span></div>
-            <div class="kv">Señal detectada: <b>${esc(e.senal_dominante||"—")}</b></div>
-            <div class="descargo">Coincidencia de palabras clave. Sin situación reconstruida. No constituye hallazgo.</div>
-            <div class="kv">Evidencias: ${e.total_evidencias}</div>
-            ${(e.evidencias||[]).slice(0,3).map(v=>`<div class="ev">${esc(v.texto||"")}<div class="f">${esc(v.fuente||"")} · ${esc(v.fecha||"")} · <a href="${esc(v.url||"#")}">fuente</a></div></div>`).join("")}
-        </div>`;
-    });
-    box.innerHTML=h;
-}
-
-$("#refresh").onclick=loadAll;
-$("#config").onclick=()=>{
-    const base = prompt("URL del backend Motor A:", API);
-    if(base===null) return;
-    API = (base.trim() || API_DEFAULT).replace(/\/+$/, "");
-    localStorage.setItem("hd_api_base", API);
-    if(confirm("¿Borrar también el token de ingesta guardado?")){
-        localStorage.removeItem("hd_ingest_token"); TOKEN="";
-    }
-    loadAll();
-};
-$("#q").oninput=renderGrid;
-$("#cat").onchange=()=>{document.querySelectorAll("#cats .chip").forEach(x=>x.classList.remove("active"));renderGrid();};
-
-$("#toggleExp").onclick=()=>{ $("#expedientes").classList.toggle("hidden"); };
-$("#toggleJson").onclick=()=>{
-    const box=$("#jsonBox"); box.classList.toggle("hidden");
-    if(!box.classList.contains("hidden")){
-        $("#json").textContent = JSON.stringify(
-            {prospectos:RAW.prospectos, categorias:RAW.categorias, expedientes:RAW.expedientes}, null, 2);
-    }
-};
-
-$("#runRadar").onclick=async()=>{
-    // /radar escribe evidencia: exige X-Ingest-Token. Se pide al operador la
-    // primera vez y se guarda en el dispositivo (nunca viaja en el APK).
-    if(!TOKEN){
-        const t = prompt("Token de ingesta (X-Ingest-Token) del backend:");
-        if(!t){ $("#radarState").innerHTML='<span class="err">Se necesita el token de ingesta para ejecutar el Radar.</span>'; return; }
-        TOKEN = t.trim(); localStorage.setItem("hd_ingest_token", TOKEN);
-    }
-    const btn=$("#runRadar"); btn.disabled=true; $("#radarState").textContent="Ejecutando…";
-    try{
-        const body=JSON.stringify({region:"Toda LATAM",enfoque:[],tamanos:[],palabra_clave:""});
-        const r=await fetch(API+"/radar",{method:"POST",headers:{
-            "Content-Type":"application/json","x-ingest-token":TOKEN},body});
-        if(!r.ok){
-            let detalle="";
-            try{ const j=await r.json(); detalle = j.detail ? " — "+j.detail : ""; }catch(_){}
-            if(r.status===401 || r.status===403){
-                localStorage.removeItem("hd_ingest_token"); TOKEN="";
-                throw new Error(`token rechazado (${r.status})${detalle}. Se borró el token guardado; vuelve a intentarlo.`);
-            }
-            throw new Error(`/radar → ${r.status}${detalle}`);
-        }
-        const data=await r.json();
-        $("#radarState").innerHTML=`<span class="pill">detención: ${esc(data.detencion||"?")}</span>
-            <span class="pill">escritos: ${data.total_escritos??0}</span>
-            <span class="pill">vistos: ${data.total_vistos??0}</span>
-            <span class="pill">expedientes: ${data.expedientes?data.expedientes.total:0}</span>`;
-        await loadAll();
-    }catch(e){ $("#radarState").innerHTML=`<span class="err">${esc(detallarError(e))}</span>`; }
-    finally{ btn.disabled=false; }
-};
-
-loadAll();
+},
+    },
+  }
 </script>
-</body>
-</html>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.filled {
+            font-variation-settings: 'FILL' 1;
+        }
+        
+        /* Hide scrollbar for a cleaner editorial look */
+        ::-webkit-scrollbar {
+            width: 0px;
+            background: transparent;
+        }
+    </style>
+<style>
+    html {
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+    }
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-surface text-on-surface min-h-screen flex flex-col font-ui-label selection:bg-primary-container selection:text-on-primary-container">
+<div id="screen-explorar">
+<!-- TopAppBar -->
+<header class="bg-surface dark:bg-surface-dim border-b border-outline/20 docked full-width top-0 z-40 fixed">
+<div class="flex justify-between items-center px-margin-mobile md:px-gutter h-16 w-full max-w-container-max mx-auto">
+<button aria-label="Menu" class="flex items-center justify-center h-full hover:bg-surface-container-low dark:hover:bg-surface-container-highest transition-colors active:opacity-80 active:scale-95 duration-150 transition-all">
+<span class="material-symbols-outlined text-primary dark:text-primary-fixed-dim" data-icon="menu">menu</span>
+</button>
+<h1 class="font-headline-md text-headline-md text-primary dark:text-primary-fixed-dim tracking-tight text-center flex-1">ANTROSAPIENS V3</h1>
+<button aria-label="User profile settings" class="flex items-center justify-center h-full hover:bg-surface-container-low dark:hover:bg-surface-container-highest transition-colors active:opacity-80 active:scale-95 duration-150 transition-all">
+<div class="w-8 h-8 rounded-full bg-secondary-container flex items-center justify-center text-on-secondary-container font-metadata-code text-metadata-code uppercase overflow-hidden ring-1 ring-outline">
+<img alt="User profile settings" class="object-cover w-full h-full" data-alt="A macro photography style portrait of a researcher's eye reflecting a glowing digital map of South America. The lighting is soft and cinematic, favoring a mineral color palette with earthy tones and subtle hints of vibrant clinical mint. The overall mood is intellectual and focused, evoking a sense of deep observation." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAS-uqvGfqu_Z9NzV4prGUqQOMsHahWckSCR7ilXryvKDKuS1fg90qhoCY2K9IFjWPqMRK_n49bAhbj0yN6NSGDkpXmpXDABijTcIM9L4kmuu5BfR1xxLSpFYOlnYPobOC1fWWPST2qTB9nAManGOIYgYH0aoE73TOwnGm4KuOM_TNZ8E_GTiVNPDtWG90tb5HmqhrkF_9SwsKdT7YgWHOSdD2Hi8AwYhGSsexV5ODAuUhDBO8kOwjHxg"/>
+</div>
+</button>
+</div>
+</header>
+<!-- Main Canvas -->
+<main class="flex-1 w-full max-w-3xl mx-auto pt-[96px] pb-[120px] px-margin-mobile md:px-gutter flex flex-col gap-stack-lg">
+<!-- Header Section -->
+<section class="flex flex-col gap-stack-sm pt-8">
+<h2 class="font-display-lg text-display-lg text-on-surface">¿Qué quieres investigar?</h2>
+<p class="font-body-reading text-body-reading text-on-surface-variant max-w-xl">
+                Explora organizaciones, señales y fenómenos que podrían merecer una mirada más cercana.
+            </p>
+</section>
+<!-- Search Input -->
+<section class="w-full relative group">
+<div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-outline-variant group-focus-within:text-primary transition-colors" data-icon="search">search</span>
+</div>
+<input class="w-full bg-transparent border-b-2 border-outline-variant focus:border-primary py-4 pl-12 pr-4 font-body-reading text-body-reading text-on-surface placeholder:text-outline focus:ring-0 focus:outline-none transition-colors" placeholder="Escribe una organización, fenómeno, sector o pregunta..." type="text"/>
+</section>
+<!-- Filters Section (Bento/Tactile structure) -->
+<section class="flex flex-col gap-stack-md mt-4">
+<!-- Region Filter -->
+<div class="flex flex-col gap-stack-sm">
+<label class="font-metadata-code text-metadata-code text-outline tracking-wider uppercase">REGIÓN</label>
+<div class="flex flex-wrap gap-stack-sm">
+<button class="px-4 py-2 border border-outline-variant/30 text-on-surface-variant rounded-full font-body-reading text-ui-label hover:bg-surface-container-high transition-colors focus:bg-primary focus:text-on-primary focus:border-primary">Toda LATAM</button>
+<button class="px-4 py-2 border border-outline-variant/30 text-on-surface-variant rounded-full font-body-reading text-ui-label hover:bg-surface-container-high transition-colors focus:bg-primary focus:text-on-primary focus:border-primary">México</button>
+<button class="px-4 py-2 border border-outline-variant/30 text-on-surface-variant rounded-full font-body-reading text-ui-label hover:bg-surface-container-high transition-colors focus:bg-primary focus:text-on-primary focus:border-primary">México y Centroamérica</button>
+<button class="px-4 py-2 border border-outline-variant/30 text-on-surface-variant rounded-full font-body-reading text-ui-label hover:bg-surface-container-high transition-colors focus:bg-primary focus:text-on-primary focus:border-primary">Sudamérica</button>
+</div>
+</div>
+<hr class="border-outline-variant/30 w-1/3 my-2"/>
+<!-- Focus Filter (poblado dinámicamente desde el backend real) -->
+<div class="flex flex-col gap-stack-sm">
+<label class="font-metadata-code text-metadata-code text-outline tracking-wider uppercase">FOCO</label>
+<div id="focoFilters" class="flex flex-wrap gap-stack-sm">
+<button data-cat="" class="px-4 py-2 border border-primary bg-primary text-on-primary rounded-full font-body-reading text-ui-label transition-colors">Todos</button>
+                <span id="focoLoading" class="font-metadata-code text-metadata-code text-outline self-center">Cargando categorías…</span>
+        </div>
+</div>
+<hr class="border-outline-variant/30 w-1/3 my-2"/>
+<!-- Vertical Filter (poblado dinámicamente desde el backend real) -->
+<div class="flex flex-col gap-stack-sm">
+<label class="font-metadata-code text-metadata-code text-outline tracking-wider uppercase">VERTICAL</label>
+<div id="verticalFilters" class="flex flex-wrap gap-stack-sm">
+<button data-val="" class="px-4 py-2 border border-primary bg-primary text-on-primary rounded-full font-body-reading text-ui-label transition-colors">Todos</button>
+<span id="verticalLoading" class="font-metadata-code text-metadata-code text-outline self-center">Cargando verticales…</span>
+</div>
+</div>
+<hr class="border-outline-variant/30 w-1/3 my-2"/>
+<!-- Escala Filter (poblado dinámicamente desde el backend real) -->
+<div class="flex flex-col gap-stack-sm">
+<label class="font-metadata-code text-metadata-code text-outline tracking-wider uppercase">ESCALA</label>
+<div id="escalaFilters" class="flex flex-wrap gap-stack-sm">
+<button data-val="" class="px-4 py-2 border border-primary bg-primary text-on-primary rounded-full font-body-reading text-ui-label transition-colors">Todos</button>
+<span id="escalaLoading" class="font-metadata-code text-metadata-code text-outline self-center">Cargando escalas…</span>
+</div>
+</div>
+</section>
+<!-- Primary Action -->
+<section class="mt-8 flex justify-end">
+<button id="btnExplorar" class="bg-primary text-on-primary font-ui-label text-ui-label rounded-lg flex items-center gap-2 hover:bg-primary-fixed-variant transition-colors min-w-[200px] justify-center shadow-sm w-full py-6 text-lg shadow-lg">
+                Comenzar exploración
+                <span class="material-symbols-outlined" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</section>
+<!-- Resultados (aparece tras Comenzar exploración; sustituye a Mesa de Resultados hasta que exista esa pantalla) -->
+<section id="resultados" class="hidden flex flex-col gap-stack-md">
+<hr class="border-outline-variant/30"/>
+<div class="flex items-baseline justify-between">
+<h3 class="font-headline-md-mobile text-headline-md-mobile text-on-surface">Hallazgos</h3>
+<span id="resultadosCount" class="font-metadata-code text-metadata-code text-outline"></span>
+</div>
+<div id="resultadosList" class="flex flex-col gap-stack-sm"></div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="bg-surface dark:bg-surface-container-lowest border-t border-outline/20 bg-surface/95 backdrop-blur-none fixed bottom-0 left-0 w-full flex items-center px-1 py-2 pb-safe md:max-w-container-max md:left-1/2 md:-translate-x-1/2 z-50">
+<!-- EXPLORAR (Active) -->
+<a id="btnExplorarNav" class="flex-1 min-w-0 flex flex-col items-center justify-center text-primary dark:text-primary-fixed-dim bg-primary-container/10 rounded-xl py-1 active:scale-90 duration-200 ease-in-out transition-transform" href="#">
+<span class="material-symbols-outlined filled" data-icon="explore" data-weight="fill">explore</span>
+<span class="font-ui-label leading-tight mt-1 text-[9px] text-center break-words">EXPLORAR</span>
+</a>
+<!-- OBSERVAR (Inactive) -->
+<a id="btnObservarNav" class="flex-1 min-w-0 flex flex-col items-center justify-center text-outline dark:text-outline-variant py-1 hover:text-secondary dark:hover:text-secondary-fixed active:scale-90 duration-200 ease-in-out transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="visibility">visibility</span>
+<span class="font-ui-label leading-tight mt-1 text-[9px] text-center break-words">OBSERVAR</span>
+</a>
+<!-- TRIANGULAR (Inactive) -->
+<a class="flex-1 min-w-0 flex flex-col items-center justify-center text-outline dark:text-outline-variant py-1 hover:text-secondary dark:hover:text-secondary-fixed active:scale-90 duration-200 ease-in-out transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="change_history">change_history</span>
+<span class="font-ui-label leading-tight mt-1 text-[9px] text-center break-words">TRIANGULAR</span>
+</a>
+<!-- FIJAR (Inactive) -->
+<a class="flex-1 min-w-0 flex flex-col items-center justify-center text-outline dark:text-outline-variant py-1 hover:text-secondary dark:hover:text-secondary-fixed active:scale-90 duration-200 ease-in-out transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="push_pin">push_pin</span>
+<span class="font-ui-label leading-tight mt-1 text-[9px] text-center break-words">FIJAR</span>
+</a>
+</nav>
+</div>
+<div id="screen-observar" style="display:none">
+<header class="sticky top-0 z-50 bg-[#FCFAED]/95 backdrop-blur-sm border-b border-black/5 px-4 h-16 flex items-center justify-between">
+    <button id="btnVolverObservar" class="p-2">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+    </button>
+    <h1 class="font-newsreader text-xl font-medium uppercase tracking-wider text-[#091426]">AntroSapiens V3</h1>
+    <div class="w-10"></div>
+    </header>
+    <div id="observarBarra" class="sticky top-16 z-40 bg-[#FCFAED] border-b border-black/5 px-4 h-12 flex items-center">
+        <p class="font-mono text-xs text-slate-500 uppercase tracking-widest truncate" style="max-width:65ch;margin-inline:auto;width:100%">Observando: <span id="observarBarraNombre" class="text-[#091426]"></span></p>
+    </div>
+<main class="px-6 pt-8" style="max-width:65ch;margin-inline:auto">
+    <div class="mb-8">
+        <p id="observarExp" class="font-mono text-xs text-slate-500 uppercase tracking-widest mb-1"></p>
+        <h2 id="observarNombre" class="font-newsreader text-2xl md:text-4xl font-medium leading-tight mb-4 text-[#091426] break-words"></h2>
+        <!-- Estado temporal del expediente: rango de fechas + aviso de archivo. -->
+        <p id="observarEstado" class="font-mono text-xs text-slate-500 flex items-center gap-2 flex-wrap"></p>
+    </div>
+    <!-- Orden declarado de la cronología, idéntico en todos los expedientes. -->
+    <p id="observarOrden" class="font-mono text-xs text-slate-500 uppercase tracking-widest mb-4"></p>
+    <div id="observarTimeline" class="relative pl-8 border-l border-slate-200 ml-2"></div>
+    <!-- Lectura del investigador: una sola vez, al cierre de la cronología. -->
+    <div id="observarLectura" class="mt-8 mb-16"></div>
+</main>
+</div>
+<script>
+        const API = "https://antrosapiens-api-pro.vercel.app";
+        let categoriaActiva = "";
+        let verticalActiva = "";
+        let escalaActiva = "";
+        const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+        let expedienteActual = null;
+
+        function mostrarObservar(p) {
+            expedienteActual = p;
+            document.getElementById('observarExp').textContent = 'EXP. ' + (p.categoria || '') + ' · ' + (p.scoring || '?');
+            document.getElementById('observarNombre').textContent = p.nombre || '';
+            document.getElementById('observarBarraNombre').textContent = p.nombre || '';
+            const tl = document.getElementById('observarTimeline');
+            const val = p.validacion_cientifica || {};
+            const vacios = val.hipotesis_bloqueada ? (val.recomendacion || 'Evidencia insuficiente para validar.') : 'Sin vacios criticos registrados.';
+
+            // Orden de presentación: de más reciente a más antigua. Se ordena aquí
+            // para que el encabezado declarado valga en TODOS los expedientes y no
+            // dependa del orden en que llegue el arreglo. No altera los datos.
+            const evidencias = (p.evidencias || []).slice().sort((a, b) => {
+                const ta = Date.parse(a && a.fecha) || 0;
+                const tb = Date.parse(b && b.fecha) || 0;
+                return tb - ta;
+            });
+
+            // Rango temporal del expediente y aviso de archivo (>12 meses).
+            const fechas = evidencias.map(ev => Date.parse(ev && ev.fecha)).filter(t => !isNaN(t));
+            const soloDia = (t) => new Date(t).toISOString().slice(0, 10);
+            const estado = document.getElementById('observarEstado');
+            if (fechas.length) {
+                const masReciente = Math.max(...fechas);
+                const masAntigua = Math.min(...fechas);
+                const doceMeses = new Date();
+                doceMeses.setFullYear(doceMeses.getFullYear() - 1);
+                const archivo = masReciente < doceMeses.getTime()
+                    ? '<span class="px-2 py-0.5 rounded bg-amber-100 text-amber-800 font-bold uppercase tracking-wider">Archivo histórico</span>'
+                    : '';
+                estado.innerHTML = `<span>${esc(soloDia(masAntigua))} — ${esc(soloDia(masReciente))}</span>${archivo}`;
+            } else {
+                estado.innerHTML = '<span>Sin fechas de evidencia registradas</span>';
+            }
+
+            document.getElementById('observarOrden').textContent =
+                'Cronología · de más reciente a más antigua';
+
+            tl.innerHTML = evidencias.map(ev => `
+                <div class="mb-12 relative">
+                    <div class="absolute -left-10 top-2 w-4 h-4 rounded-full bg-slate-300 border-4 border-[#FCFAED]"></div>
+                    <p class="font-mono text-xs text-slate-500 mb-4">${esc(ev.fecha || '')}</p>
+                    <div class="bg-white/50 rounded-2xl border border-slate-200 overflow-hidden">
+                        <div class="p-6 bg-[#fef2e2]/30 border-b border-slate-100">
+                            <span class="font-mono text-xs font-bold text-[#2d5a27] uppercase tracking-wider">Lo que sabemos (Hecho)</span>
+                            <p class="text-slate-800 leading-relaxed mt-2">${esc(ev.texto || '')}</p>
+                            <div class="mt-4"><span class="font-mono text-[10px] bg-slate-200 px-2 py-1 rounded text-slate-600 uppercase">Fuente: ${esc(ev.fuente || '')}</span></div>
+                        </div>
+                        <div class="p-6">
+                            <span class="font-mono text-xs font-bold text-slate-500 uppercase tracking-wider">Lo que no sabemos (Vacios)</span>
+                            <p class="text-slate-600 mt-2">${esc(vacios)}</p>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            // Una sola lectura por expediente, al final de toda la cronología:
+            // intercalada entre evidencias no se sabía a cuál se refería.
+            document.getElementById('observarLectura').innerHTML = `
+                <div class="bg-white/50 rounded-2xl border border-slate-200 p-6">
+                    <span class="font-mono text-xs font-bold text-[#2d5a27] uppercase tracking-wider">Tu Lectura (Interpretacion)</span>
+                    <p class="font-mono text-xs text-slate-500 mt-1">Sobre el conjunto de la cronología.</p>
+                    <textarea class="w-full mt-2 font-newsreader text-lg italic text-slate-800 bg-transparent border border-slate-200 rounded-lg p-3" rows="4" placeholder="Escribe tu interpretacion aqui..."></textarea>
+                </div>`;
+
+            document.getElementById('screen-explorar').style.display = 'none';
+            document.getElementById('screen-observar').style.display = 'block';
+        }
+
+        document.getElementById('btnVolverObservar').addEventListener('click', () => {
+            document.getElementById('screen-observar').style.display = 'none';
+            document.getElementById('screen-explorar').style.display = 'block';
+        });
+
+        // --- Filtro REGIÓN: comportamiento visual tipo radio (sin datos backend aún) ---
+        document.querySelectorAll('section .flex-wrap').forEach(group => {
+            if (group.id === 'focoFilters') return; // FOCO se maneja aparte, con datos reales
+            group.querySelectorAll('button').forEach(button => {
+                button.addEventListener('click', function() {
+                    group.querySelectorAll('button').forEach(btn => {
+                        btn.classList.remove('bg-primary', 'text-on-primary', 'border-primary');
+                        btn.classList.add('border-outline-variant/30', 'text-on-surface-variant');
+                    });
+                    this.classList.add('bg-primary', 'text-on-primary', 'border-primary');
+                    this.classList.remove('border-outline-variant/30', 'text-on-surface-variant');
+                });
+            });
+        });
+
+        // --- Filtro FOCO: se puebla con las categorías reales del backend ---
+        async function cargarCategorias() {
+            const cont = document.getElementById('focoFilters');
+            const loading = document.getElementById('focoLoading');
+            try {
+                const res = await fetch(`${API}/prospectos/categorias`);
+                const data = await res.json();
+                loading.remove();
+                const cats = data.categorias || {};
+                Object.keys(cats).forEach(nombre => {
+                    const btn = document.createElement('button');
+                    btn.dataset.cat = nombre;
+                    btn.className = "px-4 py-2 border border-outline-variant/30 text-on-surface-variant rounded-full font-body-reading text-ui-label hover:bg-surface-container-high transition-colors";
+                    btn.textContent = `${nombre} (${cats[nombre]})`;
+                    btn.addEventListener('click', () => seleccionarFoco(btn));
+                    cont.appendChild(btn);
+                });
+                document.querySelector('#focoFilters button[data-cat=""]').addEventListener('click', function() {
+                    seleccionarFoco(this);
+                });
+            } catch (e) {
+                loading.textContent = "No se pudieron cargar las categorías (backend no disponible).";
+            }
+        }
+
+        function seleccionarFoco(btnSeleccionado) {
+            categoriaActiva = btnSeleccionado.dataset.cat || "";
+            document.querySelectorAll('#focoFilters button').forEach(btn => {
+                btn.classList.remove('bg-primary', 'text-on-primary', 'border-primary');
+                btn.classList.add('border-outline-variant/30', 'text-on-surface-variant');
+            });
+            btnSeleccionado.classList.add('bg-primary', 'text-on-primary', 'border-primary');
+            btnSeleccionado.classList.remove('border-outline-variant/30', 'text-on-surface-variant');
+        }
+
+        // --- Selección visual genérica (misma lógica que FOCO) para VERTICAL y ESCALA ---
+        function seleccionarFiltro(cont, btnSeleccionado) {
+            cont.querySelectorAll('button').forEach(btn => {
+                btn.classList.remove('bg-primary', 'text-on-primary', 'border-primary');
+                btn.classList.add('border-outline-variant/30', 'text-on-surface-variant');
+            });
+            btnSeleccionado.classList.add('bg-primary', 'text-on-primary', 'border-primary');
+            btnSeleccionado.classList.remove('border-outline-variant/30', 'text-on-surface-variant');
+            const val = btnSeleccionado.dataset.val || "";
+            if (cont.id === 'verticalFilters') verticalActiva = val;
+            else if (cont.id === 'escalaFilters') escalaActiva = val;
+        }
+
+        // --- Filtros VERTICAL y ESCALA: se pueblan con valores únicos y conteos reales de /expedientes ---
+        async function cargarFiltroProspectos(containerId, loadingId, campo) {
+            const cont = document.getElementById(containerId);
+            const loading = document.getElementById(loadingId);
+            try {
+                const res = await fetch(`${API}/expedientes?limite=100`);
+                const data = await res.json();
+                loading.remove();
+                const conteo = {};
+                (data.expedientes || []).forEach(p => {
+                    const v = String(p[campo] || "").trim();
+                    if (!v) return;
+                    conteo[v] = (conteo[v] || 0) + 1;
+                });
+                Object.keys(conteo).sort().forEach(valor => {
+                    const btn = document.createElement('button');
+                    btn.dataset.val = valor;
+                    btn.className = "px-4 py-2 border border-outline-variant/30 text-on-surface-variant rounded-full font-body-reading text-ui-label hover:bg-surface-container-high transition-colors";
+                    btn.textContent = `${valor} (${conteo[valor]})`;
+                    btn.addEventListener('click', () => seleccionarFiltro(cont, btn));
+                    cont.appendChild(btn);
+                });
+                const todos = cont.querySelector('button[data-val=""]');
+                if (todos) todos.addEventListener('click', () => seleccionarFiltro(cont, todos));
+            } catch (e) {
+                loading.textContent = "No se pudo cargar (backend no disponible).";
+            }
+        }
+
+        // --- Comenzar exploración: trae EXPEDIENTES curados (scoring, Deuda Cultural, evidencia), no la lista cruda ---
+        document.getElementById('btnExplorar').addEventListener('click', async () => {
+            const q = document.querySelector('input[type="text"]').value.trim().toLowerCase();
+            const seccion = document.getElementById('resultados');
+            const lista = document.getElementById('resultadosList');
+            const count = document.getElementById('resultadosCount');
+            seccion.classList.remove('hidden');
+            lista.innerHTML = `<p class="font-body-reading text-on-surface-variant">Curando hallazgos…</p>`;
+            try {
+                const res = await fetch(`${API}/expedientes?limite=100`);
+                const data = await res.json();
+                let items = data.expedientes || [];
+                if (categoriaActiva) items = items.filter(p => p.categoria === categoriaActiva);
+                if (verticalActiva) items = items.filter(p => p.vertical === verticalActiva);
+                if (escalaActiva) items = items.filter(p => p.escala === escalaActiva);
+                if (q) items = items.filter(p => (p.nombre || "").toLowerCase().includes(q));
+                count.textContent = `${items.length} expediente(s)`;
+                if (!items.length) {
+                    const hayFiltros = categoriaActiva || verticalActiva || escalaActiva;
+                    lista.innerHTML = hayFiltros
+                        ? `<p class="font-body-reading text-body-reading text-on-surface-variant">Sin expedientes que combinen estos filtros específicos. Prueba quitando uno de los criterios (categoría, vertical o escala) para ver si aparecen resultados.</p>`
+                        : `<p class="font-body-reading text-body-reading text-on-surface-variant">Sin expedientes curados con estos criterios todavía. El Radar sigue detectando; vuelve a intentar tras la próxima corrida.</p>`;
+                    return;
+                }
+                const badge = (s) => ({A:'bg-primary text-on-primary', B:'bg-tertiary-container text-on-tertiary-container', C:'bg-error-container text-on-error-container'}[s] || 'bg-surface-container-high text-on-surface-variant');
+                window._items = items;
+                lista.innerHTML = items.slice(0, 30).map((p, idx) => `
+                    <div class="p-4 border border-outline-variant/30 rounded-lg flex flex-col gap-2 cursor-pointer hover:border-primary transition-colors" data-idx="${idx}">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="font-headline-md-mobile text-on-surface text-lg">${esc(p.nombre)}</span>
+                            <span class="px-2 py-0.5 rounded-full text-xs font-metadata-code ${badge(p.scoring)}">${esc(p.scoring || '?')}</span>
+                            <span class="font-metadata-code text-metadata-code text-outline">ICP ${esc(p.score_icp ?? 0)}</span>
+                            <span class="font-metadata-code text-metadata-code text-outline uppercase">${esc(p.categoria)}</span>
+                        </div>
+                        <p class="font-body-reading text-on-surface-variant text-sm">
+                            <strong class="text-on-surface">Señal detectada: ${esc(p.senal_dominante || '—')}</strong>
+                        </p>
+                        <p class="font-metadata-code text-xs text-outline/70 leading-snug">
+                            Coincidencia de palabras clave. Sin situación reconstruida. No constituye hallazgo.
+                        </p>
+                        <span class="px-2 py-0.5 rounded-full text-xs font-metadata-code ${(p.validacion_cientifica && p.validacion_cientifica.hipotesis_bloqueada) ? 'bg-error text-on-error' : 'bg-secondary-container text-on-secondary-container'}">${(p.validacion_cientifica && p.validacion_cientifica.hipotesis_bloqueada) ? 'BLOQUEADA' : 'VALIDADA'}</span>
+                        <p class="font-metadata-code text-metadata-code text-outline">
+                            Evidencias: ${p.total_evidencias ?? 0}
+                        </p>
+                        ${(p.evidencias || []).slice(0, 2).map(ev => `
+                            <div class="pl-3 border-l-2 border-outline-variant/40">
+                                <p class="font-body-reading text-on-surface-variant text-sm italic">${esc(ev.texto || '')}</p>
+                                <p class="font-metadata-code text-metadata-code text-outline">${esc(ev.fuente || '')} · ${esc(ev.fecha || '')}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                `).join('');
+                lista.querySelectorAll('[data-idx]').forEach(el => {
+                    el.addEventListener('click', () => mostrarObservar(window._items[Number(el.dataset.idx)]));
+                });
+            } catch (e) {
+                lista.innerHTML = `<p class="font-body-reading text-error">No se pudo conectar con el laboratorio. Intenta de nuevo.</p>`;
+            }
+        });
+
+        cargarCategorias();
+        cargarFiltroProspectos('verticalFilters', 'verticalLoading', 'vertical');
+        cargarFiltroProspectos('escalaFilters', 'escalaLoading', 'escala');
+
+        document.getElementById('btnExplorarNav').addEventListener('click', (e) => {
+            e.preventDefault();
+            document.getElementById('screen-observar').style.display = 'none';
+            document.getElementById('screen-explorar').style.display = 'block';
+        });
+
+        document.getElementById('btnObservarNav').addEventListener('click', (e) => {
+            e.preventDefault();
+            if (expedienteActual) {
+                document.getElementById('screen-explorar').style.display = 'none';
+                document.getElementById('screen-observar').style.display = 'block';
+            } else {
+                alert('Selecciona un hallazgo en Explorar primero');
+            }
+        });
+    </script>
+</body></html>
