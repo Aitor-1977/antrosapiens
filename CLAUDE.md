@@ -110,7 +110,7 @@ SOLO sobre datos ya extraídos por este mismo motor; sin IA, sin juicio libre):
   `sintetizar` y nunca colapsa). No decide ni ejecuta acción comercial.
   Implementación: `hd_scraper/nvidia_parser.py`.
 - **Clasificación epistemológica de la evidencia (Entrega 2)** (autorizado por
-  el operador —Mario— el 2026-08-22): sobre evidencia YA extraída por este
+  el operador —Mario— el 2026-08-21): sobre evidencia YA extraída por este
   motor, determina **qué peso epistemológico tiene según quién enuncia y desde
   qué posición**, en cuatro categorías literales:
   `senal_primaria_autodeclaracion` (máxima autoridad de la organización, o

@@ -1,6 +1,6 @@
 """Clasificación epistemológica de la evidencia capturada — Entrega 2.
 
-Autorizado por el operador (Mario) el 2026-08-22 (ver «Frontera de
+Autorizado por el operador (Mario) el 2026-08-21 (ver «Frontera de
 Interpretación» en CLAUDE.md). Responde UNA sola pregunta sobre una evidencia
 ya extraída por este mismo motor: **qué peso epistemológico tiene**, es decir,
 quién enuncia y desde qué posición, no si lo enunciado es bueno o malo.
