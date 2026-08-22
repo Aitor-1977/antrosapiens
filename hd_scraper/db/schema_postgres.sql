@@ -390,3 +390,43 @@ CREATE TABLE IF NOT EXISTS memoria_cientifica (
 
 CREATE INDEX IF NOT EXISTS idx_memoria_org  ON memoria_cientifica (org_nombre);
 CREATE INDEX IF NOT EXISTS idx_memoria_hash ON memoria_cientifica (hash);
+
+-- ── Clasificación epistemológica de la evidencia (Entrega 2) ───────────────
+-- Reproducción EXACTA del DDL ya aplicado y verificado en producción (Neon).
+-- Se aparta de la convención del resto del archivo (`serial` en vez de
+-- `GENERATED ALWAYS AS IDENTITY`, `timestamptz` en vez de TEXT) a propósito:
+-- manda lo que hay en la base, no la convención. `IF NOT EXISTS` garantiza que
+-- estas sentencias jamás alteren las tablas existentes.
+--
+-- Sin índice único sobre `evidencia_id` ni sobre `organizacion`: la
+-- idempotencia de la reejecución vive en `clasificacion_store.py`.
+
+CREATE TABLE IF NOT EXISTS expedientes_candidatos (
+    id              serial PRIMARY KEY,
+    organizacion    text NOT NULL,
+    estado          text NOT NULL DEFAULT 'abierto',
+    creado_en       timestamptz NOT NULL DEFAULT now(),
+    actualizado_en  timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT chk_estado CHECK (estado IN ('abierto','candidato','descartado'))
+);
+
+CREATE TABLE IF NOT EXISTS evidencia_clasificada (
+    id                  serial PRIMARY KEY,
+    expediente_id       integer NOT NULL REFERENCES expedientes_candidatos(id),
+    evidencia_id        bigint NOT NULL REFERENCES evidencias(id),
+    tipo_epistemologico text NOT NULL,
+    enunciador_nombre   text,
+    enunciador_cargo    text,
+    enunciador_dominio  text,
+    creado_en           timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT chk_tipo CHECK (tipo_epistemologico IN (
+        'senal_primaria_autodeclaracion',
+        'senal_primaria_huella_practica',
+        'corroborante',
+        'contextual'
+    ))
+);
+
+CREATE INDEX IF NOT EXISTS idx_evclas_evidencia   ON evidencia_clasificada (evidencia_id);
+CREATE INDEX IF NOT EXISTS idx_evclas_expediente  ON evidencia_clasificada (expediente_id);
+CREATE INDEX IF NOT EXISTS idx_expcand_org        ON expedientes_candidatos (organizacion);

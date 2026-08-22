@@ -109,6 +109,25 @@ SOLO sobre datos ya extraídos por este mismo motor; sin IA, sin juicio libre):
   (sin key, ante fallo de red, timeout o JSON inválido, Motor A degrada a
   `sintetizar` y nunca colapsa). No decide ni ejecuta acción comercial.
   Implementación: `hd_scraper/nvidia_parser.py`.
+- **Clasificación epistemológica de la evidencia (Entrega 2)** (autorizado por
+  el operador —Mario— el 2026-08-22): sobre evidencia YA extraída por este
+  motor, determina **qué peso epistemológico tiene según quién enuncia y desde
+  qué posición**, en cuatro categorías literales:
+  `senal_primaria_autodeclaracion` (máxima autoridad de la organización, o
+  cargo funcional dentro de su propio dominio), `senal_primaria_huella_practica`
+  (acto publicado por la organización misma —`origen_declaracion='operador'`—
+  sin declaración de persona), `corroborante` (posición de tensión con la
+  organización y fricción explícita en el texto) y `contextual`. Determinista y
+  auditable: léxico cerrado y patrones de atribución declarados en el módulo,
+  sin IA, sin red. **REGLA DURA**: ante información insuficiente se clasifica
+  `contextual`; nunca se fuerza una categoría de mayor peso sobre evidencia
+  ambigua. **NO nombra Deuda Cultural™** —ni el término ni ninguno de sus cinco
+  tipos— y no emite juicio de valor sobre el contenido: solo dice quién habla y
+  desde dónde. No decide ni ejecuta acción comercial; tampoco promueve
+  expedientes (todos quedan en estado `abierto`; la promoción a `candidato` es
+  Entrega 3). Implementación: `hd_scraper/clasificacion_epistemologica.py`
+  (cascada pura) y `hd_scraper/clasificacion_store.py` (persistencia en
+  `expedientes_candidatos` y `evidencia_clasificada`).
 
 **Exclusivo de RadarHD (JAMÁS aquí):**
 
@@ -121,9 +140,11 @@ SOLO sobre datos ya extraídos por este mismo motor; sin IA, sin juicio libre):
 ICP, Deuda preliminar sobre señales de evento), `hd_scraper/engine/rule_engine.py`
 (reglas y pesos de señal), `hd_scraper/lectura_estructural.py` (lectura
 estructural preliminar de Deuda sobre el discurso corporativo),
-`hd_scraper/sintesis.py` (síntesis estructural preliminar por organización) y
+`hd_scraper/sintesis.py` (síntesis estructural preliminar por organización),
 `hd_scraper/nvidia_parser.py` (síntesis estructural LLM preliminar por
-organización). No reproducir esa lógica en otros módulos.
+organización) y `hd_scraper/clasificacion_epistemologica.py` +
+`hd_scraper/clasificacion_store.py` (clasificación epistemológica de la
+evidencia). No reproducir esa lógica en otros módulos.
 
 **Regla de ampliación:** cualquier ampliación futura de interpretación en este
 repo exige actualizar **esta misma sección ANTES de escribir código**. Si una
@@ -303,6 +324,8 @@ python -m hd_scraper.ingesta youtube --url <VIDEO_URL> --org Acme
 python -m scripts.run_once                               # autónomo: barre objetivos por defecto
 python -m scripts.run_once "Nubank" --tipo ronda --connector gdelt
 python -m scripts.run_once "Acme" --connector job_boards --slug acme     # requiere --slug
+python -m scripts.clasificar_evidencia                  # dry-run: clasifica evidencia capturada
+python -m scripts.clasificar_evidencia --aplicar        # escribe la clasificación
 python -m scripts.serve_api                              # API + scheduler
 uvicorn hd_scraper.api.app:app --reload                  # solo API
 pytest -q                                                # tests
