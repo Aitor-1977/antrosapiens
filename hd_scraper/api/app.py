@@ -24,7 +24,6 @@ from fastapi import Body, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from pydantic import BaseModel
-from starlette.middleware.base import BaseHTTPMiddleware
 
 from ..config import settings
 from ..connectors import REGISTRY
@@ -78,23 +77,39 @@ app = FastAPI(
     version="0.2.0",
 )
 
+# --- CORS (consumo desde el cliente Android) -----------------------------
+#
+# La app AntrolabsHD es un WebView que sirve su pantalla con
+# `WebViewAssetLoader` bajo `https://appassets.androidplatform.net`, de modo que
+# tiene un origen REAL y concreto que se puede autorizar. Servirla desde
+# `file://` daría origen `null`, indistinguible de cualquier HTML local de
+# cualquier equipo: por eso no se admite ese caso.
+#
+# Lista blanca explícita, NUNCA comodín: `/radar` y el intake de prospectos
+# escriben y viajan con `X-Ingest-Token`; un `*` permitiría a cualquier web
+# ajena usar ese token si algún día se filtra. Ampliable por entorno con
+# `HD_CORS_ORIGINS` (separado por comas) sin tocar código.
+_CORS_ORIGINS_DEFAULT = (
+    "https://appassets.androidplatform.net",  # cliente Android (WebViewAssetLoader)
+    "http://localhost:8000",                  # desarrollo local
+    "http://127.0.0.1:8000",
+)
+_cors_origins = [
+    o.strip() for o in os.getenv(
+        "HD_CORS_ORIGINS", ",".join(_CORS_ORIGINS_DEFAULT)
+    ).split(",") if o.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=['*'],
+    allow_origins=_cors_origins,
+    # Sin cookies ni credenciales de navegador: la autenticación de escritura es
+    # la cabecera X-Ingest-Token, no una sesión. Mantenerlo en False evita que
+    # el navegador adjunte credenciales de forma implícita.
     allow_credentials=False,
-    allow_methods=['*'],
-    allow_headers=['*'],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "X-Ingest-Token"],
 )
-
-
-class PrivateNetworkAccessMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request, call_next):
-        response = await call_next(request)
-        response.headers['Access-Control-Allow-Private-Network'] = 'true'
-        return response
-
-
-app.add_middleware(PrivateNetworkAccessMiddleware)
 
 
 # --- Intake de prospectos (escritura autenticada del operador) -----------

@@ -300,8 +300,14 @@
     <div class="mb-8">
         <p id="observarExp" class="font-mono text-xs text-slate-500 uppercase tracking-widest mb-1"></p>
         <h2 id="observarNombre" class="font-newsreader text-2xl md:text-4xl font-medium leading-tight mb-4 text-[#091426] break-words"></h2>
+        <!-- Estado temporal del expediente: rango de fechas + aviso de archivo. -->
+        <p id="observarEstado" class="font-mono text-xs text-slate-500 flex items-center gap-2 flex-wrap"></p>
     </div>
+    <!-- Orden declarado de la cronología, idéntico en todos los expedientes. -->
+    <p id="observarOrden" class="font-mono text-xs text-slate-500 uppercase tracking-widest mb-4"></p>
     <div id="observarTimeline" class="relative pl-8 border-l border-slate-200 ml-2"></div>
+    <!-- Lectura del investigador: una sola vez, al cierre de la cronología. -->
+    <div id="observarLectura" class="mt-8 mb-16"></div>
 </main>
 </div>
 <script>
@@ -321,7 +327,37 @@
             const tl = document.getElementById('observarTimeline');
             const val = p.validacion_cientifica || {};
             const vacios = val.hipotesis_bloqueada ? (val.recomendacion || 'Evidencia insuficiente para validar.') : 'Sin vacios criticos registrados.';
-            tl.innerHTML = (p.evidencias || []).map(ev => `
+
+            // Orden de presentación: de más reciente a más antigua. Se ordena aquí
+            // para que el encabezado declarado valga en TODOS los expedientes y no
+            // dependa del orden en que llegue el arreglo. No altera los datos.
+            const evidencias = (p.evidencias || []).slice().sort((a, b) => {
+                const ta = Date.parse(a && a.fecha) || 0;
+                const tb = Date.parse(b && b.fecha) || 0;
+                return tb - ta;
+            });
+
+            // Rango temporal del expediente y aviso de archivo (>12 meses).
+            const fechas = evidencias.map(ev => Date.parse(ev && ev.fecha)).filter(t => !isNaN(t));
+            const soloDia = (t) => new Date(t).toISOString().slice(0, 10);
+            const estado = document.getElementById('observarEstado');
+            if (fechas.length) {
+                const masReciente = Math.max(...fechas);
+                const masAntigua = Math.min(...fechas);
+                const doceMeses = new Date();
+                doceMeses.setFullYear(doceMeses.getFullYear() - 1);
+                const archivo = masReciente < doceMeses.getTime()
+                    ? '<span class="px-2 py-0.5 rounded bg-amber-100 text-amber-800 font-bold uppercase tracking-wider">Archivo histórico</span>'
+                    : '';
+                estado.innerHTML = `<span>${esc(soloDia(masAntigua))} — ${esc(soloDia(masReciente))}</span>${archivo}`;
+            } else {
+                estado.innerHTML = '<span>Sin fechas de evidencia registradas</span>';
+            }
+
+            document.getElementById('observarOrden').textContent =
+                'Cronología · de más reciente a más antigua';
+
+            tl.innerHTML = evidencias.map(ev => `
                 <div class="mb-12 relative">
                     <div class="absolute -left-10 top-2 w-4 h-4 rounded-full bg-slate-300 border-4 border-[#FCFAED]"></div>
                     <p class="font-mono text-xs text-slate-500 mb-4">${esc(ev.fecha || '')}</p>
@@ -331,17 +367,23 @@
                             <p class="text-slate-800 leading-relaxed mt-2">${esc(ev.texto || '')}</p>
                             <div class="mt-4"><span class="font-mono text-[10px] bg-slate-200 px-2 py-1 rounded text-slate-600 uppercase">Fuente: ${esc(ev.fuente || '')}</span></div>
                         </div>
-                        <div class="p-6 border-b border-slate-100 border-dashed">
+                        <div class="p-6">
                             <span class="font-mono text-xs font-bold text-slate-500 uppercase tracking-wider">Lo que no sabemos (Vacios)</span>
                             <p class="text-slate-600 mt-2">${esc(vacios)}</p>
-                        </div>
-                        <div class="p-6">
-                            <span class="font-mono text-xs font-bold text-[#2d5a27] uppercase tracking-wider">Tu Lectura (Interpretacion)</span>
-                            <textarea class="w-full mt-2 font-newsreader text-lg italic text-slate-800 bg-transparent border border-slate-200 rounded-lg p-3" rows="3" placeholder="Escribe tu interpretacion aqui..."></textarea>
                         </div>
                     </div>
                 </div>
             `).join('');
+
+            // Una sola lectura por expediente, al final de toda la cronología:
+            // intercalada entre evidencias no se sabía a cuál se refería.
+            document.getElementById('observarLectura').innerHTML = `
+                <div class="bg-white/50 rounded-2xl border border-slate-200 p-6">
+                    <span class="font-mono text-xs font-bold text-[#2d5a27] uppercase tracking-wider">Tu Lectura (Interpretacion)</span>
+                    <p class="font-mono text-xs text-slate-500 mt-1">Sobre el conjunto de la cronología.</p>
+                    <textarea class="w-full mt-2 font-newsreader text-lg italic text-slate-800 bg-transparent border border-slate-200 rounded-lg p-3" rows="4" placeholder="Escribe tu interpretacion aqui..."></textarea>
+                </div>`;
+
             document.getElementById('screen-explorar').style.display = 'none';
             document.getElementById('screen-observar').style.display = 'block';
         }
@@ -478,12 +520,14 @@
                             <span class="font-metadata-code text-metadata-code text-outline uppercase">${esc(p.categoria)}</span>
                         </div>
                         <p class="font-body-reading text-on-surface-variant text-sm">
-                            <strong class="text-on-surface">Hipotesis: ${esc(p.tipo_deuda || 'no clasificada')}</strong>
-                            ${p.deuda_razon ? ' · ' + esc(p.deuda_razon) : ''}
+                            <strong class="text-on-surface">Señal detectada: ${esc(p.senal_dominante || '—')}</strong>
+                        </p>
+                        <p class="font-metadata-code text-xs text-outline/70 leading-snug">
+                            Coincidencia de palabras clave. Sin situación reconstruida. No constituye hallazgo.
                         </p>
                         <span class="px-2 py-0.5 rounded-full text-xs font-metadata-code ${(p.validacion_cientifica && p.validacion_cientifica.hipotesis_bloqueada) ? 'bg-error text-on-error' : 'bg-secondary-container text-on-secondary-container'}">${(p.validacion_cientifica && p.validacion_cientifica.hipotesis_bloqueada) ? 'BLOQUEADA' : 'VALIDADA'}</span>
                         <p class="font-metadata-code text-metadata-code text-outline">
-                            Señal dominante: ${esc(p.senal_dominante || '—')} · Evidencias: ${p.total_evidencias ?? 0}
+                            Evidencias: ${p.total_evidencias ?? 0}
                         </p>
                         ${(p.evidencias || []).slice(0, 2).map(ev => `
                             <div class="pl-3 border-l-2 border-outline-variant/40">
