@@ -53,16 +53,12 @@ DIRECTORIO_SEMILLA: tuple[tuple[str, str, str, str, str], ...] = (
     ("Amplifica Capital", "VC", "Venture Capital", "https://www.amplifica.capital", "1-10"),
 
     # ── Startup ───────────────────────────────────────────────────────────
-    ("Nubank", "Startup", "Fintech", "https://nubank.com.br", "501+"),
-    ("Rappi", "Startup", "Q-commerce / Delivery", "https://www.rappi.com", "501+"),
-    ("Kavak", "Startup", "Autos usados / Marketplace", "https://www.kavak.com", "501+"),
-    ("Bitso", "Startup", "Cripto / Fintech", "https://bitso.com", "501+"),
-    ("Clip", "Startup", "Pagos", "https://www.clip.mx", "501+"),
-    ("Konfío", "Startup", "Fintech PyME", "https://www.konfio.mx", "501+"),
     ("Clara", "Startup", "Gastos corporativos / Fintech", "https://www.clara.com", "201-500"),
     ("Nowports", "Startup", "Logística / Freight", "https://www.nowports.com", "201-500"),
-    ("Ualá", "Startup", "Fintech", "https://www.uala.com.ar", "501+"),
     ("Jüsto", "Startup", "Supermercado online", "https://www.justo.mx", "501+"),
+    # Jüsto se revisó junto con el resto de escala=501+ (decisión del operador,
+    # 2026-08-22) y se mantiene en Startup: sin evidencia pública de valuación
+    # ≥ US$1000M ni de consolidación regional madura equivalente.
     # Startups tempranas / en crecimiento (bandas públicas aproximadas; el
     # perfil fundacional las refina). Cubren tamaños pequeños/medianos: el ICP
     # real de HD, donde la Deuda Cultural muerde antes del product-market fit.
@@ -102,6 +98,23 @@ DIRECTORIO_SEMILLA: tuple[tuple[str, str, str, str, str], ...] = (
     ("Banco Santander México", "Corporativo", "Banca", "https://www.santander.com.mx", "501+"),
     ("Arca Continental", "Corporativo", "Bebidas", "https://www.arcacontal.com", "501+"),
     ("Grupo Salinas", "Corporativo", "Conglomerado", "https://www.gruposalinas.com", "501+"),
+    # Reclasificadas desde Startup por decisión del operador (Mario, 2026-08-22):
+    # el ICP de HD excluye unicornios y grandes corporativos consolidados, no
+    # por tamaño de plantilla sino por estatus de mercado (valuación pública
+    # ≥ US$1000M en alguna ronda conocida, o consolidación regional madura
+    # equivalente — p. ej. cotización bursátil pública). Ninguna es un banco,
+    # conglomerado o empresa históricamente corporativa: son startups que
+    # SUPERARON el ICP de HD al crecer. `categoria` sigue siendo declarada por
+    # el operador, no inferida — este es el operador corrigiendo su propia
+    # declaración anterior con evidencia pública nueva, no una heurística
+    # automática decidiendo por él.
+    ("Nubank", "Corporativo", "Fintech", "https://nubank.com.br", "501+"),
+    ("Rappi", "Corporativo", "Q-commerce / Delivery", "https://www.rappi.com", "501+"),
+    ("Kavak", "Corporativo", "Autos usados / Marketplace", "https://www.kavak.com", "501+"),
+    ("Bitso", "Corporativo", "Cripto / Fintech", "https://bitso.com", "501+"),
+    ("Clip", "Corporativo", "Pagos", "https://www.clip.mx", "501+"),
+    ("Konfío", "Corporativo", "Fintech PyME", "https://www.konfio.mx", "501+"),
+    ("Ualá", "Corporativo", "Fintech", "https://www.uala.com.ar", "501+"),
 )
 
 

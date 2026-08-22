@@ -32,7 +32,9 @@ def test_filtro_por_escala(db):
     # los fondos VC son equipos pequeños; los corporativos son 501+.
     corp_grandes = db.fetch_one(
         "SELECT COUNT(*) AS n FROM prospectos WHERE categoria='Corporativo' AND escala='501+'")["n"]
-    assert corp_grandes == 10
+    # 10 corporativos históricos + 7 reclasificados desde Startup por estatus
+    # de unicornio/consolidación (decisión del operador, 2026-08-22).
+    assert corp_grandes == 17
     vc_grandes = db.fetch_one(
         "SELECT COUNT(*) AS n FROM prospectos WHERE categoria='VC' AND escala='501+'")["n"]
     assert vc_grandes == 0
