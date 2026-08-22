@@ -326,6 +326,8 @@ python -m scripts.run_once "Nubank" --tipo ronda --connector gdelt
 python -m scripts.run_once "Acme" --connector job_boards --slug acme     # requiere --slug
 python -m scripts.clasificar_evidencia                  # dry-run: clasifica evidencia capturada
 python -m scripts.clasificar_evidencia --aplicar        # escribe la clasificación
+python -m scripts.promover_candidatos                    # dry-run: evalúa promoción 'abierto'->'candidato'
+python -m scripts.promover_candidatos --aplicar          # escribe la promoción
 python -m scripts.serve_api                              # API + scheduler
 uvicorn hd_scraper.api.app:app --reload                  # solo API
 pytest -q                                                # tests
