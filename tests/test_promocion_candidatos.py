@@ -224,3 +224,15 @@ def test_no_toca_evidencia_clasificada_ni_prospectos(db):
 
     assert dict(db.fetch_one("SELECT * FROM evidencia_clasificada")) == antes_ev
     assert dict(db.fetch_one("SELECT * FROM prospectos")) == antes_pr
+
+
+def test_categoria_prefiere_la_fila_mas_reciente_ante_duplicados(db):
+    """Regresión del incidente 2026-08-22: un reseed tras cambiar categoria
+    en seed_prospectos.py crea un duplicado (hash_dedup distinto) sin borrar
+    la fila vieja. La lectura debe preferir la declaración más reciente, no
+    la más antigua."""
+    _prospecto(db, "Nubank", "Startup")
+    _prospecto(db, "Nubank", "Corporativo")  # simula el duplicado del reseed
+
+    assert len(db.fetch_all("SELECT id FROM prospectos WHERE nombre = 'Nubank'")) == 2
+    assert categoria_de_organizacion(db, "Nubank") == "Corporativo"

@@ -21,10 +21,21 @@ def categoria_de_organizacion(db, organizacion: str) -> str | None:
     """`categoria` declarada en `prospectos` para esa organización, o None
     si el nombre del expediente no matchea ninguna fila (p. ej. variante de
     nombre no dada de alta). Comparación case-insensitive, mismo patrón que
-    `clasificacion_store.buscar_expediente`."""
+    `clasificacion_store.buscar_expediente`.
+
+    ``ORDER BY id DESC``: prefiere la fila MÁS RECIENTE. `hash_dedup` de
+    `prospectos` es sha256(nombre + categoria) — si `categoria` cambia para
+    una organización ya sembrada (p. ej. una reclasificación de Startup a
+    Corporativo en `seed_prospectos.py`), el reseed automático de `get_db()`
+    no reconoce la fila vieja como la misma entidad y crea un duplicado, en
+    vez de corregirla (ON CONFLICT no bloquea porque el hash es distinto). Sin
+    este DESC, un duplicado así hace que la promoción lea la categoria
+    OBSOLETA. Esto es una salvaguarda, no el arreglo real: los duplicados en
+    sí son un defecto de datos que debe limpiarse en la base (ver incidente
+    2026-08-22 documentado en el historial de commits)."""
     fila = db.fetch_one(
         "SELECT categoria FROM prospectos WHERE LOWER(nombre) = LOWER(?) "
-        "ORDER BY id LIMIT 1",
+        "ORDER BY id DESC LIMIT 1",
         (organizacion,))
     return dict(fila)["categoria"] if fila else None
 
