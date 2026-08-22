@@ -232,8 +232,11 @@ _NOMBRE = re.compile(rf"{_TOKEN}(?:\s+(?:{_CONECTOR}\s+)?{_TOKEN}){{1,3}}")
 
 _VERBOS = (
     r"(?:dijo|afirm[oó]|declar[oó]|asegur[oó]|advirti[oó]|se[ñn]al[oó]|"
-    r"explic[oó]|coment[oó]|sostuvo|reconoci[oó]|admiti[oó]|anunci[oó])"
+    r"explic[oó]|coment[oó]|sostuvo|reconoci[oó]|admiti[oó]|anunci[oó]|"
+    r"habl[oó]|indic[oó]|revel[oó]|confirm[oó]|neg[oó]|critic[oó]|"
+    r"respondi[oó])"
 )
+_VERBOS_RE = re.compile(_VERBOS)
 
 _ATRIBUCION = tuple(
     re.compile(p) for p in (
@@ -243,10 +246,28 @@ _ATRIBUCION = tuple(
     )
 )
 
+# Comillas: una cita textual cerca del cargo es señal de habla igual de válida
+# que un verbo declarativo.
+_COMILLAS = re.compile(r'["“”«»]')
+
 # Ventana alrededor del cargo dentro de la cual un nombre propio se considera
 # atribuido a él. 80 caracteres cubre «Juan Pérez, director de operaciones de
 # Acme» en ambos sentidos sin cruzar a otra oración de un titular.
 _VENTANA = 80
+
+
+def _hay_senal_de_habla(texto: str, centro: int) -> bool:
+    """¿El texto muestra a la persona HABLANDO, o solo la nombra?
+
+    Un titular puede narrar en tercera persona «el plan del CEO de Acme» sin
+    que él haya dicho una palabra — mera coincidencia de cargo y organización
+    no es una declaración. Exigir un verbo de habla o una cita textual cerca
+    del cargo evita que la sola mención ascienda a autodeclaración cuando la
+    evidencia es ambigua (REGLA DURA).
+    """
+    ini, fin = max(0, centro - _VENTANA), centro + _VENTANA
+    ventana = texto[ini:fin]
+    return bool(_VERBOS_RE.search(_plano(ventana)) or _COMILLAS.search(ventana))
 
 
 @dataclass(frozen=True)
@@ -325,19 +346,29 @@ def _es_nombre_valido(candidato: str, vetados: tuple[str, ...]) -> bool:
     return True
 
 
-def _nombre_cerca(texto: str, centro: int, vetados: tuple[str, ...]) -> str | None:
-    """Nombre propio más cercano al cargo, dentro de ``_VENTANA``."""
-    ini, fin = max(0, centro - _VENTANA), centro + _VENTANA
-    mejor, mejor_d = None, None
-    for m in _NOMBRE.finditer(texto):
-        if m.end() < ini or m.start() > fin:
-            continue
-        if not _es_nombre_valido(m.group(0), vetados):
-            continue
-        d = abs(m.start() - centro)
-        if mejor_d is None or d < mejor_d:
-            mejor, mejor_d = m.group(0).strip(), d
-    return mejor
+def _nombre_adjunto_al_cargo(texto: str, cargo: re.Match,
+                             vetados: tuple[str, ...]) -> str | None:
+    """Nombre propio en APOSICIÓN gramatical real con el cargo.
+
+    Exige que el nombre esté separado del cargo solo por una coma —«Juan
+    Pérez, CEO de Acme» o «El CEO de Acme, Juan Pérez»— en vez de aceptar
+    cualquier frase capitalizada dentro de una ventana de proximidad: un país o
+    una ciudad mencionados en la misma oración («conquistar Estados Unidos»)
+    no son el nombre de quien habla, aunque estén cerca del cargo.
+    """
+    ini = max(0, cargo.start() - _VENTANA)
+    fin = min(len(texto), cargo.end() + _VENTANA)
+    antes, despues = texto[ini:cargo.start()], texto[cargo.end():fin]
+
+    m_antes = re.search(rf"({_NOMBRE.pattern})\s*,\s*$", antes)
+    if m_antes and _es_nombre_valido(m_antes.group(1), vetados):
+        return m_antes.group(1).strip()
+
+    m_despues = re.match(rf"[^,]*,\s*({_NOMBRE.pattern})", despues)
+    if m_despues and _es_nombre_valido(m_despues.group(1), vetados):
+        return m_despues.group(1).strip()
+
+    return None
 
 
 def _nombre_por_atribucion(texto: str, vetados: tuple[str, ...]) -> str | None:
@@ -414,7 +445,18 @@ def identificar_enunciador(evidencia: dict,
     hallazgo = _buscar_cargo(plano)
     dominio = detectar_dominio(texto)
 
-    if hallazgo is None:
+    # Un cargo de máxima autoridad o funcional SIN señal de habla cerca no es
+    # una autodeclaración: es una mención de tercero (titular narrado por
+    # prensa). Se trata como si no se hubiera hallado ningún cargo, y el nombre
+    # solo se acepta si viene de un patrón de atribución explícito — nunca por
+    # mera proximidad a un cargo sin habla.
+    cargo_sin_habla = (
+        hallazgo is not None
+        and hallazgo[1] in (NIVEL_MAXIMA, NIVEL_FUNCIONAL)
+        and not _hay_senal_de_habla(texto, hallazgo[0].start())
+    )
+
+    if hallazgo is None or cargo_sin_habla:
         nombre = persona_declarada or _nombre_por_atribucion(texto, vetados)
         return Enunciador(nombre=nombre, cargo=None, nivel=NIVEL_NINGUNO,
                           dominio=dominio, dominio_cargo=None, vinculado=False)
@@ -422,7 +464,7 @@ def identificar_enunciador(evidencia: dict,
     m, nivel, _ = hallazgo
     dominio_cargo = _dominio_del_cargo(hallazgo)
 
-    nombre = persona_declarada or _nombre_cerca(texto, m.start(), vetados)
+    nombre = persona_declarada or _nombre_adjunto_al_cargo(texto, m, vetados)
     return Enunciador(
         nombre=nombre,
         # Se guarda el fragmento tal como aparece en el texto original.

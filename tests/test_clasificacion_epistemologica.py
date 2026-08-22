@@ -185,3 +185,31 @@ def test_cargo_generico_declarado_hereda_su_dominio():
                        persona="Ana Gómez", cargo="directora de operaciones"))
     assert c.tipo == TIPO_AUTODECLARACION
     assert c.enunciador_dominio == "operaciones"
+
+
+def test_mencion_de_cargo_sin_habla_no_es_autodeclaracion():
+    """Un titular puede narrar en tercera persona sin que el CEO haya dicho nada."""
+    c = clasificar(_ev(
+        "El nuevo plan del multimillonario CEO de Nubank: conquistar la banca "
+        "estadounidense con el modelo que revolucionó América Latina",
+        org="Nubank"))
+    assert c.tipo == TIPO_CONTEXTUAL
+    assert c.enunciador_nombre is None
+    assert c.enunciador_cargo is None
+
+
+def test_verbo_de_habla_permite_autodeclaracion_con_nombre_correcto():
+    c = clasificar(_ev(
+        "David Vélez, CEO de Nubank, dijo que la banca estadounidense es la "
+        "próxima frontera", org="Nubank"))
+    assert c.tipo == TIPO_AUTODECLARACION
+    assert c.enunciador_nombre == "David Vélez"
+
+
+def test_cita_textual_no_captura_frase_capitalizada_ajena_como_nombre():
+    """'Estados Unidos' no debe leerse como el nombre de quien habla."""
+    c = clasificar(_ev(
+        'El CEO de Nubank afirmó: "vamos a conquistar Estados Unidos"',
+        org="Nubank"))
+    assert c.enunciador_nombre is None
+    assert c.enunciador_nombre != "Estados Unidos"
