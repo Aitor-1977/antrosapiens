@@ -40,6 +40,9 @@ def _informe(rep: dict) -> str:
         f"expedientes creados:      {rep['expedientes_creados']}"
         + ("" if rep["aplicado"] else "  (proyección)"),
     ]
+    if rep.get("saltadas"):
+        lineas.append(f"saltadas (fallo de conexión persistente): {rep['saltadas']}"
+                      "  — re-correr el mismo comando las recoge")
     if rep["muestra"]:
         lineas += ["", "muestra:"]
         for m in rep["muestra"]:

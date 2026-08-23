@@ -23,6 +23,10 @@ es una regla de la Entrega 3 y este módulo no la implementa ni la anticipa.
 """
 from __future__ import annotations
 
+import logging
+import time
+from typing import Callable
+
 from .clasificacion_epistemologica import (
     TIPOS,
     VERSION_REGLAS,
@@ -31,6 +35,24 @@ from .clasificacion_epistemologica import (
 )
 
 ESTADO_INICIAL = "abierto"
+
+log = logging.getLogger("hd_scraper.clasificacion_store")
+
+# Vocabulario de errores de RED/CONEXIÓN (no de datos), compartido por
+# psycopg y sqlite3 en sus mensajes de excepción. Dialecto-agnóstico a
+# propósito: no importa psycopg a nivel de módulo (solo hace falta si hay
+# Postgres en el entorno) y evita acoplarse a una clase de excepción concreta.
+_MARCADORES_ERROR_CONEXION = (
+    "ssl syscall", "connection abort", "could not receive data",
+    "could not send data", "server closed the connection",
+    "connection already closed", "consuming input failed",
+    "terminating connection", "connection reset", "broken pipe",
+)
+
+
+def _es_error_conexion(exc: Exception) -> bool:
+    msg = str(exc).lower()
+    return any(marcador in msg for marcador in _MARCADORES_ERROR_CONEXION)
 
 
 def orgs_conocidas(db) -> tuple[str, ...]:
@@ -117,11 +139,22 @@ def guardar_clasificacion(db, expediente_id: int, evidencia_id: int,
 
 def clasificar_lote(db, *, desde: str | None = None, org: str | None = None,
                     limite: int | None = None, solo_ok: bool = False,
-                    aplicar: bool = False, muestra: int = 10) -> dict:
+                    aplicar: bool = False, muestra: int = 10,
+                    max_reintentos: int = 5, backoff_base: float = 1.0,
+                    sleep: Callable[[float], None] = time.sleep) -> dict:
     """Clasifica el lote pendiente. Sin ``aplicar=True`` NO escribe nada.
 
     El informe es idéntico en dry-run y en aplicación, salvo `escritas` y
     `expedientes_creados`, que en dry-run son proyecciones.
+
+    Resiliencia de red: cada escritura ya commitea por su cuenta (ver
+    `Database.execute`/`insert_returning_id`), así que esto NUNCA fue una
+    transacción larga — pero una red inestable (datos móviles) puede tumbar el
+    socket a media evidencia. Si la excepción es de conexión (no de datos), se
+    reconecta con backoff y se reintenta la MISMA evidencia hasta
+    `max_reintentos` veces; si sigue fallando, se salta y se registra: la
+    próxima corrida la recoge sola (el lote excluye lo ya clasificado). Un
+    error que no sea de conexión (de datos/programación) no se reintenta.
     """
     lote = evidencias_sin_clasificar(db, desde=desde, org=org, limite=limite,
                                      solo_ok=solo_ok)
@@ -130,25 +163,46 @@ def clasificar_lote(db, *, desde: str | None = None, org: str | None = None,
     distribucion = {t: 0 for t in TIPOS}
     escritas = 0
     expedientes_creados = 0
+    saltadas = 0
     orgs_proyectadas: set[str] = set()
     ejemplos: list[dict] = []
 
     for ev in lote:
         clas = clasificar(ev, conocidas)
         distribucion[clas.tipo] += 1
-
         organizacion = (ev.get("empresa_mencionada") or "").strip()
-        if aplicar and organizacion:
-            expediente_id, creado = obtener_o_crear_expediente(db, organizacion)
-            expedientes_creados += int(creado)
-            if guardar_clasificacion(db, expediente_id, ev["id"], clas):
-                escritas += 1
-        elif organizacion:
-            clave = organizacion.lower()
-            if (clave not in orgs_proyectadas
-                    and buscar_expediente(db, organizacion) is None):
-                orgs_proyectadas.add(clave)
-                expedientes_creados += 1
+
+        intento = 0
+        while True:
+            try:
+                if aplicar and organizacion:
+                    expediente_id, creado = obtener_o_crear_expediente(db, organizacion)
+                    expedientes_creados += int(creado)
+                    if guardar_clasificacion(db, expediente_id, ev["id"], clas):
+                        escritas += 1
+                elif organizacion:
+                    clave = organizacion.lower()
+                    if (clave not in orgs_proyectadas
+                            and buscar_expediente(db, organizacion) is None):
+                        orgs_proyectadas.add(clave)
+                        expedientes_creados += 1
+                break
+            except Exception as exc:
+                if not _es_error_conexion(exc) or intento >= max_reintentos:
+                    log.error("clasificar_lote: se salta evidencia %s tras "
+                              "fallo permanente: %s", ev.get("id"), exc)
+                    saltadas += 1
+                    break
+                intento += 1
+                espera = backoff_base * (2 ** (intento - 1))
+                log.warning("clasificar_lote: conexión caída en evidencia %s "
+                           "(intento %d/%d), reconectando en %.1fs: %s",
+                           ev.get("id"), intento, max_reintentos, espera, exc)
+                sleep(espera)
+                try:
+                    db.reconectar()
+                except Exception:
+                    pass
 
         if len(ejemplos) < muestra:
             ejemplos.append({
@@ -170,5 +224,6 @@ def clasificar_lote(db, *, desde: str | None = None, org: str | None = None,
         "distribucion": distribucion,
         "escritas": escritas,
         "expedientes_creados": expedientes_creados,
+        "saltadas": saltadas,
         "muestra": ejemplos,
     }

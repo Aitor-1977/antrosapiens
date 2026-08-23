@@ -174,6 +174,83 @@ def test_la_evidencia_original_no_se_modifica(db):
     assert dict(db.fetch_one("SELECT * FROM evidencias")) == antes
 
 
+# ── Resiliencia de red (reconexión y reintentos) ────────────────────────────
+
+def test_reintenta_tras_caida_de_conexion_transitoria_y_termina_escribiendo(db, monkeypatch):
+    """Regresión: en Termux sobre datos móviles el socket se cayó a media
+    evidencia con 'SSL SYSCALL error: Software caused connection abort'. La
+    primera escritura falla, la reconexión ocurre, el reintento escribe bien."""
+    _insertar(db, "Juan Pérez, CEO de Acme, anunció despidos", n=1)
+
+    original_execute = db.execute
+    fallos = {"n": 0}
+
+    def flaky(sql, params=()):
+        if "INSERT INTO evidencia_clasificada" in sql and fallos["n"] == 0:
+            fallos["n"] += 1
+            raise RuntimeError("SSL SYSCALL error: Software caused connection abort")
+        return original_execute(sql, params)
+
+    reconexiones = {"n": 0}
+    monkeypatch.setattr(db, "execute", flaky)
+    monkeypatch.setattr(db, "reconectar",
+                        lambda: reconexiones.__setitem__("n", reconexiones["n"] + 1))
+
+    rep = clasificar_lote(db, aplicar=True, sleep=lambda s: None)
+
+    assert rep["escritas"] == 1
+    assert rep["saltadas"] == 0
+    assert reconexiones["n"] == 1
+    assert len(db.fetch_all("SELECT id FROM evidencia_clasificada")) == 1
+
+
+def test_error_de_conexion_persistente_salta_la_evidencia_sin_tumbar_el_lote(db, monkeypatch):
+    """Si la reconexión nunca sostiene (red realmente caída), se agotan los
+    reintentos, esa evidencia se salta (queda pendiente para la próxima
+    corrida) y el resto del lote se procesa igual."""
+    _insertar(db, "Juan Pérez, CEO de Acme, anunció despidos", org="Acme", n=1)
+    _insertar(db, "Beta busca ingeniero de datos", org="Beta", origen="operador", n=2)
+
+    original_execute = db.execute
+
+    def siempre_falla_para_evidencia_1(sql, params=()):
+        if "INSERT INTO evidencia_clasificada" in sql and params[1] == 1:
+            raise RuntimeError("could not receive data from server")
+        return original_execute(sql, params)
+
+    monkeypatch.setattr(db, "execute", siempre_falla_para_evidencia_1)
+    monkeypatch.setattr(db, "reconectar", lambda: None)
+
+    rep = clasificar_lote(db, aplicar=True, max_reintentos=2, sleep=lambda s: None)
+
+    assert rep["saltadas"] == 1
+    assert rep["escritas"] == 1  # Beta sí se escribió
+    assert len(db.fetch_all("SELECT id FROM evidencia_clasificada")) == 1
+
+
+def test_error_que_no_es_de_conexion_no_se_reintenta(db, monkeypatch):
+    """Un error de datos/programación (no de red) se salta de inmediato: no
+    tiene sentido reintentarlo, y no debe consumir los `max_reintentos`."""
+    _insertar(db, "Juan Pérez, CEO de Acme, anunció despidos", n=1)
+
+    intentos = {"n": 0}
+    original_execute = db.execute
+
+    def falla_con_error_de_datos(sql, params=()):
+        if "INSERT INTO evidencia_clasificada" in sql:
+            intentos["n"] += 1
+            raise ValueError("CHECK constraint failed: chk_tipo")
+        return original_execute(sql, params)
+
+    monkeypatch.setattr(db, "execute", falla_con_error_de_datos)
+
+    rep = clasificar_lote(db, aplicar=True, sleep=lambda s: None)
+
+    assert intentos["n"] == 1  # ni un reintento
+    assert rep["saltadas"] == 1
+    assert rep["escritas"] == 0
+
+
 def test_friccion_anterior_a_la_posicion_de_tension_no_cuenta():
     """«Acme demanda más clientes» no es la queja de un cliente."""
     c = clasificar(_ev("Acme demanda más clientes para su nueva plataforma"))
