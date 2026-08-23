@@ -434,3 +434,42 @@ CREATE TABLE IF NOT EXISTS memoria_cientifica (
 
 CREATE INDEX IF NOT EXISTS idx_memoria_org  ON memoria_cientifica (org_nombre);
 CREATE INDEX IF NOT EXISTS idx_memoria_hash ON memoria_cientifica (hash);
+
+-- ── Clasificación epistemológica de la evidencia (Entrega 2) ───────────────
+-- Espejo SQLite de las tablas ya existentes en producción (Neon). Se declaran
+-- aquí para que los tests corran sin Postgres. `IF NOT EXISTS` garantiza que
+-- una base que ya las tiene no se toca.
+--
+-- No llevan índice único sobre `evidencia_id` ni sobre `organizacion`: así
+-- están en producción y no se modifican desde el código. La idempotencia de la
+-- reejecución vive en `clasificacion_store.py` (LEFT JOIN + SELECT previo).
+
+CREATE TABLE IF NOT EXISTS expedientes_candidatos (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    organizacion    TEXT NOT NULL,
+    estado          TEXT NOT NULL DEFAULT 'abierto',
+    creado_en       TEXT NOT NULL DEFAULT (datetime('now')),
+    actualizado_en  TEXT NOT NULL DEFAULT (datetime('now')),
+    CONSTRAINT chk_estado CHECK (estado IN ('abierto','candidato','descartado'))
+);
+
+CREATE TABLE IF NOT EXISTS evidencia_clasificada (
+    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    expediente_id       INTEGER NOT NULL REFERENCES expedientes_candidatos(id),
+    evidencia_id        INTEGER NOT NULL REFERENCES evidencias(id),
+    tipo_epistemologico TEXT NOT NULL,
+    enunciador_nombre   TEXT,
+    enunciador_cargo    TEXT,
+    enunciador_dominio  TEXT,
+    creado_en           TEXT NOT NULL DEFAULT (datetime('now')),
+    CONSTRAINT chk_tipo CHECK (tipo_epistemologico IN (
+        'senal_primaria_autodeclaracion',
+        'senal_primaria_huella_practica',
+        'corroborante',
+        'contextual'
+    ))
+);
+
+CREATE INDEX IF NOT EXISTS idx_evclas_evidencia   ON evidencia_clasificada (evidencia_id);
+CREATE INDEX IF NOT EXISTS idx_evclas_expediente  ON evidencia_clasificada (expediente_id);
+CREATE INDEX IF NOT EXISTS idx_expcand_org        ON expedientes_candidatos (organizacion);

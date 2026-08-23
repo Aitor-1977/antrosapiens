@@ -1,10 +1,6 @@
-import org.gradle.api.plugins.ExtensionAware
-import com.chaquo.python.PythonExtension
-
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-    id("com.chaquo.python")
 }
 
 android {
@@ -17,25 +13,6 @@ android {
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
-
-        val python = (this as ExtensionAware).extensions.getByName<PythonExtension>("python")
-        python.version = "3.12"
-        python.buildPython = listOf("/data/data/com.termux/files/usr/bin/python3.11")
-        python.pip.apply {
-            install("fastapi")
-            install("uvicorn")
-            install("httpx")
-            install("feedparser")
-            install("python-dateutil")
-            install("beautifulsoup4")
-            install("apscheduler")
-            install("pydantic<2")
-            install("python-dotenv")
-        }
-
-        ndk {
-            abiFilters += listOf("arm64-v8a", "x86_64")
-        }
     }
 
     buildTypes {
@@ -61,4 +38,7 @@ android {
 dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.appcompat:appcompat:1.7.0")
+    // WebViewAssetLoader: sirve los assets bajo un origen https real y
+    // autorizable por CORS, en lugar de file:// (origen `null`).
+    implementation("androidx.webkit:webkit:1.11.0")
 }

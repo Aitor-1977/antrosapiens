@@ -36,6 +36,7 @@ class Database:
         if dsn is None:
             dsn = settings.database_url
         dsn = str(dsn)
+        self._dsn = dsn
 
         if _es_postgres(dsn):
             self.dialect = "postgres"
@@ -125,6 +126,23 @@ class Database:
         rid = cur.fetchone()["id"]
         self.conn.commit()
         return rid
+
+    def reconectar(self) -> None:
+        """Cierra la conexión actual (si sigue viva) y abre una nueva.
+
+        Para recuperarse de una red inestable (p. ej. datos móviles en Termux)
+        que tumba el socket a media ejecución de un batch largo: la conexión en
+        sí es lo que murió, no hay nada que reparar en la sesión SQL. Reusa el
+        DSN original.
+        """
+        try:
+            self.conn.close()
+        except Exception:
+            pass
+        if self.dialect == "postgres":
+            self._connect_postgres(self._dsn)
+        else:
+            self._connect_sqlite(self._dsn)
 
     def close(self) -> None:
         self.conn.close()
