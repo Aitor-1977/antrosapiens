@@ -197,6 +197,20 @@
                 Explora organizaciones, señales y fenómenos que podrían merecer una mirada más cercana.
             </p>
 </section>
+<!-- Candidatos verificados (Entrega 3): expedientes ya promovidos con evidencia primaria citada. Distinto de las tarjetas de "Señal detectada" de más abajo, que son solo coincidencia de palabras clave sin verificar. -->
+<section id="candidatosVerificados" class="flex flex-col gap-stack-sm">
+<div class="flex items-baseline justify-between">
+<h3 class="font-headline-md-mobile text-headline-md-mobile text-on-surface">Candidatos verificados</h3>
+<span id="verificadosCount" class="font-metadata-code text-metadata-code text-outline"></span>
+</div>
+<p class="font-metadata-code text-xs text-outline/70 leading-snug">
+                Evidencia primaria citada: autodeclaración o huella práctica de la propia organización. No es coincidencia de palabras clave.
+            </p>
+<div id="verificadosList" class="flex flex-col gap-stack-sm">
+<span id="verificadosLoading" class="font-metadata-code text-metadata-code text-outline">Cargando candidatos verificados…</span>
+</div>
+</section>
+<hr class="border-outline-variant/30"/>
 <!-- Search Input -->
 <section class="w-full relative group">
 <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -408,6 +422,42 @@
             });
         });
 
+        // --- Candidatos verificados (Entrega 3): GET /verificados, distinto de /expedientes ---
+        const TIPO_LABEL = {
+            senal_primaria_autodeclaracion: 'Autodeclaración',
+            senal_primaria_huella_practica: 'Huella práctica',
+        };
+
+        async function cargarCandidatosVerificados() {
+            const cont = document.getElementById('verificadosList');
+            const loading = document.getElementById('verificadosLoading');
+            const count = document.getElementById('verificadosCount');
+            try {
+                const res = await fetch(`${API}/verificados?limite=50`);
+                const data = await res.json();
+                loading.remove();
+                const items = data.items || [];
+                count.textContent = `${items.length} verificado(s)`;
+                if (!items.length) {
+                    cont.innerHTML = `<p class="font-body-reading text-body-reading text-on-surface-variant">Aún no hay candidatos verificados.</p>`;
+                    return;
+                }
+                cont.innerHTML = items.map(it => `
+                    <div class="p-4 border-l-4 border-secondary bg-secondary-container/20 rounded-lg flex flex-col gap-2">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="font-headline-md-mobile text-on-surface text-lg">${esc(it.organizacion)}</span>
+                            <span class="px-2 py-0.5 rounded-full text-xs font-metadata-code bg-secondary text-on-secondary uppercase">Verificado</span>
+                            <span class="font-metadata-code text-metadata-code text-outline">${esc(TIPO_LABEL[it.tipo_epistemologico] || it.tipo_epistemologico)}</span>
+                        </div>
+                        <p class="font-body-reading text-on-surface-variant text-sm italic">${esc(it.cita_textual || '')}</p>
+                        <p class="font-metadata-code text-metadata-code text-outline">${esc(it.nombre_medio || '')}</p>
+                    </div>
+                `).join('');
+            } catch (e) {
+                loading.textContent = 'No se pudieron cargar los candidatos verificados (backend no disponible).';
+            }
+        }
+
         // --- Filtro FOCO: se puebla con las categorías reales del backend ---
         async function cargarCategorias() {
             const cont = document.getElementById('focoFilters');
@@ -548,6 +598,7 @@
         cargarCategorias();
         cargarFiltroProspectos('verticalFilters', 'verticalLoading', 'vertical');
         cargarFiltroProspectos('escalaFilters', 'escalaLoading', 'escala');
+        cargarCandidatosVerificados();
 
         document.getElementById('btnExplorarNav').addEventListener('click', (e) => {
             e.preventDefault();

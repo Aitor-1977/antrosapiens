@@ -2209,6 +2209,24 @@ def listar_expedientes(
     return _construir_expedientes(_cats_validas(categoria, categorias), limite)
 
 
+from ..candidatos_verificados import listar_candidatos_verificados
+
+
+@app.get("/verificados")
+def verificados_listar(limite: int = Query(50, ge=1, le=200)) -> dict:
+    """Candidatos verificados (Entrega 3): expedientes ya promovidos a
+    'candidato' con su evidencia primaria (autodeclaración o huella práctica)
+    citada literalmente.
+
+    Distinto de `/expedientes` (Expedientes Vivos, análisis de Dolor Cultural
+    preliminar) y de `/candidatos` (Candidato Comercial BC-I→BC-II): esto es
+    solo lectura de `expedientes_candidatos.estado='candidato'`, ya escrito por
+    `scripts.promover_candidatos --aplicar`. No decide ni promueve nada aquí.
+    """
+    items = listar_candidatos_verificados(get_db(), limite=limite)
+    return {"total": len(items), "items": items}
+
+
 # --- Capa 11: Validación Científica del Peritaje Antropológico ---------------
 #
 # Somete la hipótesis de Dolor Cultural de una organización a la batería de
