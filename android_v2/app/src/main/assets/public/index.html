@@ -258,22 +258,7 @@
 </div>
 </div>
 </section>
-<!-- Primary Action -->
-<section class="mt-8 flex justify-end">
-<button id="btnExplorar" class="bg-primary text-on-primary font-ui-label text-ui-label rounded-lg flex items-center gap-2 hover:bg-primary-fixed-variant transition-colors min-w-[200px] justify-center shadow-sm w-full py-6 text-lg shadow-lg">
-                Comenzar exploración
-                <span class="material-symbols-outlined" data-icon="arrow_forward">arrow_forward</span>
-</button>
-</section>
-<!-- Resultados (aparece tras Comenzar exploración; sustituye a Mesa de Resultados hasta que exista esa pantalla) -->
-<section id="resultados" class="hidden flex flex-col gap-stack-md">
-<hr class="border-outline-variant/30"/>
-<div class="flex items-baseline justify-between">
-<h3 class="font-headline-md-mobile text-headline-md-mobile text-on-surface">Hallazgos</h3>
-<span id="resultadosCount" class="font-metadata-code text-metadata-code text-outline"></span>
-</div>
-<div id="resultadosList" class="flex flex-col gap-stack-sm"></div>
-</section>
+<!-- EXPLORAR renderiza únicamente "Candidatos verificados" (GET /verifiedos). Sin Hallazgos ni Señal detectada: esa sección consumía /expedientes y mostraba corporativos/unicornios. -->
 </main>
 <!-- BottomNavBar -->
 <nav class="bg-surface dark:bg-surface-container-lowest border-t border-outline/20 bg-surface/95 backdrop-blur-none fixed bottom-0 left-0 w-full flex items-center px-1 py-2 pb-safe md:max-w-container-max md:left-1/2 md:-translate-x-1/2 z-50">
@@ -535,65 +520,8 @@
             }
         }
 
-        // --- Comenzar exploración: trae EXPEDIENTES curados (scoring, Deuda Cultural, evidencia), no la lista cruda ---
-        document.getElementById('btnExplorar').addEventListener('click', async () => {
-            const q = document.querySelector('input[type="text"]').value.trim().toLowerCase();
-            const seccion = document.getElementById('resultados');
-            const lista = document.getElementById('resultadosList');
-            const count = document.getElementById('resultadosCount');
-            seccion.classList.remove('hidden');
-            lista.innerHTML = `<p class="font-body-reading text-on-surface-variant">Curando hallazgos…</p>`;
-            try {
-                const res = await fetch(`${API}/expedientes?limite=100`);
-                const data = await res.json();
-                let items = data.expedientes || [];
-                if (categoriaActiva) items = items.filter(p => p.categoria === categoriaActiva);
-                if (verticalActiva) items = items.filter(p => p.vertical === verticalActiva);
-                if (escalaActiva) items = items.filter(p => p.escala === escalaActiva);
-                if (q) items = items.filter(p => (p.nombre || "").toLowerCase().includes(q));
-                count.textContent = `${items.length} expediente(s)`;
-                if (!items.length) {
-                    const hayFiltros = categoriaActiva || verticalActiva || escalaActiva;
-                    lista.innerHTML = hayFiltros
-                        ? `<p class="font-body-reading text-body-reading text-on-surface-variant">Sin expedientes que combinen estos filtros específicos. Prueba quitando uno de los criterios (categoría, vertical o escala) para ver si aparecen resultados.</p>`
-                        : `<p class="font-body-reading text-body-reading text-on-surface-variant">Sin expedientes curados con estos criterios todavía. El Radar sigue detectando; vuelve a intentar tras la próxima corrida.</p>`;
-                    return;
-                }
-                const badge = (s) => ({A:'bg-primary text-on-primary', B:'bg-tertiary-container text-on-tertiary-container', C:'bg-error-container text-on-error-container'}[s] || 'bg-surface-container-high text-on-surface-variant');
-                window._items = items;
-                lista.innerHTML = items.slice(0, 30).map((p, idx) => `
-                    <div class="p-4 border border-outline-variant/30 rounded-lg flex flex-col gap-2 cursor-pointer hover:border-primary transition-colors" data-idx="${idx}">
-                        <div class="flex items-center gap-2 flex-wrap">
-                            <span class="font-headline-md-mobile text-on-surface text-lg">${esc(p.nombre)}</span>
-                            <span class="px-2 py-0.5 rounded-full text-xs font-metadata-code ${badge(p.scoring)}">${esc(p.scoring || '?')}</span>
-                            <span class="font-metadata-code text-metadata-code text-outline">ICP ${esc(p.score_icp ?? 0)}</span>
-                            <span class="font-metadata-code text-metadata-code text-outline uppercase">${esc(p.categoria)}</span>
-                        </div>
-                        <p class="font-body-reading text-on-surface-variant text-sm">
-                            <strong class="text-on-surface">Señal detectada: ${esc(p.senal_dominante || '—')}</strong>
-                        </p>
-                        <p class="font-metadata-code text-xs text-outline/70 leading-snug">
-                            Coincidencia de palabras clave. Sin situación reconstruida. No constituye hallazgo.
-                        </p>
-                        <span class="px-2 py-0.5 rounded-full text-xs font-metadata-code ${(p.validacion_cientifica && p.validacion_cientifica.hipotesis_bloqueada) ? 'bg-error text-on-error' : 'bg-secondary-container text-on-secondary-container'}">${(p.validacion_cientifica && p.validacion_cientifica.hipotesis_bloqueada) ? 'BLOQUEADA' : 'VALIDADA'}</span>
-                        <p class="font-metadata-code text-metadata-code text-outline">
-                            Evidencias: ${p.total_evidencias ?? 0}
-                        </p>
-                        ${(p.evidencias || []).slice(0, 2).map(ev => `
-                            <div class="pl-3 border-l-2 border-outline-variant/40">
-                                <p class="font-body-reading text-on-surface-variant text-sm italic">${esc(ev.texto || '')}</p>
-                                <p class="font-metadata-code text-metadata-code text-outline">${esc(ev.fuente || '')} · ${esc(ev.fecha || '')}</p>
-                            </div>
-                        `).join('')}
-                    </div>
-                `).join('');
-                lista.querySelectorAll('[data-idx]').forEach(el => {
-                    el.addEventListener('click', () => mostrarObservar(window._items[Number(el.dataset.idx)]));
-                });
-            } catch (e) {
-                lista.innerHTML = `<p class="font-body-reading text-error">No se pudo conectar con el laboratorio. Intenta de nuevo.</p>`;
-            }
-        });
+        // --- Comenzar exploración / Hallazgos ELIMINADO: esa sección consumía GET /expedientes
+        //     y mostraba corporativos y unicornios. EXPLORAR ahora renderiza solo "Candidatos verificados" (GET /verificados). ---
 
         cargarCategorias();
         cargarFiltroProspectos('verticalFilters', 'verticalLoading', 'vertical');
