@@ -132,6 +132,7 @@
     border-radius:10px; padding:14px 16px;
     display:flex; flex-direction:column; gap:6px;
     overflow:hidden;
+    overflow-wrap: anywhere; word-break: break-word;
   }
   .verified-card .row{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
   .verified-card .name{ font-family:'Newsreader',serif; font-weight:600; font-size:18px; color:var(--carbon); overflow-wrap:anywhere; min-width:0; }
@@ -198,6 +199,7 @@
     display:flex; align-items:stretch;
     background:var(--avena);
     border-top:1px solid var(--line-soft);
+    min-height:52px; touch-action: manipulation;
     padding:6px 2px calc(6px + env(safe-area-inset-bottom, 0px));
   }
   nav.bottom a{
@@ -240,20 +242,6 @@
       <p class="build-id" id="buildId">BUILD: —</p>
     </section>
 
-    <!-- Candidatos verificados -->
-    <section class="section" id="candidatosVerificados">
-      <div style="display:flex; align-items:baseline; justify-content:space-between; gap:8px; flex-wrap:wrap;">
-        <span class="serif" style="font-weight:600; font-size:20px; overflow-wrap:anywhere;">Candidatos verificados</span>
-        <span class="meta" id="verificadosCount" style="font-size:11px; color:var(--gris); letter-spacing:.04em; text-transform:uppercase; white-space:nowrap;"></span>
-      </div>
-      <p class="hint">Evidencia primaria citada: autodeclaración o huella práctica de la propia organización. No es coincidencia de palabras clave.</p>
-      <div id="verificadosList" class="section" style="gap:10px;">
-        <p class="state-msg" id="verificadosLoading">Cargando candidatos verificados…</p>
-      </div>
-    </section>
-
-    <hr class="div"/>
-
     <!-- Search -->
     <section class="search-wrap">
       <span class="mat s-icon">search</span>
@@ -273,6 +261,7 @@
 
     <hr class="div"/>
 
+    <!-- Foco -->
     <section class="section">
       <span class="label">Foco</span>
       <div class="chips" id="focoFilters">
@@ -298,6 +287,20 @@
       <div class="chips" id="escalaFilters">
         <button class="chip active" data-val="">Todos</button>
         <span class="state-msg" id="escalaLoading">Cargando escalas…</span>
+      </div>
+    </section>
+
+    <hr class="div"/>
+
+    <!-- Candidatos verificados -->
+    <section class="section" id="candidatosVerificados">
+      <div style="display:flex; align-items:baseline; justify-content:space-between; gap:8px; flex-wrap:wrap;">
+        <span class="serif" style="font-weight:600; font-size:20px; overflow-wrap:anywhere;">Candidatos verificados</span>
+        <span class="meta" id="verificadosCount" style="font-size:11px; color:var(--gris); letter-spacing:.04em; text-transform:uppercase; white-space:nowrap;"></span>
+      </div>
+      <p class="hint">Evidencia primaria citada: autodeclaración o huella práctica de la propia organización. No es coincidencia de palabras clave.</p>
+      <div id="verificadosList" class="section" style="gap:10px;">
+        <p class="state-msg" id="verificadosLoading">Cargando candidatos verificados…</p>
       </div>
     </section>
   </main>
@@ -354,32 +357,34 @@
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const $ = (id) => document.getElementById(id);
 
-  function fetchJSON(url, ms){
-    ms = ms || 5000;
-    const ctrl = new AbortController();
-    const t = setTimeout(function(){ ctrl.abort(); }, ms);
-    var sep = (url.indexOf("?") === -1) ? "?" : "&";
-    var urlBust = url + sep + "t=" + Date.now();
-    return fetch(urlBust, { signal: ctrl.signal, headers: { "Accept": "application/json" } })
-      .then(function(res){
-        if(!res.ok) throw new Error("http_" + res.status);
-        return res.json();
-      })
-      .finally(function(){ clearTimeout(t); });
+  async function fetchJSON(url, ms){
+    var esperas = [2500, 5000];
+    for (var intento = 1; intento <= 3; intento++) {
+      try {
+        var res = await fetch(url);
+        if (res.status === 502 || res.status === 503 || res.status === 504) {
+          if (intento < 3) { await new Promise(function(r){ setTimeout(r, esperas[intento-1]); }); continue; }
+          throw new Error("backend_no_disponible");
+        }
+        return await res.json();
+      } catch (e) {
+        if (intento < 3) { await new Promise(function(r){ setTimeout(r, esperas[intento-1]); }); continue; }
+        throw e;
+      }
+    }
   }
 
-  // ---- build id ----
+  const REGION_HINTS = [
+    {chip:"México", rx:/méxico|mexico|cdmx|monterrey|guadalajara|puebla|querétaro|queretaro|sheinbaum/},
+    {chip:"México y Centroamérica", rx:/méxico|mexico|cdmx|monterrey|guadalajara|puebla|querétaro|queretaro|sheinbaum|costa rica|panamá|panama|guatemala|honduras|el salvador|nicaragua/},
+    {chip:"Sudamérica", rx:/chile|colombia|uruguay|argentina|perú|peru|ecuador|venezuela|bolivia|paraguay|brazil|brasil|bogotá|bogota|santiago|montevideo|buenos aires|lima/}
+  ];
+
   (function(){
-    const el = $("buildId");
+    const el = document.getElementById("buildId");
     if (el) el.textContent = "BUILD: " + (window.BUILD_ID || "desconocido");
   })();
 
-  // ---- region detection ----
-  const REGION_HINTS = [
-    {chip:"México", rx:/(\bMéxico\b|\bméxico\b|\bmexico\b|\bmexicano(s)?\b|\bmexicana(s)?\b|\bcdmx\b|\bmonterrey\b|\bguadalajara\b|\bpuebla\b|\bquerétaro\b|\bqueretaro\b)/i},
-    {chip:"México y Centroamérica", rx:/(\bméxico\b|\bmexico\b|\bmexicanos?\b|\bmexicana(s)?\b|\bcdmx\b|\bmonterrey\b|\bguadalajara\b|\bpuebla\b|\bquerétaro\b|\bqueretaro\b|\bcosta rica\b|\bpanamá\b|\bpanama\b|\bguatemala\b|\bhonduras\b|\bel salvador\b|\bnicaragua\b)/i},
-    {chip:"Sudamérica", rx:/(\bchile\b|\bcolombia\b|\buruguay\b|\bargentina\b|\bperú\b|\bperu\b|\becuador\b|\bvenezuela\b|\bolivia\b|\bparaguay\b|\bbrazil\b|\bbrasil\b|\bbogotá\b|\bsantiago\b|\bmontevideo\b|\bbuenos aires\b|\blima\b)/i}
-  ];
   function regionDe(it){
     const t = ((it.organizacion||"") + " " + (it.cita_textual||"") + " " + (it.nombre_medio||"")).toLowerCase();
     for (const r of REGION_HINTS){ if (r.rx.test(t)) return r.chip; }
@@ -441,21 +446,38 @@
     }).join("");
   }
 
-  function cargarCandidatosVerificados(){
-    const loading = $("verificadosLoading");
-    fetchJSON(API + "/verificados?limite=50")
-      .then(function(data){
-        if (loading) loading.remove();
-        verificadosItems = (data.items || []).map(function(it){ return Object.assign({}, it, { regionDe: regionDe(it) }); });
-        renderVerificados();
-      })
-      .catch(function(){
-        if (loading) loading.textContent = "Sin datos en radar.";
-      });
-  }
+  async function cargarCandidatosVerificados(){
+    const loading = document.getElementById('verificadosLoading');
+    const ESPERAS = [2500, 5000];
+    const esReintentable = (res) => res && (res.status === 502 || res.status === 503 || res.status === 504);
+    for (let intento = 1; intento <= 3; intento++) {
+        try {
+            const res = await fetch(API + "/verificados?limite=50");
+            if (esReintentable(res)) {
+                if (intento < 3) {
+                    loading.textContent = "Calentando backend… reintento " + intento + " de 3";
+                    await new Promise(r => setTimeout(r, ESPERAS[intento - 1]));
+                    continue;
+                }
+                throw new Error('backend_no_disponible');
+            }
+            const data = await res.json();
+            loading.remove();
+            verificadosItems = (data.items || []).map(function(it){ return Object.assign({}, it, { regionDe: regionDe(it) }); });
+            renderVerificados();
+            return;
+        } catch (e) {
+            if (intento < 3) {
+                loading.textContent = "Calentando backend… reintento " + intento + " de 3";
+                await new Promise(r => setTimeout(r, ESPERAS[intento - 1]));
+                continue;
+            }
+            loading.textContent = 'No se pudieron cargar los candidatos verificados (backend no disponible).';
+        }
+    }
+}
 
-  // ---- foco (categorías) ----
-  function cargarCategorias(){
+function cargarCategorias(){
     const cont = $("focoFilters");
     const loading = $("focoLoading");
     fetchJSON(API + "/prospectos/categorias")
