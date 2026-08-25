@@ -196,6 +196,7 @@
 <p class="font-body-reading text-body-reading text-on-surface-variant max-w-xl">
                 Explora organizaciones, señales y fenómenos que podrían merecer una mirada más cercana.
             </p>
+<p id="buildId" class="font-metadata-code text-[10px] tracking-wider text-outline/50 select-none">BUILD: —</p>
 </section>
 <!-- Candidatos verificados (Entrega 3): expedientes ya promovidos con evidencia primaria citada. Distinto de las tarjetas de "Señal detectada" de más abajo, que son solo coincidencia de palabras clave sin verificar. -->
 <section id="candidatosVerificados" class="flex flex-col gap-stack-sm">
@@ -223,7 +224,7 @@
 <!-- Region Filter -->
 <div class="flex flex-col gap-stack-sm">
 <label class="font-metadata-code text-metadata-code text-outline tracking-wider uppercase">REGIÓN</label>
-<div class="flex flex-wrap gap-stack-sm">
+<div id="regionFilters" class="flex flex-wrap gap-stack-sm">
 <button class="px-4 py-2 border border-outline-variant/30 text-on-surface-variant rounded-full font-body-reading text-ui-label hover:bg-surface-container-high transition-colors focus:bg-primary focus:text-on-primary focus:border-primary">Toda LATAM</button>
 <button class="px-4 py-2 border border-outline-variant/30 text-on-surface-variant rounded-full font-body-reading text-ui-label hover:bg-surface-container-high transition-colors focus:bg-primary focus:text-on-primary focus:border-primary">México</button>
 <button class="px-4 py-2 border border-outline-variant/30 text-on-surface-variant rounded-full font-body-reading text-ui-label hover:bg-surface-container-high transition-colors focus:bg-primary focus:text-on-primary focus:border-primary">México y Centroamérica</button>
@@ -309,12 +310,44 @@
     <div id="observarLectura" class="mt-8 mb-16"></div>
 </main>
 </div>
+<script src="build_info.js"></script>
 <script>
         const API = "https://antrosapiens-api-pro.vercel.app";
         let categoriaActiva = "";
         let verticalActiva = "";
         let escalaActiva = "";
+                const REGION_HINTS = [
+            {chip:"México", kws:["méxico","mexico","cdmx","monterrey","guadalajara","puebla","querétaro"]},
+            {chip:"México y Centroamérica", kws:["méxico","mexico","cdmx","monterrey","guadalajara","puebla","querétaro","costa rica","panamá","panama","guatemala","honduras","el salvador","nicaragua"]},
+            {chip:"Sudamérica", kws:["chile","colombia","uruguay","argentina","perú","peru","ecuador","venezuela","bolivia","paraguay","brazil","brasil","bogotá","santiago","montevideo","buenos aires","lima"]}
+        ];
+        function regionDe(it){
+            const t=((it.organizacion||"")+" "+(it.cita_textual||"")+" "+(it.nombre_medio||"")).toLowerCase();
+            for(const r of REGION_HINTS){ if(r.kws.some(k=>t.includes(k))) return r.chip; }
+            return null;
+        }
+
+                const REGION_HINTS = [
+            {chip:"México", kws:["méxico","mexico","cdmx","monterrey","guadalajara","puebla","querétaro"]},
+            {chip:"México y Centroamérica", kws:["méxico","mexico","cdmx","monterrey","guadalajara","puebla","querétaro","costa rica","panamá","panama","guatemala","honduras","el salvador","nicaragua"]},
+            {chip:"Sudamérica", kws:["chile","colombia","uruguay","argentina","perú","peru","ecuador","venezuela","bolivia","paraguay","brazil","brasil","bogotá","santiago","montevideo","buenos aires","lima"]}
+        ];
+        function regionDe(it){
+            const t=((it.organizacion||"")+" "+(it.cita_textual||"")+" "+(it.nombre_medio||"")).toLowerCase();
+            for(const r of REGION_HINTS){ if(r.kws.some(k=>t.includes(k))) return r.chip; }
+            return null;
+        }
+
+        let regionActiva = "México";
+        const REGION_TODAS = "Toda LATAM";
         const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+        // --- BUILD ID embebido: generado en tiempo de compilación (Gradle) y servido como asset.
+        //     NO se calcula en tiempo de ejecución (sin Date()/hora). ---
+        (function () {
+            const el = document.getElementById('buildId');
+            if (el) el.textContent = 'BUILD: ' + (window.BUILD_ID || 'desconocido');
+        })();
 
         let expedienteActual = null;
 
@@ -392,9 +425,28 @@
             document.getElementById('screen-explorar').style.display = 'block';
         });
 
-        // --- Filtro REGIÓN: comportamiento visual tipo radio (sin datos backend aún) ---
+        // --- Filtro REGIÓN: radio funcional que filtra Candidatos verificados ---
+        const regionGroup = document.getElementById('regionFilters');
+        regionGroup.querySelectorAll('button').forEach(button => {
+            if (button.textContent === regionActiva) {
+                button.classList.add('bg-primary', 'text-on-primary', 'border-primary');
+                button.classList.remove('border-outline-variant/30', 'text-on-surface-variant');
+            }
+            button.addEventListener('click', function() {
+                regionActiva = this.textContent;
+                regionGroup.querySelectorAll('button').forEach(btn => {
+                    btn.classList.remove('bg-primary', 'text-on-primary', 'border-primary');
+                    btn.classList.add('border-outline-variant/30', 'text-on-surface-variant');
+                });
+                this.classList.add('bg-primary', 'text-on-primary', 'border-primary');
+                this.classList.remove('border-outline-variant/30', 'text-on-surface-variant');
+                renderVerificados();
+            });
+        });
+
+        // --- Filtros genéricos visuales tipo radio (FOCO y REGIÓN se manejan aparte) ---
         document.querySelectorAll('section .flex-wrap').forEach(group => {
-            if (group.id === 'focoFilters') return; // FOCO se maneja aparte, con datos reales
+            if (group.id === 'focoFilters' || group.id === 'regionFilters') return;
             group.querySelectorAll('button').forEach(button => {
                 button.addEventListener('click', function() {
                     group.querySelectorAll('button').forEach(btn => {
@@ -413,33 +465,63 @@
             senal_primaria_huella_practica: 'Huella práctica',
         };
 
-        async function cargarCandidatosVerificados() {
+        let verificadosItems = [];
+
+        function filtrarVerificados(items) {
+            if (regionActiva === REGION_TODAS) return items; // Toda LATAM: incluye items sin región (regionDe null)
+            return items.filter(it => (it.regionDe ?? null) === regionActiva);
+        }
+
+        function renderVerificados() {
             const cont = document.getElementById('verificadosList');
-            const loading = document.getElementById('verificadosLoading');
             const count = document.getElementById('verificadosCount');
-            try {
-                const res = await fetch(`${API}/verificados?limite=50`);
-                const data = await res.json();
-                loading.remove();
-                const items = data.items || [];
-                count.textContent = `${items.length} verificado(s)`;
-                if (!items.length) {
-                    cont.innerHTML = `<p class="font-body-reading text-body-reading text-on-surface-variant">Aún no hay candidatos verificados.</p>`;
-                    return;
-                }
-                cont.innerHTML = items.map(it => `
-                    <div class="p-4 border-l-4 border-secondary bg-secondary-container/20 rounded-lg flex flex-col gap-2">
-                        <div class="flex items-center gap-2 flex-wrap">
-                            <span class="font-headline-md-mobile text-on-surface text-lg">${esc(it.organizacion)}</span>
-                            <span class="px-2 py-0.5 rounded-full text-xs font-metadata-code bg-secondary text-on-secondary uppercase">Verificado</span>
-                            <span class="font-metadata-code text-metadata-code text-outline">${esc(TIPO_LABEL[it.tipo_epistemologico] || it.tipo_epistemologico)}</span>
-                        </div>
-                        <p class="font-body-reading text-on-surface-variant text-sm italic">${esc(it.cita_textual || '')}</p>
-                        <p class="font-metadata-code text-metadata-code text-outline">${esc(it.nombre_medio || '')}</p>
+            const visibles = filtrarVerificados(verificadosItems);
+            count.textContent = `${visibles.length} verificado(s)`; // contador refleja la lista filtrada
+            if (!visibles.length) {
+                cont.innerHTML = `<p class="font-body-reading text-body-reading text-on-surface-variant">Aún no hay candidatos verificados${regionActiva === REGION_TODAS ? '' : ' en esta región'}.</p>`;
+                return;
+            }
+            cont.innerHTML = visibles.map(it => `
+                <div class="p-4 border-l-4 border-secondary bg-secondary-container/20 rounded-lg flex flex-col gap-2">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="font-headline-md-mobile text-on-surface text-lg">${esc(it.organizacion)}</span>
+                        <span class="px-2 py-0.5 rounded-full text-xs font-metadata-code bg-secondary text-on-secondary uppercase">Verificado</span>
+                        <span class="font-metadata-code text-metadata-code text-outline">${esc(TIPO_LABEL[it.tipo_epistemologico] || it.tipo_epistemologico)}</span>
                     </div>
-                `).join('');
-            } catch (e) {
-                loading.textContent = 'No se pudieron cargar los candidatos verificados (backend no disponible).';
+                    <p class="font-body-reading text-on-surface-variant text-sm italic">${esc(it.cita_textual || '')}</p>
+                    <p class="font-metadata-code text-metadata-code text-outline">${esc(it.nombre_medio || '')}</p>
+                </div>
+            `).join('');
+        }
+
+        async function cargarCandidatosVerificados() {
+            const loading = document.getElementById('verificadosLoading');
+            const ESPERAS = [2500, 5000];
+            const esReintentable = (res) => res && (res.status === 502 || res.status === 503 || res.status === 504);
+            for (let intento = 1; intento <= 3; intento++) {
+                try {
+                    const res = await fetch(`${API}/verificados?limite=50`);
+                    if (esReintentable(res)) {
+                        if (intento < 3) {
+                            loading.textContent = `Calentando backend… reintento ${intento} de 3`;
+                            await new Promise(r => setTimeout(r, ESPERAS[intento - 1]));
+                            continue;
+                        }
+                        throw new Error('backend_no_disponible');
+                    }
+                    const data = await res.json();
+                    loading.remove();
+                    verificadosItems = (data.items || []).map(it => ({...it, regionDe: regionDe(it)}));
+                    renderVerificados(); // ya filtrado por regionActiva desde el primer pintado
+                    return;
+                } catch (e) {
+                    if (intento < 3) {
+                        loading.textContent = `Calentando backend… reintento ${intento} de 3`;
+                        await new Promise(r => setTimeout(r, ESPERAS[intento - 1]));
+                        continue;
+                    }
+                    loading.textContent = 'No se pudieron cargar los candidatos verificados (backend no disponible).';
+                }
             }
         }
 

@@ -7,3 +7,6 @@ local.properties
 captures/
 .externalNativeBuild/
 .cxx/
+
+# BUILD ID generado en tiempo de compilación (no se versiona)
+app/src/main/assets/public/build_info.js
