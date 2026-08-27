@@ -83,6 +83,107 @@ def test_cargo_de_otra_organizacion_no_es_autodeclaracion():
     assert c.tipo == TIPO_CONTEXTUAL
 
 
+# ── Autoidentificación situada en primera persona (ampliación 2026-08-27) ──
+
+def test_autoidentificacion_maxima_con_situacion_concreta_es_autodeclaracion():
+    c = clasificar(_ev(
+        "Soy fundadora de mi startup y cometí el error de contratar "
+        "demasiado rápido sin cultura clara.", org='"cometí el error de" startup'))
+    assert c.tipo == TIPO_AUTODECLARACION
+
+
+def test_autoidentificacion_sin_situacion_concreta_no_basta():
+    """Primera persona SOLA, sin marcador de situación concreta, no admite."""
+    c = clasificar(_ev("Soy fundador y creo que las startups son difíciles."))
+    assert c.tipo == TIPO_CONTEXTUAL
+
+
+def test_autoidentificacion_en_listiculo_sigue_rechazada():
+    """La autoidentificación no rescata contenido marcado como opinión/listículo."""
+    c = clasificar(_ev(
+        "Como fundador, aquí van 10 claves para evitar los errores "
+        "más comunes al emprender."))
+    assert c.tipo == TIPO_CONTEXTUAL
+
+
+def test_autoidentificacion_tension_sin_friccion_sigue_siendo_contextual():
+    """La vía nueva NO baja el listón de corroborante: sigue exigiendo fricción."""
+    c = clasificar(_ev(
+        "Fui despedido de mi empresa el año pasado, y desde entonces "
+        "entendí muchas cosas."))
+    assert c.tipo == TIPO_CONTEXTUAL
+
+
+def test_como_rol_en_tercera_persona_no_es_autoidentificacion():
+    """Falso positivo real detectado en la validación con corpus de Tavily:
+
+    "presentó su renuncia como CEO" es tercera persona (el verbo lleva la
+    persona, no la frase "como CEO"); admitirlo confundía descripción de
+    prensa con autoidentificación. Debe seguir cayendo en contextual.
+    """
+    c = clasificar(_ev(
+        "El enigmático mensaje que dejó la CEO de 'X' — Linda Yaccarino "
+        "presentó su renuncia como CEO de X y antes de irse habló sobre "
+        "el cambio logrado en la plataforma."))
+    assert c.tipo == TIPO_CONTEXTUAL
+
+
+def test_atribucion_de_prensa_en_tercera_persona_no_se_rompe():
+    """La cascada original (tercera persona) sigue funcionando sin cambios."""
+    c = clasificar(_ev(
+        'Ana Torres, fundadora de Acme, admitió: "cometimos el error de '
+        'crecer muy rápido".'))
+    assert c.tipo == TIPO_AUTODECLARACION
+
+
+def test_posesivo_mas_evento_sin_rol_explicito_es_autodeclaracion():
+    """"Cerré mi startup" nunca dice "soy fundador", pero identifica posición.
+
+    Nota: se evita a propósito la frase "lo que aprendí", que coincide con un
+    marcador de opinión ya existente en ``relevance.MARCADORES_OPINION`` — ver
+    ``test_frase_lo_que_aprendi_colisiona_con_filtro_de_opinion`` más abajo,
+    que documenta esa colisión real encontrada en el corpus de validación.
+    """
+    c = clasificar(_ev(
+        "Cerré mi startup después de 5 semanas, sin haber validado el "
+        "mercado a tiempo."))
+    assert c.tipo == TIPO_AUTODECLARACION
+
+
+def test_frase_lo_que_aprendi_colisiona_con_filtro_de_opinion():
+    """Hallazgo real de la validación 2026-08-27: un testimonio genuino de
+    founder titulado "esto es lo que aprendí" NO se admite, porque esa frase
+    ya es un marcador de opinión/reflexión genérica en ``relevance.py``
+    (reutilizado aquí a propósito como filtro anti-ruido). Es una limitación
+    conocida, no un bug: se documenta con un test en vez de solo en el chat.
+    """
+    c = clasificar(_ev(
+        "Cerré mi startup después de 5 semanas. Esto es lo que aprendí sobre "
+        "validar antes de construir."))
+    assert c.tipo == TIPO_CONTEXTUAL
+
+
+def test_posesivo_mas_evento_sin_marcador_no_es_admitido():
+    """Sin verbo de evento, el posesivo solo no basta."""
+    c = clasificar(_ev("Mi startup está creciendo bien este trimestre."))
+    assert c.tipo == TIPO_CONTEXTUAL
+
+
+def test_salvaguarda_empleado_no_dueno_no_asciende_a_autodeclaracion():
+    """"Mi jefe" marca que quien habla es empleado, no dueño: no autodeclaracion."""
+    c = clasificar(_ev(
+        "Mi jefe me pidió que dejara mi proyecto paralelo, así que cerré mi "
+        "startup y aprendí a priorizar mejor mi tiempo."))
+    assert c.tipo != TIPO_AUTODECLARACION
+
+
+def test_salvaguarda_empleado_con_friccion_es_corroborante():
+    c = clasificar(_ev(
+        "Mi jefe me pidió trabajar horas extra sin pago; cerré mi startup "
+        "paralela porque ya no daba abasto y renuncié poco después."))
+    assert c.tipo == TIPO_CORROBORANTE
+
+
 def test_columnas_del_contrato_tienen_prioridad_sobre_el_texto():
     c = clasificar(_ev("Acme amplía su red de sucursales en el país",
                        persona="Ana Gómez", cargo="fundadora"))

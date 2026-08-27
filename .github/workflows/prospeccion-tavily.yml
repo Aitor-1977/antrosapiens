@@ -1,0 +1,63 @@
+name: Prospección Tavily (búsqueda dinámica founder)
+
+# Modo AUTOMÁTICO (uno de los tres modos, no compite con los otros dos —
+# ver conector busqueda_dinamica.py). Corre el conector aislado
+# 'busqueda_dinamica_founder' dos veces por semana e inserta en la base de
+# producción existente (expedientes_candidatos / evidencia_clasificada).
+#
+# Alcance deliberadamente acotado: captura (run_once) + clasificación
+# epistemológica (clasificar_evidencia --aplicar). NO incluye
+# promover_candidatos: la promoción 'abierto' -> 'candidato' la decide el
+# operador manualmente, igual que hoy.
+#
+# Autorizado por el operador el 2026-08-27. Independiente a propósito del
+# scheduler viejo (hd_scraper/scheduler.py, APScheduler dentro de la API):
+# ese scheduler arma una consulta por cada empresa x tipo_evento, y este
+# conector ignora esos parámetros (usa siempre su propio léxico fijo) — si
+# corriera ahí, dispararía las 14 frases una vez por cada combinación y
+# agotaría la cuota gratis de Tavily en una sola corrida.
+
+on:
+  schedule:
+    # Lunes y jueves, 06:00 hora de Ciudad de México (UTC-6) = 12:00 UTC.
+    - cron: "0 12 * * 1,4"
+  workflow_dispatch: {} # permite disparar una corrida manual desde GitHub
+
+concurrency:
+  group: prospeccion-tavily
+  cancel-in-progress: false
+
+jobs:
+  capturar-y-clasificar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      # El runner es efímero: el crudo comprimido no sobrevive entre
+      # corridas, así que retenerlo en disco no aporta nada (mismo criterio
+      # que ya usa el propio proyecto para Vercel, también efímero).
+      HD_RAW_ENABLED: "0"
+
+    steps:
+      - name: Clonar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependencias de producción
+        run: pip install -r requirements.txt
+
+      - name: Asegurar esquema (idempotente, no destructivo sobre datos existentes)
+        run: python -m scripts.migrate
+
+      - name: Capturar evidencia real (conector busqueda_dinamica_founder)
+        run: >-
+          python -m scripts.run_once "busqueda_dinamica_founder"
+          --tipo queja --connector busqueda_dinamica_founder
+
+      - name: Clasificar evidencia pendiente (epistemológica, aplica cambios)
+        run: python -m scripts.clasificar_evidencia --aplicar
