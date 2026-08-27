@@ -26,12 +26,29 @@ Nota sobre el corpus real: los cuatro conectores de Fase 1 guardan en
 identificable, así que la REGLA DURA manda la mayoría de las filas a
 ``contextual`` o a ``senal_primaria_huella_practica``. Eso es fidelidad al
 corpus, no una limitación del clasificador.
+
+Ampliación — autoidentificación situada en primera persona (autorizado por el
+operador el 2026-08-27; ver la entrada correspondiente en «Frontera de
+Interpretación» de CLAUDE.md). La cascada de atribución de arriba está
+calibrada para prosa de PRENSA en tercera persona (Nombre + cargo + verbo
+declarativo/comillas). Un texto en primera persona ("soy fundadora", "fui
+despedido", "cometí el error de...") nunca dispara esa cascada aunque
+identifique con claridad quién habla y desde qué posición. Esta ampliación
+(ver ``_buscar_autoidentificacion`` / ``_hay_situacion_concreta`` más abajo)
+reconoce esa forma adicional, igual de determinista: exige la autoidentificación
+DE ROL en primera persona MÁS al menos un marcador de situación concreta
+(posesivo organizacional, verbo de evento o marcador temporal), y descarta el
+texto si luce como opinión/listículo genérico. No introduce ningún tipo nuevo
+ni relaja la REGLA DURA: solo permite que la posición del enunciador se
+reconozca por autodeclaración además de por atribución de prensa.
 """
 from __future__ import annotations
 
 import re
 import unicodedata
 from dataclasses import dataclass
+
+from .relevance import es_opinion
 
 VERSION_REGLAS = "clasificacion_epistemologica.v1"
 
@@ -219,6 +236,113 @@ _FRICCION: tuple[str, ...] = (
     "disputa", "reclam", "inconformidad", "malestar", "descontento", "exig",
     "advierte", "alerta", "fricci", "molestia", "desmiente", "contradice",
 )
+
+
+# ── Autoidentificación situada en primera persona ───────────────────────────
+# Ver docstring del módulo y la entrada correspondiente en «Frontera de
+# Interpretación» de CLAUDE.md. Determinista: patrón de rol en primera
+# persona (patrón, nivel, dominio_que_concede_el_cargo_o_None), con el mismo
+# criterio de desempate por coincidencia MÁS LARGA que ``_CARGOS``.
+
+_AUTOID: tuple[tuple[str, str, str | None], ...] = (
+    # Máxima autoridad, autoidentificada.
+    #
+    # NOTA (hallazgo de la validación 2026-08-27, corpus real de Tavily): un
+    # patrón bare "como CEO"/"como fundador" es AMBIGUO en español — "Linda
+    # Yaccarino presentó su renuncia como CEO de X" es tercera persona (verbo
+    # "presentó"), no autoidentificación, y ese patrón lo admitía como falso
+    # positivo. El marcador de persona en español va en el VERBO, no en la
+    # frase "como X"; por eso cada patrón de "como <rol>" exige aquí un verbo
+    # de primera persona inequívoco inmediatamente antes ("trabajo como",
+    # "me desempeño como", "hablo como"), nunca "como <rol>" a secas.
+    (r"\brenunci[eé] como (?:ceo|fundador(?:a)?|co-?fundador(?:a)?|"
+     r"director(?:a)? general)\b", NIVEL_MAXIMA, None),
+    (r"\bsoy (?:el |la )?(?:co-?)?fundador(?:a)?\b", NIVEL_MAXIMA, None),
+    (r"\btrabajo como (?:co-?)?fundador(?:a)?\b", NIVEL_MAXIMA, None),
+    (r"\bme desempen[oó] como (?:co-?)?fundador(?:a)?\b", NIVEL_MAXIMA, None),
+    (r"\bsoy (?:el |la )?ceo\b", NIVEL_MAXIMA, None),
+    (r"\btrabajo como ceo\b", NIVEL_MAXIMA, None),
+    (r"\bme desempen[oó] como ceo\b", NIVEL_MAXIMA, None),
+    (r"\bsoy (?:el |la )?director(?:a)? general\b", NIVEL_MAXIMA, None),
+    # Funcional, autoidentificado (dominio declarado por el propio cargo).
+    (r"\bsoy (?:el |la )?cfo\b", NIVEL_FUNCIONAL, "finanzas"),
+    (r"\bsoy (?:el |la )?cto\b", NIVEL_FUNCIONAL, "tecnologia"),
+    (r"\bsoy (?:el |la )?coo\b", NIVEL_FUNCIONAL, "operaciones"),
+    # Posición de tensión, autoidentificada.
+    (r"\bsoy (?:un |una )?(?:ex-?)?emplead[oa]\b", NIVEL_TENSION, None),
+    (r"\btrabaj[eé] en\b", NIVEL_TENSION, None),
+    (r"\bfui despedid[oa]\b", NIVEL_TENSION, None),
+    (r"\bfui contratad[oa]\b", NIVEL_TENSION, None),
+    (r"\bsoy client[ea]\b", NIVEL_TENSION, None),
+    (r"\bhablo como client[ea]\b", NIVEL_TENSION, None),
+    (r"\bsoy usuari[oa]\b", NIVEL_TENSION, None),
+    (r"\bhablo como usuari[oa]\b", NIVEL_TENSION, None),
+    (r"\brenunci[eé]\b", NIVEL_TENSION, None),
+)
+
+_AUTOID_COMPILADOS = tuple(
+    (re.compile(p), nivel, dominio) for p, nivel, dominio in _AUTOID
+)
+
+
+def _buscar_autoidentificacion(plano: str) -> tuple[re.Match, str, str | None] | None:
+    """Autoidentificación de rol en primera persona con la coincidencia MÁS
+    LARGA (mismo criterio de desempate que ``_buscar_cargo``): así "renuncié
+    como CEO" le gana a la "renuncié" genérica sobre el mismo texto."""
+    mejor: tuple[re.Match, str, str | None] | None = None
+    for patron, nivel, dominio in _AUTOID_COMPILADOS:
+        m = patron.search(plano)
+        if not m:
+            continue
+        if mejor is None:
+            mejor = (m, nivel, dominio)
+            continue
+        largo_actual = len(m.group(0))
+        largo_mejor = len(mejor[0].group(0))
+        if largo_actual > largo_mejor or (
+            largo_actual == largo_mejor and m.start() < mejor[0].start()
+        ):
+            mejor = (m, nivel, dominio)
+    return mejor
+
+
+# Situación concreta / temporalidad: la autoidentificación en primera persona
+# NUNCA basta por sí sola (no se admite "cualquier texto en primera persona").
+# Exige, además, al menos uno de estos marcadores estructurales.
+_POSESIVO_ORG = re.compile(
+    r"\b(?:mi|mis|nuestro|nuestra|nuestros|nuestras)\s+"
+    r"(?:startup|empresa|equipo|negocio|compania|organizacion|proyecto)\b"
+)
+
+_MARCADORES_EVENTO: tuple[str, ...] = (
+    "decidimos", "decidi", "cometi", "cometimos", "aprendi", "aprendimos",
+    "cerramos", "cerre", "quebre", "quebramos", "pivoteamos", "pivotee",
+    "lanzamos", "lance", "despedimos", "me despidieron", "nos despidieron",
+    "empezamos", "dejamos de", "cambiamos", "cambie",
+)
+
+_MARCADORES_TEMPORALES: tuple[str, ...] = (
+    "actualmente", "anteriormente", "desde entonces", "despues de",
+    "antes de", "durante", "ocurrio", "hace un ano", "hace unos meses",
+    "al principio", "con el tiempo",
+)
+
+
+def _hay_situacion_concreta(texto: str) -> bool:
+    """¿Hay al menos un marcador de situación concreta/temporalidad?
+
+    Es el segundo requisito (junto a la autoidentificación) de la vía en
+    primera persona: mide COEXISTENCIA de indicadores observables, nunca
+    intenta medir "profundidad cultural" por regex.
+    """
+    plano = _plano(texto)
+    if _POSESIVO_ORG.search(plano):
+        return True
+    if any(m in plano for m in _MARCADORES_EVENTO):
+        return True
+    if any(m in plano for m in _MARCADORES_TEMPORALES):
+        return True
+    return False
 
 
 # ── Nombres propios y atribución ────────────────────────────────────────────
@@ -457,6 +581,27 @@ def identificar_enunciador(evidencia: dict,
     )
 
     if hallazgo is None or cargo_sin_habla:
+        # Vía adicional: autoidentificación de rol en primera persona ("soy
+        # fundadora", "fui despedido"). Nunca basta sola: exige un marcador de
+        # situación concreta Y que el texto no luzca como opinión/listículo
+        # genérico (REGLA DURA — ver docstring del módulo y CLAUDE.md).
+        auto = _buscar_autoidentificacion(plano)
+        if auto is not None and not es_opinion(texto) and _hay_situacion_concreta(texto):
+            m_auto, nivel_auto, dominio_cargo_auto = auto
+            return Enunciador(
+                nombre=persona_declarada,
+                cargo=texto[m_auto.start():m_auto.end()].strip(),
+                nivel=nivel_auto,
+                dominio=dominio,
+                dominio_cargo=dominio_cargo_auto,
+                # Autoidentificación en primera persona ("mi empresa/mi
+                # startup"): el vínculo con la organización de esta fila no
+                # depende de que el nombre de una compañía real coincida en
+                # el texto (empresa_mencionada puede ser un término de
+                # búsqueda, no una compañía) — mismo criterio que ya aplica
+                # cuando el conector declara ``cargo`` como dato estructural.
+                vinculado=True,
+            )
         nombre = persona_declarada or _nombre_por_atribucion(texto, vetados)
         return Enunciador(nombre=nombre, cargo=None, nivel=NIVEL_NINGUNO,
                           dominio=dominio, dominio_cargo=None, vinculado=False)

@@ -83,6 +83,59 @@ def test_cargo_de_otra_organizacion_no_es_autodeclaracion():
     assert c.tipo == TIPO_CONTEXTUAL
 
 
+# ── Autoidentificación situada en primera persona (ampliación 2026-08-27) ──
+
+def test_autoidentificacion_maxima_con_situacion_concreta_es_autodeclaracion():
+    c = clasificar(_ev(
+        "Soy fundadora de mi startup y cometí el error de contratar "
+        "demasiado rápido sin cultura clara.", org='"cometí el error de" startup'))
+    assert c.tipo == TIPO_AUTODECLARACION
+
+
+def test_autoidentificacion_sin_situacion_concreta_no_basta():
+    """Primera persona SOLA, sin marcador de situación concreta, no admite."""
+    c = clasificar(_ev("Soy fundador y creo que las startups son difíciles."))
+    assert c.tipo == TIPO_CONTEXTUAL
+
+
+def test_autoidentificacion_en_listiculo_sigue_rechazada():
+    """La autoidentificación no rescata contenido marcado como opinión/listículo."""
+    c = clasificar(_ev(
+        "Como fundador, aquí van 10 claves para evitar los errores "
+        "más comunes al emprender."))
+    assert c.tipo == TIPO_CONTEXTUAL
+
+
+def test_autoidentificacion_tension_sin_friccion_sigue_siendo_contextual():
+    """La vía nueva NO baja el listón de corroborante: sigue exigiendo fricción."""
+    c = clasificar(_ev(
+        "Fui despedido de mi empresa el año pasado, y desde entonces "
+        "entendí muchas cosas."))
+    assert c.tipo == TIPO_CONTEXTUAL
+
+
+def test_como_rol_en_tercera_persona_no_es_autoidentificacion():
+    """Falso positivo real detectado en la validación con corpus de Tavily:
+
+    "presentó su renuncia como CEO" es tercera persona (el verbo lleva la
+    persona, no la frase "como CEO"); admitirlo confundía descripción de
+    prensa con autoidentificación. Debe seguir cayendo en contextual.
+    """
+    c = clasificar(_ev(
+        "El enigmático mensaje que dejó la CEO de 'X' — Linda Yaccarino "
+        "presentó su renuncia como CEO de X y antes de irse habló sobre "
+        "el cambio logrado en la plataforma."))
+    assert c.tipo == TIPO_CONTEXTUAL
+
+
+def test_atribucion_de_prensa_en_tercera_persona_no_se_rompe():
+    """La cascada original (tercera persona) sigue funcionando sin cambios."""
+    c = clasificar(_ev(
+        'Ana Torres, fundadora de Acme, admitió: "cometimos el error de '
+        'crecer muy rápido".'))
+    assert c.tipo == TIPO_AUTODECLARACION
+
+
 def test_columnas_del_contrato_tienen_prioridad_sobre_el_texto():
     c = clasificar(_ev("Acme amplía su red de sucursales en el país",
                        persona="Ana Gómez", cargo="fundadora"))

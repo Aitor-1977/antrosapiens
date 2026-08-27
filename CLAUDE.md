@@ -128,6 +128,36 @@ SOLO sobre datos ya extraídos por este mismo motor; sin IA, sin juicio libre):
   Entrega 3). Implementación: `hd_scraper/clasificacion_epistemologica.py`
   (cascada pura) y `hd_scraper/clasificacion_store.py` (persistencia en
   `expedientes_candidatos` y `evidencia_clasificada`).
+- **Autoidentificación situada en primera persona (ampliación del clasificador
+  epistemológico)** (autorizado por el operador —Mario— el 2026-08-27): dentro
+  de `clasificacion_epistemologica.py`, la cascada gana una vía adicional para
+  reconocer la posición del enunciador cuando el propio texto se autoidentifica
+  en primera persona con un rol ("soy fundadora", "como CEO", "fui despedido")
+  EN VEZ de depender solo de menciones de prensa en tercera persona (Nombre +
+  cargo + verbo declarativo). Sigue siendo **determinista y auditable**: léxico
+  cerrado de patrones de autoidentificación y de marcadores de situación
+  concreta (posesivos organizacionales — "mi startup", "nuestra empresa" —,
+  verbos de evento y marcadores temporales), **sin IA, sin red, sin
+  embeddings**. La autoidentificación en primera persona SOLA nunca basta:
+  exige además al menos un marcador de situación concreta, Y que el texto no
+  esté marcado como opinión/listículo genérico (reutiliza
+  `relevance.es_opinion`) — la REGLA DURA se mantiene intacta: sin esos
+  marcadores, la fila sigue cayendo en `contextual` igual que antes. **No
+  añade ningún tipo literal nuevo** (los cuatro de `evidencia_clasificada`
+  siguen siendo los únicos posibles): una autoidentificación de máxima
+  autoridad puede alcanzar `senal_primaria_autodeclaracion` bajo las mismas
+  reglas de dominio/autoridad ya vigentes, y una autoidentificación de tensión
+  sigue exigiendo fricción explícita para llegar a `corroborante` — el listón
+  no baja, solo se reconoce una forma adicional y estructural de detectar
+  quién habla. No clasifica por canal (prensa/foro/LinkedIn/job posting no
+  determinan admisibilidad por sí solos). No nombra Deuda Cultural™ ni emite
+  juicio de valor sobre el contenido, ni decide si una evidencia constituye un
+  hallazgo antropológico — solo determina si hay señales observables
+  suficientes para considerarla evidencia potencialmente admisible; la
+  interpretación antropológica sigue siendo posterior y de RadarHD. No decide
+  ni ejecuta acción comercial. Implementación: mismos archivos de la entrada
+  anterior (`clasificacion_epistemologica.py` / `clasificacion_store.py`); no
+  se creó ningún módulo nuevo.
 
 **Exclusivo de RadarHD (JAMÁS aquí):**
 
