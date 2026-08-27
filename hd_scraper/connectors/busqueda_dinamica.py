@@ -71,23 +71,51 @@ TAVILY_SEARCH_API = "https://api.tavily.com/search"
 # página; el crudo completo igual se retiene comprimido en disco (raw_store).
 MAX_CUERPO_CHARS = 2000
 
-# Léxico de partida (ajustable, no definitivo — ver discusión con el
-# operador). Cada frase declara su propio tipo_evento estructural: lo fija
-# quien mantiene este módulo, nunca se infiere leyendo el resultado.
+# Léxico (ajustable, no definitivo — ver discusión con el operador). Cada
+# frase declara su propio tipo_evento estructural: lo fija quien mantiene
+# este módulo, nunca se infiere leyendo el resultado.
 #   - "pivotar" -> cambio_sitio (mismo bucket que usa discovery.py para pivote).
 #   - "renuncié como CEO porque" -> despido (salida de la máxima autoridad;
 #     es la aproximación más cercana dentro del vocabulario cerrado del
 #     contrato, que no tiene un tipo_evento propio para renuncia ejecutiva).
 #   - el resto son variantes del bucket de fricción/crisis -> queja.
+#
+# Ampliación 2026-08-27 (autorizada por el operador): iteración de
+# DIVERSIDAD, no de volumen. Las frases se agrupan por TIPO DE TENSIÓN /
+# POSICIÓN DEL ENUNCIADOR (no por canal, que ya no se restringe en ningún
+# lado) para evitar que el buscador converja siempre sobre el mismo artículo.
+# Se retiraron dos frases de la v1 que convergían con otras del mismo grupo
+# sin aportar resultados distintos ('"el error que casi" mi empresa' — casi
+# sinónima de "cometí el error de") o que colisionaban con el filtro de
+# opinión ya existente en relevance.py ('"lo que aprendí cuando cerré"' —
+# "lo que aprendí" es un marcador de opinión declarado ahí; se sustituye por
+# variantes de cierre que no llevan esa frase exacta).
 FRASES_FOUNDER: tuple[tuple[str, str], ...] = (
+    # Grupo A — founder: error/decisión de negocio.
     ('"cometí el error de" startup', "queja"),
-    ('"el error que casi" mi empresa', "queja"),
-    ('"lo que aprendí cuando cerré" startup', "queja"),
-    ('"por qué decidimos pivotar" startup', "cambio_sitio"),
     ('"el problema que no vi venir en mi startup"', "queja"),
-    ('"casi quiebro mi empresa cuando"', "queja"),
-    ('"renuncié como CEO porque"', "despido"),
     ('"la decisión que casi hunde a mi startup"', "queja"),
+
+    # Grupo B — founder: fracaso/cierre del negocio (verbos de fricción
+    # nuevos: quebré, perdí, fracasé, no funcionó, tuve que cerrar).
+    ('"quebré mi empresa" startup', "queja"),
+    ('"perdí todo mi dinero en mi startup"', "queja"),
+    ('"fracasé con mi startup" y esto pasó', "queja"),
+    ('"tuve que cerrar mi startup" porque', "queja"),
+    ('"mi startup no funcionó" porque', "queja"),
+
+    # Grupo C — founder: salida ejecutiva/renuncia.
+    ('"renuncié como CEO porque"', "despido"),
+    ('"dejé de ser CEO de mi propia empresa"', "despido"),
+
+    # Grupo D — founder: pivote/cambio de modelo de negocio.
+    ('"por qué decidimos pivotar" startup', "cambio_sitio"),
+    ('"tuvimos que cambiar de modelo de negocio porque"', "cambio_sitio"),
+
+    # Grupo E — posición de tensión DISTINTA a founder: empleado. Diversifica
+    # QUIÉN enuncia, no solo qué dice, tal como pidió el operador.
+    ('"renuncié a mi trabajo en la startup porque"', "queja"),
+    ('"lo que viví como empleado de una startup"', "queja"),
 )
 
 RESULTADOS_POR_FRASE_DEFAULT = 10  # tope de resultados por frase
