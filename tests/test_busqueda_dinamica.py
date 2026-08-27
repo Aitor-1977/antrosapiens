@@ -5,41 +5,41 @@ from hd_scraper.connectors.busqueda_dinamica import BusquedaDinamicaConnector
 from hd_scraper.db.models import ESTADO_NO_FECHADO, ESTADO_OK, QuerySpec
 
 FIXTURE_RESPUESTA = {
-    "items": [
+    "query": '"cometí el error de" startup',
+    "results": [
         {
             "title": "Cometí el error de contratar rápido sin cultura clara",
-            "link": "https://blog.ejemplo.com/error-contratacion",
-            "snippet": "En mi startup, cometí el error de crecer el equipo antes de tener claridad de cultura...",
-            "pagemap": {
-                "metatags": [{"article:published_time": "2026-06-01T10:00:00Z"}]
-            },
+            "url": "https://blog.ejemplo.com/error-contratacion",
+            "content": "En mi startup, cometí el error de crecer el equipo antes de tener claridad de cultura...",
+            "raw_content": "Texto completo del artículo, mucho más largo que el resumen.",
+            "published_date": "2026-06-01",
+            "score": 0.9,
         },
         {
             "title": "Sin fecha: reflexión sobre un error de founder",
-            "link": "https://medium.com/@founder/reflexion-error",
-            "snippet": "Una historia sin metadatos de fecha.",
+            "url": "https://medium.com/@founder/reflexion-error",
+            "content": "Una historia sin metadata de fecha.",
+            "raw_content": "",
         },
-    ]
+    ],
 }
 
 
 def _connector(monkeypatch, frases=None) -> BusquedaDinamicaConnector:
-    object.__setattr__(settings, "google_cse_api_key", "fake-key")
-    object.__setattr__(settings, "google_cse_cx", "fake-cx")
+    object.__setattr__(settings, "tavily_api_key", "tvly-fake-key")
     c = BusquedaDinamicaConnector(frases=frases)
-    monkeypatch.setattr(c, "_get", lambda url: json.dumps(FIXTURE_RESPUESTA))
+    monkeypatch.setattr(c, "_post", lambda url, payload: json.dumps(FIXTURE_RESPUESTA))
     return c
 
 
 def test_sin_credenciales_no_hace_red_y_devuelve_vacio(monkeypatch):
-    object.__setattr__(settings, "google_cse_api_key", "")
-    object.__setattr__(settings, "google_cse_cx", "")
+    object.__setattr__(settings, "tavily_api_key", "")
     c = BusquedaDinamicaConnector()
 
-    def _falla(url):  # pragma: no cover - no debe llamarse
+    def _falla(url, payload):  # pragma: no cover - no debe llamarse
         raise AssertionError("no debe llamar a la red sin credenciales")
 
-    monkeypatch.setattr(c, "_get", _falla)
+    monkeypatch.setattr(c, "_post", _falla)
     items = list(c.search(QuerySpec(empresa="x", tipo_evento="queja")))
     assert items == []
 
@@ -51,7 +51,7 @@ def test_search_extrae_items_de_cada_frase(monkeypatch):
     assert len(items) == 2
     assert items[0].meta["frase"] == '"cometí el error de" startup'
     assert items[0].meta["tipo_evento"] == "queja"
-    assert items[0].meta["fecha_publicacion"] == "2026-06-01T10:00:00Z"
+    assert items[0].meta["fecha_publicacion"] == "2026-06-01"
     assert items[1].meta["fecha_publicacion"] is None
 
 
@@ -69,7 +69,10 @@ def test_normalize_no_interpreta_usa_estructura(monkeypatch):
     # nombre_medio es el dominio de la URL, no algo leído del contenido:
     assert rec.nombre_medio == "blog.ejemplo.com"
     assert rec.cita_textual.startswith("Cometí el error de contratar rápido")
+    assert "Texto completo del artículo" in rec.cita_textual
     assert rec.connector == "busqueda_dinamica_founder"
+    assert rec.persona_citada is None
+    assert rec.cargo is None
 
 
 def test_valida_ok_y_no_fechado(monkeypatch):
@@ -82,73 +85,20 @@ def test_valida_ok_y_no_fechado(monkeypatch):
     assert v1.ok and v1.estado == ESTADO_NO_FECHADO
 
 
-FIXTURE_CON_AUTOR = {
-    "items": [
-        {
-            "title": "Founder de Acme: cometí el error de contratar sin cultura",
-            "link": "https://medium.com/@ana/error-contratacion",
-            "snippet": "Cometí el error de crecer el equipo demasiado rápido.",
-            "pagemap": {
-                "person": [{"name": "Ana Torres", "jobtitle": "Founder"}],
-                "metatags": [{"article:published_time": "2026-06-01T10:00:00Z"}],
-            },
-        },
-        {
-            "title": "Sin metadata de autor",
-            "link": "https://blog.ejemplo.com/error-generico",
-            "snippet": "Una historia sin schema.org Person ni metatags de autoría.",
-            "pagemap": {
-                "metatags": [{"article:published_time": "2026-06-02T10:00:00Z"}],
-            },
-        },
-        {
-            "title": "Autor solo por metatag",
-            "link": "https://blog.ejemplo.com/con-metatag-autor",
-            "snippet": "El autor viene declarado por metatag, no por schema.org Person.",
-            "pagemap": {
-                "metatags": [{"author": "Luis Gómez", "article:published_time": "2026-06-03T10:00:00Z"}],
-            },
-        },
-    ]
-}
-
-
-def test_persona_y_cargo_solo_si_hay_metadata_estructural(monkeypatch):
-    frases = (('"cometí el error de" startup', "queja"),)
-    object.__setattr__(settings, "google_cse_api_key", "fake-key")
-    object.__setattr__(settings, "google_cse_cx", "fake-cx")
-    c = BusquedaDinamicaConnector(frases=frases)
-    monkeypatch.setattr(c, "_get", lambda url: json.dumps(FIXTURE_CON_AUTOR))
-
-    items = list(c.search(QuerySpec(empresa="x", tipo_evento="queja")))
-    recs = [c.normalize(it) for it in items]
-
-    # schema.org Person: persona_citada + cargo estructurales.
-    assert recs[0].persona_citada == "Ana Torres"
-    assert recs[0].cargo == "Founder"
-    # sin metadata de autor: ambos None (igual que Fase 1).
-    assert recs[1].persona_citada is None
-    assert recs[1].cargo is None
-    # solo metatag de autor (sin jobtitle): persona sí, cargo no.
-    assert recs[2].persona_citada == "Luis Gómez"
-    assert recs[2].cargo is None
-
-
 def test_una_frase_caida_no_tumba_a_las_demas(monkeypatch):
     frases = (
         ('"frase que falla"', "queja"),
         ('"cometí el error de" startup', "queja"),
     )
-    object.__setattr__(settings, "google_cse_api_key", "fake-key")
-    object.__setattr__(settings, "google_cse_cx", "fake-cx")
+    object.__setattr__(settings, "tavily_api_key", "tvly-fake-key")
     c = BusquedaDinamicaConnector(frases=frases)
 
-    def _get(url):
-        if "frase+que+falla" in url:
+    def _post(url, payload):
+        if payload["query"] == '"frase que falla"':
             raise RuntimeError("500 boom")
         return json.dumps(FIXTURE_RESPUESTA)
 
-    monkeypatch.setattr(c, "_get", _get)
+    monkeypatch.setattr(c, "_post", _post)
     items = list(c.search(QuerySpec(empresa="x", tipo_evento="queja")))
     assert len(items) == 2  # solo los de la segunda frase
     eventos = c.drain_health_events()

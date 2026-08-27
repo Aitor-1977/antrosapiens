@@ -87,12 +87,12 @@ class Settings:
     # vacío, la escritura queda DESHABILITADA (la API sigue siendo solo lectura).
     ingest_token: str = os.getenv("HD_INGEST_TOKEN", "")
 
-    # Google Programmable Search Engine (Custom Search JSON API), usado por el
-    # conector de búsqueda dinámica (`connectors/busqueda_dinamica.py`). Sin
-    # ambas variables, el conector no ejecuta ninguna llamada de red y no
+    # Tavily Search API, usada por el conector de búsqueda dinámica
+    # (`connectors/busqueda_dinamica.py`). Se eligió sobre Google Custom
+    # Search porque su capa gratuita no exige vincular tarjeta/facturación.
+    # Sin la variable, el conector no ejecuta ninguna llamada de red y no
     # rompe el resto del sistema.
-    google_cse_api_key: str = os.getenv("GOOGLE_CSE_API_KEY", "")
-    google_cse_cx: str = os.getenv("GOOGLE_CSE_CX", "")
+    tavily_api_key: str = os.getenv("TAVILY_API_KEY", "")
 
     # Clave de Hunter.io para VERIFICAR correos del decisor (opcional). Si está
     # vacía, la verificación queda deshabilitada y el motor usa solo hipótesis
