@@ -41,6 +41,18 @@ DE ROL en primera persona MÁS al menos un marcador de situación concreta
 texto si luce como opinión/listículo genérico. No introduce ningún tipo nuevo
 ni relaja la REGLA DURA: solo permite que la posición del enunciador se
 reconozca por autodeclaración además de por atribución de prensa.
+
+Ampliación 2 — posesivo + evento SIN rol explícito (autorizado por el operador
+el 2026-08-27, misma entrada de CLAUDE.md). La vía anterior sigue exigiendo un
+ROL declarado ("soy fundador"); pero "cerré mi startup después de 5 semanas,
+esto es lo que aprendí" nunca dice la palabra "fundador" y aun así identifica
+con claridad a alguien narrando su propia situación. Esta vía IMPLÍCITA admite
+posesivo organizacional ("mi startup"/"mi empresa") + verbo de cierre, error o
+aprendizaje, sin exigir un rol explícito. Salvaguarda determinista: si el texto
+también trae un marcador de que quien habla es EMPLEADO, no dueño ("mi jefe",
+"mi equipo me pidió"), no asciende a máxima autoridad — se trata como posición
+de tensión, que sigue exigiendo fricción explícita para `corroborante` (la
+REGLA DURA no se toca: sin fricción, cae igual a `contextual`).
 """
 from __future__ import annotations
 
@@ -327,6 +339,18 @@ _MARCADORES_TEMPORALES: tuple[str, ...] = (
     "al principio", "con el tiempo",
 )
 
+# Marcadores de que quien habla es EMPLEADO, no dueño, aunque use un
+# posesivo organizacional ("mi empresa" también lo dice quien trabaja ahí,
+# no solo quien la fundó). Salvaguarda pedida por el operador el 2026-08-27
+# para la vía de autoidentificación IMPLÍCITA (ver más abajo): su presencia
+# impide ascender a máxima autoridad aunque haya posesivo + evento.
+_MARCADORES_NO_DUENO: tuple[str, ...] = (
+    "mi jefe", "mi jefa", "mi supervisor", "mi supervisora", "mi gerente",
+    "mi equipo me pidio", "en mi trabajo me dijeron", "me pidieron en el trabajo",
+    "mi jefe me dijo", "mi jefa me dijo", "mi gerente me dijo",
+    "mi gerente me pidio", "mi jefe me pidio",
+)
+
 
 def _hay_situacion_concreta(texto: str) -> bool:
     """¿Hay al menos un marcador de situación concreta/temporalidad?
@@ -602,6 +626,29 @@ def identificar_enunciador(evidencia: dict,
                 # cuando el conector declara ``cargo`` como dato estructural.
                 vinculado=True,
             )
+
+        # Vía adicional IMPLÍCITA (autorizado por el operador el 2026-08-27):
+        # posesivo organizacional ("mi startup", "mi empresa") + verbo de
+        # cierre/error/aprendizaje, SIN que el texto declare un rol explícito
+        # ("cerré mi startup después de 5 semanas" nunca dice "soy fundador").
+        # Salvaguarda: si el texto también trae un marcador de que quien
+        # habla es EMPLEADO, no dueño ("mi jefe", "mi equipo me pidió"), no
+        # se asciende a máxima autoridad — se trata como posición de tensión,
+        # que sigue exigiendo fricción explícita para llegar a `corroborante`
+        # (REGLA DURA intacta: sin fricción, cae igual a `contextual`).
+        posesivo = _POSESIVO_ORG.search(plano)
+        if (posesivo is not None and not es_opinion(texto)
+                and any(m in plano for m in _MARCADORES_EVENTO)):
+            es_empleado = any(m in plano for m in _MARCADORES_NO_DUENO)
+            return Enunciador(
+                nombre=persona_declarada,
+                cargo=texto[posesivo.start():posesivo.end()].strip(),
+                nivel=NIVEL_TENSION if es_empleado else NIVEL_MAXIMA,
+                dominio=dominio,
+                dominio_cargo=None,
+                vinculado=True,
+            )
+
         nombre = persona_declarada or _nombre_por_atribucion(texto, vetados)
         return Enunciador(nombre=nombre, cargo=None, nivel=NIVEL_NINGUNO,
                           dominio=dominio, dominio_cargo=None, vinculado=False)

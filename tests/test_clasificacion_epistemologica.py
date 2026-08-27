@@ -136,6 +136,54 @@ def test_atribucion_de_prensa_en_tercera_persona_no_se_rompe():
     assert c.tipo == TIPO_AUTODECLARACION
 
 
+def test_posesivo_mas_evento_sin_rol_explicito_es_autodeclaracion():
+    """"Cerré mi startup" nunca dice "soy fundador", pero identifica posición.
+
+    Nota: se evita a propósito la frase "lo que aprendí", que coincide con un
+    marcador de opinión ya existente en ``relevance.MARCADORES_OPINION`` — ver
+    ``test_frase_lo_que_aprendi_colisiona_con_filtro_de_opinion`` más abajo,
+    que documenta esa colisión real encontrada en el corpus de validación.
+    """
+    c = clasificar(_ev(
+        "Cerré mi startup después de 5 semanas, sin haber validado el "
+        "mercado a tiempo."))
+    assert c.tipo == TIPO_AUTODECLARACION
+
+
+def test_frase_lo_que_aprendi_colisiona_con_filtro_de_opinion():
+    """Hallazgo real de la validación 2026-08-27: un testimonio genuino de
+    founder titulado "esto es lo que aprendí" NO se admite, porque esa frase
+    ya es un marcador de opinión/reflexión genérica en ``relevance.py``
+    (reutilizado aquí a propósito como filtro anti-ruido). Es una limitación
+    conocida, no un bug: se documenta con un test en vez de solo en el chat.
+    """
+    c = clasificar(_ev(
+        "Cerré mi startup después de 5 semanas. Esto es lo que aprendí sobre "
+        "validar antes de construir."))
+    assert c.tipo == TIPO_CONTEXTUAL
+
+
+def test_posesivo_mas_evento_sin_marcador_no_es_admitido():
+    """Sin verbo de evento, el posesivo solo no basta."""
+    c = clasificar(_ev("Mi startup está creciendo bien este trimestre."))
+    assert c.tipo == TIPO_CONTEXTUAL
+
+
+def test_salvaguarda_empleado_no_dueno_no_asciende_a_autodeclaracion():
+    """"Mi jefe" marca que quien habla es empleado, no dueño: no autodeclaracion."""
+    c = clasificar(_ev(
+        "Mi jefe me pidió que dejara mi proyecto paralelo, así que cerré mi "
+        "startup y aprendí a priorizar mejor mi tiempo."))
+    assert c.tipo != TIPO_AUTODECLARACION
+
+
+def test_salvaguarda_empleado_con_friccion_es_corroborante():
+    c = clasificar(_ev(
+        "Mi jefe me pidió trabajar horas extra sin pago; cerré mi startup "
+        "paralela porque ya no daba abasto y renuncié poco después."))
+    assert c.tipo == TIPO_CORROBORANTE
+
+
 def test_columnas_del_contrato_tienen_prioridad_sobre_el_texto():
     c = clasificar(_ev("Acme amplía su red de sucursales en el país",
                        persona="Ana Gómez", cargo="fundadora"))

@@ -158,6 +158,20 @@ SOLO sobre datos ya extraídos por este mismo motor; sin IA, sin juicio libre):
   ni ejecuta acción comercial. Implementación: mismos archivos de la entrada
   anterior (`clasificacion_epistemologica.py` / `clasificacion_store.py`); no
   se creó ningún módulo nuevo.
+- **Posesivo organizacional + evento, sin rol explícito (ampliación 2 de la
+  autoidentificación en primera persona)** (autorizado por el operador —Mario—
+  el 2026-08-27): la vía anterior exige un ROL declarado ("soy fundador"); esta
+  cubre el caso, muy frecuente en el corpus real, de un texto que dice "cerré
+  mi startup después de 5 semanas, esto es lo que aprendí" sin nombrar ningún
+  rol. Determinista: posesivo organizacional ("mi startup"/"mi empresa") +
+  verbo de cierre/error/aprendizaje admite la fila, salvo que el texto también
+  traiga un marcador léxico de que quien habla es EMPLEADO, no dueño ("mi
+  jefe", "mi equipo me pidió") — en ese caso NO asciende a máxima autoridad:
+  se trata como posición de tensión, que sigue exigiendo fricción explícita
+  para `corroborante` (la REGLA DURA no se toca: sin fricción, sigue cayendo
+  en `contextual`). No añade tipo literal nuevo. No nombra Deuda Cultural™ ni
+  decide acción comercial. Implementación: mismos archivos de las dos entradas
+  anteriores.
 
 **Exclusivo de RadarHD (JAMÁS aquí):**
 
