@@ -44,6 +44,49 @@ def test_maxima_autoridad_es_autodeclaracion():
     assert c.enunciador_dominio == "retencion_talento"
 
 
+def test_org_de_una_palabra_no_matchea_dentro_de_nombre_propio_mas_largo():
+    """Causa raíz real del caso "Clara Brugada" (2026-08-28): antes,
+    `_vinculado_a_org` usaba subcadena pura, así que empresa_mencionada
+    "Clara" matcheaba dentro de "Clara Brugada" (alcaldesa de CDMX, una
+    persona distinta) y vinculaba el cargo a la organización equivocada.
+    Ahora exige palabra completa y descarta el caso en que el nombre de una
+    sola palabra es solo el primer token de un nombre propio más largo. Aquí
+    ni siquiera se llega a evaluar el gate de dominio: el cargo nunca queda
+    vinculado a "Clara", así que `_dominio_bajo_autoridad` no se invoca."""
+    c = clasificar(_ev(
+        'Clara Brugada acompaña a la Presidenta Claudia Sheinbaum en el '
+        'arranque de "Sí al Desarme, Sí a la Paz"; destaca reducción de '
+        'homicidios en la Ciudad de México - CDMX',
+        org="Clara", medio="CDMX"))
+    assert c.tipo == TIPO_CONTEXTUAL
+
+
+def test_org_de_una_palabra_si_matchea_como_mencion_autonoma():
+    """Contraste con el test anterior: cuando "Clara" aparece como mención
+    autónoma de la organización (no pegada a un apellido), sigue vinculando
+    con normalidad — el fix no rompe el caso normal de nombres cortos."""
+    c = clasificar(_ev(
+        "Clara, la fintech, anunció una ronda de inversión de 50 millones "
+        "de dólares liderada por su CEO", org="Clara"))
+    assert c.tipo == TIPO_AUTODECLARACION
+    assert c.enunciador_dominio == "finanzas"
+
+
+def test_maxima_autoridad_sin_dominio_de_negocio_cae_a_contextual():
+    """Regresión real (2026-08-28): 'Clara Brugada' (alcaldesa de CDMX) se
+    clasificó como autodeclaración de la fintech 'Clara' porque el patrón de
+    cargo 'presidenta' (referido a la Presidenta de México en el mismo
+    titular) disparaba NIVEL_MAXIMA sin que el texto mencionara ningún
+    dominio de negocio (DOMINIOS). Máxima autoridad da autoridad sobre
+    cualquier dominio de NEGOCIO, no sobre cualquier tema."""
+    c = clasificar(_ev(
+        'Clara Brugada acompaña a la Presidenta Claudia Sheinbaum en el '
+        'arranque de "Sí al Desarme, Sí a la Paz"; destaca reducción de '
+        'homicidios en la Ciudad de México - CDMX',
+        org="Clara", medio="CDMX"))
+    assert c.tipo == TIPO_CONTEXTUAL
+
+
 def test_cargo_funcional_dentro_de_su_dominio_es_autodeclaracion():
     c = clasificar(_ev("María López, CFO de Acme, habló de la ronda de inversión"))
     assert c.tipo == TIPO_AUTODECLARACION
@@ -130,12 +173,21 @@ def test_como_rol_en_tercera_persona_no_es_autoidentificacion():
     assert c.tipo == TIPO_CONTEXTUAL
 
 
-def test_atribucion_de_prensa_en_tercera_persona_no_se_rompe():
-    """La cascada original (tercera persona) sigue funcionando sin cambios."""
+def test_atribucion_de_prensa_en_tercera_persona_sin_dominio_cae_a_contextual():
+    """Límite aceptado del gate de dominio (2026-08-28, ver
+    ``test_maxima_autoridad_sin_dominio_de_negocio_cae_a_contextual``): esta
+    frase es una autodeclaración legítima de la fundadora sobre su propia
+    empresa, pero "crecer muy rápido" no está en el léxico cerrado de
+    ``DOMINIOS`` (no es literalmente "expansión" ni ninguna otra palabra
+    listada). El gate no distingue "prensa sobre otro tema" (el caso real que
+    lo motivó — Clara Brugada) de "founder hablando en lenguaje natural que
+    no toca el léxico" — ambos caen a `contextual`. Aceptado explícitamente
+    por el operador como costo del fix: la REGLA DURA prefiere perder señal
+    ambigua a admitir un falso positivo evidente."""
     c = clasificar(_ev(
         'Ana Torres, fundadora de Acme, admitió: "cometimos el error de '
         'crecer muy rápido".'))
-    assert c.tipo == TIPO_AUTODECLARACION
+    assert c.tipo == TIPO_CONTEXTUAL
 
 
 def test_posesivo_mas_evento_sin_rol_explicito_es_autodeclaracion():
@@ -474,11 +526,17 @@ def test_mencion_de_cargo_sin_habla_no_es_autodeclaracion():
     assert c.enunciador_cargo is None
 
 
-def test_verbo_de_habla_permite_autodeclaracion_con_nombre_correcto():
+def test_verbo_de_habla_permite_atribuir_el_nombre_correcto():
+    """El verbo de habla ('dijo') sigue permitiendo atribuir el nombre
+    correctamente incluso cuando el gate de dominio (2026-08-28) baja el
+    `tipo` a `contextual` por no tocar el léxico cerrado de ``DOMINIOS``
+    ("banca... próxima frontera" no es ninguna palabra de la lista) — ver
+    ``test_atribucion_de_prensa_en_tercera_persona_sin_dominio_cae_a_contextual``.
+    La atribución de nombre es independiente de esa rama final."""
     c = clasificar(_ev(
         "David Vélez, CEO de Nubank, dijo que la banca estadounidense es la "
         "próxima frontera", org="Nubank"))
-    assert c.tipo == TIPO_AUTODECLARACION
+    assert c.tipo == TIPO_CONTEXTUAL
     assert c.enunciador_nombre == "David Vélez"
 
 

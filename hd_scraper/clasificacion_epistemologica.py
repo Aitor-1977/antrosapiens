@@ -601,25 +601,64 @@ def _nombre_por_atribucion(texto: str, vetados: tuple[str, ...]) -> str | None:
     return None
 
 
-def _vinculado_a_org(plano: str, pos_cargo: int, org: str,
+def _es_parte_de_nombre_mas_largo(texto: str, inicio: int, fin: int) -> bool:
+    """¿La ocurrencia está pegada a otro token capitalizado, formando un
+    nombre propio más largo? Causa raíz real (2026-08-28): `empresa_mencionada
+    = "Clara"` (la fintech) matcheaba como subcadena dentro de "Clara
+    Brugada" (la alcaldesa de CDMX, una persona distinta con el mismo nombre
+    corto) — ninguna organización de una sola palabra debería vincularse así
+    a un cargo que en realidad pertenece a otra entidad. Se mira el texto
+    ORIGINAL (con mayúsculas), no el `plano`, en las posiciones adyacentes a
+    la coincidencia."""
+    antes = texto[:inicio]
+    despues = texto[fin:]
+    if re.search(rf"{_TOKEN}\s*$", antes):
+        return True
+    if re.match(rf"\s*{_TOKEN}", despues):
+        return True
+    return False
+
+
+def _ocurrencias_org(texto: str, plano: str, org_plano: str) -> list[re.Match]:
+    """Ocurrencias de ``org_plano`` como PALABRA COMPLETA en ``plano`` (nunca
+    subcadena parcial: "Acme" no debe matchear dentro de "Acmecorp"). Si el
+    nombre de la organización es de una sola palabra, además descarta las
+    ocurrencias que sean solo el primer token de un nombre propio más largo
+    (ver ``_es_parte_de_nombre_mas_largo``) — un nombre de una palabra puede
+    coincidir con el nombre de pila de una persona distinta; uno de varias
+    palabras ya se desambigua por su propia longitud.
+    """
+    ocurrencias = list(re.finditer(rf"\b{re.escape(org_plano)}\b", plano))
+    if len(org_plano.split()) == 1:
+        ocurrencias = [m for m in ocurrencias
+                      if not _es_parte_de_nombre_mas_largo(texto, m.start(), m.end())]
+    return ocurrencias
+
+
+def _vinculado_a_org(texto: str, plano: str, pos_cargo: int, org: str,
                      otras_orgs: tuple[str, ...]) -> bool:
     """El cargo pertenece a la organización de la evidencia.
 
-    Se exige que la organización aparezca en el texto y que ninguna OTRA
-    organización conocida esté más cerca del cargo. Un CEO de otra empresa
-    hablando sobre esta no es autodeclaración de esta.
+    Se exige que la organización aparezca en el texto como PALABRA COMPLETA
+    (no subcadena) y que ninguna OTRA organización conocida esté más cerca
+    del cargo. Un CEO de otra empresa hablando sobre esta no es
+    autodeclaración de esta.
     """
     org_plano = normalizar(org)
-    if not org_plano or org_plano not in plano:
+    if not org_plano:
         return False
-    d_org = min(abs(m.start() - pos_cargo)
-                for m in re.finditer(re.escape(org_plano), plano))
+    ocurrencias = _ocurrencias_org(texto, plano, org_plano)
+    if not ocurrencias:
+        return False
+    d_org = min(abs(m.start() - pos_cargo) for m in ocurrencias)
     for otra in otras_orgs:
         otra_plano = normalizar(otra)
-        if not otra_plano or otra_plano == org_plano or otra_plano not in plano:
+        if not otra_plano or otra_plano == org_plano:
             continue
-        d_otra = min(abs(m.start() - pos_cargo)
-                     for m in re.finditer(re.escape(otra_plano), plano))
+        otras_ocurrencias = _ocurrencias_org(texto, plano, otra_plano)
+        if not otras_ocurrencias:
+            continue
+        d_otra = min(abs(m.start() - pos_cargo) for m in otras_ocurrencias)
         if d_otra < d_org:
             return False
     return True
@@ -737,19 +776,25 @@ def identificar_enunciador(evidencia: dict,
         nivel=nivel,
         dominio=dominio,
         dominio_cargo=dominio_cargo,
-        vinculado=_vinculado_a_org(plano, m.start(), org, otras_orgs),
+        vinculado=_vinculado_a_org(texto, plano, m.start(), org, otras_orgs),
     )
 
 
 def _dominio_bajo_autoridad(enunciador: Enunciador) -> bool:
     """¿El dominio del que habla cae dentro de su autoridad razonable?
 
-    Máxima autoridad: cualquier dominio de su organización. Cargo funcional:
-    solo el dominio del propio cargo. Cualquier otra combinación es ambigua y,
-    por la REGLA DURA, no alcanza autodeclaración.
+    Máxima autoridad: cualquier dominio de NEGOCIO de su organización — pero
+    el texto debe mencionar alguno (``DOMINIOS``, léxico cerrado): un cargo de
+    máxima autoridad (CEO/fundador/presidente) no concede autodeclaración
+    sobre un texto que no habla de nada del léxico de negocio, aunque el
+    cargo aparezca y esté vinculado a la organización (ver también el fix de
+    ``_vinculado_a_org``, causa raíz principal del caso real que motivó esto:
+    2026-08-28, "Clara Brugada"). Cargo funcional: solo el dominio del propio
+    cargo. Cualquier otra combinación es ambigua y, por la REGLA DURA, no
+    alcanza autodeclaración.
     """
     if enunciador.nivel == NIVEL_MAXIMA:
-        return True
+        return enunciador.dominio != DOMINIO_INDETERMINADO
     if enunciador.nivel != NIVEL_FUNCIONAL:
         return False
     if not enunciador.dominio_cargo or enunciador.dominio == DOMINIO_INDETERMINADO:
