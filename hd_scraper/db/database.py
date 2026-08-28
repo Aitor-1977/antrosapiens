@@ -79,7 +79,22 @@ class Database:
             # psycopg admite múltiples sentencias en un execute sin parámetros.
             self.conn.execute(SCHEMA_POSTGRES.read_text(encoding="utf-8"))
         self._migrar_pipeline_candidato()
+        self._migrar_organizacion_mencionada()
         self.conn.commit()
+
+    def _migrar_organizacion_mencionada(self) -> None:
+        """Migración idempotente: añade ``organizacion_mencionada`` a
+        ``evidencia_clasificada`` (bases persistentes previas a esta
+        ampliación del clasificador epistemológico). El ALTER es un no-op
+        cuando la columna ya existe. Ver CLAUDE.md "Frontera de
+        Interpretación" (entrada 2026-08-28).
+        """
+        try:
+            self.conn.execute(
+                "ALTER TABLE evidencia_clasificada "
+                "ADD COLUMN organizacion_mencionada TEXT")
+        except Exception:
+            pass
 
     def _migrar_pipeline_candidato(self) -> None:
         """Migración idempotente: añade ``candidato_id`` a ``pipeline_comercial``.

@@ -172,6 +172,35 @@ SOLO sobre datos ya extraídos por este mismo motor; sin IA, sin juicio libre):
   en `contextual`). No añade tipo literal nuevo. No nombra Deuda Cultural™ ni
   decide acción comercial. Implementación: mismos archivos de las dos entradas
   anteriores.
+- **Extracción estructural de organización explícitamente mencionada**
+  (autorizado por el operador —Mario— el 2026-08-28): resuelve un problema de
+  identidad detectado al operar el conector `busqueda_dinamica_founder`
+  (Tavily) — ese conector usa la FRASE de búsqueda como `empresa_mencionada`
+  (documentado desde su creación), y ese valor NUNCA debe convertirse en
+  identidad organizacional para promoción de candidatos. Este módulo añade
+  `organizacion_mencionada` (columna nueva, nullable, en
+  `evidencia_clasificada`): el nombre de una organización SOLO cuando el
+  propio texto lo declara con un patrón fuerte de aposición/fundación en
+  primera persona ("soy fundador/a de `<Nombre>`", "fundé/cofundé `<Nombre>`",
+  "mi startup/empresa se llama `<Nombre>`", "mi startup/empresa, `<Nombre>`,
+  ..."), reutilizando el léxico y las funciones ya existentes de
+  autoidentificación (`_buscar_autoidentificacion`, `_POSESIVO_ORG`) — sin
+  duplicar esa lógica en `relevance.py` ni en los conectores. Es **extracción
+  estructural determinista**, no interpretación semántica: sin IA, sin red,
+  sin heurística de respaldo (nunca usa la primera palabra capitalizada como
+  sustituto) — sin patrón fuerte, `organizacion_mencionada` queda `NULL` y la
+  evidencia NO genera expediente (se mantiene `evidencia_clasificada.
+  expediente_id` como `NOT NULL`, sin migrar el esquema para volverlo
+  nullable). `empresa_mencionada` se conserva sin cambios para los cuatro
+  conectores de Fase 1 (ahí ya es un nombre real, declarado por el operador);
+  el cambio de fuente de identidad organizacional aplica únicamente a la
+  evidencia del conector `busqueda_dinamica_founder`. No construye todavía
+  `organizacion_canonica`, resolución de entidad, deduplicación ni el
+  Concentrador de Evidencia — quedan explícitamente diferidos. No nombra
+  Deuda Cultural™ ni decide acción comercial. Implementación:
+  `hd_scraper/clasificacion_epistemologica.py` (detección) y
+  `hd_scraper/clasificacion_store.py` (persistencia y uso condicionado por
+  `connector` al crear expedientes); no se creó ningún módulo nuevo.
 
 **Exclusivo de RadarHD (JAMÁS aquí):**
 

@@ -20,6 +20,17 @@ cambio de DDL en producción (recomendado en la nota de entrega, no aplicado).
 
 El estado del expediente queda SIEMPRE en 'abierto'. La promoción a 'candidato'
 es una regla de la Entrega 3 y este módulo no la implementa ni la anticipa.
+
+Identidad organizacional del conector `busqueda_dinamica_founder` (autorizado
+2026-08-28, ver CLAUDE.md): ese conector guarda en `empresa_mencionada` la
+FRASE de búsqueda, nunca una organización real. Para su evidencia (y SOLO
+para ella — los cuatro conectores de Fase 1 siguen usando `empresa_mencionada`
+sin cambios, ahí ya es un nombre real declarado por el operador), la
+organización del expediente sale de `Clasificacion.organizacion_mencionada`
+(extracción estructural sobre el contenido, ver
+`clasificacion_epistemologica._detectar_organizacion_mencionada`). Sin
+organización identificada, la evidencia NO genera expediente: se mantiene
+`evidencia_clasificada.expediente_id` como NOT NULL, sin migrar a nullable.
 """
 from __future__ import annotations
 
@@ -35,6 +46,10 @@ from .clasificacion_epistemologica import (
 )
 
 ESTADO_INICIAL = "abierto"
+
+# Único conector cuyo `empresa_mencionada` es una frase de búsqueda, no una
+# organización real (ver docstring del módulo).
+_CONECTOR_BUSQUEDA_DINAMICA = "busqueda_dinamica_founder"
 
 log = logging.getLogger("hd_scraper.clasificacion_store")
 
@@ -131,9 +146,10 @@ def guardar_clasificacion(db, expediente_id: int, evidencia_id: int,
     db.execute(
         "INSERT INTO evidencia_clasificada (expediente_id, evidencia_id, "
         "tipo_epistemologico, enunciador_nombre, enunciador_cargo, "
-        "enunciador_dominio) VALUES (?,?,?,?,?,?)",
+        "enunciador_dominio, organizacion_mencionada) VALUES (?,?,?,?,?,?,?)",
         (expediente_id, evidencia_id, clas.tipo, clas.enunciador_nombre,
-         clas.enunciador_cargo, clas.enunciador_dominio))
+         clas.enunciador_cargo, clas.enunciador_dominio,
+         clas.organizacion_mencionada))
     return True
 
 
@@ -170,7 +186,15 @@ def clasificar_lote(db, *, desde: str | None = None, org: str | None = None,
     for ev in lote:
         clas = clasificar(ev, conocidas)
         distribucion[clas.tipo] += 1
-        organizacion = (ev.get("empresa_mencionada") or "").strip()
+        if ev.get("connector") == _CONECTOR_BUSQUEDA_DINAMICA:
+            # `empresa_mencionada` de este conector es la FRASE de búsqueda,
+            # nunca una organización real (ver CLAUDE.md, entrada 2026-08-28
+            # y docstring de busqueda_dinamica.py). Se usa exclusivamente la
+            # organización EXTRAÍDA DEL CONTENIDO; sin ella, no hay expediente
+            # (expediente_id sigue NOT NULL: no se migra a nullable).
+            organizacion = (clas.organizacion_mencionada or "").strip()
+        else:
+            organizacion = (ev.get("empresa_mencionada") or "").strip()
 
         intento = 0
         while True:
@@ -208,6 +232,8 @@ def clasificar_lote(db, *, desde: str | None = None, org: str | None = None,
             ejemplos.append({
                 "evidencia_id": ev.get("id"),
                 "organizacion": organizacion,
+                "empresa_mencionada": ev.get("empresa_mencionada"),
+                "organizacion_mencionada": clas.organizacion_mencionada,
                 "cita_textual": ev.get("cita_textual"),
                 "tipo_epistemologico": clas.tipo,
                 "enunciador_nombre": clas.enunciador_nombre,

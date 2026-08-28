@@ -418,6 +418,11 @@ CREATE TABLE IF NOT EXISTS evidencia_clasificada (
     enunciador_nombre   text,
     enunciador_cargo    text,
     enunciador_dominio  text,
+    -- Organización explícitamente mencionada en el texto (extracción
+    -- estructural, no la frase de búsqueda de conectores de descubrimiento
+    -- amplio). NULL cuando no hay patrón fuerte de aposición/fundación en el
+    -- texto — nunca se inventa. Ver CLAUDE.md "Frontera de Interpretación".
+    organizacion_mencionada text,
     creado_en           timestamptz NOT NULL DEFAULT now(),
     CONSTRAINT chk_tipo CHECK (tipo_epistemologico IN (
         'senal_primaria_autodeclaracion',
