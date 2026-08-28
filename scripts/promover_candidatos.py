@@ -27,14 +27,16 @@ def _informe(rep: dict) -> str:
         f"expedientes 'abierto' evaluados: {rep['evaluados']}",
         f"promovidos: {rep['promovidos']}"
         + ("" if rep["aplicado"] else "  (proyección)"),
+        f"conflictos de categoria (prospectos duplicado): {rep['conflictos_categoria']}",
         "",
         "detalle:",
     ]
     for d in rep["detalle"]:
         marca = "PROMUEVE" if d["promovido"] else "queda abierto"
+        conflicto = "  ⚠ CONFLICTO DE CATEGORIA (revisar prospectos)" if d["categoria_en_conflicto"] else ""
         lineas.append(
             f"  [{d['expediente_id']}] {d['organizacion']} "
-            f"(categoria={d['categoria'] or '—'}) -> {marca}")
+            f"(categoria={d['categoria'] or '—'}) -> {marca}{conflicto}")
         lineas.append(f"      tipos: {d['tipos_encontrados'] or '(ninguno)'}")
         lineas.append(f"      razón: {d['razon']}")
     return "\n".join(lineas)

@@ -111,12 +111,12 @@ def _prospecto(db, nombre, categoria):
 
 def test_categoria_de_organizacion_case_insensitive(db):
     _prospecto(db, "Acme", "Startup")
-    assert categoria_de_organizacion(db, "acme") == "Startup"
-    assert categoria_de_organizacion(db, "ACME") == "Startup"
+    assert categoria_de_organizacion(db, "acme") == ("Startup", False)
+    assert categoria_de_organizacion(db, "ACME") == ("Startup", False)
 
 
 def test_categoria_de_organizacion_sin_match_es_none(db):
-    assert categoria_de_organizacion(db, "Organización Inexistente") is None
+    assert categoria_de_organizacion(db, "Organización Inexistente") == (None, False)
 
 
 def test_promover_escribe_y_es_idempotente(db):
@@ -226,13 +226,70 @@ def test_no_toca_evidencia_clasificada_ni_prospectos(db):
     assert dict(db.fetch_one("SELECT * FROM prospectos")) == antes_pr
 
 
-def test_categoria_prefiere_la_fila_mas_reciente_ante_duplicados(db):
-    """Regresión del incidente 2026-08-22: un reseed tras cambiar categoria
-    en seed_prospectos.py crea un duplicado (hash_dedup distinto) sin borrar
-    la fila vieja. La lectura debe preferir la declaración más reciente, no
-    la más antigua."""
+def test_categoria_detecta_conflicto_ante_duplicados_no_elige_en_silencio(db):
+    """Regresión del incidente 2026-08-22/23: un reseed (o un alta duplicada
+    vía /prospectos/bulk) tras cambiar categoria crea un duplicado
+    (hash_dedup distinto, porque incluye categoria) sin borrar la fila vieja.
+    Elegir en silencio la fila más reciente fue justo lo que dejó promover a
+    Bitso/Kavak/Nubank/Rappi/Ualá pese a estar marcadas 'Corporativo': un
+    duplicado 'Startup' más nuevo ganaba la lectura. Ahora debe señalar el
+    conflicto, no resolverlo adivinando cuál es la buena."""
     _prospecto(db, "Nubank", "Startup")
-    _prospecto(db, "Nubank", "Corporativo")  # simula el duplicado del reseed
+    _prospecto(db, "Nubank", "Corporativo")  # simula el duplicado real
 
     assert len(db.fetch_all("SELECT id FROM prospectos WHERE nombre = 'Nubank'")) == 2
-    assert categoria_de_organizacion(db, "Nubank") == "Corporativo"
+    assert categoria_de_organizacion(db, "Nubank") == (None, True)
+
+
+def test_categoria_sin_conflicto_con_dos_filas_iguales(db):
+    """Dos filas con la MISMA categoria (p. ej. un alta repetida sin cambio
+    de categoria) no es el defecto de datos que preocupa: no es conflicto."""
+    _prospecto(db, "Acme", "Startup")
+    db.execute(
+        "INSERT INTO prospectos (nombre, categoria, hash_dedup, creado_en, "
+        "actualizado_en) VALUES (?, ?, ?, ?, ?)",
+        ("Acme", "Startup", "hash-duplicado-mismo-valor", ahora_iso(), ahora_iso()))
+
+    assert len(db.fetch_all("SELECT id FROM prospectos WHERE nombre = 'Acme'")) == 2
+    assert categoria_de_organizacion(db, "Acme") == ("Startup", False)
+
+
+def test_conflicto_bloquea_promocion_aunque_haya_autodeclaracion(db):
+    """El expediente NO promueve mientras el conflicto en prospectos no se
+    resuelva a mano, aun con evidencia que normalmente bastaría."""
+    _prospecto(db, "Nubank", "Startup")
+    _prospecto(db, "Nubank", "Corporativo")
+    exp = _expediente(db, "Nubank")
+    _clasificar(db, exp, _evidencia(db, "Nubank", 1), "senal_primaria_autodeclaracion")
+
+    rep = promover_lote(db, aplicar=True)
+    assert rep["promovidos"] == 0
+    assert rep["conflictos_categoria"] == 1
+    detalle = rep["detalle"][0]
+    assert detalle["categoria_en_conflicto"] is True
+    assert detalle["promovido"] is False
+    assert "conflicto" in detalle["razon"].lower()
+    fila = dict(db.fetch_one("SELECT estado FROM expedientes_candidatos WHERE id = ?", (exp,)))
+    assert fila["estado"] == "abierto"
+
+
+def test_conflicto_se_registra_en_el_log(db, caplog):
+    import logging
+    _prospecto(db, "Nubank", "Startup")
+    _prospecto(db, "Nubank", "Corporativo")
+
+    with caplog.at_level(logging.WARNING, logger="hd_scraper.promocion_store"):
+        categoria_de_organizacion(db, "Nubank")
+
+    assert any("conflicto" in r.message.lower() for r in caplog.records)
+
+
+def test_sin_conflicto_categoria_en_conflicto_es_false_en_el_detalle(db):
+    _prospecto(db, "Acme", "Startup")
+    exp = _expediente(db, "Acme")
+    _clasificar(db, exp, _evidencia(db, "Acme", 1), "senal_primaria_autodeclaracion")
+
+    rep = promover_lote(db, aplicar=True)
+    assert rep["conflictos_categoria"] == 0
+    assert rep["detalle"][0]["categoria_en_conflicto"] is False
+    assert rep["promovidos"] == 1
