@@ -4,6 +4,7 @@ from hd_scraper.clasificacion_epistemologica import (
     TIPO_CONTEXTUAL,
     TIPO_CORROBORANTE,
     TIPO_HUELLA_PRACTICA,
+    _detectar_organizacion_mencionada,
     clasificar,
     detectar_dominio,
 )
@@ -24,13 +25,14 @@ def _ev(cita, *, org="Acme", origen="prensa", medio="Prensa X",
     }
 
 
-def _insertar(db, cita, *, org="Acme", origen="prensa", n=0):
+def _insertar(db, cita, *, org="Acme", origen="prensa", n=0,
+              connector="google_news"):
     db.execute(
         "INSERT INTO evidencias (cita_textual, fecha_extraccion, url_fuente, "
         "nombre_medio, empresa_mencionada, tipo_evento, origen_declaracion, "
         "hash_dedup, connector, creado_en) VALUES (?,?,?,?,?,?,?,?,?,?)",
         (cita, ahora_iso(), f"https://ejemplo.test/{n}", "Prensa X", org,
-         "lanzamiento", origen, f"hash-{n}", "google_news", ahora_iso()))
+         "lanzamiento", origen, f"hash-{n}", connector, ahora_iso()))
 
 
 # ── Cascada ────────────────────────────────────────────────────────────────
@@ -266,6 +268,102 @@ def test_filtros_acotan_el_lote(db):
     _insertar(db, "Beta amplía su red", org="Beta", n=2)
     assert clasificar_lote(db, org="Beta")["pendientes"] == 1
     assert clasificar_lote(db, limite=1)["pendientes"] == 1
+
+
+# ── Organización explícitamente mencionada (ampliación 2026-08-28) ─────────
+
+def test_detecta_soy_fundador_de():
+    assert _detectar_organizacion_mencionada(
+        "Soy fundadora de Acme y cometí el error de crecer muy rápido."
+    ) == "Acme"
+
+
+def test_detecta_funde():
+    assert _detectar_organizacion_mencionada(
+        "Fundé Acme en 2019 con dos amigos de la universidad."
+    ) == "Acme"
+
+
+def test_detecta_mi_startup_se_llama():
+    assert _detectar_organizacion_mencionada(
+        "Mi startup se llama Acme y hoy tiene 40 empleados."
+    ) == "Acme"
+
+
+def test_detecta_mi_empresa_coma_nombre_coma():
+    assert _detectar_organizacion_mencionada(
+        "Mi empresa, Acme, tuvo que despedir a la mitad del equipo."
+    ) == "Acme"
+
+
+def test_cometi_el_error_sin_organizacion_es_null():
+    assert _detectar_organizacion_mencionada(
+        "Cometí el error de contratar rápido en mi startup."
+    ) is None
+
+
+def test_generalizacion_sobre_startups_es_null():
+    assert _detectar_organizacion_mencionada(
+        "Las startups en general fallan por falta de validación."
+    ) is None
+
+
+def test_mi_jefe_no_produce_organizacion_propia():
+    assert _detectar_organizacion_mencionada(
+        "Mi jefe me pidió que dejara mi proyecto paralelo, así que cerré "
+        "mi startup."
+    ) is None
+
+
+def test_consulta_tavily_como_texto_no_es_organizacion():
+    """La frase de búsqueda en sí, si apareciera como cita_textual, no debe
+    producir una organización — no hay patrón de aposición/fundación."""
+    assert _detectar_organizacion_mencionada('"cometí el error de" startup') is None
+
+
+def test_clasificar_lote_usa_organizacion_mencionada_para_busqueda_dinamica(db):
+    """La evidencia_id del conector Tavily NUNCA usa la frase de búsqueda
+    (empresa_mencionada) como organización del expediente — solo la
+    organización extraída del contenido."""
+    _insertar(
+        db,
+        "Soy fundador de Acme y cometí el error de crecer muy rápido.",
+        org='"cometí el error de" startup',  # la frase, tal como la guarda el conector real
+        origen="usuario",
+        n=1,
+        connector="busqueda_dinamica_founder",
+    )
+    rep = clasificar_lote(db, aplicar=True)
+    assert rep["expedientes_creados"] == 1
+    assert buscar_expediente(db, "Acme") is not None
+    assert buscar_expediente(db, '"cometí el error de" startup') is None
+
+
+def test_clasificar_lote_sin_organizacion_no_crea_expediente_para_busqueda_dinamica(db):
+    """Sin patrón de organización en el contenido, la fila del conector Tavily
+    se clasifica pero NO genera expediente (expediente_id sigue NOT NULL)."""
+    _insertar(
+        db,
+        "Cometí el error de contratar rápido en mi startup.",
+        org='"cometí el error de" startup',
+        origen="usuario",
+        n=2,
+        connector="busqueda_dinamica_founder",
+    )
+    rep = clasificar_lote(db, aplicar=True)
+    assert rep["expedientes_creados"] == 0
+    assert rep["escritas"] == 0
+    assert buscar_expediente(db, '"cometí el error de" startup') is None
+
+
+def test_clasificar_lote_conectores_fase1_no_cambian_de_comportamiento(db):
+    """Los conectores que ya usaban empresa_mencionada como org real (Fase 1)
+    siguen exactamente igual: no se ven afectados por esta ampliación."""
+    _insertar(db, "Juan Pérez, CEO de Acme, anunció despidos",
+             org="Acme", n=3, connector="google_news")
+    rep = clasificar_lote(db, aplicar=True)
+    assert rep["expedientes_creados"] == 1
+    assert buscar_expediente(db, "Acme") is not None
 
 
 def test_la_evidencia_original_no_se_modifica(db):

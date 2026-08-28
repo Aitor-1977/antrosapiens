@@ -60,7 +60,7 @@ import re
 import unicodedata
 from dataclasses import dataclass
 
-from .relevance import es_opinion
+from .relevance import _GENERICOS_SECTOR, _STOP_CAP, es_opinion
 
 VERSION_REGLAS = "clasificacion_epistemologica.v1"
 
@@ -369,6 +369,74 @@ def _hay_situacion_concreta(texto: str) -> bool:
     return False
 
 
+# ── Organización explícitamente mencionada (autorizado 2026-08-28) ─────────
+# Ver docstring del módulo y la entrada correspondiente en CLAUDE.md. Reutiliza
+# el mismo léxico de primera persona de arriba (fundar/poseer una
+# organización), NO el léxico de terceros (_CARGOS) ni nada de relevance.py o
+# de los conectores: solo se importan de ahí los stopwords/genéricos de
+# sector para validar el candidato, exactamente como ya hace ``detectar_empresa``
+# en relevance.py, para no duplicar esa lista.
+#
+# Cada ancla se busca en ``plano`` (léxico determinista, insensible a acentos);
+# el nombre se captura del texto ORIGINAL justo donde termina la ancla —
+# ``_plano`` conserva el índice carácter a carácter, así que las posiciones
+# son intercambiables entre ambas cadenas.
+_ANCLAS_ORG: tuple[str, ...] = (
+    r"\bsoy (?:el |la )?(?:co-?)?fundador(?:a)? de\s+",
+    r"\bcofund[eé]\s+",
+    r"\bfund[eé]\s+",
+    r"\bmi (?:startup|empresa) se llama\s+",
+    r"\bmi (?:startup|empresa),\s*",
+)
+_ANCLAS_ORG_COMPILADAS = tuple(re.compile(p) for p in _ANCLAS_ORG)
+
+# Nombre propio: 1 a 4 tokens capitalizados consecutivos. A diferencia de
+# ``_NOMBRE`` (nombres de persona, que exige 2+ tokens para no confundirse con
+# el arranque de una oración), aquí basta un solo token ("Acme") porque la
+# ANCLA — no la capitalización — es la que desambigua: el candidato se busca
+# únicamente justo después de una frase de fundación/posesión ya validada.
+_NOMBRE_ORG = re.compile(
+    r"[A-ZÁÉÍÓÚÜÑ][\wÁÉÍÓÚÜÑáéíóúüñ'\-]*(?:\s+[A-ZÁÉÍÓÚÜÑ][\wÁÉÍÓÚÜÑáéíóúüñ'\-]*){0,3}"
+)
+
+
+def _es_organizacion_valida(candidato: str) -> bool:
+    """Filtro mínimo de sensatez, reutilizando los stopwords/genéricos de
+    ``relevance.py`` (misma lista que usa ``detectar_empresa`` allá) para no
+    admitir palabras comunes o términos de sector como si fueran un nombre.
+    """
+    if len(candidato) < 2:
+        return False
+    primer_token = normalizar(candidato.split()[0])
+    return primer_token not in _STOP_CAP and primer_token not in _GENERICOS_SECTOR
+
+
+def _detectar_organizacion_mencionada(texto: str) -> str | None:
+    """Organización explícitamente mencionada, o ``None``.
+
+    Extracción ESTRUCTURAL determinista: solo reconoce patrones fuertes de
+    aposición/fundación en primera persona ("soy fundadora de Acme", "fundé
+    Acme", "mi startup se llama Acme", "mi empresa, Acme, ..."). Sin
+    heurística de respaldo — NUNCA usa la primera palabra capitalizada del
+    texto como sustituto (a diferencia de ``detectar_empresa`` en
+    relevance.py, que sí lo hace y por eso no sirve para este propósito: sobre
+    prosa en primera persona confunde el arranque de la oración con el nombre
+    de la empresa). Sin patrón fuerte, devuelve ``None``: nunca se inventa.
+    """
+    plano = _plano(texto)
+    for ancla in _ANCLAS_ORG_COMPILADAS:
+        m = ancla.search(plano)
+        if not m:
+            continue
+        candidato_m = _NOMBRE_ORG.match(texto, m.end())
+        if not candidato_m:
+            continue
+        candidato = candidato_m.group(0).strip()
+        if _es_organizacion_valida(candidato):
+            return candidato
+    return None
+
+
 # ── Nombres propios y atribución ────────────────────────────────────────────
 
 _TOKEN = r"[A-ZÁÉÍÓÚÜÑ][a-záéíóúüñ'’\-]+"
@@ -441,6 +509,11 @@ class Clasificacion:
     enunciador_nombre: str | None
     enunciador_cargo: str | None
     enunciador_dominio: str | None
+    # Organización explícitamente mencionada en el texto (extracción
+    # estructural; ver ``_detectar_organizacion_mencionada``). ``None`` cuando
+    # no hay patrón fuerte — nunca es la frase de búsqueda de un conector de
+    # descubrimiento amplio. Independiente de ``tipo``: se calcula siempre.
+    organizacion_mencionada: str | None
     # Razón legible de la rama tomada. Se usa en el informe del dry-run; la
     # tabla no tiene columna para guardarla.
     razon: str
@@ -718,6 +791,9 @@ def clasificar(evidencia: dict,
     dominio_salida = (
         enunciador.dominio if enunciador.dominio != DOMINIO_INDETERMINADO else None
     )
+    # Se calcula siempre, independiente de la rama de la cascada: es
+    # extracción estructural sobre el texto, no una consecuencia del tipo.
+    organizacion_mencionada = _detectar_organizacion_mencionada(texto)
 
     def salida(tipo: str, razon: str) -> Clasificacion:
         return Clasificacion(
@@ -725,6 +801,7 @@ def clasificar(evidencia: dict,
             enunciador_nombre=enunciador.nombre,
             enunciador_cargo=enunciador.cargo,
             enunciador_dominio=dominio_salida,
+            organizacion_mencionada=organizacion_mencionada,
             razon=razon,
         )
 
