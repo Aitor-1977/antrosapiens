@@ -189,9 +189,13 @@ SOLO sobre datos ya extraídos por este mismo motor; sin IA, sin juicio libre):
   estructural determinista**, no interpretación semántica: sin IA, sin red,
   sin heurística de respaldo (nunca usa la primera palabra capitalizada como
   sustituto) — sin patrón fuerte, `organizacion_mencionada` queda `NULL` y la
-  evidencia NO genera expediente (se mantiene `evidencia_clasificada.
-  expediente_id` como `NOT NULL`, sin migrar el esquema para volverlo
-  nullable). `empresa_mencionada` se conserva sin cambios para los cuatro
+  evidencia NO genera expediente. **Actualización 2026-08-29 (§8.3 del
+  documento maestro):** `evidencia_clasificada.expediente_id` se migró a
+  nullable (antes era `NOT NULL`, y por eso la evidencia sin organización
+  identificable no podía persistirse en absoluto — se perdía en silencio,
+  confirmado empíricamente con las 96 evidencias de Tavily: 0 quedaron
+  guardadas). Ahora se conserva con `expediente_id = NULL`: sin expediente,
+  sin promoción posible, pero sin perderse. `empresa_mencionada` se conserva sin cambios para los cuatro
   conectores de Fase 1 (ahí ya es un nombre real, declarado por el operador);
   el cambio de fuente de identidad organizacional aplica únicamente a la
   evidencia del conector `busqueda_dinamica_founder`. No construye todavía

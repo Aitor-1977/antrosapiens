@@ -455,7 +455,12 @@ CREATE TABLE IF NOT EXISTS expedientes_candidatos (
 
 CREATE TABLE IF NOT EXISTS evidencia_clasificada (
     id                  INTEGER PRIMARY KEY AUTOINCREMENT,
-    expediente_id       INTEGER NOT NULL REFERENCES expedientes_candidatos(id),
+    -- NULL cuando la evidencia no tiene organización identificable (ver
+    -- §8.3 del documento maestro, 2026-08-29): se conserva la clasificación
+    -- igual, sin expediente ni promoción posible. Antes era NOT NULL y la
+    -- fila simplemente no se guardaba — una evidencia sin organización se
+    -- perdía en silencio.
+    expediente_id       INTEGER REFERENCES expedientes_candidatos(id),
     evidencia_id        INTEGER NOT NULL REFERENCES evidencias(id),
     tipo_epistemologico TEXT NOT NULL,
     enunciador_nombre   TEXT,

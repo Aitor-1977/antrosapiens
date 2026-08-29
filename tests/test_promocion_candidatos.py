@@ -293,3 +293,20 @@ def test_sin_conflicto_categoria_en_conflicto_es_false_en_el_detalle(db):
     assert rep["conflictos_categoria"] == 0
     assert rep["detalle"][0]["categoria_en_conflicto"] is False
     assert rep["promovidos"] == 1
+
+
+def test_evidencia_sin_expediente_nunca_se_promueve(db):
+    """§8.3 (2026-08-29): una evidencia_clasificada con expediente_id=NULL
+    (sin organización identificable) no tiene ningún expediente que evaluar
+    — promover_lote solo recorre `expedientes_candidatos`, y una fila
+    huérfana no crea ninguna ahí. Confirma que no se cuela en la promoción
+    ni provoca error."""
+    ev = _evidencia(db, "sin organizacion", 99)
+    db.execute(
+        "INSERT INTO evidencia_clasificada (expediente_id, evidencia_id, "
+        "tipo_epistemologico) VALUES (?,?,?)",
+        (None, ev, "senal_primaria_autodeclaracion"))
+
+    rep = promover_lote(db, aplicar=True)
+    assert rep["evaluados"] == 0
+    assert rep["promovidos"] == 0

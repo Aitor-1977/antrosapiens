@@ -391,9 +391,10 @@ def test_clasificar_lote_usa_organizacion_mencionada_para_busqueda_dinamica(db):
     assert buscar_expediente(db, '"cometí el error de" startup') is None
 
 
-def test_clasificar_lote_sin_organizacion_no_crea_expediente_para_busqueda_dinamica(db):
-    """Sin patrón de organización en el contenido, la fila del conector Tavily
-    se clasifica pero NO genera expediente (expediente_id sigue NOT NULL)."""
+def test_clasificar_lote_sin_organizacion_persiste_sin_expediente(db):
+    """§8.3 (2026-08-29): sin patrón de organización en el contenido, la fila
+    del conector Tavily se clasifica y SE PERSISTE (ya no se pierde), con
+    expediente_id = NULL — no genera expediente ni puede promoverse."""
     _insertar(
         db,
         "Cometí el error de contratar rápido en mi startup.",
@@ -404,8 +405,13 @@ def test_clasificar_lote_sin_organizacion_no_crea_expediente_para_busqueda_dinam
     )
     rep = clasificar_lote(db, aplicar=True)
     assert rep["expedientes_creados"] == 0
-    assert rep["escritas"] == 0
+    assert rep["escritas"] == 1
     assert buscar_expediente(db, '"cometí el error de" startup') is None
+
+    fila = dict(db.fetch_one(
+        "SELECT expediente_id FROM evidencia_clasificada WHERE evidencia_id = "
+        "(SELECT id FROM evidencias WHERE hash_dedup = 'hash-2')"))
+    assert fila["expediente_id"] is None
 
 
 def test_clasificar_lote_conectores_fase1_no_cambian_de_comportamiento(db):
