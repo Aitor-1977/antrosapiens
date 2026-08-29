@@ -80,7 +80,39 @@ class Database:
             self.conn.execute(SCHEMA_POSTGRES.read_text(encoding="utf-8"))
         self._migrar_pipeline_candidato()
         self._migrar_organizacion_mencionada()
+        self._migrar_expediente_id_nullable()
         self.conn.commit()
+
+    def _migrar_expediente_id_nullable(self) -> None:
+        """Migración idempotente (2026-08-29, ver §8.3 del documento maestro):
+        ``evidencia_clasificada.expediente_id`` pasa a admitir NULL.
+
+        Antes, una evidencia sin organización identificable no podía
+        persistirse en absoluto (la columna era NOT NULL) — se perdía en
+        silencio, confirmado empíricamente con las 96 evidencias de
+        `busqueda_dinamica_founder`: 0 quedaron guardadas en
+        `evidencia_clasificada`, ni siquiera las 5 con
+        `senal_primaria_autodeclaracion`. Ahora se conserva con
+        `expediente_id = NULL`: sin fila en `expedientes_candidatos` que
+        referencie esa clasificación, no hay caso organizacional ni
+        promoción posible (`promocion_store.py` solo evalúa expedientes que
+        SÍ existen en `expedientes_candidatos`, así que una fila con
+        `expediente_id` NULL nunca entra en ese universo) — pero la
+        evidencia y su clasificación ya no se pierden.
+
+        Solo aplica en Postgres: SQLite no soporta
+        ``ALTER TABLE ... ALTER COLUMN ... DROP NOT NULL``, y las bases
+        SQLite (dev/tests) siempre se crean desde cero con ``schema.sql``,
+        que ya declara la columna nullable.
+        """
+        if self.dialect != "postgres":
+            return
+        try:
+            self.conn.execute(
+                "ALTER TABLE evidencia_clasificada "
+                "ALTER COLUMN expediente_id DROP NOT NULL")
+        except Exception:
+            pass
 
     def _migrar_organizacion_mencionada(self) -> None:
         """Migración idempotente: añade ``organizacion_mencionada`` a

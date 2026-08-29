@@ -28,9 +28,18 @@ para ella — los cuatro conectores de Fase 1 siguen usando `empresa_mencionada`
 sin cambios, ahí ya es un nombre real declarado por el operador), la
 organización del expediente sale de `Clasificacion.organizacion_mencionada`
 (extracción estructural sobre el contenido, ver
-`clasificacion_epistemologica._detectar_organizacion_mencionada`). Sin
-organización identificada, la evidencia NO genera expediente: se mantiene
-`evidencia_clasificada.expediente_id` como NOT NULL, sin migrar a nullable.
+`clasificacion_epistemologica._detectar_organizacion_mencionada`).
+
+Evidencia sin organización identificada (§8.3 del documento maestro,
+2026-08-29): la clasificación SÍ se persiste, con
+`evidencia_clasificada.expediente_id = NULL` — la columna se migró a
+nullable (ver `db/database.py:_migrar_expediente_id_nullable`) precisamente
+para esto. Antes (hasta 2026-08-28) la fila completa se descartaba en
+silencio porque la columna era NOT NULL; eso perdía evidencia real, incluida
+la de mayor peso epistemológico (`senal_primaria_autodeclaracion`). Sin
+`expediente_id`, no hay expediente ni promoción posible — pero la evidencia
+y su clasificación quedan conservadas y pueden vincularse más adelante si
+mejora la extracción de identidad organizacional.
 """
 from __future__ import annotations
 
@@ -138,9 +147,13 @@ def ya_clasificada(db, evidencia_id: int) -> bool:
         (evidencia_id,)) is not None
 
 
-def guardar_clasificacion(db, expediente_id: int, evidencia_id: int,
+def guardar_clasificacion(db, expediente_id: int | None, evidencia_id: int,
                           clas: Clasificacion) -> bool:
-    """Inserta la clasificación. Devuelve False si ya existía (no duplica)."""
+    """Inserta la clasificación. Devuelve False si ya existía (no duplica).
+
+    `expediente_id=None` cuando la evidencia no tiene organización
+    identificada (§8.3): se persiste igual, sin vincular a ningún
+    expediente."""
     if ya_clasificada(db, evidencia_id):
         return False
     db.execute(
@@ -191,7 +204,7 @@ def clasificar_lote(db, *, desde: str | None = None, org: str | None = None,
             # nunca una organización real (ver CLAUDE.md, entrada 2026-08-28
             # y docstring de busqueda_dinamica.py). Se usa exclusivamente la
             # organización EXTRAÍDA DEL CONTENIDO; sin ella, no hay expediente
-            # (expediente_id sigue NOT NULL: no se migra a nullable).
+            # (expediente_id queda NULL, ver §8.3 del documento maestro).
             organizacion = (clas.organizacion_mencionada or "").strip()
         else:
             organizacion = (ev.get("empresa_mencionada") or "").strip()
@@ -199,9 +212,16 @@ def clasificar_lote(db, *, desde: str | None = None, org: str | None = None,
         intento = 0
         while True:
             try:
-                if aplicar and organizacion:
-                    expediente_id, creado = obtener_o_crear_expediente(db, organizacion)
-                    expedientes_creados += int(creado)
+                if aplicar:
+                    # Con organización, se crea/reutiliza el expediente y se
+                    # vincula. Sin ella, la clasificación se persiste igual
+                    # (expediente_id = NULL): la evidencia nunca se pierde
+                    # por falta de identidad organizacional (§8.3).
+                    if organizacion:
+                        expediente_id, creado = obtener_o_crear_expediente(db, organizacion)
+                        expedientes_creados += int(creado)
+                    else:
+                        expediente_id = None
                     if guardar_clasificacion(db, expediente_id, ev["id"], clas):
                         escritas += 1
                 elif organizacion:
