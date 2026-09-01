@@ -204,7 +204,11 @@ SOLO sobre datos ya extraídos por este mismo motor; sin IA, sin juicio libre):
   Deuda Cultural™ ni decide acción comercial. Implementación:
   `hd_scraper/clasificacion_epistemologica.py` (detección) y
   `hd_scraper/clasificacion_store.py` (persistencia y uso condicionado por
-  `connector` al crear expedientes); no se creó ningún módulo nuevo.
+  `connector` al crear expedientes); no se creó ningún módulo nuevo. Una
+  evidencia admisible sin organización identificable no se descarta: se
+  conserva como evidencia clasificada con `expediente_id = NULL` y no puede
+  convertirse en candidato hasta que exista una organización identificable.
+  El sistema nunca debe inventar una organización para crear un expediente.
 
 **Exclusivo de RadarHD (JAMÁS aquí):**
 
