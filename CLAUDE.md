@@ -199,12 +199,42 @@ SOLO sobre datos ya extraídos por este mismo motor; sin IA, sin juicio libre):
   conectores de Fase 1 (ahí ya es un nombre real, declarado por el operador);
   el cambio de fuente de identidad organizacional aplica únicamente a la
   evidencia del conector `busqueda_dinamica_founder`. No construye todavía
-  `organizacion_canonica`, resolución de entidad, deduplicación ni el
-  Concentrador de Evidencia — quedan explícitamente diferidos. No nombra
+  `organizacion_canonica`, resolución de entidad ni deduplicación entre
+  nombres distintos de una misma organización — quedan explícitamente
+  diferidos (ver siguiente entrada para la pieza mínima que SÍ se construyó
+  del Concentrador de Evidencia). No nombra
   Deuda Cultural™ ni decide acción comercial. Implementación:
   `hd_scraper/clasificacion_epistemologica.py` (detección) y
   `hd_scraper/clasificacion_store.py` (persistencia y uso condicionado por
-  `connector` al crear expedientes); no se creó ningún módulo nuevo.
+  `connector` al crear expedientes); no se creó ningún módulo nuevo. Una
+  evidencia admisible sin organización identificable no se descarta: se
+  conserva como evidencia clasificada con `expediente_id = NULL` y no puede
+  convertirse en candidato hasta que exista una organización identificable.
+  El sistema nunca debe inventar una organización para crear un expediente.
+- **Concentrador de Evidencia — lectura, sólo por coincidencia exacta de
+  nombre** (autorizado por el operador —Mario— el 2026-09-02, como parte de
+  la integración de arquitectura multifuente): consulta de **solo lectura**
+  que, dada una organización, devuelve TODAS las evidencias que la
+  mencionan sin importar el conector/fuente que las capturó — unión de
+  `evidencias.empresa_mencionada` (Fase 1: nombre real declarado por el
+  operador o detectado estructuralmente) con
+  `evidencia_clasificada.organizacion_mencionada` (Tavily: extracción
+  estructural de la entrada anterior). La coincidencia es **exacta**
+  (`LOWER(TRIM(...))`, ningún fuzzy-match ni embeddings): dos nombres
+  distintos de la misma organización real ("Acme" vs. "Acme Inc.") NO se
+  agrupan todavía — eso es la resolución de entidad que sigue diferida (ver
+  entrada anterior). Es agregación estructural, no interpretación: no
+  aplica scoring, no calcula Deuda Cultural™, no decide candidatura ni
+  reemplaza `hd_scraper/candidato.py` (que resuelve otra identidad —
+  `candidato_id` sobre los expedientes de `analisis.py`/`expediente_vivo.py`
+  para el puente BC-I↔BC-II — ni se toca ni se duplica aquí). El resumen que
+  acompaña la consulta es puramente descriptivo (recuentos: evidencias
+  totales, fuentes/conectores distintos, señales primarias por tipo
+  epistemológico) — **no es Densidad Evidencial ni una decisión**; una
+  futura Densidad Evidencial (o cualquier equivalencia Densidad = Deuda
+  Cultural™) sigue exigiendo su propia entrada en esta sección antes de
+  escribirse. Implementación: `hd_scraper/concentrador_evidencia.py` (nuevo
+  módulo, sin escritura, sin tablas nuevas).
 
 **Exclusivo de RadarHD (JAMÁS aquí):**
 
