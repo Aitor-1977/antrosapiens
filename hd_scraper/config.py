@@ -121,6 +121,18 @@ class Settings:
         default_factory=lambda: _parse_slugs(os.getenv("HD_TRACKED_SLUGS", ""))
     )
 
+    # Fuentes habilitadas para el orquestador multifuente (coma-separadas, por
+    # nombre de conector: "google_news,gdelt"). Vacío = todas las registradas en
+    # connectors.REGISTRY. NO cambia el scheduler, que sigue barriendo el
+    # REGISTRY completo; solo acota las corridas lanzadas vía OrquestadorFuentes.
+    fuentes_activas: tuple[str, ...] = field(
+        default_factory=lambda: tuple(
+            f.strip()
+            for f in os.getenv("HD_FUENTES_ACTIVAS", "").split(",")
+            if f.strip()
+        )
+    )
+
     @property
     def sqlite_path(self) -> Path | None:
         if self.database_url.startswith("sqlite:///"):

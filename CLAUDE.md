@@ -128,6 +128,22 @@ SOLO sobre datos ya extraídos por este mismo motor; sin IA, sin juicio libre):
   Entrega 3). Implementación: `hd_scraper/clasificacion_epistemologica.py`
   (cascada pura) y `hd_scraper/clasificacion_store.py` (persistencia en
   `expedientes_candidatos` y `evidencia_clasificada`).
+- **Concentración de evidencia y densidad evidencial (Entrega 4)** (autorizado
+  por el operador el 2026-09-02): sobre evidencia YA extraída y YA clasificada
+  por este motor, agrupa todas las evidencias de una organización identificada
+  (vía `expedientes_candidatos` / `evidencia_clasificada`) sin importar la
+  fuente, y calcula una **métrica de densidad** puramente aritmética: número de
+  evidencias, número de fuentes independientes, número de señales primarias,
+  corroborantes/contextuales y persistencia temporal (rango de fechas de
+  publicación). Determinista y reproducible: mismo insumo ⇒ misma métrica. Sin
+  IA, sin red. **NO puntúa, NO decide y NO nombra Deuda Cultural™**:
+  `densidad ≠ Deuda Cultural`; la densidad solo prioriza qué casos merecen
+  revisión humana. No promueve expedientes (eso sigue siendo Entrega 3) ni
+  ejecuta acción comercial. La evidencia sin organización identificada se
+  conserva y se puede listar, pero nunca entra en un caso ni se promueve.
+  Implementación: `hd_scraper/concentrador.py`. La orquestación multifuente que
+  la alimenta (`hd_scraper/orquestador.py`) solo coordina los conectores
+  existentes; no extrae interpretación nueva.
 
 **Exclusivo de RadarHD (JAMÁS aquí):**
 
@@ -142,9 +158,11 @@ ICP, Deuda preliminar sobre señales de evento), `hd_scraper/engine/rule_engine.
 estructural preliminar de Deuda sobre el discurso corporativo),
 `hd_scraper/sintesis.py` (síntesis estructural preliminar por organización),
 `hd_scraper/nvidia_parser.py` (síntesis estructural LLM preliminar por
-organización) y `hd_scraper/clasificacion_epistemologica.py` +
+organización), `hd_scraper/clasificacion_epistemologica.py` +
 `hd_scraper/clasificacion_store.py` (clasificación epistemológica de la
-evidencia). No reproducir esa lógica en otros módulos.
+evidencia) y `hd_scraper/concentrador.py` (concentración de evidencia por
+organización identificada + densidad evidencial aritmética; sin scoring, sin
+Deuda). No reproducir esa lógica en otros módulos.
 
 **Regla de ampliación:** cualquier ampliación futura de interpretación en este
 repo exige actualizar **esta misma sección ANTES de escribir código**. Si una
@@ -218,8 +236,16 @@ crea el esquema. En Vercel se auto-detecta `DATABASE_URL`/`POSTGRES_URL`.
 
 - **Conectores** (`hd_scraper/connectors/`): clase base `Connector` con
   `search / fetch / normalize / validate`. Cada fuente es intercambiable.
+  `connectors/__init__.py:REGISTRY` es el registro de fuentes probadas.
+- **Orquestador de fuentes** (`orquestador.py`): coordina los conectores del
+  `REGISTRY` para una `QuerySpec`, según las fuentes habilitadas
+  (`HD_FUENTES_ACTIVAS`, vacío = todas). Reutiliza `pipeline.run_connector`;
+  no reimplementa el pipeline ni infiere nada.
 - **Pipeline** (`pipeline.py`): search → normalize → validate → (guardar crudo +
   escribir con dedup) | rechazo.
+- **Concentrador** (`concentrador.py`): agrupa la evidencia ya clasificada por
+  organización identificada y calcula la densidad evidencial (métrica
+  aritmética, no interpretación). Solo lectura.
 - **Gobernanza** (`governance/`): rate limiting con backoff por fuente; salud por
   conector (2 fallos seguidos ⇒ alerta); dedup en escritura por `hash_dedup`;
   retención del crudo comprimido 90 días (`storage/raw_store.py`).

@@ -27,3 +27,6 @@ android_v2/local.properties
 *.apk
 .smoke/
 __pycache__/
+
+# Scripts experimentales en cuarentena (ver sandbox/README.md)
+sandbox/
