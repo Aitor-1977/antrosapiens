@@ -259,6 +259,28 @@ def debug_db(authorization: Optional[str] = Header(None),
 
     if dialecto != "postgres":
         resultado["conexion"] = "N/A (dialecto no es postgres)"
+        # Metadatos de FORMA del valor ganador, nunca su contenido: ningún
+        # campo de aquí abajo devuelve ni un carácter de la variable, solo
+        # su longitud y presencia/ausencia de patrones. Sirve para
+        # diagnosticar un valor "unknown" (no empieza con postgres:// ni
+        # postgresql://) cuando la variable está marcada Sensitive en
+        # Vercel y ni el propio operador puede volver a verla.
+        resultado["forma_del_valor"] = {
+            "longitud": len(dsn),
+            "contiene_espacios": " " in dsn,
+            "contiene_saltos_de_linea": ("\n" in dsn) or ("\r" in dsn),
+            "contiene_comillas": ("'" in dsn) or ('"' in dsn),
+            "contiene_signo_igual": "=" in dsn,
+            # ¿"://" aparece en cualquier posición, no solo al principio?
+            # Distingue "está corrido/con basura antes" de "no es una URL".
+            "contiene_esquema_en_algun_lugar": "://" in dsn,
+            "empieza_con_postgres_tras_recortar_espacios":
+                dsn.strip().startswith(("postgres://", "postgresql://")),
+            # Prueba directa de la hipótesis ya vista antes en esta sesión
+            # (un comando de shell pegado por error en el campo del valor).
+            "contiene_palabra_export": "export" in dsn.lower(),
+            "contiene_palabra_python": "python" in dsn.lower(),
+        }
         return resultado
 
     # Etapa 4: conexión psycopg cruda, misma ruta que
