@@ -139,3 +139,28 @@ def test_probar_init_schema_por_defecto_no_se_ejecuta_si_la_conexion_falla(cli):
         assert "init_schema_y_singleton" not in body
     finally:
         object.__setattr__(settings, "database_url", dsn_original)
+
+
+def test_mapear_columnas_no_se_ejecuta_si_la_conexion_falla(cli):
+    """mapear_columnas=true con una conexión que falla no debe intentar
+    nada más: corta en la etapa 4, igual que probar_init_schema."""
+    dsn_falsa = "postgresql://u:p@host-inexistente.invalid.test:5432/db"
+    dsn_original = settings.database_url
+    object.__setattr__(settings, "database_url", dsn_falsa)
+    try:
+        r = cli.get("/_debug/db?mapear_columnas=true",
+                    headers={"Authorization": "Bearer secreto-123"})
+        body = r.json()
+        assert body["conexion"] == "FAILED"
+        assert "mapa_columnas" not in body
+        assert "mapa_columnas_error" not in body
+    finally:
+        object.__setattr__(settings, "database_url", dsn_original)
+
+
+def test_mapear_columnas_no_aparece_con_dialecto_sqlite(cli):
+    r = cli.get("/_debug/db?mapear_columnas=true",
+               headers={"Authorization": "Bearer secreto-123"})
+    body = r.json()
+    assert body["dialecto_detectado"] == "sqlite"
+    assert "mapa_columnas" not in body

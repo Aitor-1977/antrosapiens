@@ -205,6 +205,11 @@ def debug_db(authorization: Optional[str] = Header(None),
                 False, description="Además de la conexión cruda, invoca "
                                     "get_db() tal cual (init_schema + siembra) "
                                     "para aislar un fallo posterior a la conexión.")
+            , mapear_columnas: bool = Query(
+                False, description="Compara, vía information_schema (solo "
+                                    "metadatos, ningún dato ni fila), las "
+                                    "columnas REALES de las tablas clave "
+                                    "contra las esperadas por schema_postgres.sql.")
             ) -> dict:
     """Diagnóstico TEMPORAL de conexión a base de datos, por etapas.
 
@@ -304,6 +309,57 @@ def debug_db(authorization: Optional[str] = Header(None),
         }
         resultado["etapa_fallida"] = "psycopg.connect / SELECT 1"
         return resultado
+
+    if mapear_columnas:
+        # Columnas que ESTE código espera, tomadas directamente de
+        # hd_scraper/db/schema_postgres.sql (no de una copia que pueda
+        # desincronizarse). Solo metadatos (nombres de columna): ninguna
+        # fila ni valor de la base viaja en esta respuesta.
+        esperadas = {
+            "evidencias": (
+                "id", "cita_textual", "fecha_extraccion", "url_fuente",
+                "nombre_medio", "empresa_mencionada", "tipo_evento",
+                "origen_declaracion", "hash_dedup", "fecha_publicacion",
+                "persona_citada", "cargo", "connector", "estado", "raw_hash",
+                "categoria", "keywords", "confianza", "clave_contenido",
+                "hash_contenido", "calidad_captura", "creado_en",
+            ),
+            "evidencia_clasificada": (
+                "id", "expediente_id", "evidencia_id", "tipo_epistemologico",
+                "enunciador_nombre", "enunciador_cargo", "enunciador_dominio",
+                "organizacion_mencionada",
+            ),
+            "expedientes_candidatos": ("id", "organizacion", "estado", "actualizado_en"),
+        }
+        try:
+            import psycopg
+            from psycopg.rows import dict_row
+            conexion_meta = psycopg.connect(dsn, row_factory=dict_row,
+                                            connect_timeout=10)
+            try:
+                mapa: dict = {}
+                for tabla, columnas_esperadas in esperadas.items():
+                    filas = conexion_meta.execute(
+                        "SELECT column_name FROM information_schema.columns "
+                        "WHERE table_schema = 'public' AND table_name = %s "
+                        "ORDER BY ordinal_position", (tabla,)).fetchall()
+                    reales = tuple(f["column_name"] for f in filas)
+                    mapa[tabla] = {
+                        "tabla_existe": len(reales) > 0,
+                        "columnas_reales": list(reales),
+                        "columnas_faltantes": [c for c in columnas_esperadas
+                                              if c not in reales],
+                        "columnas_extra_no_esperadas": [c for c in reales
+                                                        if c not in columnas_esperadas],
+                    }
+                resultado["mapa_columnas"] = mapa
+            finally:
+                conexion_meta.close()
+        except Exception as exc:
+            resultado["mapa_columnas_error"] = {
+                "clase": type(exc).__name__,
+                "mensaje": _sanear_mensaje(exc),
+            }
 
     if not probar_init_schema:
         resultado["init_schema_y_singleton"] = "no probado (probar_init_schema=false)"
