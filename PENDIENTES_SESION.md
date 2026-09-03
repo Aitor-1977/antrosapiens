@@ -3,6 +3,12 @@
 Notas para retomar en la próxima sesión. No implementadas todavía —
 solo diagnóstico y especificación.
 
+> **Nota (2026-09-03):** commit sin cambios de lógica, únicamente para forzar
+> un deploy nuevo en Vercel después de rotar `HD_INGEST_TOKEN` en Environment
+> Variables — guardar la variable ahí NO dispara un deploy por sí solo; hace
+> falta un push (o "Redeploy" manual) para que el runtime tome el valor
+> nuevo. Ver punto 2 más abajo (endpoint temporal de reversión de "Clara").
+
 ## 1. "Clara" sigue promovida por error en producción
 
 `expedientes_candidatos.organizacion = 'Clara'` sigue en `estado = 'candidato'`
