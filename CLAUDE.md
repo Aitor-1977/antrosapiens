@@ -414,6 +414,84 @@ certificados; ampliar cobertura de fuentes reales fuera del entorno con proxy.
 3. Sin Playwright en Fase 1. Librerías: `httpx`, `feedparser`, y BeautifulSoup
    **solo si es indispensable**.
 
+## Protocolo de rigor analítico y operación (Capa 0)
+
+> Sección añadida el 2026-09-03 por autorización explícita del operador
+> —Mario—, adaptando un protocolo de calibración que compartió, recortado
+> a lo que aplica en **este** repo: rigor de diagnóstico, Python y
+> PostgreSQL. Las directrices de React/Vite/TypeScript del protocolo
+> original son de la arquitectura de **RadarHD** (otro repo) y no
+> aplican acá — hd-scraper es Python + PostgreSQL/SQLite, sin frontend.
+> Nace directamente del incidente real de producción de esa fecha:
+> `HD_DATABASE_URL` con un valor incompleto (21 caracteres) causó 500 en
+> todos los endpoints que tocan la base, y una vez corregido, la
+> conexión funcionaba pero `init_schema()` fallaba con
+> `column "empresa_mencionada" does not exist` — una columna del
+> `CREATE TABLE` original, ausente en la tabla real de producción.
+
+**Diagnóstico y resolución de problemas (Capa 0 = causa raíz, no el síntoma):**
+
+- No asumas paridad entre el código fuente (`schema_postgres.sql`) y el
+  esquema real de la base de producción. Una `CREATE TABLE IF NOT EXISTS`
+  contra una tabla que ya existe es un no-op: no reconcilia columnas.
+- Ante un error de base de datos, **mapea el desfase estructural completo**
+  (qué columnas/tablas existen realmente vs. lo que el código espera)
+  **antes** de proponer un `ALTER TABLE` aislado para una sola columna —
+  la primera columna que falla suele no ser la única.
+- Identificá la causa raíz exacta (fallo de migración vs. variable de
+  entorno mal configurada vs. error lógico) antes de prescribir una
+  solución. "Funciona de nuevo" no es lo mismo que "se entendió por qué
+  había fallado".
+- Priorizá estabilidad y reproducibilidad sobre parches temporales. Un
+  endpoint de diagnóstico temporal (como `/_debug/db`, ver más abajo) es
+  preferible a adivinar y desplegar a ciegas.
+
+**Bases de datos y migraciones (PostgreSQL):**
+
+- Tratá `CREATE TABLE IF NOT EXISTS` como **insuficiente** por sí solo
+  para control de versiones del esquema: no agrega columnas nuevas a una
+  tabla preexistente. Cada columna agregada después de la creación
+  original necesita su propio `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`
+  (ver los ya existentes en `schema_postgres.sql`, líneas 39-45 y 84-87) o
+  su migración idempotente en `database.py` (ver `_migrar_pipeline_candidato`,
+  `_migrar_organizacion_mencionada`, `_migrar_expediente_id_nullable`).
+- Generá siempre migraciones **idempotentes**: deben poder correr N veces
+  sin romper nada (mismo patrón que las tres ya existentes: `try/except`
+  silencioso, o `IF NOT EXISTS`/`ADD COLUMN IF NOT EXISTS`).
+- Si `schema_postgres.sql` se ejecuta como un único `execute()` multi-sentencia
+  (ver `database.py:init_schema`), tené presente que Postgres corre ese
+  bloque como una transacción implícita: **una sola sentencia que falle
+  (p. ej. un `CREATE INDEX` sobre una columna inexistente) puede abortar y
+  revertir TODO lo que venía antes en el mismo bloque**, incluidas
+  migraciones que de otro modo habrían funcionado. Es una razón más para
+  mapear el desfase completo antes de tocar una sola columna.
+- Verificá dependencias de claves foráneas, índices y `NOT NULL` antes de
+  alterar una tabla en producción — un `ADD COLUMN ... NOT NULL` sin
+  `DEFAULT` falla contra una tabla con filas existentes.
+
+**Escritura de código (Python):**
+
+- Sesiones y cursores de base de datos siempre manejados de forma segura
+  (abrir, usar, cerrar en `finally`, o context manager) — nunca conexiones
+  colgantes. El wrapper compartido es `hd_scraper/db/database.py:Database`;
+  cualquier conexión adicional fuera de ese wrapper (p. ej. una conexión de
+  diagnóstico descartable) sigue el mismo patrón `try/finally`.
+- Funciones puras donde sea posible; lógica de negocio separada de la capa
+  de API (`hd_scraper/api/app.py` debería orquestar, no reimplementar
+  reglas que ya viven en otro módulo).
+
+**Formato de interacción:**
+
+- Ante un incidente de producción: primero diagnóstico con evidencia real
+  (logs, endpoint de diagnóstico, `information_schema`), después — y solo
+  después — la propuesta de solución. Nunca al revés.
+- Confirmación explícita del operador antes de cualquier operación
+  destructiva o irreversible sobre datos de producción (`DROP`, `DELETE`,
+  un `ALTER TABLE` que pueda perder datos, reset de ramas de git). Un
+  `ALTER TABLE ADD COLUMN` idempotente y no destructivo sigue requiriendo
+  que el operador lo autorice antes de ejecutarse contra producción —no es
+  "destructivo", pero tampoco es un cambio de código local.
+
 ## Comandos
 
 Operación autónoma: ningún argumento es obligatorio. Sin flags, los motores
