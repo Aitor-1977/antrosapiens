@@ -169,6 +169,140 @@ def revertir_candidato_clara(x_ingest_token: Optional[str] = Header(None),
     return {"organizacion": "Clara", "filas_afectadas": cur.rowcount}
 
 
+def _bearer_token(authorization: Optional[str]) -> Optional[str]:
+    """Extrae el token de un header ``Authorization: Bearer <token>``."""
+    if not authorization:
+        return None
+    partes = authorization.split(" ", 1)
+    if len(partes) != 2 or partes[0].lower() != "bearer":
+        return None
+    return partes[1].strip() or None
+
+
+def _sanear_mensaje(exc: Exception) -> str:
+    """Texto de una excepción sin DSN, token ni ninguna URL con credenciales.
+
+    Reemplaza primero los valores REALES conocidos en este proceso (el DSN
+    completo y el token de ingesta), por si el driver los citó literalmente
+    en el mensaje de error, y como red de seguridad adicional enmascara
+    cualquier patrón ``esquema://...`` que sobreviva.
+    """
+    import re
+    texto = str(exc)
+    dsn = settings.database_url or ""
+    token = settings.ingest_token or ""
+    if dsn:
+        texto = texto.replace(dsn, "[DSN_REDACTADO]")
+    if token:
+        texto = texto.replace(token, "[TOKEN_REDACTADO]")
+    texto = re.sub(r"[a-zA-Z][a-zA-Z0-9+.-]*://\S+", "[URL_REDACTADA]", texto)
+    return texto[:500]
+
+
+@app.get("/_debug/db")
+def debug_db(authorization: Optional[str] = Header(None),
+            probar_init_schema: bool = Query(
+                False, description="Además de la conexión cruda, invoca "
+                                    "get_db() tal cual (init_schema + siembra) "
+                                    "para aislar un fallo posterior a la conexión.")
+            ) -> dict:
+    """Diagnóstico TEMPORAL de conexión a base de datos, por etapas.
+
+    Endpoint temporal de un solo propósito: identificar en qué etapa falla
+    la conexión de producción (resolución de variable / conexión psycopg /
+    init_schema), sin exponer secretos y sin escribir en la base. Protegido
+    con el mismo HD_INGEST_TOKEN que el resto de los endpoints de escritura,
+    pero exigido aquí como ``Authorization: Bearer <token>`` (distinto del
+    header ``X-Ingest-Token`` que usan los demás, a pedido explícito de este
+    diagnóstico).
+
+    No modifica ``get_db()``, ``config.py`` ni ``/health``: solo los invoca
+    o replica su lectura de forma aislada.
+
+    Por defecto (``probar_init_schema=false``) esta ruta es puramente de
+    lectura: abre una conexión psycopg DESCARTABLE (no la compartida por la
+    app), ejecuta un único ``SELECT 1`` y la cierra — sin ``INSERT``,
+    ``UPDATE``, ``DELETE`` ni migración de ningún tipo.
+
+    Con ``probar_init_schema=true`` (opt-in explícito) y solo si esa
+    conexión de prueba funcionó, además invoca ``get_db()`` sin
+    modificarla — el mismo camino que ya ejecuta cada arranque en frío del
+    proceso real (``init_schema`` + siembra del directorio, ya idempotentes
+    por diseño) — para poder distinguir un fallo de conexión de uno
+    posterior a ella.
+
+    Retirar este endpoint del código una vez cerrado el diagnóstico.
+    """
+    token = _bearer_token(authorization)
+    if not settings.ingest_token or not token or not hmac.compare_digest(
+            token, settings.ingest_token):
+        raise HTTPException(401, "token inválido o ausente "
+                                  "(Authorization: Bearer <HD_INGEST_TOKEN>)")
+
+    resultado: dict = {}
+
+    # Etapas 1-2: qué variable ganó y si está presente. Nunca su valor.
+    orden = ("HD_DATABASE_URL", "DATABASE_URL", "POSTGRES_URL", "POSTGRES_PRISMA_URL")
+    ganadora = next((v for v in orden if os.getenv(v)), None)
+    resultado["variable_ganadora"] = ganadora or "fallback_sqlite"
+    resultado["variable_presente"] = "PRESENT" if ganadora else "AUSENTE"
+
+    # Etapa 3: dialecto ya resuelto por config.py — no se re-resuelve nada.
+    dsn = settings.database_url or ""
+    if dsn.startswith("postgres://") or dsn.startswith("postgresql://"):
+        dialecto = "postgres"
+    elif dsn.startswith("sqlite"):
+        dialecto = "sqlite"
+    else:
+        dialecto = "unknown"
+    resultado["dialecto_detectado"] = dialecto
+
+    if dialecto != "postgres":
+        resultado["conexion"] = "N/A (dialecto no es postgres)"
+        return resultado
+
+    # Etapa 4: conexión psycopg cruda, misma ruta que
+    # Database._connect_postgres, pero descartable: no usa el singleton
+    # compartido ni toca el esquema. Única operación: SELECT 1.
+    try:
+        import psycopg
+        from psycopg.rows import dict_row
+        conexion_prueba = psycopg.connect(dsn, row_factory=dict_row,
+                                          connect_timeout=10)
+        try:
+            conexion_prueba.execute("SELECT 1").fetchone()
+            resultado["conexion"] = "OK"
+        finally:
+            conexion_prueba.close()
+    except Exception as exc:
+        resultado["conexion"] = "FAILED"
+        resultado["excepcion_conexion"] = {
+            "clase": type(exc).__name__,
+            "mensaje": _sanear_mensaje(exc),
+        }
+        resultado["etapa_fallida"] = "psycopg.connect / SELECT 1"
+        return resultado
+
+    if not probar_init_schema:
+        resultado["init_schema_y_singleton"] = "no probado (probar_init_schema=false)"
+        return resultado
+
+    # Etapa 8 (opt-in): get_db() tal cual, para aislar un fallo posterior a
+    # la conexión (init_schema / siembra del directorio).
+    try:
+        get_db()
+        resultado["init_schema_y_singleton"] = "OK"
+    except Exception as exc:
+        resultado["init_schema_y_singleton"] = "FAILED"
+        resultado["excepcion_init_schema"] = {
+            "clase": type(exc).__name__,
+            "mensaje": _sanear_mensaje(exc),
+        }
+        resultado["etapa_fallida"] = "get_db() (init_schema o siembra, posterior a la conexión)"
+
+    return resultado
+
+
 def _alta(payload: ProspectoIn) -> dict:
     record = nuevo_prospecto(
         payload.nombre, payload.categoria,
