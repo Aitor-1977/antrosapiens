@@ -24,8 +24,16 @@ solo diagnóstico y especificación.
 > "Clara" (`abierto` vs `candidato`) siga correcto ahora que se conecta a
 > esta base (se revirtió antes, contra un proceso que puede haber estado
 > usando una conexión distinta).
+>
+> **Punto 1 resuelto (2026-09-04):** se volvió a ejecutar
+> `GET /admin/revertir-candidato-clara` contra la base Neon ya correcta.
+> `GET /verificados` confirmado en `"total":6` (bajó de 7), sin "Clara" en la
+> lista de items (verificado por el operador desde el navegador y de forma
+> independiente por el agente vía curl). El expediente quedó en `estado =
+> 'abierto'` en la base de producción real. Punto 2 (destino del endpoint
+> temporal) sigue abierto — ver más abajo.
 
-## 1. "Clara" sigue promovida por error en producción
+## 1. "Clara" sigue promovida por error en producción — ✅ RESUELTO 2026-09-04
 
 `expedientes_candidatos.organizacion = 'Clara'` sigue en `estado = 'candidato'`
 en Neon (producción), y por lo tanto sigue apareciendo en `GET /verificados`.
@@ -62,29 +70,17 @@ código:
 Después de correr cualquiera de los dos, verificar con `GET /verificados`
 que el total baja de 7 a 6 y que "Clara" ya no aparece en la lista.
 
-## 2. Endpoint temporal de reversión — decidir su destino
+## 2. Endpoint temporal de reversión — ✅ RETIRADO 2026-09-04
 
-`GET /admin/revertir-candidato-clara` (`hd_scraper/api/app.py`, agregado en
-PR #5, ya fusionado a `main`) revierte el expediente `'Clara'` de
-`'candidato'` a `'abierto'`. Se construyó como alternativa puntual porque no
-había acceso a Neon en esa sesión.
-
-Características actuales:
-- Hardcodeado a `organizacion = 'Clara'` (sin parámetro): no puede usarse
-  contra ningún otro expediente.
-- Protegido con `X-Ingest-Token` (mismo mecanismo que `/prospectos`).
-- Idempotente (`filas_afectadas: 0` si ya no está en `'candidato'`).
-
-**Pendiente decidir**, una vez que el punto 1 esté resuelto:
-- **Eliminarlo** del código (patrón acordado originalmente: era "de un solo
-  uso", se retira apenas se confirme que revirtió a Clara). Esto respeta el
-  invariante que documenta `promocion_candidatos.py` ("nunca degrada un
-  candidato de vuelta a abierto... no existe ese camino en este módulo") —
-  dejarlo vivo permanentemente contradice ese invariante.
-- O **dejarlo permanente pero con mejor seguridad** (parámetro de
-  organización + un token/rol distinto al de intake general, auditoría de
-  quién lo dispara, etc.) si se decide que hace falta una vía de corrección
-  recurrente para este tipo de bug. No evaluado todavía cuál conviene.
+`GET /admin/revertir-candidato-clara` (`hd_scraper/api/app.py`) cumplió su
+propósito de un solo uso: revertir el expediente `'Clara'` de `'candidato'`
+a `'abierto'` en la base de producción correcta (ver punto 1, resuelto el
+mismo día). Se eliminó del código siguiendo el patrón acordado originalmente
+("de un solo uso, se retira apenas se confirme que revirtió a Clara"),
+respetando el invariante de `promocion_candidatos.py` ("nunca degrada un
+candidato de vuelta a abierto... no existe ese camino en este módulo").
+Solo queda `GET /admin` (el formulario HTML de intake) bajo `/admin/*`.
+976 tests pasando tras el retiro.
 
 ## 3. "Rasgos a evaluar" (checklist pericial) — especificación pendiente, sin iniciar
 

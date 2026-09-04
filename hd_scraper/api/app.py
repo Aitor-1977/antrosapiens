@@ -136,39 +136,6 @@ def _exigir_token(token: Optional[str]) -> None:
         raise HTTPException(401, "token de ingesta inválido")
 
 
-@app.get("/admin/revertir-candidato-clara")
-def revertir_candidato_clara(x_ingest_token: Optional[str] = Header(None),
-                             token: Optional[str] = Query(None)) -> dict:
-    """Endpoint TEMPORAL de un solo uso (2026-08-28) — se elimina de este
-    archivo inmediatamente después de dispararse una vez.
-
-    El expediente 'Clara' se promovió a 'candidato' por error: el
-    clasificador vinculaba `empresa_mencionada="Clara"` (la fintech) a un
-    titular sobre "Clara Brugada" (alcaldesa de CDMX, persona distinta con
-    el mismo nombre corto) por un bug de subcadena en `_vinculado_a_org`, ya
-    corregido en `clasificacion_epistemologica.py`. Este endpoint corrige
-    solo el DATO ya persistido; no añade ningún camino general
-    `candidato` -> `abierto` a la lógica de promoción — `promocion_candidatos.
-    py` sigue sin ese camino, tal como documenta su propio docstring.
-
-    Hardcodeado a `organizacion = 'Clara'`: no acepta parámetro de
-    organización, para que no pueda usarse por error (ni a propósito) contra
-    ningún otro expediente. Acepta el token por header (`X-Ingest-Token`,
-    preferido) o por query string (`?token=...`), solo para poder
-    dispararlo desde la barra del navegador — un GET no puede fijar headers
-    personalizados. El token en la URL puede quedar en logs/historial del
-    navegador; aceptable aquí porque el endpoint es de un solo uso y se
-    retira del código de inmediato.
-    """
-    _exigir_token(x_ingest_token or token)
-    db = get_db()
-    cur = db.execute(
-        "UPDATE expedientes_candidatos SET estado = 'abierto', "
-        "actualizado_en = ? WHERE organizacion = 'Clara' AND estado = 'candidato'",
-        (ahora_iso(),))
-    return {"organizacion": "Clara", "filas_afectadas": cur.rowcount}
-
-
 def _alta(payload: ProspectoIn) -> dict:
     record = nuevo_prospecto(
         payload.nombre, payload.categoria,
