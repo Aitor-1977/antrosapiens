@@ -1,619 +1,508 @@
 <!DOCTYPE html>
-
-<html class="light" lang="es"><head>
-<meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>Explorar - Antrosapiens V3</title>
-<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400&amp;family=Newsreader:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
-<script id="tailwind-config">
-  tailwind.config = {
-    darkMode: "class",
-    theme: {
-      extend: {
-        "colors": {
-                "on-tertiary-fixed-variant": "#703800",
-                "on-secondary": "#ffffff",
-                "on-secondary-container": "#007353",
-                "error-container": "#ffdad6",
-                "on-tertiary-container": "#ffb277",
-                "surface-bright": "#fff8f2",
-                "surface-tint": "#3b6934",
-                "surface-container-low": "#fef2e2",
-                "tertiary-fixed": "#ffdcc4",
-                "surface-variant": "#ece1d1",
-                "on-secondary-fixed-variant": "#00513a",
-                "on-primary": "#ffffff",
-                "inverse-surface": "#363025",
-                "tertiary-fixed-dim": "#ffb781",
-                "error": "#ba1a1a",
-                "surface-container-highest": "#ece1d1",
-                "tertiary-container": "#7e4000",
-                "on-surface": "#201b11",
-                "outline": "#72796e",
-                "secondary-fixed-dim": "#7bd8b1",
-                "on-secondary-fixed": "#002115",
-                "on-error-container": "#93000a",
-                "secondary-container": "#97f5cc",
-                "surface-dim": "#e4d9c9",
-                "inverse-primary": "#a1d494",
-                "primary-fixed": "#bcf0ae",
-                "on-primary-fixed": "#002201",
-                "secondary": "#006c4e",
-                "on-background": "#201b11",
-                "on-tertiary-fixed": "#2f1400",
-                "outline-variant": "#c2c9bb",
-                "surface": "#fff8f2",
-                "on-error": "#ffffff",
-                "on-primary-container": "#9dd090",
-                "on-surface-variant": "#42493e",
-                "primary-fixed-dim": "#a1d494",
-                "surface-container-high": "#f2e7d6",
-                "on-primary-fixed-variant": "#23501e",
-                "surface-container": "#f8ecdc",
-                "on-tertiary": "#ffffff",
-                "surface-container-lowest": "#ffffff",
-                "primary-container": "#2d5a27",
-                "primary": "#154212",
-                "tertiary": "#5c2d00",
-                "background": "#fff8f2",
-                "inverse-on-surface": "#fbefdf",
-                "secondary-fixed": "#97f5cc"
-        },
-        "borderRadius": {
-                "DEFAULT": "0.125rem",
-                "lg": "0.25rem",
-                "xl": "0.5rem",
-                "full": "0.75rem"
-        },
-        "spacing": {
-                "stack-sm": "8px",
-                "stack-lg": "32px",
-                "stack-md": "16px",
-                "gutter": "24px",
-                "container-max": "1120px",
-                "reading-width": "65ch",
-                "section-gap": "64px",
-                "margin-mobile": "16px"
-        },
-        "fontFamily": {
-                "metadata-code": [
-                        "JetBrains Mono"
-                ],
-                "ui-label": [
-                        "Inter"
-                ],
-                "headline-md-mobile": [
-                        "Newsreader"
-                ],
-                "body-reading": [
-                        "Newsreader"
-                ],
-                "display-lg": [
-                        "Newsreader"
-                ],
-                "headline-md": [
-                        "Newsreader"
-                ]
-        },
-        "fontSize": {
-                "metadata-code": [
-                        "13px",
-                        {
-                                "lineHeight": "18px",
-                                "fontWeight": "400"
-                        }
-                ],
-                "ui-label": [
-                        "14px",
-                        {
-                                "lineHeight": "20px",
-                                "letterSpacing": "0.01em",
-                                "fontWeight": "500"
-                        }
-                ],
-                "headline-md-mobile": [
-                        "24px",
-                        {
-                                "lineHeight": "32px",
-                                "fontWeight": "500"
-                        }
-                ],
-                "body-reading": [
-                        "20px",
-                        {
-                                "lineHeight": "32px",
-                                "fontWeight": "400"
-                        }
-                ],
-                "display-lg": [
-                        "48px",
-                        {
-                                "lineHeight": "56px",
-                                "letterSpacing": "-0.02em",
-                                "fontWeight": "600"
-                        }
-                ],
-                "headline-md": [
-                        "32px",
-                        {
-                                "lineHeight": "40px",
-                                "fontWeight": "500"
-                        }
-                ]
-        }
-},
-    },
-  }
-</script>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AntrolabsHD — Explorar</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
 <style>
-        .material-symbols-outlined {
-            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-        }
-        .material-symbols-outlined.filled {
-            font-variation-settings: 'FILL' 1;
-        }
-        
-        /* Hide scrollbar for a cleaner editorial look */
-        ::-webkit-scrollbar {
-            width: 0px;
-            background: transparent;
-        }
-    </style>
-<style>
-    html {
-      -webkit-text-size-adjust: 100%;
-      text-size-adjust: 100%;
-    }
-    body {
-      min-height: max(884px, 100dvh);
-    }
-  </style>
+    html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+    body { background-color: #E8E4DC; color: #111111; font-family: 'Inter', sans-serif; min-height: max(884px, 100dvh); }
+    .font-serif-voice { font-family: 'Playfair Display', serif; }
+    .font-tech { font-family: 'IBM Plex Mono', monospace; }
+    ::-webkit-scrollbar { width: 0px; background: transparent; }
+</style>
 </head>
-<body class="bg-surface text-on-surface min-h-screen flex flex-col font-ui-label selection:bg-primary-container selection:text-on-primary-container">
+<body class="min-h-screen flex flex-col pb-24">
+
+<!-- ═══════════════════════ EXPLORAR (Nivel 0) ═══════════════════════ -->
 <div id="screen-explorar">
-<!-- TopAppBar -->
-<header class="bg-surface dark:bg-surface-dim border-b border-outline/20 docked full-width top-0 z-40 fixed">
-<div class="flex justify-between items-center px-margin-mobile md:px-gutter h-16 w-full max-w-container-max mx-auto">
-<button aria-label="Menu" class="flex items-center justify-center h-full hover:bg-surface-container-low dark:hover:bg-surface-container-highest transition-colors active:opacity-80 active:scale-95 duration-150 transition-all">
-<span class="material-symbols-outlined text-primary dark:text-primary-fixed-dim" data-icon="menu">menu</span>
-</button>
-<h1 class="font-headline-md text-headline-md text-primary dark:text-primary-fixed-dim tracking-tight text-center flex-1">ANTROSAPIENS V3</h1>
-<button aria-label="User profile settings" class="flex items-center justify-center h-full hover:bg-surface-container-low dark:hover:bg-surface-container-highest transition-colors active:opacity-80 active:scale-95 duration-150 transition-all">
-<div class="w-8 h-8 rounded-full bg-secondary-container flex items-center justify-center text-on-secondary-container font-metadata-code text-metadata-code uppercase overflow-hidden ring-1 ring-outline">
-<img alt="User profile settings" class="object-cover w-full h-full" data-alt="A macro photography style portrait of a researcher's eye reflecting a glowing digital map of South America. The lighting is soft and cinematic, favoring a mineral color palette with earthy tones and subtle hints of vibrant clinical mint. The overall mood is intellectual and focused, evoking a sense of deep observation." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAS-uqvGfqu_Z9NzV4prGUqQOMsHahWckSCR7ilXryvKDKuS1fg90qhoCY2K9IFjWPqMRK_n49bAhbj0yN6NSGDkpXmpXDABijTcIM9L4kmuu5BfR1xxLSpFYOlnYPobOC1fWWPST2qTB9nAManGOIYgYH0aoE73TOwnGm4KuOM_TNZ8E_GTiVNPDtWG90tb5HmqhrkF_9SwsKdT7YgWHOSdD2Hi8AwYhGSsexV5ODAuUhDBO8kOwjHxg"/>
-</div>
-</button>
-</div>
+<header class="sticky top-0 z-50 bg-[#E8E4DC]/95 backdrop-blur border-b border-[#111111]/10 px-4 h-16 flex items-center justify-between">
+    <div class="flex items-center gap-2">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5A7A00" stroke-width="2"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        <span class="font-tech text-xs uppercase tracking-wider text-[#5A7A00] font-bold">AntrolabsHD</span>
+    </div>
+    <span class="font-tech text-xs text-[#111111]/60">NIVEL 0: EXPLORAR</span>
 </header>
-<!-- Main Canvas -->
-<main class="flex-1 w-full max-w-3xl mx-auto pt-[96px] pb-[120px] px-margin-mobile md:px-gutter flex flex-col gap-stack-lg">
-<!-- Header Section -->
-<section class="flex flex-col gap-stack-sm pt-8">
-<h2 class="font-display-lg text-display-lg text-on-surface">¿Qué quieres investigar?</h2>
-<p class="font-body-reading text-body-reading text-on-surface-variant max-w-xl">
-                Explora organizaciones, señales y fenómenos que podrían merecer una mirada más cercana.
-            </p>
-</section>
-<!-- Candidatos verificados (Entrega 3): expedientes ya promovidos con evidencia primaria citada. Distinto de las tarjetas de "Señal detectada" de más abajo, que son solo coincidencia de palabras clave sin verificar. -->
-<section id="candidatosVerificados" class="flex flex-col gap-stack-sm">
-<div class="flex items-baseline justify-between">
-<h3 class="font-headline-md-mobile text-headline-md-mobile text-on-surface">Candidatos verificados</h3>
-<span id="verificadosCount" class="font-metadata-code text-metadata-code text-outline"></span>
-</div>
-<p class="font-metadata-code text-xs text-outline/70 leading-snug">
-                Evidencia primaria citada: autodeclaración o huella práctica de la propia organización. No es coincidencia de palabras clave.
-            </p>
-<div id="verificadosList" class="flex flex-col gap-stack-sm">
-<span id="verificadosLoading" class="font-metadata-code text-metadata-code text-outline">Cargando candidatos verificados…</span>
-</div>
-</section>
-<hr class="border-outline-variant/30"/>
-<!-- Search Input -->
-<section class="w-full relative group">
-<div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-<span class="material-symbols-outlined text-outline-variant group-focus-within:text-primary transition-colors" data-icon="search">search</span>
-</div>
-<input class="w-full bg-transparent border-b-2 border-outline-variant focus:border-primary py-4 pl-12 pr-4 font-body-reading text-body-reading text-on-surface placeholder:text-outline focus:ring-0 focus:outline-none transition-colors" placeholder="Escribe una organización, fenómeno, sector o pregunta..." type="text"/>
-</section>
-<!-- Filters Section (Bento/Tactile structure) -->
-<section class="flex flex-col gap-stack-md mt-4">
-<!-- Region Filter -->
-<div class="flex flex-col gap-stack-sm">
-<label class="font-metadata-code text-metadata-code text-outline tracking-wider uppercase">REGIÓN</label>
-<div class="flex flex-wrap gap-stack-sm">
-<button class="px-4 py-2 border border-outline-variant/30 text-on-surface-variant rounded-full font-body-reading text-ui-label hover:bg-surface-container-high transition-colors focus:bg-primary focus:text-on-primary focus:border-primary">Toda LATAM</button>
-<button class="px-4 py-2 border border-outline-variant/30 text-on-surface-variant rounded-full font-body-reading text-ui-label hover:bg-surface-container-high transition-colors focus:bg-primary focus:text-on-primary focus:border-primary">México</button>
-<button class="px-4 py-2 border border-outline-variant/30 text-on-surface-variant rounded-full font-body-reading text-ui-label hover:bg-surface-container-high transition-colors focus:bg-primary focus:text-on-primary focus:border-primary">México y Centroamérica</button>
-<button class="px-4 py-2 border border-outline-variant/30 text-on-surface-variant rounded-full font-body-reading text-ui-label hover:bg-surface-container-high transition-colors focus:bg-primary focus:text-on-primary focus:border-primary">Sudamérica</button>
-</div>
-</div>
-<hr class="border-outline-variant/30 w-1/3 my-2"/>
-<!-- Focus Filter (poblado dinámicamente desde el backend real) -->
-<div class="flex flex-col gap-stack-sm">
-<label class="font-metadata-code text-metadata-code text-outline tracking-wider uppercase">FOCO</label>
-<div id="focoFilters" class="flex flex-wrap gap-stack-sm">
-<button data-cat="" class="px-4 py-2 border border-primary bg-primary text-on-primary rounded-full font-body-reading text-ui-label transition-colors">Todos</button>
-                <span id="focoLoading" class="font-metadata-code text-metadata-code text-outline self-center">Cargando categorías…</span>
+<main class="max-w-md mx-auto px-4 pt-6 flex flex-col gap-6">
+    <section class="flex flex-col gap-2 pt-2">
+        <h1 class="font-serif-voice text-3xl font-semibold leading-tight text-[#111111]">¿Qué quieres investigar?</h1>
+        <p class="text-sm text-[#111111]/70 leading-relaxed">Explora organizaciones, señales y fenómenos que podrían merecer una mirada más cercana.</p>
+    </section>
+
+    <!-- Candidatos verificados (Entrega 3): expedientes ya promovidos con evidencia primaria citada. Distinto de las tarjetas de "Señal detectada" de más abajo, que son solo coincidencia de palabras clave sin verificar. -->
+    <section id="candidatosVerificados" class="flex flex-col gap-2">
+        <div class="flex items-baseline justify-between">
+            <h2 class="font-serif-voice text-lg font-semibold text-[#111111]">Candidatos verificados</h2>
+            <span id="verificadosCount" class="font-tech text-xs text-[#111111]/60"></span>
         </div>
-</div>
-<hr class="border-outline-variant/30 w-1/3 my-2"/>
-<!-- Vertical Filter (poblado dinámicamente desde el backend real) -->
-<div class="flex flex-col gap-stack-sm">
-<label class="font-metadata-code text-metadata-code text-outline tracking-wider uppercase">VERTICAL</label>
-<div id="verticalFilters" class="flex flex-wrap gap-stack-sm">
-<button data-val="" class="px-4 py-2 border border-primary bg-primary text-on-primary rounded-full font-body-reading text-ui-label transition-colors">Todos</button>
-<span id="verticalLoading" class="font-metadata-code text-metadata-code text-outline self-center">Cargando verticales…</span>
-</div>
-</div>
-<hr class="border-outline-variant/30 w-1/3 my-2"/>
-<!-- Escala Filter (poblado dinámicamente desde el backend real) -->
-<div class="flex flex-col gap-stack-sm">
-<label class="font-metadata-code text-metadata-code text-outline tracking-wider uppercase">ESCALA</label>
-<div id="escalaFilters" class="flex flex-wrap gap-stack-sm">
-<button data-val="" class="px-4 py-2 border border-primary bg-primary text-on-primary rounded-full font-body-reading text-ui-label transition-colors">Todos</button>
-<span id="escalaLoading" class="font-metadata-code text-metadata-code text-outline self-center">Cargando escalas…</span>
-</div>
-</div>
-</section>
-<!-- Primary Action -->
-<section class="mt-8 flex justify-end">
-<button id="btnExplorar" class="bg-primary text-on-primary font-ui-label text-ui-label rounded-lg flex items-center gap-2 hover:bg-primary-fixed-variant transition-colors min-w-[200px] justify-center shadow-sm w-full py-6 text-lg shadow-lg">
-                Comenzar exploración
-                <span class="material-symbols-outlined" data-icon="arrow_forward">arrow_forward</span>
-</button>
-</section>
-<!-- Resultados (aparece tras Comenzar exploración; sustituye a Mesa de Resultados hasta que exista esa pantalla) -->
-<section id="resultados" class="hidden flex flex-col gap-stack-md">
-<hr class="border-outline-variant/30"/>
-<div class="flex items-baseline justify-between">
-<h3 class="font-headline-md-mobile text-headline-md-mobile text-on-surface">Hallazgos</h3>
-<span id="resultadosCount" class="font-metadata-code text-metadata-code text-outline"></span>
-</div>
-<div id="resultadosList" class="flex flex-col gap-stack-sm"></div>
-</section>
+        <p class="font-tech text-[11px] text-[#111111]/60 leading-snug">Evidencia primaria citada: autodeclaración o huella práctica de la propia organización. No es coincidencia de palabras clave.</p>
+        <div id="verificadosList" class="flex flex-col gap-2">
+            <span id="verificadosLoading" class="font-tech text-xs text-[#111111]/60">Cargando candidatos verificados…</span>
+        </div>
+    </section>
+
+    <hr class="border-[#111111]/10">
+
+    <!-- Search Input -->
+    <section class="w-full relative group">
+        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#111111" stroke-opacity="0.4" stroke-width="2" class="group-focus-within:stroke-[#5A7A00]"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        </div>
+        <input class="w-full bg-transparent border-b-2 border-[#111111]/15 focus:border-[#5A7A00] py-3 pl-9 pr-4 text-base text-[#111111] placeholder:text-[#111111]/40 focus:ring-0 focus:outline-none transition-colors" placeholder="Escribe una organización, fenómeno, sector o pregunta..." type="text">
+    </section>
+
+    <!-- Filters -->
+    <section class="flex flex-col gap-4">
+        <div class="flex flex-col gap-2">
+            <label class="font-tech text-xs text-[#111111]/60 tracking-wider uppercase">Región</label>
+            <div class="flex flex-wrap gap-2">
+                <button class="px-4 py-2 border border-[#111111]/15 text-[#111111]/70 rounded-full text-sm hover:bg-[#111111]/5 transition-colors focus:bg-[#5A7A00] focus:text-white focus:border-[#5A7A00]">Toda LATAM</button>
+                <button class="px-4 py-2 border border-[#111111]/15 text-[#111111]/70 rounded-full text-sm hover:bg-[#111111]/5 transition-colors focus:bg-[#5A7A00] focus:text-white focus:border-[#5A7A00]">México</button>
+                <button class="px-4 py-2 border border-[#111111]/15 text-[#111111]/70 rounded-full text-sm hover:bg-[#111111]/5 transition-colors focus:bg-[#5A7A00] focus:text-white focus:border-[#5A7A00]">México y Centroamérica</button>
+                <button class="px-4 py-2 border border-[#111111]/15 text-[#111111]/70 rounded-full text-sm hover:bg-[#111111]/5 transition-colors focus:bg-[#5A7A00] focus:text-white focus:border-[#5A7A00]">Sudamérica</button>
+            </div>
+        </div>
+        <hr class="border-[#111111]/10 w-1/3">
+        <!-- Foco (poblado dinámicamente desde el backend real) -->
+        <div class="flex flex-col gap-2">
+            <label class="font-tech text-xs text-[#111111]/60 tracking-wider uppercase">Foco</label>
+            <div id="focoFilters" class="flex flex-wrap gap-2 items-center">
+                <button data-cat="" class="px-4 py-2 border border-[#5A7A00] bg-[#5A7A00] text-white rounded-full text-sm transition-colors">Todos</button>
+                <span id="focoLoading" class="font-tech text-xs text-[#111111]/60">Cargando categorías…</span>
+            </div>
+        </div>
+        <hr class="border-[#111111]/10 w-1/3">
+        <!-- Vertical (poblado dinámicamente desde el backend real) -->
+        <div class="flex flex-col gap-2">
+            <label class="font-tech text-xs text-[#111111]/60 tracking-wider uppercase">Vertical</label>
+            <div id="verticalFilters" class="flex flex-wrap gap-2 items-center">
+                <button data-val="" class="px-4 py-2 border border-[#5A7A00] bg-[#5A7A00] text-white rounded-full text-sm transition-colors">Todos</button>
+                <span id="verticalLoading" class="font-tech text-xs text-[#111111]/60">Cargando verticales…</span>
+            </div>
+        </div>
+        <hr class="border-[#111111]/10 w-1/3">
+        <!-- Escala (poblado dinámicamente desde el backend real) -->
+        <div class="flex flex-col gap-2">
+            <label class="font-tech text-xs text-[#111111]/60 tracking-wider uppercase">Escala</label>
+            <div id="escalaFilters" class="flex flex-wrap gap-2 items-center">
+                <button data-val="" class="px-4 py-2 border border-[#5A7A00] bg-[#5A7A00] text-white rounded-full text-sm transition-colors">Todos</button>
+                <span id="escalaLoading" class="font-tech text-xs text-[#111111]/60">Cargando escalas…</span>
+            </div>
+        </div>
+    </section>
+
+    <section class="mt-2">
+        <button id="btnExplorar" class="bg-[#5A7A00] text-white rounded-lg flex items-center justify-center gap-2 hover:opacity-90 transition-opacity w-full py-4 text-base font-semibold shadow-sm">
+            Comenzar exploración
+            <span aria-hidden="true">→</span>
+        </button>
+    </section>
+
+    <!-- Resultados (aparece tras Comenzar exploración) -->
+    <section id="resultados" class="hidden flex flex-col gap-3">
+        <hr class="border-[#111111]/10">
+        <div class="flex items-baseline justify-between">
+            <h2 class="font-serif-voice text-lg font-semibold text-[#111111]">Hallazgos</h2>
+            <span id="resultadosCount" class="font-tech text-xs text-[#111111]/60"></span>
+        </div>
+        <div id="resultadosList" class="flex flex-col gap-2"></div>
+    </section>
 </main>
-<!-- BottomNavBar -->
-<nav class="bg-surface dark:bg-surface-container-lowest border-t border-outline/20 bg-surface/95 backdrop-blur-none fixed bottom-0 left-0 w-full flex items-center px-1 py-2 pb-safe md:max-w-container-max md:left-1/2 md:-translate-x-1/2 z-50">
-<!-- EXPLORAR (Active) -->
-<a id="btnExplorarNav" class="flex-1 min-w-0 flex flex-col items-center justify-center text-primary dark:text-primary-fixed-dim bg-primary-container/10 rounded-xl py-1 active:scale-90 duration-200 ease-in-out transition-transform" href="#">
-<span class="material-symbols-outlined filled" data-icon="explore" data-weight="fill">explore</span>
-<span class="font-ui-label leading-tight mt-1 text-[9px] text-center break-words">EXPLORAR</span>
-</a>
-<!-- OBSERVAR (Inactive) -->
-<a id="btnObservarNav" class="flex-1 min-w-0 flex flex-col items-center justify-center text-outline dark:text-outline-variant py-1 hover:text-secondary dark:hover:text-secondary-fixed active:scale-90 duration-200 ease-in-out transition-transform" href="#">
-<span class="material-symbols-outlined" data-icon="visibility">visibility</span>
-<span class="font-ui-label leading-tight mt-1 text-[9px] text-center break-words">OBSERVAR</span>
-</a>
-<!-- TRIANGULAR (Inactive) -->
-<a class="flex-1 min-w-0 flex flex-col items-center justify-center text-outline dark:text-outline-variant py-1 hover:text-secondary dark:hover:text-secondary-fixed active:scale-90 duration-200 ease-in-out transition-transform" href="#">
-<span class="material-symbols-outlined" data-icon="change_history">change_history</span>
-<span class="font-ui-label leading-tight mt-1 text-[9px] text-center break-words">TRIANGULAR</span>
-</a>
-<!-- FIJAR (Inactive) -->
-<a class="flex-1 min-w-0 flex flex-col items-center justify-center text-outline dark:text-outline-variant py-1 hover:text-secondary dark:hover:text-secondary-fixed active:scale-90 duration-200 ease-in-out transition-transform" href="#">
-<span class="material-symbols-outlined" data-icon="push_pin">push_pin</span>
-<span class="font-ui-label leading-tight mt-1 text-[9px] text-center break-words">FIJAR</span>
-</a>
-</nav>
 </div>
+
+<!-- ═══════════════════════ OBSERVAR (Nivel 1) ═══════════════════════ -->
 <div id="screen-observar" style="display:none">
-<header class="sticky top-0 z-50 bg-[#FCFAED]/95 backdrop-blur-sm border-b border-black/5 px-4 h-16 flex items-center justify-between">
-    <button id="btnVolverObservar" class="p-2">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-    </button>
-    <h1 class="font-newsreader text-xl font-medium uppercase tracking-wider text-[#091426]">AntroSapiens V3</h1>
-    <div class="w-10"></div>
-    </header>
-    <div id="observarBarra" class="sticky top-16 z-40 bg-[#FCFAED] border-b border-black/5 px-4 h-12 flex items-center">
-        <p class="font-mono text-xs text-slate-500 uppercase tracking-widest truncate" style="max-width:65ch;margin-inline:auto;width:100%">Observando: <span id="observarBarraNombre" class="text-[#091426]"></span></p>
+<header class="sticky top-0 z-50 bg-[#E8E4DC]/95 backdrop-blur border-b border-[#111111]/10 px-4 h-16 flex items-center justify-between">
+    <span class="font-serif-voice text-lg font-semibold text-[#5A7A00]">Mesa de Evidencias</span>
+    <span class="font-tech text-xs text-[#111111]/60">NIVEL 1</span>
+</header>
+<div id="observarBarra" class="sticky top-16 z-40 bg-[#E8E4DC] border-b border-[#111111]/10 px-4 h-10 flex items-center">
+    <p class="font-tech text-xs text-[#111111]/60 uppercase tracking-widest truncate max-w-md mx-auto w-full">Observando: <span id="observarBarraNombre" class="text-[#111111]"></span></p>
+</div>
+<main class="max-w-md mx-auto px-4 pt-6">
+    <div class="mb-6">
+        <p id="observarExp" class="font-tech text-xs text-[#111111]/60 uppercase tracking-widest mb-1"></p>
+        <h2 id="observarNombre" class="font-serif-voice text-2xl font-semibold leading-tight mb-3 text-[#111111] break-words"></h2>
+        <p id="observarEstado" class="font-tech text-xs text-[#111111]/60 flex items-center gap-2 flex-wrap"></p>
     </div>
-<main class="px-6 pt-8" style="max-width:65ch;margin-inline:auto">
-    <div class="mb-8">
-        <p id="observarExp" class="font-mono text-xs text-slate-500 uppercase tracking-widest mb-1"></p>
-        <h2 id="observarNombre" class="font-newsreader text-2xl md:text-4xl font-medium leading-tight mb-4 text-[#091426] break-words"></h2>
-        <!-- Estado temporal del expediente: rango de fechas + aviso de archivo. -->
-        <p id="observarEstado" class="font-mono text-xs text-slate-500 flex items-center gap-2 flex-wrap"></p>
-    </div>
-    <!-- Orden declarado de la cronología, idéntico en todos los expedientes. -->
-    <p id="observarOrden" class="font-mono text-xs text-slate-500 uppercase tracking-widest mb-4"></p>
-    <div id="observarTimeline" class="relative pl-8 border-l border-slate-200 ml-2"></div>
-    <!-- Lectura del investigador: una sola vez, al cierre de la cronología. -->
-    <div id="observarLectura" class="mt-8 mb-16"></div>
+    <p id="observarOrden" class="font-tech text-xs text-[#111111]/60 uppercase tracking-widest mb-4"></p>
+    <div id="observarTimeline" class="relative pl-6 border-l border-[#111111]/15 ml-1"></div>
+    <div id="observarLectura" class="mt-6 mb-4"></div>
 </main>
 </div>
+
+<!-- ═══════════════════════ TRIANGULAR (Nivel 2) ═══════════════════════ -->
+<div id="screen-triangular" style="display:none">
+<header class="sticky top-0 z-50 bg-[#E8E4DC]/95 backdrop-blur border-b border-[#111111]/10 px-4 h-16 flex items-center justify-between">
+    <span class="font-serif-voice text-lg font-semibold text-[#5A7A00]">Mesa de Relaciones</span>
+    <span class="font-tech text-xs text-[#111111]/60">NIVEL 2</span>
+</header>
+<main class="max-w-md mx-auto px-4 pt-6 flex flex-col gap-4">
+    <div class="bg-white p-4 rounded-xl border border-[#111111]/10">
+        <span class="font-tech text-[10px] bg-[#111111]/5 text-[#111111]/60 px-2 py-0.5 rounded uppercase tracking-wider">Sin conectar todavía</span>
+        <p class="font-serif-voice text-sm text-[#111111]/80 leading-relaxed mt-3">
+            La triangulación entre lo declarado y lo observado —contradicciones entre fuentes sobre un mismo expediente— todavía no está conectada a datos reales en esta versión. Cuando exista evidencia de fuentes distintas que se contradigan, aparecerá aquí con la referencia a ambas.
+        </p>
+    </div>
+</main>
+</div>
+
+<!-- ═══════════════════════ FIJAR (Nivel 3) ═══════════════════════ -->
+<div id="screen-fijar" style="display:none">
+<header class="sticky top-0 z-50 bg-[#E8E4DC]/95 backdrop-blur border-b border-[#111111]/10 px-4 h-16 flex items-center justify-between">
+    <span class="font-serif-voice text-lg font-semibold text-[#5A7A00]">Inspector de Evidencias</span>
+    <span class="font-tech text-xs text-[#111111]/60">NIVEL 3</span>
+</header>
+<main class="max-w-md mx-auto px-4 pt-6 flex flex-col gap-4">
+    <div id="fijarContenido" class="bg-white p-5 rounded-xl border border-[#111111]/10">
+        <span class="font-tech text-[10px] bg-[#111111]/5 text-[#111111]/60 px-2 py-0.5 rounded uppercase tracking-wider">Sin expediente seleccionado</span>
+        <p class="font-serif-voice text-sm text-[#111111]/80 leading-relaxed mt-3">Selecciona un hallazgo en Explorar para revisarlo aquí.</p>
+    </div>
+</main>
+</div>
+
+<!-- ═══════════════════════ BottomNavBar (persistente en las 4 pantallas) ═══════════════════════ -->
+<nav class="fixed bottom-0 left-0 right-0 bg-[#E8E4DC] border-t border-[#111111]/10 h-20 flex justify-around items-center px-2 z-50">
+    <a id="btnExplorarNav" class="flex-1 flex flex-col items-center justify-center text-[#5A7A00] font-bold py-1" href="#">
+        <span class="font-tech text-xs uppercase">Explorar</span>
+    </a>
+    <a id="btnObservarNav" class="flex-1 flex flex-col items-center justify-center text-[#111111]/60 py-1" href="#">
+        <span class="font-tech text-xs uppercase">Observar</span>
+    </a>
+    <a id="btnTriangularNav" class="flex-1 flex flex-col items-center justify-center text-[#111111]/60 py-1" href="#">
+        <span class="font-tech text-xs uppercase">Triangular</span>
+    </a>
+    <a id="btnFijarNav" class="flex-1 flex flex-col items-center justify-center text-[#111111]/60 py-1" href="#">
+        <span class="font-tech text-xs uppercase">Fijar</span>
+    </a>
+</nav>
+
 <script>
-        const API = "https://antrosapiens-api-pro.vercel.app";
-        let categoriaActiva = "";
-        let verticalActiva = "";
-        let escalaActiva = "";
-        const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+    const API = "https://antrosapiens-api-pro.vercel.app";
+    let categoriaActiva = "";
+    let verticalActiva = "";
+    let escalaActiva = "";
+    const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
-        let expedienteActual = null;
+    let expedienteActual = null;
 
-        function mostrarObservar(p) {
-            expedienteActual = p;
-            document.getElementById('observarExp').textContent = 'EXP. ' + (p.categoria || '') + ' · ' + (p.scoring || '?');
-            document.getElementById('observarNombre').textContent = p.nombre || '';
-            document.getElementById('observarBarraNombre').textContent = p.nombre || '';
-            const tl = document.getElementById('observarTimeline');
-            const val = p.validacion_cientifica || {};
-            const vacios = val.hipotesis_bloqueada ? (val.recomendacion || 'Evidencia insuficiente para validar.') : 'Sin vacios criticos registrados.';
-
-            // Orden de presentación: de más reciente a más antigua. Se ordena aquí
-            // para que el encabezado declarado valga en TODOS los expedientes y no
-            // dependa del orden en que llegue el arreglo. No altera los datos.
-            const evidencias = (p.evidencias || []).slice().sort((a, b) => {
-                const ta = Date.parse(a && a.fecha) || 0;
-                const tb = Date.parse(b && b.fecha) || 0;
-                return tb - ta;
-            });
-
-            // Rango temporal del expediente y aviso de archivo (>12 meses).
-            const fechas = evidencias.map(ev => Date.parse(ev && ev.fecha)).filter(t => !isNaN(t));
-            const soloDia = (t) => new Date(t).toISOString().slice(0, 10);
-            const estado = document.getElementById('observarEstado');
-            if (fechas.length) {
-                const masReciente = Math.max(...fechas);
-                const masAntigua = Math.min(...fechas);
-                const doceMeses = new Date();
-                doceMeses.setFullYear(doceMeses.getFullYear() - 1);
-                const archivo = masReciente < doceMeses.getTime()
-                    ? '<span class="px-2 py-0.5 rounded bg-amber-100 text-amber-800 font-bold uppercase tracking-wider">Archivo histórico</span>'
-                    : '';
-                estado.innerHTML = `<span>${esc(soloDia(masAntigua))} — ${esc(soloDia(masReciente))}</span>${archivo}`;
+    // --- Navegación entre las 4 pantallas + estado activo del nav inferior ---
+    const PANTALLAS = ['explorar', 'observar', 'triangular', 'fijar'];
+    function mostrarPantalla(nombre) {
+        PANTALLAS.forEach(n => {
+            document.getElementById('screen-' + n).style.display = (n === nombre) ? 'block' : 'none';
+        });
+        PANTALLAS.forEach(n => {
+            const nav = document.getElementById('btn' + n[0].toUpperCase() + n.slice(1) + 'Nav');
+            if (n === nombre) {
+                nav.classList.add('text-[#5A7A00]', 'font-bold');
+                nav.classList.remove('text-[#111111]/60');
             } else {
-                estado.innerHTML = '<span>Sin fechas de evidencia registradas</span>';
+                nav.classList.remove('text-[#5A7A00]', 'font-bold');
+                nav.classList.add('text-[#111111]/60');
             }
+        });
+    }
 
-            document.getElementById('observarOrden').textContent =
-                'Cronología · de más reciente a más antigua';
+    function actualizarFijar() {
+        const cont = document.getElementById('fijarContenido');
+        if (!expedienteActual) {
+            cont.innerHTML = `
+                <span class="font-tech text-[10px] bg-[#111111]/5 text-[#111111]/60 px-2 py-0.5 rounded uppercase tracking-wider">Sin expediente seleccionado</span>
+                <p class="font-serif-voice text-sm text-[#111111]/80 leading-relaxed mt-3">Selecciona un hallazgo en Explorar para revisarlo aquí.</p>`;
+            return;
+        }
+        cont.innerHTML = `
+            <span class="font-tech text-[10px] bg-[#5A7A00]/10 text-[#5A7A00] px-2 py-0.5 rounded uppercase tracking-wider">En observación</span>
+            <h2 class="font-serif-voice text-xl font-bold text-[#111111] mt-3 mb-2">${esc(expedienteActual.nombre || '')}</h2>
+            <p class="font-serif-voice italic text-sm text-[#111111]/80 mb-4">El sellado formal del peritaje (Capa 12, Gobernanza Científica) aún no está conectado a esta pantalla — por ahora solo refleja el expediente que estás observando.</p>
+            <button disabled class="w-full bg-[#111111]/10 text-[#111111]/50 py-3 rounded-lg font-tech text-xs uppercase tracking-widest font-bold cursor-not-allowed">Sellar Peritaje (próximamente)</button>`;
+    }
 
-            tl.innerHTML = evidencias.map(ev => `
-                <div class="mb-12 relative">
-                    <div class="absolute -left-10 top-2 w-4 h-4 rounded-full bg-slate-300 border-4 border-[#FCFAED]"></div>
-                    <p class="font-mono text-xs text-slate-500 mb-4">${esc(ev.fecha || '')}</p>
-                    <div class="bg-white/50 rounded-2xl border border-slate-200 overflow-hidden">
-                        <div class="p-6 bg-[#fef2e2]/30 border-b border-slate-100">
-                            <span class="font-mono text-xs font-bold text-[#2d5a27] uppercase tracking-wider">Lo que sabemos (Hecho)</span>
-                            <p class="text-slate-800 leading-relaxed mt-2">${esc(ev.texto || '')}</p>
-                            <div class="mt-4"><span class="font-mono text-[10px] bg-slate-200 px-2 py-1 rounded text-slate-600 uppercase">Fuente: ${esc(ev.fuente || '')}</span></div>
-                        </div>
-                        <div class="p-6">
-                            <span class="font-mono text-xs font-bold text-slate-500 uppercase tracking-wider">Lo que no sabemos (Vacios)</span>
-                            <p class="text-slate-600 mt-2">${esc(vacios)}</p>
-                        </div>
+    function mostrarObservar(p) {
+        expedienteActual = p;
+        document.getElementById('observarExp').textContent = 'EXP. ' + (p.categoria || '') + ' · ' + (p.scoring || '?');
+        document.getElementById('observarNombre').textContent = p.nombre || '';
+        document.getElementById('observarBarraNombre').textContent = p.nombre || '';
+        const tl = document.getElementById('observarTimeline');
+        const val = p.validacion_cientifica || {};
+        const vacios = val.hipotesis_bloqueada ? (val.recomendacion || 'Evidencia insuficiente para validar.') : 'Sin vacios criticos registrados.';
+
+        // Orden de presentación: de más reciente a más antigua. Se ordena aquí
+        // para que el encabezado declarado valga en TODOS los expedientes y no
+        // dependa del orden en que llegue el arreglo. No altera los datos.
+        const evidencias = (p.evidencias || []).slice().sort((a, b) => {
+            const ta = Date.parse(a && a.fecha) || 0;
+            const tb = Date.parse(b && b.fecha) || 0;
+            return tb - ta;
+        });
+
+        // Rango temporal del expediente y aviso de archivo (>12 meses).
+        const fechas = evidencias.map(ev => Date.parse(ev && ev.fecha)).filter(t => !isNaN(t));
+        const soloDia = (t) => new Date(t).toISOString().slice(0, 10);
+        const estado = document.getElementById('observarEstado');
+        if (fechas.length) {
+            const masReciente = Math.max(...fechas);
+            const masAntigua = Math.min(...fechas);
+            const doceMeses = new Date();
+            doceMeses.setFullYear(doceMeses.getFullYear() - 1);
+            const archivo = masReciente < doceMeses.getTime()
+                ? '<span class="px-2 py-0.5 rounded bg-[#B00020]/10 text-[#B00020] font-bold uppercase tracking-wider">Archivo histórico</span>'
+                : '';
+            estado.innerHTML = `<span>${esc(soloDia(masAntigua))} — ${esc(soloDia(masReciente))}</span>${archivo}`;
+        } else {
+            estado.innerHTML = '<span>Sin fechas de evidencia registradas</span>';
+        }
+
+        document.getElementById('observarOrden').textContent =
+            'Cronología · de más reciente a más antigua';
+
+        tl.innerHTML = evidencias.map(ev => `
+            <div class="mb-8 relative">
+                <div class="absolute -left-8 top-2 w-3 h-3 rounded-full bg-[#111111]/20 border-4 border-[#E8E4DC]"></div>
+                <p class="font-tech text-xs text-[#111111]/60 mb-3">${esc(ev.fecha || '')}</p>
+                <div class="bg-white rounded-xl border border-[#111111]/10 overflow-hidden">
+                    <div class="p-5 bg-[#5A7A00]/5 border-b border-[#111111]/10">
+                        <span class="font-tech text-xs font-bold text-[#5A7A00] uppercase tracking-wider">Lo que sabemos (Hecho)</span>
+                        <p class="text-[#111111] leading-relaxed mt-2">${esc(ev.texto || '')}</p>
+                        <div class="mt-3"><span class="font-tech text-[10px] bg-[#111111]/5 px-2 py-1 rounded text-[#111111]/60 uppercase">Fuente: ${esc(ev.fuente || '')}</span></div>
+                    </div>
+                    <div class="p-5">
+                        <span class="font-tech text-xs font-bold text-[#111111]/60 uppercase tracking-wider">Lo que no sabemos (Vacíos)</span>
+                        <p class="text-[#111111]/70 mt-2">${esc(vacios)}</p>
                     </div>
                 </div>
+            </div>
+        `).join('');
+
+        // Una sola lectura por expediente, al final de toda la cronología:
+        // intercalada entre evidencias no se sabía a cuál se refería.
+        document.getElementById('observarLectura').innerHTML = `
+            <div class="bg-white rounded-xl border border-[#111111]/10 p-5">
+                <span class="font-tech text-xs font-bold text-[#5A7A00] uppercase tracking-wider">Tu lectura (Interpretación)</span>
+                <p class="font-tech text-xs text-[#111111]/60 mt-1">Sobre el conjunto de la cronología.</p>
+                <textarea class="w-full mt-2 font-serif-voice text-base italic text-[#111111] bg-transparent border border-[#111111]/15 rounded-lg p-3" rows="4" placeholder="Escribe tu interpretación aquí..."></textarea>
+            </div>`;
+
+        actualizarFijar();
+        mostrarPantalla('observar');
+    }
+
+    // --- Filtro REGIÓN: comportamiento visual tipo radio (sin datos backend aún) ---
+    document.querySelectorAll('section .flex-wrap').forEach(group => {
+        if (group.id === 'focoFilters' || group.id === 'verticalFilters' || group.id === 'escalaFilters') return; // se manejan aparte, con datos reales
+        group.querySelectorAll('button').forEach(button => {
+            button.addEventListener('click', function() {
+                group.querySelectorAll('button').forEach(btn => {
+                    btn.classList.remove('bg-[#5A7A00]', 'text-white', 'border-[#5A7A00]');
+                    btn.classList.add('border-[#111111]/15', 'text-[#111111]/70');
+                });
+                this.classList.add('bg-[#5A7A00]', 'text-white', 'border-[#5A7A00]');
+                this.classList.remove('border-[#111111]/15', 'text-[#111111]/70');
+            });
+        });
+    });
+
+    // --- Candidatos verificados (Entrega 3): GET /verificados, distinto de /expedientes ---
+    const TIPO_LABEL = {
+        senal_primaria_autodeclaracion: 'Autodeclaración',
+        senal_primaria_huella_practica: 'Huella práctica',
+    };
+
+    async function cargarCandidatosVerificados() {
+        const cont = document.getElementById('verificadosList');
+        const loading = document.getElementById('verificadosLoading');
+        const count = document.getElementById('verificadosCount');
+        try {
+            const res = await fetch(`${API}/verificados?limite=50`);
+            const data = await res.json();
+            loading.remove();
+            const items = data.items || [];
+            count.textContent = `${items.length} verificado(s)`;
+            if (!items.length) {
+                cont.innerHTML = `<p class="text-sm text-[#111111]/70">Aún no hay candidatos verificados.</p>`;
+                return;
+            }
+            cont.innerHTML = items.map(it => `
+                <div class="p-4 border-l-4 border-[#1F5C8C] bg-[#1F5C8C]/5 rounded-lg flex flex-col gap-2">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="font-serif-voice font-semibold text-[#111111] text-lg">${esc(it.organizacion)}</span>
+                        <span class="px-2 py-0.5 rounded-full text-xs font-tech bg-[#1F5C8C] text-white uppercase">Verificado</span>
+                        <span class="font-tech text-xs text-[#111111]/60">${esc(TIPO_LABEL[it.tipo_epistemologico] || it.tipo_epistemologico)}</span>
+                    </div>
+                    <p class="font-serif-voice italic text-[#111111]/80 text-sm">${esc(it.cita_textual || '')}</p>
+                    <p class="font-tech text-xs text-[#111111]/60">${esc(it.nombre_medio || '')}</p>
+                </div>
             `).join('');
-
-            // Una sola lectura por expediente, al final de toda la cronología:
-            // intercalada entre evidencias no se sabía a cuál se refería.
-            document.getElementById('observarLectura').innerHTML = `
-                <div class="bg-white/50 rounded-2xl border border-slate-200 p-6">
-                    <span class="font-mono text-xs font-bold text-[#2d5a27] uppercase tracking-wider">Tu Lectura (Interpretacion)</span>
-                    <p class="font-mono text-xs text-slate-500 mt-1">Sobre el conjunto de la cronología.</p>
-                    <textarea class="w-full mt-2 font-newsreader text-lg italic text-slate-800 bg-transparent border border-slate-200 rounded-lg p-3" rows="4" placeholder="Escribe tu interpretacion aqui..."></textarea>
-                </div>`;
-
-            document.getElementById('screen-explorar').style.display = 'none';
-            document.getElementById('screen-observar').style.display = 'block';
+        } catch (e) {
+            loading.textContent = 'No se pudieron cargar los candidatos verificados (backend no disponible).';
         }
+    }
 
-        document.getElementById('btnVolverObservar').addEventListener('click', () => {
-            document.getElementById('screen-observar').style.display = 'none';
-            document.getElementById('screen-explorar').style.display = 'block';
-        });
-
-        // --- Filtro REGIÓN: comportamiento visual tipo radio (sin datos backend aún) ---
-        document.querySelectorAll('section .flex-wrap').forEach(group => {
-            if (group.id === 'focoFilters') return; // FOCO se maneja aparte, con datos reales
-            group.querySelectorAll('button').forEach(button => {
-                button.addEventListener('click', function() {
-                    group.querySelectorAll('button').forEach(btn => {
-                        btn.classList.remove('bg-primary', 'text-on-primary', 'border-primary');
-                        btn.classList.add('border-outline-variant/30', 'text-on-surface-variant');
-                    });
-                    this.classList.add('bg-primary', 'text-on-primary', 'border-primary');
-                    this.classList.remove('border-outline-variant/30', 'text-on-surface-variant');
-                });
+    // --- Filtro FOCO: se puebla con las categorías reales del backend ---
+    async function cargarCategorias() {
+        const cont = document.getElementById('focoFilters');
+        const loading = document.getElementById('focoLoading');
+        try {
+            const res = await fetch(`${API}/prospectos/categorias`);
+            const data = await res.json();
+            loading.remove();
+            const cats = data.categorias || {};
+            Object.keys(cats).forEach(nombre => {
+                const btn = document.createElement('button');
+                btn.dataset.cat = nombre;
+                btn.className = "px-4 py-2 border border-[#111111]/15 text-[#111111]/70 rounded-full text-sm hover:bg-[#111111]/5 transition-colors";
+                btn.textContent = `${nombre} (${cats[nombre]})`;
+                btn.addEventListener('click', () => seleccionarFoco(btn));
+                cont.appendChild(btn);
             });
+            document.querySelector('#focoFilters button[data-cat=""]').addEventListener('click', function() {
+                seleccionarFoco(this);
+            });
+        } catch (e) {
+            loading.textContent = "No se pudieron cargar las categorías (backend no disponible).";
+        }
+    }
+
+    function seleccionarFoco(btnSeleccionado) {
+        categoriaActiva = btnSeleccionado.dataset.cat || "";
+        document.querySelectorAll('#focoFilters button').forEach(btn => {
+            btn.classList.remove('bg-[#5A7A00]', 'text-white', 'border-[#5A7A00]');
+            btn.classList.add('border-[#111111]/15', 'text-[#111111]/70');
         });
+        btnSeleccionado.classList.add('bg-[#5A7A00]', 'text-white', 'border-[#5A7A00]');
+        btnSeleccionado.classList.remove('border-[#111111]/15', 'text-[#111111]/70');
+    }
 
-        // --- Candidatos verificados (Entrega 3): GET /verificados, distinto de /expedientes ---
-        const TIPO_LABEL = {
-            senal_primaria_autodeclaracion: 'Autodeclaración',
-            senal_primaria_huella_practica: 'Huella práctica',
-        };
+    // --- Selección visual genérica (misma lógica que FOCO) para VERTICAL y ESCALA ---
+    function seleccionarFiltro(cont, btnSeleccionado) {
+        cont.querySelectorAll('button').forEach(btn => {
+            btn.classList.remove('bg-[#5A7A00]', 'text-white', 'border-[#5A7A00]');
+            btn.classList.add('border-[#111111]/15', 'text-[#111111]/70');
+        });
+        btnSeleccionado.classList.add('bg-[#5A7A00]', 'text-white', 'border-[#5A7A00]');
+        btnSeleccionado.classList.remove('border-[#111111]/15', 'text-[#111111]/70');
+        const val = btnSeleccionado.dataset.val || "";
+        if (cont.id === 'verticalFilters') verticalActiva = val;
+        else if (cont.id === 'escalaFilters') escalaActiva = val;
+    }
 
-        async function cargarCandidatosVerificados() {
-            const cont = document.getElementById('verificadosList');
-            const loading = document.getElementById('verificadosLoading');
-            const count = document.getElementById('verificadosCount');
-            try {
-                const res = await fetch(`${API}/verificados?limite=50`);
-                const data = await res.json();
-                loading.remove();
-                const items = data.items || [];
-                count.textContent = `${items.length} verificado(s)`;
-                if (!items.length) {
-                    cont.innerHTML = `<p class="font-body-reading text-body-reading text-on-surface-variant">Aún no hay candidatos verificados.</p>`;
-                    return;
-                }
-                cont.innerHTML = items.map(it => `
-                    <div class="p-4 border-l-4 border-secondary bg-secondary-container/20 rounded-lg flex flex-col gap-2">
-                        <div class="flex items-center gap-2 flex-wrap">
-                            <span class="font-headline-md-mobile text-on-surface text-lg">${esc(it.organizacion)}</span>
-                            <span class="px-2 py-0.5 rounded-full text-xs font-metadata-code bg-secondary text-on-secondary uppercase">Verificado</span>
-                            <span class="font-metadata-code text-metadata-code text-outline">${esc(TIPO_LABEL[it.tipo_epistemologico] || it.tipo_epistemologico)}</span>
-                        </div>
-                        <p class="font-body-reading text-on-surface-variant text-sm italic">${esc(it.cita_textual || '')}</p>
-                        <p class="font-metadata-code text-metadata-code text-outline">${esc(it.nombre_medio || '')}</p>
+    // --- Filtros VERTICAL y ESCALA: se pueblan con valores únicos y conteos reales de /expedientes ---
+    async function cargarFiltroProspectos(containerId, loadingId, campo) {
+        const cont = document.getElementById(containerId);
+        const loading = document.getElementById(loadingId);
+        try {
+            const res = await fetch(`${API}/expedientes?limite=100`);
+            const data = await res.json();
+            loading.remove();
+            const conteo = {};
+            (data.expedientes || []).forEach(p => {
+                const v = String(p[campo] || "").trim();
+                if (!v) return;
+                conteo[v] = (conteo[v] || 0) + 1;
+            });
+            Object.keys(conteo).sort().forEach(valor => {
+                const btn = document.createElement('button');
+                btn.dataset.val = valor;
+                btn.className = "px-4 py-2 border border-[#111111]/15 text-[#111111]/70 rounded-full text-sm hover:bg-[#111111]/5 transition-colors";
+                btn.textContent = `${valor} (${conteo[valor]})`;
+                btn.addEventListener('click', () => seleccionarFiltro(cont, btn));
+                cont.appendChild(btn);
+            });
+            const todos = cont.querySelector('button[data-val=""]');
+            if (todos) todos.addEventListener('click', () => seleccionarFiltro(cont, todos));
+        } catch (e) {
+            loading.textContent = "No se pudo cargar (backend no disponible).";
+        }
+    }
+
+    // --- Comenzar exploración: trae EXPEDIENTES curados (scoring, Deuda Cultural, evidencia), no la lista cruda ---
+    document.getElementById('btnExplorar').addEventListener('click', async () => {
+        const q = document.querySelector('input[type="text"]').value.trim().toLowerCase();
+        const seccion = document.getElementById('resultados');
+        const lista = document.getElementById('resultadosList');
+        const count = document.getElementById('resultadosCount');
+        seccion.classList.remove('hidden');
+        lista.innerHTML = `<p class="text-sm text-[#111111]/70">Curando hallazgos…</p>`;
+        try {
+            const res = await fetch(`${API}/expedientes?limite=100`);
+            const data = await res.json();
+            let items = data.expedientes || [];
+            if (categoriaActiva) items = items.filter(p => p.categoria === categoriaActiva);
+            if (verticalActiva) items = items.filter(p => p.vertical === verticalActiva);
+            if (escalaActiva) items = items.filter(p => p.escala === escalaActiva);
+            if (q) items = items.filter(p => (p.nombre || "").toLowerCase().includes(q));
+            count.textContent = `${items.length} expediente(s)`;
+            if (!items.length) {
+                const hayFiltros = categoriaActiva || verticalActiva || escalaActiva;
+                lista.innerHTML = hayFiltros
+                    ? `<p class="text-sm text-[#111111]/70">Sin expedientes que combinen estos filtros específicos. Prueba quitando uno de los criterios (categoría, vertical o escala) para ver si aparecen resultados.</p>`
+                    : `<p class="text-sm text-[#111111]/70">Sin expedientes curados con estos criterios todavía. El Radar sigue detectando; vuelve a intentar tras la próxima corrida.</p>`;
+                return;
+            }
+            const badge = (s) => ({A:'bg-[#5A7A00] text-white', B:'bg-[#1F5C8C]/15 text-[#1F5C8C]', C:'bg-[#B00020]/10 text-[#B00020]'}[s] || 'bg-[#111111]/5 text-[#111111]/70');
+            window._items = items;
+            lista.innerHTML = items.slice(0, 30).map((p, idx) => `
+                <div class="p-4 border border-[#111111]/10 rounded-lg flex flex-col gap-2 cursor-pointer hover:border-[#5A7A00] transition-colors bg-white" data-idx="${idx}">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="font-serif-voice font-semibold text-[#111111] text-lg">${esc(p.nombre)}</span>
+                        <span class="px-2 py-0.5 rounded-full text-xs font-tech ${badge(p.scoring)}">${esc(p.scoring || '?')}</span>
+                        <span class="font-tech text-xs text-[#111111]/60">ICP ${esc(p.score_icp ?? 0)}</span>
+                        <span class="font-tech text-xs text-[#111111]/60 uppercase">${esc(p.categoria)}</span>
                     </div>
-                `).join('');
-            } catch (e) {
-                loading.textContent = 'No se pudieron cargar los candidatos verificados (backend no disponible).';
-            }
-        }
-
-        // --- Filtro FOCO: se puebla con las categorías reales del backend ---
-        async function cargarCategorias() {
-            const cont = document.getElementById('focoFilters');
-            const loading = document.getElementById('focoLoading');
-            try {
-                const res = await fetch(`${API}/prospectos/categorias`);
-                const data = await res.json();
-                loading.remove();
-                const cats = data.categorias || {};
-                Object.keys(cats).forEach(nombre => {
-                    const btn = document.createElement('button');
-                    btn.dataset.cat = nombre;
-                    btn.className = "px-4 py-2 border border-outline-variant/30 text-on-surface-variant rounded-full font-body-reading text-ui-label hover:bg-surface-container-high transition-colors";
-                    btn.textContent = `${nombre} (${cats[nombre]})`;
-                    btn.addEventListener('click', () => seleccionarFoco(btn));
-                    cont.appendChild(btn);
-                });
-                document.querySelector('#focoFilters button[data-cat=""]').addEventListener('click', function() {
-                    seleccionarFoco(this);
-                });
-            } catch (e) {
-                loading.textContent = "No se pudieron cargar las categorías (backend no disponible).";
-            }
-        }
-
-        function seleccionarFoco(btnSeleccionado) {
-            categoriaActiva = btnSeleccionado.dataset.cat || "";
-            document.querySelectorAll('#focoFilters button').forEach(btn => {
-                btn.classList.remove('bg-primary', 'text-on-primary', 'border-primary');
-                btn.classList.add('border-outline-variant/30', 'text-on-surface-variant');
-            });
-            btnSeleccionado.classList.add('bg-primary', 'text-on-primary', 'border-primary');
-            btnSeleccionado.classList.remove('border-outline-variant/30', 'text-on-surface-variant');
-        }
-
-        // --- Selección visual genérica (misma lógica que FOCO) para VERTICAL y ESCALA ---
-        function seleccionarFiltro(cont, btnSeleccionado) {
-            cont.querySelectorAll('button').forEach(btn => {
-                btn.classList.remove('bg-primary', 'text-on-primary', 'border-primary');
-                btn.classList.add('border-outline-variant/30', 'text-on-surface-variant');
-            });
-            btnSeleccionado.classList.add('bg-primary', 'text-on-primary', 'border-primary');
-            btnSeleccionado.classList.remove('border-outline-variant/30', 'text-on-surface-variant');
-            const val = btnSeleccionado.dataset.val || "";
-            if (cont.id === 'verticalFilters') verticalActiva = val;
-            else if (cont.id === 'escalaFilters') escalaActiva = val;
-        }
-
-        // --- Filtros VERTICAL y ESCALA: se pueblan con valores únicos y conteos reales de /expedientes ---
-        async function cargarFiltroProspectos(containerId, loadingId, campo) {
-            const cont = document.getElementById(containerId);
-            const loading = document.getElementById(loadingId);
-            try {
-                const res = await fetch(`${API}/expedientes?limite=100`);
-                const data = await res.json();
-                loading.remove();
-                const conteo = {};
-                (data.expedientes || []).forEach(p => {
-                    const v = String(p[campo] || "").trim();
-                    if (!v) return;
-                    conteo[v] = (conteo[v] || 0) + 1;
-                });
-                Object.keys(conteo).sort().forEach(valor => {
-                    const btn = document.createElement('button');
-                    btn.dataset.val = valor;
-                    btn.className = "px-4 py-2 border border-outline-variant/30 text-on-surface-variant rounded-full font-body-reading text-ui-label hover:bg-surface-container-high transition-colors";
-                    btn.textContent = `${valor} (${conteo[valor]})`;
-                    btn.addEventListener('click', () => seleccionarFiltro(cont, btn));
-                    cont.appendChild(btn);
-                });
-                const todos = cont.querySelector('button[data-val=""]');
-                if (todos) todos.addEventListener('click', () => seleccionarFiltro(cont, todos));
-            } catch (e) {
-                loading.textContent = "No se pudo cargar (backend no disponible).";
-            }
-        }
-
-        // --- Comenzar exploración: trae EXPEDIENTES curados (scoring, Deuda Cultural, evidencia), no la lista cruda ---
-        document.getElementById('btnExplorar').addEventListener('click', async () => {
-            const q = document.querySelector('input[type="text"]').value.trim().toLowerCase();
-            const seccion = document.getElementById('resultados');
-            const lista = document.getElementById('resultadosList');
-            const count = document.getElementById('resultadosCount');
-            seccion.classList.remove('hidden');
-            lista.innerHTML = `<p class="font-body-reading text-on-surface-variant">Curando hallazgos…</p>`;
-            try {
-                const res = await fetch(`${API}/expedientes?limite=100`);
-                const data = await res.json();
-                let items = data.expedientes || [];
-                if (categoriaActiva) items = items.filter(p => p.categoria === categoriaActiva);
-                if (verticalActiva) items = items.filter(p => p.vertical === verticalActiva);
-                if (escalaActiva) items = items.filter(p => p.escala === escalaActiva);
-                if (q) items = items.filter(p => (p.nombre || "").toLowerCase().includes(q));
-                count.textContent = `${items.length} expediente(s)`;
-                if (!items.length) {
-                    const hayFiltros = categoriaActiva || verticalActiva || escalaActiva;
-                    lista.innerHTML = hayFiltros
-                        ? `<p class="font-body-reading text-body-reading text-on-surface-variant">Sin expedientes que combinen estos filtros específicos. Prueba quitando uno de los criterios (categoría, vertical o escala) para ver si aparecen resultados.</p>`
-                        : `<p class="font-body-reading text-body-reading text-on-surface-variant">Sin expedientes curados con estos criterios todavía. El Radar sigue detectando; vuelve a intentar tras la próxima corrida.</p>`;
-                    return;
-                }
-                const badge = (s) => ({A:'bg-primary text-on-primary', B:'bg-tertiary-container text-on-tertiary-container', C:'bg-error-container text-on-error-container'}[s] || 'bg-surface-container-high text-on-surface-variant');
-                window._items = items;
-                lista.innerHTML = items.slice(0, 30).map((p, idx) => `
-                    <div class="p-4 border border-outline-variant/30 rounded-lg flex flex-col gap-2 cursor-pointer hover:border-primary transition-colors" data-idx="${idx}">
-                        <div class="flex items-center gap-2 flex-wrap">
-                            <span class="font-headline-md-mobile text-on-surface text-lg">${esc(p.nombre)}</span>
-                            <span class="px-2 py-0.5 rounded-full text-xs font-metadata-code ${badge(p.scoring)}">${esc(p.scoring || '?')}</span>
-                            <span class="font-metadata-code text-metadata-code text-outline">ICP ${esc(p.score_icp ?? 0)}</span>
-                            <span class="font-metadata-code text-metadata-code text-outline uppercase">${esc(p.categoria)}</span>
+                    <p class="text-sm text-[#111111]/80">
+                        <strong class="text-[#111111]">Señal detectada: ${esc(p.senal_dominante || '—')}</strong>
+                    </p>
+                    <p class="font-tech text-xs text-[#111111]/60 leading-snug">
+                        Coincidencia de palabras clave. Sin situación reconstruida. No constituye hallazgo.
+                    </p>
+                    <span class="px-2 py-0.5 rounded-full text-xs font-tech w-fit ${(p.validacion_cientifica && p.validacion_cientifica.hipotesis_bloqueada) ? 'bg-[#B00020] text-white' : 'bg-[#5A7A00]/10 text-[#5A7A00]'}">${(p.validacion_cientifica && p.validacion_cientifica.hipotesis_bloqueada) ? 'BLOQUEADA' : 'VALIDADA'}</span>
+                    <p class="font-tech text-xs text-[#111111]/60">
+                        Evidencias: ${p.total_evidencias ?? 0}
+                    </p>
+                    ${(p.evidencias || []).slice(0, 2).map(ev => `
+                        <div class="pl-3 border-l-2 border-[#111111]/15">
+                            <p class="font-serif-voice italic text-[#111111]/80 text-sm">${esc(ev.texto || '')}</p>
+                            <p class="font-tech text-xs text-[#111111]/60">${esc(ev.fuente || '')} · ${esc(ev.fecha || '')}</p>
                         </div>
-                        <p class="font-body-reading text-on-surface-variant text-sm">
-                            <strong class="text-on-surface">Señal detectada: ${esc(p.senal_dominante || '—')}</strong>
-                        </p>
-                        <p class="font-metadata-code text-xs text-outline/70 leading-snug">
-                            Coincidencia de palabras clave. Sin situación reconstruida. No constituye hallazgo.
-                        </p>
-                        <span class="px-2 py-0.5 rounded-full text-xs font-metadata-code ${(p.validacion_cientifica && p.validacion_cientifica.hipotesis_bloqueada) ? 'bg-error text-on-error' : 'bg-secondary-container text-on-secondary-container'}">${(p.validacion_cientifica && p.validacion_cientifica.hipotesis_bloqueada) ? 'BLOQUEADA' : 'VALIDADA'}</span>
-                        <p class="font-metadata-code text-metadata-code text-outline">
-                            Evidencias: ${p.total_evidencias ?? 0}
-                        </p>
-                        ${(p.evidencias || []).slice(0, 2).map(ev => `
-                            <div class="pl-3 border-l-2 border-outline-variant/40">
-                                <p class="font-body-reading text-on-surface-variant text-sm italic">${esc(ev.texto || '')}</p>
-                                <p class="font-metadata-code text-metadata-code text-outline">${esc(ev.fuente || '')} · ${esc(ev.fecha || '')}</p>
-                            </div>
-                        `).join('')}
-                    </div>
-                `).join('');
-                lista.querySelectorAll('[data-idx]').forEach(el => {
-                    el.addEventListener('click', () => mostrarObservar(window._items[Number(el.dataset.idx)]));
-                });
-            } catch (e) {
-                lista.innerHTML = `<p class="font-body-reading text-error">No se pudo conectar con el laboratorio. Intenta de nuevo.</p>`;
-            }
-        });
+                    `).join('')}
+                </div>
+            `).join('');
+            lista.querySelectorAll('[data-idx]').forEach(el => {
+                el.addEventListener('click', () => mostrarObservar(window._items[Number(el.dataset.idx)]));
+            });
+        } catch (e) {
+            lista.innerHTML = `<p class="text-sm text-[#B00020]">No se pudo conectar con el laboratorio. Intenta de nuevo.</p>`;
+        }
+    });
 
-        cargarCategorias();
-        cargarFiltroProspectos('verticalFilters', 'verticalLoading', 'vertical');
-        cargarFiltroProspectos('escalaFilters', 'escalaLoading', 'escala');
-        cargarCandidatosVerificados();
+    cargarCategorias();
+    cargarFiltroProspectos('verticalFilters', 'verticalLoading', 'vertical');
+    cargarFiltroProspectos('escalaFilters', 'escalaLoading', 'escala');
+    cargarCandidatosVerificados();
 
-        document.getElementById('btnExplorarNav').addEventListener('click', (e) => {
-            e.preventDefault();
-            document.getElementById('screen-observar').style.display = 'none';
-            document.getElementById('screen-explorar').style.display = 'block';
-        });
+    document.getElementById('btnExplorarNav').addEventListener('click', (e) => {
+        e.preventDefault();
+        mostrarPantalla('explorar');
+    });
 
-        document.getElementById('btnObservarNav').addEventListener('click', (e) => {
-            e.preventDefault();
-            if (expedienteActual) {
-                document.getElementById('screen-explorar').style.display = 'none';
-                document.getElementById('screen-observar').style.display = 'block';
-            } else {
-                alert('Selecciona un hallazgo en Explorar primero');
-            }
-        });
-    </script>
-</body></html>
+    document.getElementById('btnObservarNav').addEventListener('click', (e) => {
+        e.preventDefault();
+        if (expedienteActual) mostrarPantalla('observar');
+        else alert('Selecciona un hallazgo en Explorar primero');
+    });
+
+    document.getElementById('btnTriangularNav').addEventListener('click', (e) => {
+        e.preventDefault();
+        mostrarPantalla('triangular');
+    });
+
+    document.getElementById('btnFijarNav').addEventListener('click', (e) => {
+        e.preventDefault();
+        mostrarPantalla('fijar');
+    });
+</script>
+</body>
+</html>
