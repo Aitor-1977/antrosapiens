@@ -15,6 +15,15 @@ solo diagnóstico y especificación.
 > `evidencias` con columnas de otro modelo de datos, `evidencia_clasificada`
 > y `expedientes_candidatos` inexistentes). El operador identificó y
 > actualizó el proyecto Neon correcto directamente en Vercel.
+>
+> **Incidente cerrado (2026-09-04):** `/health`, `/verificados` (7 items) y
+> `/evidencias` (5204 items) confirmados en 200 con la base correcta. El
+> endpoint temporal `/_debug/db` (y sus tests) se retiró del código en este
+> mismo commit — ya cumplió su propósito de diagnóstico y no debía quedar
+> permanentemente. Pendiente sin urgencia: reverificar que el estado de
+> "Clara" (`abierto` vs `candidato`) siga correcto ahora que se conecta a
+> esta base (se revirtió antes, contra un proceso que puede haber estado
+> usando una conexión distinta).
 
 ## 1. "Clara" sigue promovida por error en producción
 
