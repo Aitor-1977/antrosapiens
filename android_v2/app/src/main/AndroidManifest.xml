@@ -22,6 +22,13 @@
             </intent-filter>
         </activity>
 
+        <!-- Instrumento Pericial V4 (Compose nativo): Explorar/Observar/Triangular/Fijar.
+             No es punto de entrada de la app; MainActivity (Radar por WebView) sigue
+             siendo el launcher. -->
+        <activity
+            android:name=".instrumento.InstrumentoActivity"
+            android:exported="false" />
+
     </application>
 
 </manifest>
