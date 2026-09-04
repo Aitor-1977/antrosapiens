@@ -9,6 +9,13 @@ solo diagnóstico y especificación.
 > falta un push (o "Redeploy" manual) para que el runtime tome el valor
 > nuevo. Ver punto 2 más abajo (endpoint temporal de reversión de "Clara").
 
+> **Nota (2026-09-04):** segundo commit sin cambios de lógica, para forzar
+> el redeploy después de corregir `HD_DATABASE_URL` — el valor apuntaba al
+> proyecto Neon equivocado (`antro-labs`, confirmado con `/_debug/db?mapear_columnas=true`:
+> `evidencias` con columnas de otro modelo de datos, `evidencia_clasificada`
+> y `expedientes_candidatos` inexistentes). El operador identificó y
+> actualizó el proyecto Neon correcto directamente en Vercel.
+
 ## 1. "Clara" sigue promovida por error en producción
 
 `expedientes_candidatos.organizacion = 'Clara'` sigue en `estado = 'candidato'`
