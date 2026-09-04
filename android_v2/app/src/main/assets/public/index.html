@@ -3,38 +3,43 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AntrolabsHD — Explorar</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<title>AntrolabsHD — Indagar</title>
+<link rel="stylesheet" href="tailwind.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
     html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
     body { background-color: #E8E4DC; color: #111111; font-family: 'Inter', sans-serif; min-height: max(884px, 100dvh); }
-    .font-serif-voice { font-family: 'Playfair Display', serif; }
+    .font-voice { font-family: 'Inter', sans-serif; font-weight: 600; }
     .font-tech { font-family: 'IBM Plex Mono', monospace; }
     ::-webkit-scrollbar { width: 0px; background: transparent; }
+    .campo-pericial:empty::before {
+        content: "Lectura pericial pendiente de redacción manual.";
+        color: rgba(17,17,17,0.4);
+        font-style: italic;
+    }
 </style>
 </head>
 <body class="min-h-screen flex flex-col pb-24">
 
-<!-- ═══════════════════════ EXPLORAR (Nivel 0) ═══════════════════════ -->
+<!-- ═══════════════════════ INDAGAR (Nivel 0) — id interno "screen-explorar" sin cambiar, solo el rótulo visible ═══════════════════════ -->
 <div id="screen-explorar">
 <header class="sticky top-0 z-50 bg-[#E8E4DC]/95 backdrop-blur border-b border-[#111111]/10 px-4 h-16 flex items-center justify-between">
     <div class="flex items-center gap-2">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5A7A00" stroke-width="2"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5A7A00" stroke-width="2" aria-label="Icono de búsqueda pericial" role="img"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
         <span class="font-tech text-xs uppercase tracking-wider text-[#5A7A00] font-bold">AntrolabsHD</span>
     </div>
-    <span class="font-tech text-xs text-[#111111]/60">NIVEL 0: EXPLORAR</span>
+    <span class="font-tech text-xs text-[#111111]/60">NIVEL 0: INDAGAR</span>
 </header>
 <main class="max-w-md mx-auto px-4 pt-6 flex flex-col gap-6">
     <section class="flex flex-col gap-2 pt-2">
-        <h1 class="font-serif-voice text-3xl font-semibold leading-tight text-[#111111]">¿Qué quieres investigar?</h1>
+        <h1 class="font-voice text-3xl font-semibold leading-tight text-[#111111]">¿Qué quieres investigar?</h1>
         <p class="text-sm text-[#111111]/70 leading-relaxed">Explora organizaciones, señales y fenómenos que podrían merecer una mirada más cercana.</p>
     </section>
 
     <!-- Candidatos verificados (Entrega 3): expedientes ya promovidos con evidencia primaria citada. Distinto de las tarjetas de "Señal detectada" de más abajo, que son solo coincidencia de palabras clave sin verificar. -->
     <section id="candidatosVerificados" class="flex flex-col gap-2">
         <div class="flex items-baseline justify-between">
-            <h2 class="font-serif-voice text-lg font-semibold text-[#111111]">Candidatos verificados</h2>
+            <h2 class="font-voice text-lg font-semibold text-[#111111]">Candidatos verificados</h2>
             <span id="verificadosCount" class="font-tech text-xs text-[#111111]/60"></span>
         </div>
         <p class="font-tech text-[11px] text-[#111111]/60 leading-snug">Evidencia primaria citada: autodeclaración o huella práctica de la propia organización. No es coincidencia de palabras clave.</p>
@@ -104,7 +109,7 @@
     <section id="resultados" class="hidden flex flex-col gap-3">
         <hr class="border-[#111111]/10">
         <div class="flex items-baseline justify-between">
-            <h2 class="font-serif-voice text-lg font-semibold text-[#111111]">Hallazgos</h2>
+            <h2 class="font-voice text-lg font-semibold text-[#111111]">Hallazgos</h2>
             <span id="resultadosCount" class="font-tech text-xs text-[#111111]/60"></span>
         </div>
         <div id="resultadosList" class="flex flex-col gap-2"></div>
@@ -115,7 +120,7 @@
 <!-- ═══════════════════════ OBSERVAR (Nivel 1) ═══════════════════════ -->
 <div id="screen-observar" style="display:none">
 <header class="sticky top-0 z-50 bg-[#E8E4DC]/95 backdrop-blur border-b border-[#111111]/10 px-4 h-16 flex items-center justify-between">
-    <span class="font-serif-voice text-lg font-semibold text-[#5A7A00]">Mesa de Evidencias</span>
+    <span class="font-voice text-lg font-semibold text-[#5A7A00]">Mesa de Evidencias</span>
     <span class="font-tech text-xs text-[#111111]/60">NIVEL 1</span>
 </header>
 <div id="observarBarra" class="sticky top-16 z-40 bg-[#E8E4DC] border-b border-[#111111]/10 px-4 h-10 flex items-center">
@@ -124,7 +129,7 @@
 <main class="max-w-md mx-auto px-4 pt-6">
     <div class="mb-6">
         <p id="observarExp" class="font-tech text-xs text-[#111111]/60 uppercase tracking-widest mb-1"></p>
-        <h2 id="observarNombre" class="font-serif-voice text-2xl font-semibold leading-tight mb-3 text-[#111111] break-words"></h2>
+        <h2 id="observarNombre" class="font-voice text-2xl font-semibold leading-tight mb-3 text-[#111111] break-words"></h2>
         <p id="observarEstado" class="font-tech text-xs text-[#111111]/60 flex items-center gap-2 flex-wrap"></p>
     </div>
     <p id="observarOrden" class="font-tech text-xs text-[#111111]/60 uppercase tracking-widest mb-4"></p>
@@ -136,13 +141,13 @@
 <!-- ═══════════════════════ TRIANGULAR (Nivel 2) ═══════════════════════ -->
 <div id="screen-triangular" style="display:none">
 <header class="sticky top-0 z-50 bg-[#E8E4DC]/95 backdrop-blur border-b border-[#111111]/10 px-4 h-16 flex items-center justify-between">
-    <span class="font-serif-voice text-lg font-semibold text-[#5A7A00]">Mesa de Relaciones</span>
+    <span class="font-voice text-lg font-semibold text-[#5A7A00]">Mesa de Relaciones</span>
     <span class="font-tech text-xs text-[#111111]/60">NIVEL 2</span>
 </header>
 <main class="max-w-md mx-auto px-4 pt-6 flex flex-col gap-4">
     <div class="bg-white p-4 rounded-xl border border-[#111111]/10">
         <span class="font-tech text-[10px] bg-[#111111]/5 text-[#111111]/60 px-2 py-0.5 rounded uppercase tracking-wider">Sin conectar todavía</span>
-        <p class="font-serif-voice text-sm text-[#111111]/80 leading-relaxed mt-3">
+        <p class="font-voice text-sm text-[#111111]/80 leading-relaxed mt-3">
             La triangulación entre lo declarado y lo observado —contradicciones entre fuentes sobre un mismo expediente— todavía no está conectada a datos reales en esta versión. Cuando exista evidencia de fuentes distintas que se contradigan, aparecerá aquí con la referencia a ambas.
         </p>
     </div>
@@ -152,31 +157,31 @@
 <!-- ═══════════════════════ FIJAR (Nivel 3) ═══════════════════════ -->
 <div id="screen-fijar" style="display:none">
 <header class="sticky top-0 z-50 bg-[#E8E4DC]/95 backdrop-blur border-b border-[#111111]/10 px-4 h-16 flex items-center justify-between">
-    <span class="font-serif-voice text-lg font-semibold text-[#5A7A00]">Inspector de Evidencias</span>
+    <span class="font-voice text-lg font-semibold text-[#5A7A00]">Inspector de Evidencias</span>
     <span class="font-tech text-xs text-[#111111]/60">NIVEL 3</span>
 </header>
 <main class="max-w-md mx-auto px-4 pt-6 flex flex-col gap-4">
     <div id="fijarContenido" class="bg-white p-5 rounded-xl border border-[#111111]/10">
         <span class="font-tech text-[10px] bg-[#111111]/5 text-[#111111]/60 px-2 py-0.5 rounded uppercase tracking-wider">Sin expediente seleccionado</span>
-        <p class="font-serif-voice text-sm text-[#111111]/80 leading-relaxed mt-3">Selecciona un hallazgo en Explorar para revisarlo aquí.</p>
+        <p class="font-voice text-sm text-[#111111]/80 leading-relaxed mt-3">Selecciona un hallazgo en Indagar para revisarlo aquí.</p>
     </div>
 </main>
 </div>
 
 <!-- ═══════════════════════ BottomNavBar (persistente en las 4 pantallas) ═══════════════════════ -->
-<nav class="fixed bottom-0 left-0 right-0 bg-[#E8E4DC] border-t border-[#111111]/10 h-20 flex justify-around items-center px-2 z-50">
-    <a id="btnExplorarNav" class="flex-1 flex flex-col items-center justify-center text-[#5A7A00] font-bold py-1" href="#">
-        <span class="font-tech text-xs uppercase">Explorar</span>
-    </a>
-    <a id="btnObservarNav" class="flex-1 flex flex-col items-center justify-center text-[#111111]/60 py-1" href="#">
+<nav class="fixed bottom-0 left-0 right-0 bg-[#E8E4DC] border-t border-[#111111]/10 h-20 flex justify-around items-center px-2 z-50" aria-label="Navegación principal">
+    <button type="button" id="btnExplorarNav" class="flex-1 flex flex-col items-center justify-center text-[#5A7A00] font-bold py-1" aria-current="page">
+        <span class="font-tech text-xs uppercase">Indagar</span>
+    </button>
+    <button type="button" id="btnObservarNav" class="flex-1 flex flex-col items-center justify-center text-[#111111]/60 py-1">
         <span class="font-tech text-xs uppercase">Observar</span>
-    </a>
-    <a id="btnTriangularNav" class="flex-1 flex flex-col items-center justify-center text-[#111111]/60 py-1" href="#">
+    </button>
+    <button type="button" id="btnTriangularNav" class="flex-1 flex flex-col items-center justify-center text-[#111111]/60 py-1">
         <span class="font-tech text-xs uppercase">Triangular</span>
-    </a>
-    <a id="btnFijarNav" class="flex-1 flex flex-col items-center justify-center text-[#111111]/60 py-1" href="#">
+    </button>
+    <button type="button" id="btnFijarNav" class="flex-1 flex flex-col items-center justify-center text-[#111111]/60 py-1">
         <span class="font-tech text-xs uppercase">Fijar</span>
-    </a>
+    </button>
 </nav>
 
 <script>
@@ -199,9 +204,11 @@
             if (n === nombre) {
                 nav.classList.add('text-[#5A7A00]', 'font-bold');
                 nav.classList.remove('text-[#111111]/60');
+                nav.setAttribute('aria-current', 'page');
             } else {
                 nav.classList.remove('text-[#5A7A00]', 'font-bold');
                 nav.classList.add('text-[#111111]/60');
+                nav.removeAttribute('aria-current');
             }
         });
     }
@@ -211,14 +218,41 @@
         if (!expedienteActual) {
             cont.innerHTML = `
                 <span class="font-tech text-[10px] bg-[#111111]/5 text-[#111111]/60 px-2 py-0.5 rounded uppercase tracking-wider">Sin expediente seleccionado</span>
-                <p class="font-serif-voice text-sm text-[#111111]/80 leading-relaxed mt-3">Selecciona un hallazgo en Explorar para revisarlo aquí.</p>`;
+                <p class="font-voice text-sm text-[#111111]/80 leading-relaxed mt-3">Selecciona un hallazgo en Indagar para revisarlo aquí.</p>`;
             return;
         }
         cont.innerHTML = `
             <span class="font-tech text-[10px] bg-[#5A7A00]/10 text-[#5A7A00] px-2 py-0.5 rounded uppercase tracking-wider">En observación</span>
-            <h2 class="font-serif-voice text-xl font-bold text-[#111111] mt-3 mb-2">${esc(expedienteActual.nombre || '')}</h2>
-            <p class="font-serif-voice italic text-sm text-[#111111]/80 mb-4">El sellado formal del peritaje (Capa 12, Gobernanza Científica) aún no está conectado a esta pantalla — por ahora solo refleja el expediente que estás observando.</p>
-            <button disabled class="w-full bg-[#111111]/10 text-[#111111]/50 py-3 rounded-lg font-tech text-xs uppercase tracking-widest font-bold cursor-not-allowed">Sellar Peritaje (próximamente)</button>`;
+            <h2 class="font-voice text-xl font-bold text-[#111111] mt-3 mb-2">${esc(expedienteActual.nombre || '')}</h2>
+            <h3 class="font-voice text-lg text-[#111111] mb-2">Lectura Pericial</h3>
+            <!-- Campo editable por el perito humano. Vacío por defecto: el sistema nunca
+                 rellena este espacio con una interpretación generada automáticamente. -->
+            <p id="campoPericial" class="campo-pericial font-voice italic text-sm text-[#111111]/90 mb-4" contenteditable="true" role="textbox" aria-label="Lectura pericial, redactada exclusivamente por el perito humano"></p>
+            <button type="button" id="btnSellarPeritaje" disabled class="w-full bg-[#111111]/20 text-[#111111]/50 py-3 rounded-lg font-tech text-xs uppercase tracking-widest font-bold cursor-not-allowed" aria-disabled="true">Sellar Peritaje (requiere lectura escrita)</button>`;
+        inicializarLecturaPericial();
+    }
+
+    // El botón solo se habilita cuando el perito ha escrito su propia lectura;
+    // el sistema no puede sellar un peritaje sin texto humano. Se re-adjunta cada
+    // vez que actualizarFijar() reconstruye el HTML (innerHTML destruye listeners).
+    function inicializarLecturaPericial() {
+        const campo = document.getElementById('campoPericial');
+        const boton = document.getElementById('btnSellarPeritaje');
+        if (!campo || !boton) return;
+        campo.addEventListener('input', () => {
+            const tieneTexto = campo.textContent.trim().length > 0;
+            boton.disabled = !tieneTexto;
+            boton.setAttribute('aria-disabled', String(!tieneTexto));
+            boton.classList.toggle('bg-[#5A7A00]', tieneTexto);
+            boton.classList.toggle('text-white', tieneTexto);
+            boton.classList.toggle('cursor-not-allowed', !tieneTexto);
+            boton.classList.toggle('bg-[#111111]/20', !tieneTexto);
+            boton.classList.toggle('text-[#111111]/50', !tieneTexto);
+        });
+        boton.addEventListener('click', () => {
+            if (boton.disabled) return;
+            alert('El sellado formal del peritaje (Capa 12, Gobernanza Científica) aún no está conectado a esta pantalla. Tu lectura no se ha guardado ni enviado.');
+        });
     }
 
     function mostrarObservar(p) {
@@ -283,7 +317,7 @@
             <div class="bg-white rounded-xl border border-[#111111]/10 p-5">
                 <span class="font-tech text-xs font-bold text-[#5A7A00] uppercase tracking-wider">Tu lectura (Interpretación)</span>
                 <p class="font-tech text-xs text-[#111111]/60 mt-1">Sobre el conjunto de la cronología.</p>
-                <textarea class="w-full mt-2 font-serif-voice text-base italic text-[#111111] bg-transparent border border-[#111111]/15 rounded-lg p-3" rows="4" placeholder="Escribe tu interpretación aquí..."></textarea>
+                <textarea class="w-full mt-2 font-voice text-base italic text-[#111111] bg-transparent border border-[#111111]/15 rounded-lg p-3" rows="4" placeholder="Escribe tu interpretación aquí..."></textarea>
             </div>`;
 
         actualizarFijar();
@@ -328,11 +362,11 @@
             cont.innerHTML = items.map(it => `
                 <div class="p-4 border-l-4 border-[#1F5C8C] bg-[#1F5C8C]/5 rounded-lg flex flex-col gap-2">
                     <div class="flex items-center gap-2 flex-wrap">
-                        <span class="font-serif-voice font-semibold text-[#111111] text-lg">${esc(it.organizacion)}</span>
+                        <span class="font-voice font-semibold text-[#111111] text-lg">${esc(it.organizacion)}</span>
                         <span class="px-2 py-0.5 rounded-full text-xs font-tech bg-[#1F5C8C] text-white uppercase">Verificado</span>
                         <span class="font-tech text-xs text-[#111111]/60">${esc(TIPO_LABEL[it.tipo_epistemologico] || it.tipo_epistemologico)}</span>
                     </div>
-                    <p class="font-serif-voice italic text-[#111111]/80 text-sm">${esc(it.cita_textual || '')}</p>
+                    <p class="font-voice italic text-[#111111]/80 text-sm">${esc(it.cita_textual || '')}</p>
                     <p class="font-tech text-xs text-[#111111]/60">${esc(it.nombre_medio || '')}</p>
                 </div>
             `).join('');
@@ -447,7 +481,7 @@
             lista.innerHTML = items.slice(0, 30).map((p, idx) => `
                 <div class="p-4 border border-[#111111]/10 rounded-lg flex flex-col gap-2 cursor-pointer hover:border-[#5A7A00] transition-colors bg-white" data-idx="${idx}">
                     <div class="flex items-center gap-2 flex-wrap">
-                        <span class="font-serif-voice font-semibold text-[#111111] text-lg">${esc(p.nombre)}</span>
+                        <span class="font-voice font-semibold text-[#111111] text-lg">${esc(p.nombre)}</span>
                         <span class="px-2 py-0.5 rounded-full text-xs font-tech ${badge(p.scoring)}">${esc(p.scoring || '?')}</span>
                         <span class="font-tech text-xs text-[#111111]/60">ICP ${esc(p.score_icp ?? 0)}</span>
                         <span class="font-tech text-xs text-[#111111]/60 uppercase">${esc(p.categoria)}</span>
@@ -464,7 +498,7 @@
                     </p>
                     ${(p.evidencias || []).slice(0, 2).map(ev => `
                         <div class="pl-3 border-l-2 border-[#111111]/15">
-                            <p class="font-serif-voice italic text-[#111111]/80 text-sm">${esc(ev.texto || '')}</p>
+                            <p class="font-voice italic text-[#111111]/80 text-sm">${esc(ev.texto || '')}</p>
                             <p class="font-tech text-xs text-[#111111]/60">${esc(ev.fuente || '')} · ${esc(ev.fecha || '')}</p>
                         </div>
                     `).join('')}
@@ -483,24 +517,20 @@
     cargarFiltroProspectos('escalaFilters', 'escalaLoading', 'escala');
     cargarCandidatosVerificados();
 
-    document.getElementById('btnExplorarNav').addEventListener('click', (e) => {
-        e.preventDefault();
+    document.getElementById('btnExplorarNav').addEventListener('click', () => {
         mostrarPantalla('explorar');
     });
 
-    document.getElementById('btnObservarNav').addEventListener('click', (e) => {
-        e.preventDefault();
+    document.getElementById('btnObservarNav').addEventListener('click', () => {
         if (expedienteActual) mostrarPantalla('observar');
-        else alert('Selecciona un hallazgo en Explorar primero');
+        else alert('Selecciona un hallazgo en Indagar primero');
     });
 
-    document.getElementById('btnTriangularNav').addEventListener('click', (e) => {
-        e.preventDefault();
+    document.getElementById('btnTriangularNav').addEventListener('click', () => {
         mostrarPantalla('triangular');
     });
 
-    document.getElementById('btnFijarNav').addEventListener('click', (e) => {
-        e.preventDefault();
+    document.getElementById('btnFijarNav').addEventListener('click', () => {
         mostrarPantalla('fijar');
     });
 </script>
