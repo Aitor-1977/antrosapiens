@@ -38,6 +38,7 @@ from .. import drift_compare as _drift_compare
 from .. import onlife as _onlife
 from .. import pipeline_comercial as _pipeline
 from ..analisis import analizar
+from ..clasificacion_store import clasificar_lote
 from ..curaduria import curar
 from ..dictamen import generar_dictamen, generar_ranking
 from ..engine.rule_engine import RuleEngine
@@ -134,6 +135,99 @@ def _exigir_token(token: Optional[str]) -> None:
         raise HTTPException(503, "intake deshabilitada: configura HD_INGEST_TOKEN")
     if not token or not hmac.compare_digest(token, esperado):
         raise HTTPException(401, "token de ingesta inválido")
+
+
+_CONECTOR_TAVILY = "busqueda_dinamica_founder"
+
+
+def _snapshot_reproc_tavily(db) -> dict:
+    """Misma foto que ``scripts/reprocesar_96_evidencias.py:_snapshot`` (no se
+    importa ese módulo porque ``scripts/`` no viaja en el bundle de Vercel —
+    ver ``vercel.json:functions.api/index.py.includeFiles``, que solo incluye
+    ``hd_scraper/**``). Consulta de solo lectura, sin lógica de clasificación
+    ni de negocio: cuenta filas, nada más."""
+    total = dict(db.fetch_one(
+        "SELECT count(*) AS n FROM evidencias WHERE connector = ?",
+        (_CONECTOR_TAVILY,)))["n"]
+    clasificadas = dict(db.fetch_one(
+        "SELECT count(*) AS n FROM evidencias e "
+        "JOIN evidencia_clasificada ec ON ec.evidencia_id = e.id "
+        "WHERE e.connector = ?", (_CONECTOR_TAVILY,)))["n"]
+    con_expediente = dict(db.fetch_one(
+        "SELECT count(*) AS n FROM evidencias e "
+        "JOIN evidencia_clasificada ec ON ec.evidencia_id = e.id "
+        "WHERE e.connector = ? AND ec.expediente_id IS NOT NULL",
+        (_CONECTOR_TAVILY,)))["n"]
+    con_org_pero_sin_expediente = dict(db.fetch_one(
+        "SELECT count(*) AS n FROM evidencias e "
+        "JOIN evidencia_clasificada ec ON ec.evidencia_id = e.id "
+        "WHERE e.connector = ? AND ec.expediente_id IS NULL "
+        "AND ec.organizacion_mencionada IS NOT NULL",
+        (_CONECTOR_TAVILY,)))["n"]
+    distribucion = {
+        dict(f)["tipo_epistemologico"]: dict(f)["n"]
+        for f in db.fetch_all(
+            "SELECT ec.tipo_epistemologico, count(*) AS n FROM evidencias e "
+            "JOIN evidencia_clasificada ec ON ec.evidencia_id = e.id "
+            "WHERE e.connector = ? GROUP BY ec.tipo_epistemologico",
+            (_CONECTOR_TAVILY,))
+    }
+    return {
+        "evidencias_del_conector": total,
+        "ya_clasificadas": clasificadas,
+        "con_expediente_id": con_expediente,
+        "sin_expediente_id": clasificadas - con_expediente,
+        "con_organizacion_pero_sin_expediente_ANOMALO": con_org_pero_sin_expediente,
+        "distribucion_tipo_epistemologico": distribucion,
+    }
+
+
+@app.get("/ops/reproc-4bf45f8085f14016e440d7845b67dd0d")
+def _reprocesar_temporal_96_tavily(
+    x_ingest_token: Optional[str] = Header(None),
+    token: Optional[str] = Query(None),
+    aplicar: bool = Query(False),
+) -> dict:
+    """Endpoint TEMPORAL de un solo uso (2026-09-05) — se elimina de este
+    archivo inmediatamente después de usarse, y se hace un redeploy sin él.
+
+    Ruta con nombre aleatorio (no descriptivo, no adivinable) porque a
+    diferencia de los endpoints temporales previos (``/admin/revertir-
+    candidato-clara``, ``/_debug/db``), esta operación puede ESCRIBIR sobre
+    las 96 evidencias reales de Tavily (``connector=busqueda_dinamica_
+    founder``) que nunca se persistieron mientras ``expediente_id`` era
+    ``NOT NULL`` (ver ``db/database.py:_migrar_expediente_id_nullable`` y
+    ``scripts/reprocesar_96_evidencias.py``, que documenta y hace exactamente
+    esto mismo por CLI mas no puede correr aquí sin la credencial de Neon).
+
+    Reutiliza ``clasificacion_store.clasificar_lote`` tal cual — no
+    reimplementa la cascada de clasificación ni la persistencia
+    (``expediente_id``/``organizacion_mencionada`` en NULL cuando no hay
+    organización identificable ya se resuelve ahí, no aquí). No importa ni
+    llama a ``promocion_candidatos`` en ningún punto.
+
+    Por defecto (``aplicar`` ausente u ``0``) es dry-run: NO escribe nada,
+    solo devuelve el snapshot antes/después (que en dry-run son iguales) y el
+    reporte proyectado. Solo con ``?aplicar=true`` además del token pasa a
+    modo real.
+
+    Acepta el token por header (``X-Ingest-Token``, preferido) o por query
+    string (``?token=...``), igual que el precedente de ``/admin/revertir-
+    candidato-clara``, para poder dispararlo desde la barra del navegador.
+    """
+    _exigir_token(x_ingest_token or token)
+    db = get_db()
+    antes = _snapshot_reproc_tavily(db)
+    rep = clasificar_lote(db, aplicar=aplicar)
+    despues = _snapshot_reproc_tavily(db)
+    return {
+        "aplicado": aplicar,
+        "antes": antes,
+        "reporte_clasificar_lote": {k: v for k, v in rep.items() if k != "muestra"},
+        "despues": despues,
+        "perdidas": antes["evidencias_del_conector"] - despues["ya_clasificadas"],
+        "anomalo_debe_ser_0": despues["con_organizacion_pero_sin_expediente_ANOMALO"],
+    }
 
 
 def _alta(payload: ProspectoIn) -> dict:
