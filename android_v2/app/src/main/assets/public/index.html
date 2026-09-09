@@ -5,11 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AntrolabsHD — Indagar</title>
 <link rel="stylesheet" href="tailwind.css">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
 <style>
     html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
     body { background-color: #E8E4DC; color: #111111; font-family: 'Inter', sans-serif; min-height: max(884px, 100dvh); }
     .font-voice { font-family: 'Inter', sans-serif; font-weight: 600; }
+    .font-serif-voice { font-family: 'Playfair Display', serif; }
     .font-tech { font-family: 'IBM Plex Mono', monospace; }
     ::-webkit-scrollbar { width: 0px; background: transparent; }
     .campo-pericial:empty::before {
@@ -32,23 +33,9 @@
 </header>
 <main class="max-w-md mx-auto px-4 pt-6 flex flex-col gap-6">
     <section class="flex flex-col gap-2 pt-2">
-        <h1 class="font-voice text-3xl font-semibold leading-tight text-[#111111]">¿Qué quieres investigar?</h1>
-        <p class="text-sm text-[#111111]/70 leading-relaxed">Explora organizaciones, señales y fenómenos que podrían merecer una mirada más cercana.</p>
+        <h1 class="font-serif-voice text-3xl font-semibold leading-tight text-[#111111]">¿Qué quieres investigar?</h1>
+        <p class="text-sm text-[#111111]/70 leading-relaxed">Organizaciones candidatas a prospecto de Hamaca Digital, ordenadas de mejor a peor según tu ICP. Se cargan solas, sin tener que presionar nada.</p>
     </section>
-
-    <!-- Candidatos verificados (Entrega 3): expedientes ya promovidos con evidencia primaria citada. Distinto de las tarjetas de "Señal detectada" de más abajo, que son solo coincidencia de palabras clave sin verificar. -->
-    <section id="candidatosVerificados" class="flex flex-col gap-2">
-        <div class="flex items-baseline justify-between">
-            <h2 class="font-voice text-lg font-semibold text-[#111111]">Candidatos verificados</h2>
-            <span id="verificadosCount" class="font-tech text-xs text-[#111111]/60"></span>
-        </div>
-        <p class="font-tech text-[11px] text-[#111111]/60 leading-snug">Evidencia primaria citada: autodeclaración o huella práctica de la propia organización. No es coincidencia de palabras clave.</p>
-        <div id="verificadosList" class="flex flex-col gap-2">
-            <span id="verificadosLoading" class="font-tech text-xs text-[#111111]/60">Cargando candidatos verificados…</span>
-        </div>
-    </section>
-
-    <hr class="border-[#111111]/10">
 
     <!-- Search Input -->
     <section class="w-full relative group">
@@ -67,15 +54,6 @@
                 <button class="px-4 py-2 border border-[#111111]/15 text-[#111111]/70 rounded-full text-sm hover:bg-[#111111]/5 transition-colors focus:bg-[#5A7A00] focus:text-white focus:border-[#5A7A00]">México</button>
                 <button class="px-4 py-2 border border-[#111111]/15 text-[#111111]/70 rounded-full text-sm hover:bg-[#111111]/5 transition-colors focus:bg-[#5A7A00] focus:text-white focus:border-[#5A7A00]">México y Centroamérica</button>
                 <button class="px-4 py-2 border border-[#111111]/15 text-[#111111]/70 rounded-full text-sm hover:bg-[#111111]/5 transition-colors focus:bg-[#5A7A00] focus:text-white focus:border-[#5A7A00]">Sudamérica</button>
-            </div>
-        </div>
-        <hr class="border-[#111111]/10 w-1/3">
-        <!-- Foco (poblado dinámicamente desde el backend real) -->
-        <div class="flex flex-col gap-2">
-            <label class="font-tech text-xs text-[#111111]/60 tracking-wider uppercase">Foco</label>
-            <div id="focoFilters" class="flex flex-wrap gap-2 items-center">
-                <button data-cat="" class="px-4 py-2 border border-[#5A7A00] bg-[#5A7A00] text-white rounded-full text-sm transition-colors">Todos</button>
-                <span id="focoLoading" class="font-tech text-xs text-[#111111]/60">Cargando categorías…</span>
             </div>
         </div>
         <hr class="border-[#111111]/10 w-1/3">
@@ -100,16 +78,18 @@
 
     <section class="mt-2">
         <button id="btnExplorar" class="bg-[#5A7A00] text-white rounded-lg flex items-center justify-center gap-2 hover:opacity-90 transition-opacity w-full py-4 text-base font-semibold shadow-sm">
-            Comenzar exploración
+            Actualizar búsqueda
             <span aria-hidden="true">→</span>
         </button>
     </section>
 
-    <!-- Resultados (aparece tras Comenzar exploración) -->
-    <section id="resultados" class="hidden flex flex-col gap-3">
+    <!-- Resultados: se cargan solos al abrir la pantalla (ver cargarHallazgos() más abajo).
+         Una sola lista, sin separar "verificados" de "exploración": cada tarjeta dice si su
+         evidencia es confirmada por el propio founder/CEO o solo mencionada en prensa. -->
+    <section id="resultados" class="flex flex-col gap-3">
         <hr class="border-[#111111]/10">
         <div class="flex items-baseline justify-between">
-            <h2 class="font-voice text-lg font-semibold text-[#111111]">Hallazgos</h2>
+            <h2 class="font-serif-voice text-lg font-semibold text-[#111111]">Candidatos a prospecto</h2>
             <span id="resultadosCount" class="font-tech text-xs text-[#111111]/60"></span>
         </div>
         <div id="resultadosList" class="flex flex-col gap-2"></div>
@@ -163,7 +143,7 @@
 <main class="max-w-md mx-auto px-4 pt-6 flex flex-col gap-4">
     <div id="fijarContenido" class="bg-white p-5 rounded-xl border border-[#111111]/10">
         <span class="font-tech text-[10px] bg-[#111111]/5 text-[#111111]/60 px-2 py-0.5 rounded uppercase tracking-wider">Sin expediente seleccionado</span>
-        <p class="font-voice text-sm text-[#111111]/80 leading-relaxed mt-3">Selecciona un hallazgo en Indagar para revisarlo aquí.</p>
+        <p class="font-serif-voice text-sm text-[#111111]/80 leading-relaxed mt-3">Selecciona un hallazgo en Indagar para revisarlo aquí.</p>
     </div>
 </main>
 </div>
@@ -186,7 +166,10 @@
 
 <script>
     const API = "https://antrosapiens-api-pro.vercel.app";
-    let categoriaActiva = "";
+    // ICP real de HD (doctrina, no un filtro que el usuario deba tocar): nunca
+    // VC, Incubadora ni Corporativo. Antes existía un filtro "Foco" que dejaba
+    // elegir las 4 categorías; se retira y se fija siempre en Startup.
+    const CATEGORIA_ICP = "Startup";
     let verticalActiva = "";
     let escalaActiva = "";
     const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -218,7 +201,7 @@
         if (!expedienteActual) {
             cont.innerHTML = `
                 <span class="font-tech text-[10px] bg-[#111111]/5 text-[#111111]/60 px-2 py-0.5 rounded uppercase tracking-wider">Sin expediente seleccionado</span>
-                <p class="font-voice text-sm text-[#111111]/80 leading-relaxed mt-3">Selecciona un hallazgo en Indagar para revisarlo aquí.</p>`;
+                <p class="font-serif-voice text-sm text-[#111111]/80 leading-relaxed mt-3">Selecciona un hallazgo en Indagar para revisarlo aquí.</p>`;
             return;
         }
         cont.innerHTML = `
@@ -326,7 +309,7 @@
 
     // --- Filtro REGIÓN: comportamiento visual tipo radio (sin datos backend aún) ---
     document.querySelectorAll('section .flex-wrap').forEach(group => {
-        if (group.id === 'focoFilters' || group.id === 'verticalFilters' || group.id === 'escalaFilters') return; // se manejan aparte, con datos reales
+        if (group.id === 'verticalFilters' || group.id === 'escalaFilters') return; // se manejan aparte, con datos reales
         group.querySelectorAll('button').forEach(button => {
             button.addEventListener('click', function() {
                 group.querySelectorAll('button').forEach(btn => {
@@ -339,78 +322,14 @@
         });
     });
 
-    // --- Candidatos verificados (Entrega 3): GET /verificados, distinto de /expedientes ---
+    // Tipo de evidencia primaria (Entrega 3, GET /verificados) que distingue,
+    // dentro de cada tarjeta, si la fricción la declaró la propia organización.
     const TIPO_LABEL = {
-        senal_primaria_autodeclaracion: 'Autodeclaración',
-        senal_primaria_huella_practica: 'Huella práctica',
+        senal_primaria_autodeclaracion: 'Autodeclaración del founder/CEO',
+        senal_primaria_huella_practica: 'Huella práctica de la organización',
     };
 
-    async function cargarCandidatosVerificados() {
-        const cont = document.getElementById('verificadosList');
-        const loading = document.getElementById('verificadosLoading');
-        const count = document.getElementById('verificadosCount');
-        try {
-            const res = await fetch(`${API}/verificados?limite=50`);
-            const data = await res.json();
-            loading.remove();
-            const items = data.items || [];
-            count.textContent = `${items.length} verificado(s)`;
-            if (!items.length) {
-                cont.innerHTML = `<p class="text-sm text-[#111111]/70">Aún no hay candidatos verificados.</p>`;
-                return;
-            }
-            cont.innerHTML = items.map(it => `
-                <div class="p-4 border-l-4 border-[#1F5C8C] bg-[#1F5C8C]/5 rounded-lg flex flex-col gap-2">
-                    <div class="flex items-center gap-2 flex-wrap">
-                        <span class="font-voice font-semibold text-[#111111] text-lg">${esc(it.organizacion)}</span>
-                        <span class="px-2 py-0.5 rounded-full text-xs font-tech bg-[#1F5C8C] text-white uppercase">Verificado</span>
-                        <span class="font-tech text-xs text-[#111111]/60">${esc(TIPO_LABEL[it.tipo_epistemologico] || it.tipo_epistemologico)}</span>
-                    </div>
-                    <p class="font-voice italic text-[#111111]/80 text-sm">${esc(it.cita_textual || '')}</p>
-                    <p class="font-tech text-xs text-[#111111]/60">${esc(it.nombre_medio || '')}</p>
-                </div>
-            `).join('');
-        } catch (e) {
-            loading.textContent = 'No se pudieron cargar los candidatos verificados (backend no disponible).';
-        }
-    }
-
-    // --- Filtro FOCO: se puebla con las categorías reales del backend ---
-    async function cargarCategorias() {
-        const cont = document.getElementById('focoFilters');
-        const loading = document.getElementById('focoLoading');
-        try {
-            const res = await fetch(`${API}/prospectos/categorias`);
-            const data = await res.json();
-            loading.remove();
-            const cats = data.categorias || {};
-            Object.keys(cats).forEach(nombre => {
-                const btn = document.createElement('button');
-                btn.dataset.cat = nombre;
-                btn.className = "px-4 py-2 border border-[#111111]/15 text-[#111111]/70 rounded-full text-sm hover:bg-[#111111]/5 transition-colors";
-                btn.textContent = `${nombre} (${cats[nombre]})`;
-                btn.addEventListener('click', () => seleccionarFoco(btn));
-                cont.appendChild(btn);
-            });
-            document.querySelector('#focoFilters button[data-cat=""]').addEventListener('click', function() {
-                seleccionarFoco(this);
-            });
-        } catch (e) {
-            loading.textContent = "No se pudieron cargar las categorías (backend no disponible).";
-        }
-    }
-
-    function seleccionarFoco(btnSeleccionado) {
-        categoriaActiva = btnSeleccionado.dataset.cat || "";
-        document.querySelectorAll('#focoFilters button').forEach(btn => {
-            btn.classList.remove('bg-[#5A7A00]', 'text-white', 'border-[#5A7A00]');
-            btn.classList.add('border-[#111111]/15', 'text-[#111111]/70');
-        });
-        btnSeleccionado.classList.add('bg-[#5A7A00]', 'text-white', 'border-[#5A7A00]');
-        btnSeleccionado.classList.remove('border-[#111111]/15', 'text-[#111111]/70');
-    }
-
-    // --- Selección visual genérica (misma lógica que FOCO) para VERTICAL y ESCALA ---
+    // --- Selección visual genérica (misma lógica que antes tenía FOCO) para VERTICAL y ESCALA ---
     function seleccionarFiltro(cont, btnSeleccionado) {
         cont.querySelectorAll('button').forEach(btn => {
             btn.classList.remove('bg-[#5A7A00]', 'text-white', 'border-[#5A7A00]');
@@ -423,12 +342,31 @@
         else if (cont.id === 'escalaFilters') escalaActiva = val;
     }
 
-    // --- Filtros VERTICAL y ESCALA: se pueblan con valores únicos y conteos reales de /expedientes ---
+    // --- Coincidencia de escala: robusta a nulos/vacíos/"indeterminada" y a mayúsculas/espacios.
+    // "Todos" (filtroEscala vacío) desactiva el filtro por completo: no hay restricción numérica.
+    // Un registro sin clasificar (null/""/"indeterminada", p. ej. evidencia recién capturada
+    // cuya organización aún no tiene banda asignada en prospectos) nunca se descarta por una
+    // banda estricta: no hay base para excluirlo, solo para no poder confirmarlo.
+    function normalizarEscala(v) {
+        return String(v == null ? "" : v).trim().toLowerCase();
+    }
+
+    function escalaCoincide(itemEscala, filtroEscala) {
+        const filtro = normalizarEscala(filtroEscala);
+        if (!filtro) return true; // "Todos" / null / undefined / "" => sin restricción
+        const item = normalizarEscala(itemEscala);
+        if (!item || item === "indeterminada") return true; // no descarta sin clasificar
+        return item === filtro;
+    }
+
+    // --- Filtros VERTICAL y ESCALA: se pueblan con valores únicos y conteos reales de /expedientes,
+    // ya acotados a CATEGORIA_ICP para que el número en cada pastilla coincida con lo que la lista
+    // fusionada puede mostrar de verdad (si no, un conteo mezclaría VC/Corporativo que nunca aparecen).
     async function cargarFiltroProspectos(containerId, loadingId, campo) {
         const cont = document.getElementById(containerId);
         const loading = document.getElementById(loadingId);
         try {
-            const res = await fetch(`${API}/expedientes?limite=100`);
+            const res = await fetch(`${API}/expedientes?categoria=${encodeURIComponent(CATEGORIA_ICP)}&limite=100`);
             const data = await res.json();
             loading.remove();
             const conteo = {};
@@ -452,46 +390,81 @@
         }
     }
 
-    // --- Comenzar exploración: trae EXPEDIENTES curados (scoring, Deuda Cultural, evidencia), no la lista cruda ---
-    document.getElementById('btnExplorar').addEventListener('click', async () => {
+    // --- Candidatos a prospecto: UNA sola lista, fusión de /expedientes (todo lo detectado)
+    // con /verificados (lo que ya tiene evidencia primaria confirmada). Antes eran dos
+    // secciones separadas que confundían; ahora cada tarjeta dice cuál es su caso.
+    // Filtro de categoría FIJO en CATEGORIA_ICP (Startup): nunca VC, Incubadora ni
+    // Corporativo, porque ese es el ICP real de HD, no una opción que haya que elegir.
+    // Se carga sola al abrir la pantalla (ver el final de este script) y también al
+    // presionar "Actualizar búsqueda" tras cambiar vertical, escala o el texto de búsqueda.
+    async function cargarHallazgos() {
         const q = document.querySelector('input[type="text"]').value.trim().toLowerCase();
         const seccion = document.getElementById('resultados');
         const lista = document.getElementById('resultadosList');
         const count = document.getElementById('resultadosCount');
         seccion.classList.remove('hidden');
-        lista.innerHTML = `<p class="text-sm text-[#111111]/70">Curando hallazgos…</p>`;
+        lista.innerHTML = `<p class="text-sm text-[#111111]/70">Curando candidatos…</p>`;
         try {
-            const res = await fetch(`${API}/expedientes?limite=100`);
-            const data = await res.json();
-            let items = data.expedientes || [];
-            if (categoriaActiva) items = items.filter(p => p.categoria === categoriaActiva);
+            // El filtro de categoría se manda AL SERVIDOR (no se pide todo y se filtra
+            // después): /expedientes ordena por score_icp entre TODAS las categorías, así
+            // que los primeros 100 sin filtrar pueden no traer ni un solo Startup si hay
+            // más de 100 VC/Incubadora/Corporativo con mejor score. Eso causaba "0
+            // candidatos" aun con Startups reales en la base.
+            const [resExp, resVer] = await Promise.all([
+                fetch(`${API}/expedientes?categoria=${encodeURIComponent(CATEGORIA_ICP)}&limite=100`),
+                fetch(`${API}/verificados?limite=50`).catch(() => null),
+            ]);
+            const dataExp = await resExp.json();
+
+            // Mapa de evidencia primaria confirmada por nombre de organización
+            // (normalizado). Si /verificados falla, se degrada sin evidencia
+            // primaria en vez de romper toda la pantalla — nunca se inventa.
+            const verificadosPorNombre = {};
+            if (resVer && resVer.ok) {
+                const dataVer = await resVer.json();
+                (dataVer.items || []).forEach(it => {
+                    const key = String(it.organizacion || "").trim().toLowerCase();
+                    if (key) verificadosPorNombre[key] = it;
+                });
+            }
+
+            let items = (dataExp.expedientes || []).filter(p => p.categoria === CATEGORIA_ICP);
             if (verticalActiva) items = items.filter(p => p.vertical === verticalActiva);
-            if (escalaActiva) items = items.filter(p => p.escala === escalaActiva);
+            items = items.filter(p => escalaCoincide(p.escala, escalaActiva));
             if (q) items = items.filter(p => (p.nombre || "").toLowerCase().includes(q));
-            count.textContent = `${items.length} expediente(s)`;
+            items = items.map(p => ({
+                ...p,
+                _verificado: verificadosPorNombre[String(p.nombre || "").trim().toLowerCase()] || null,
+            }));
+            // Primero lo confirmado por el propio founder/CEO; dentro de cada
+            // grupo, de mejor a peor ICP (score_icp descendente).
+            items.sort((a, b) => (b._verificado ? 1 : 0) - (a._verificado ? 1 : 0)
+                || (b.score_icp ?? 0) - (a.score_icp ?? 0));
+
+            count.textContent = `${items.length} candidato(s)`;
             if (!items.length) {
-                const hayFiltros = categoriaActiva || verticalActiva || escalaActiva;
+                const hayFiltros = verticalActiva || escalaActiva || q;
                 lista.innerHTML = hayFiltros
-                    ? `<p class="text-sm text-[#111111]/70">Sin expedientes que combinen estos filtros específicos. Prueba quitando uno de los criterios (categoría, vertical o escala) para ver si aparecen resultados.</p>`
-                    : `<p class="text-sm text-[#111111]/70">Sin expedientes curados con estos criterios todavía. El Radar sigue detectando; vuelve a intentar tras la próxima corrida.</p>`;
+                    ? `<p class="text-sm text-[#111111]/70">Sin candidatos que combinen estos filtros específicos. Prueba quitando vertical, escala o el texto de búsqueda.</p>`
+                    : `<p class="text-sm text-[#111111]/70">Sin candidatos detectados todavía. El Radar sigue trabajando; vuelve a intentar tras la próxima corrida.</p>`;
                 return;
             }
             const badge = (s) => ({A:'bg-[#5A7A00] text-white', B:'bg-[#1F5C8C]/15 text-[#1F5C8C]', C:'bg-[#B00020]/10 text-[#B00020]'}[s] || 'bg-[#111111]/5 text-[#111111]/70');
             window._items = items;
             lista.innerHTML = items.slice(0, 30).map((p, idx) => `
-                <div class="p-4 border border-[#111111]/10 rounded-lg flex flex-col gap-2 cursor-pointer hover:border-[#5A7A00] transition-colors bg-white" data-idx="${idx}">
+                <div class="p-4 border ${p._verificado ? 'border-[#1F5C8C]/30' : 'border-[#111111]/10'} rounded-lg flex flex-col gap-2 cursor-pointer hover:border-[#5A7A00] transition-colors bg-white" data-idx="${idx}">
                     <div class="flex items-center gap-2 flex-wrap">
                         <span class="font-voice font-semibold text-[#111111] text-lg">${esc(p.nombre)}</span>
                         <span class="px-2 py-0.5 rounded-full text-xs font-tech ${badge(p.scoring)}">${esc(p.scoring || '?')}</span>
                         <span class="font-tech text-xs text-[#111111]/60">ICP ${esc(p.score_icp ?? 0)}</span>
-                        <span class="font-tech text-xs text-[#111111]/60 uppercase">${esc(p.categoria)}</span>
                     </div>
-                    <p class="text-sm text-[#111111]/80">
-                        <strong class="text-[#111111]">Señal detectada: ${esc(p.senal_dominante || '—')}</strong>
-                    </p>
-                    <p class="font-tech text-xs text-[#111111]/60 leading-snug">
-                        Coincidencia de palabras clave. Sin situación reconstruida. No constituye hallazgo.
-                    </p>
+                    ${p._verificado
+                        ? `<span class="px-2 py-0.5 rounded-full text-xs font-tech w-fit bg-[#1F5C8C] text-white uppercase">Confirmado: ${esc(TIPO_LABEL[p._verificado.tipo_epistemologico] || p._verificado.tipo_epistemologico)}</span>
+                           <p class="font-serif-voice italic text-[#111111]/80 text-sm">${esc(p._verificado.cita_textual || '')}</p>
+                           <p class="font-tech text-xs text-[#111111]/60">${esc(p._verificado.nombre_medio || '')}</p>`
+                        : `<span class="px-2 py-0.5 rounded-full text-xs font-tech w-fit bg-[#111111]/5 text-[#111111]/60 uppercase">Mencionado en prensa, sin confirmar</span>
+                           <p class="text-sm text-[#111111]/80"><strong class="text-[#111111]">Señal detectada: ${esc(p.senal_dominante || '—')}</strong></p>
+                           <p class="font-tech text-xs text-[#111111]/60 leading-snug">Coincidencia de palabras clave. Sin situación reconstruida. No constituye hallazgo.</p>`}
                     <span class="px-2 py-0.5 rounded-full text-xs font-tech w-fit ${(p.validacion_cientifica && p.validacion_cientifica.hipotesis_bloqueada) ? 'bg-[#B00020] text-white' : 'bg-[#5A7A00]/10 text-[#5A7A00]'}">${(p.validacion_cientifica && p.validacion_cientifica.hipotesis_bloqueada) ? 'BLOQUEADA' : 'VALIDADA'}</span>
                     <p class="font-tech text-xs text-[#111111]/60">
                         Evidencias: ${p.total_evidencias ?? 0}
@@ -510,12 +483,13 @@
         } catch (e) {
             lista.innerHTML = `<p class="text-sm text-[#B00020]">No se pudo conectar con el laboratorio. Intenta de nuevo.</p>`;
         }
-    });
+    }
 
-    cargarCategorias();
+    document.getElementById('btnExplorar').addEventListener('click', cargarHallazgos);
+
     cargarFiltroProspectos('verticalFilters', 'verticalLoading', 'vertical');
     cargarFiltroProspectos('escalaFilters', 'escalaLoading', 'escala');
-    cargarCandidatosVerificados();
+    cargarHallazgos();
 
     document.getElementById('btnExplorarNav').addEventListener('click', () => {
         mostrarPantalla('explorar');
