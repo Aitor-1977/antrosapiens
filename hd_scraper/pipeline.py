@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 from dataclasses import dataclass, field
 
 from .config import settings
@@ -117,6 +118,15 @@ def _drenar_salud_subfuentes(db: Database, connector: Connector) -> None:
         registrar_corrida(db, fuente, ok=ok, detalle=detalle)
 
 
+def _log_evento(evento: str, **campos) -> None:
+    """Log de una línea, en JSON, para que Vercel/GitHub Actions lo capturen
+    tal cual en sus propios visores de logs (no hay disco persistente entre
+    invocaciones serverless, así que esto NO se guarda en archivo: se emite
+    a stdout/logging, que es lo único que sobrevive en ese entorno)."""
+    log.info(json.dumps({"evento": evento, "timestamp": ahora_iso(), **campos},
+                        ensure_ascii=False, default=str))
+
+
 def _escribir_rechazo(db: Database, connector: str, motivo: str, payload: dict) -> None:
     db.execute(
         "INSERT INTO rechazos (connector, motivo, payload_json, creado_en) VALUES (?, ?, ?, ?)",
@@ -129,6 +139,9 @@ def run_connector(db: Database, connector: Connector, query: QuerySpec) -> RunRe
     res = RunResult(connector=connector.name, empresa=query.empresa,
                     tipo_evento=query.tipo_evento)
     corrida_ok = True
+    t0 = time.monotonic()
+    _log_evento("SCRAPER_START", connector=connector.name, empresa=query.empresa,
+                tipo_evento=query.tipo_evento)
     try:
         crudos = list(connector.search(query))
     except Exception as exc:  # fallo de la fuente: salud lo registra
@@ -136,10 +149,13 @@ def run_connector(db: Database, connector: Connector, query: QuerySpec) -> RunRe
         _drenar_salud_subfuentes(db, connector)  # eventos emitidos antes del fallo
         registrar_corrida(db, connector.name, ok=False, detalle=f"search: {exc}")
         res.errores.append(f"search: {exc}")
+        _log_evento("SCRAPER_ERROR", connector=connector.name, error=str(exc),
+                    etapa="search", duracion_s=round(time.monotonic() - t0, 2))
         return res
 
     # Salud por sub-fuente (conectores multi-fuente como rss_fijos).
     _drenar_salud_subfuentes(db, connector)
+    _log_evento("SCRAPER_PROGRESS", connector=connector.name, vistos=len(crudos))
 
     for raw in crudos:
         res.vistos += 1
@@ -221,4 +237,8 @@ def run_connector(db: Database, connector: Connector, query: QuerySpec) -> RunRe
     registrar_corrida(db, connector.name, ok=(corrida_ok and not res.errores),
                       detalle=detalle)
     log.info(detalle)
+    _log_evento("SCRAPER_END", connector=connector.name, empresa=query.empresa,
+                vistos=res.vistos, escritos=res.escritos, duplicados=res.duplicados,
+                rechazados=res.rechazados, filtrados=res.filtrados,
+                errores=len(res.errores), duracion_s=round(time.monotonic() - t0, 2))
     return res

@@ -59,6 +59,7 @@ from ..nvidia_parser import sintetizar as _sintetizar_llm
 from ..indagacion_profunda import indagar_profundo
 from ..validation.validator import validate_prospecto
 from .. import radar as _radar
+from . import diagnostic as _diagnostic
 from ..filtros import (
     ESCALAS as ESCALAS_FILTRO,
     FiltrosRadar,
@@ -66,6 +67,11 @@ from ..filtros import (
 )
 
 logger = logging.getLogger(__name__)
+
+# ICP real de HD (mismo criterio que android_v2/.../index.html:CATEGORIA_ICP):
+# nunca VC, Incubadora ni Corporativo. Se usa solo en /api/dashboard para que
+# el número que audita coincida con el que la app realmente muestra.
+CATEGORIA_ICP_DASHBOARD = "Startup"
 
 app = FastAPI(
     title="hd-prospector API",
@@ -237,6 +243,80 @@ def health() -> dict:
         "service": "hd-prospector",
         "role": "evidence-extraction",
         "db": get_db().dialect,
+    }
+
+
+# --- Auditoría de solo lectura del backend (Motor A) -------------------------
+#
+# Lo que en la sesión de hoy resolvió el "0 candidatos" (base apuntando a
+# SQLite efímero por un env var faltante, y después un filtro de categoría
+# que se aplicaba DESPUÉS de cortar a 100 resultados) se detectó a mano, con
+# curl. Estos tres endpoints existen para no tener que repetir ese proceso:
+# exponen el mismo tipo de evidencia (dialecto de base real, salud por
+# conector, y el número exacto que la app va a mostrar) sin necesitar acceso
+# a Neon ni a Vercel. Nada aquí escribe: son lecturas, igual que /health.
+
+@app.get("/audit/scraper")
+def audit_scraper() -> dict:
+    """Salud real de la captura: por conector (`salud_fuentes`, ya la
+    mantiene `governance/health.py` en cada corrida) + cola de jobs + cuándo
+    se escribió evidencia real por última vez.
+
+    Nota: no hay un scheduler persistente corriendo en Vercel (una función
+    serverless no mantiene un proceso en memoria entre invocaciones). La
+    corrida periódica real es el workflow de GitHub Actions
+    `prospeccion-tavily.yml` (lunes y jueves) más las corridas manuales por
+    `POST /scrape` — por eso esto se lee de la base, no de un scheduler.
+    """
+    return _diagnostic.check_scraper_health(get_db())
+
+
+@app.get("/audit/database")
+def audit_database() -> dict:
+    """Conexión real + calidad estructural de lo capturado. Dialecto real
+    (postgres|sqlite): si dice sqlite en producción, es la misma señal que
+    hoy delató que la base estaba en modo efímero."""
+    return _diagnostic.diagnostico_completo(get_db())
+
+
+@app.get("/api/dashboard")
+def api_dashboard() -> dict:
+    """Espejo exacto de lo que la pantalla INDAGAR de la app calcula:
+    candidatos con categoria=Startup (el ICP real, nunca VC/Incubadora/
+    Corporativo), cuántos ya tienen evidencia primaria confirmada
+    (`/verificados`), y el desglose de vertical/escala entre esos mismos
+    candidatos. Si esto y lo que ves en la app no coinciden, el problema está
+    en el cliente (caché de una versión vieja del APK), no en el backend.
+    """
+    db = get_db()
+    exp = _construir_expedientes([CATEGORIA_ICP_DASHBOARD], limite=100)
+    candidatos = exp["expedientes"]
+    verificados_nombres = {
+        v["organizacion"].strip().lower()
+        for v in listar_candidatos_verificados(db, limite=200)
+    }
+    verticales: dict[str, int] = {}
+    escalas: dict[str, int] = {}
+    confirmados = 0
+    for c in candidatos:
+        v = (c.get("vertical") or "").strip()
+        if v:
+            verticales[v] = verticales.get(v, 0) + 1
+        e = (c.get("escala") or "").strip()
+        if e:
+            escalas[e] = escalas.get(e, 0) + 1
+        if (c.get("nombre") or "").strip().lower() in verificados_nombres:
+            confirmados += 1
+    ultima = db.fetch_one(
+        "SELECT MAX(creado_en) AS t FROM evidencias WHERE estado = ?", (ESTADO_OK,))
+    return {
+        "categoria_icp": CATEGORIA_ICP_DASHBOARD,
+        "candidatos_prospecto": len(candidatos),
+        "candidatos_confirmados_por_founder": confirmados,
+        "vertical": verticales,
+        "escala": escalas,
+        "last_scan": ultima["t"] if ultima else None,
+        "status": "ok" if candidatos else "sin candidatos detectados todavía",
     }
 
 
