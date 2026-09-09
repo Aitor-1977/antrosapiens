@@ -9,6 +9,9 @@ on:
       - ".github/workflows/build-apk.yml"
   workflow_dispatch: {}
 
+permissions:
+  contents: write # necesario para publicar el Release del paso final
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -37,3 +40,17 @@ jobs:
         with:
           name: antrosapiens-v2-debug
           path: android_v2/app/build/outputs/apk/debug/app-debug.apk
+
+      # Práctica estándar de la comunidad para repartir un APK de prueba desde CI: un
+      # GitHub Release con el archivo adjunto, en vez de un "artifact" (que viene
+      # zippeado y solo se baja bien desde el sitio de escritorio de GitHub, no desde
+      # la app móvil ni con curl anónimo). El Release da un link fijo y directo al
+      # .apk, instalable con un solo toque desde el navegador del teléfono.
+      - name: Publicar Release con el APK
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-${{ github.run_number }}
+          name: "APK de prueba #${{ github.run_number }}"
+          body: "Build automático de android_v2 desde ${{ github.sha }}."
+          files: android_v2/app/build/outputs/apk/debug/app-debug.apk
+          prerelease: true
