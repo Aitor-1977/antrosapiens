@@ -20,7 +20,7 @@ import time
 from pathlib import Path
 from typing import Optional
 
-from fastapi import Body, FastAPI, Header, HTTPException, Query
+from fastapi import Body, FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from pydantic import BaseModel
@@ -60,12 +60,14 @@ from ..indagacion_profunda import indagar_profundo
 from ..validation.validator import validate_prospecto
 from .. import radar as _radar
 from . import diagnostic as _diagnostic
+from . import logging_config as _diagnostic_logging
 from ..filtros import (
     ESCALAS as ESCALAS_FILTRO,
     FiltrosRadar,
     REGIONES as REGIONES_FILTRO,
 )
 
+_diagnostic_logging.configure_logging()
 logger = logging.getLogger(__name__)
 
 # ICP real de HD (mismo criterio que android_v2/.../index.html:CATEGORIA_ICP):
@@ -116,6 +118,20 @@ app.add_middleware(
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["Content-Type", "X-Ingest-Token"],
 )
+
+
+@app.middleware("http")
+async def _etiquetar_request_id(request: Request, call_next):
+    """Da a cada petición un request_id (reusa x-vercel-id si Vercel ya lo
+    mandó, así coincide con el id que ves en el panel de Logs de Vercel) y lo
+    incrusta en TODAS las líneas de log que se emitan durante esa petición
+    (ver hd_scraper/api/logging_config.py). También lo devuelve en la
+    respuesta, para poder pedirle a alguien "dame el X-Request-Id" en vez de
+    pegar todo el log."""
+    rid = _diagnostic_logging.nuevo_request_id(request.headers.get("x-vercel-id"))
+    response = await call_next(request)
+    response.headers["X-Request-Id"] = rid
+    return response
 
 
 # --- Intake de prospectos (escritura autenticada del operador) -----------
@@ -288,36 +304,53 @@ def api_dashboard() -> dict:
     candidatos. Si esto y lo que ves en la app no coinciden, el problema está
     en el cliente (caché de una versión vieja del APK), no en el backend.
     """
-    db = get_db()
-    exp = _construir_expedientes([CATEGORIA_ICP_DASHBOARD], limite=100)
-    candidatos = exp["expedientes"]
-    verificados_nombres = {
-        v["organizacion"].strip().lower()
-        for v in listar_candidatos_verificados(db, limite=200)
-    }
-    verticales: dict[str, int] = {}
-    escalas: dict[str, int] = {}
-    confirmados = 0
-    for c in candidatos:
-        v = (c.get("vertical") or "").strip()
-        if v:
-            verticales[v] = verticales.get(v, 0) + 1
-        e = (c.get("escala") or "").strip()
-        if e:
-            escalas[e] = escalas.get(e, 0) + 1
-        if (c.get("nombre") or "").strip().lower() in verificados_nombres:
-            confirmados += 1
-    ultima = db.fetch_one(
-        "SELECT MAX(creado_en) AS t FROM evidencias WHERE estado = ?", (ESTADO_OK,))
-    return {
-        "categoria_icp": CATEGORIA_ICP_DASHBOARD,
-        "candidatos_prospecto": len(candidatos),
-        "candidatos_confirmados_por_founder": confirmados,
-        "vertical": verticales,
-        "escala": escalas,
-        "last_scan": ultima["t"] if ultima else None,
-        "status": "ok" if candidatos else "sin candidatos detectados todavía",
-    }
+    try:
+        db = get_db()
+        exp = _construir_expedientes([CATEGORIA_ICP_DASHBOARD], limite=100)
+        candidatos = exp["expedientes"]
+        verificados_nombres = {
+            v["organizacion"].strip().lower()
+            for v in listar_candidatos_verificados(db, limite=200)
+        }
+        verticales: dict[str, int] = {}
+        escalas: dict[str, int] = {}
+        confirmados = 0
+        for c in candidatos:
+            v = (c.get("vertical") or "").strip()
+            if v:
+                verticales[v] = verticales.get(v, 0) + 1
+            e = (c.get("escala") or "").strip()
+            if e:
+                escalas[e] = escalas.get(e, 0) + 1
+            if (c.get("nombre") or "").strip().lower() in verificados_nombres:
+                confirmados += 1
+        ultima = db.fetch_one(
+            "SELECT MAX(creado_en) AS t FROM evidencias WHERE estado = ?", (ESTADO_OK,))
+        return {
+            "ok": True,
+            "error": None,
+            "categoria_icp": CATEGORIA_ICP_DASHBOARD,
+            "candidatos_prospecto": len(candidatos),
+            "candidatos_confirmados_por_founder": confirmados,
+            "vertical": verticales,
+            "escala": escalas,
+            "last_scan": ultima["t"] if ultima else None,
+            "status": "ok" if candidatos else "sin candidatos detectados todavía",
+        }
+    except Exception as exc:  # noqa: BLE001 — mismo criterio que diagnostic.py:
+        # error específico en el cuerpo, nunca un 500 sin explicación.
+        logger.exception("api_dashboard falló")
+        return {
+            "ok": False,
+            "error": f"{type(exc).__name__}: {exc}",
+            "categoria_icp": CATEGORIA_ICP_DASHBOARD,
+            "candidatos_prospecto": None,
+            "candidatos_confirmados_por_founder": None,
+            "vertical": {},
+            "escala": {},
+            "last_scan": None,
+            "status": "error",
+        }
 
 
 @app.get("/evidencias")
