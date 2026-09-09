@@ -1,47 +1,56 @@
-name: Build Android APK
+name: Build Android APK (android_v2)
 
 on:
   push:
     branches:
       - main
+    paths:
+      - "android_v2/**"
+      - ".github/workflows/build-apk.yml"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write # necesario para publicar el Release del paso final
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: 18
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Build web assets
-        run: npm run build --if-present
+        uses: actions/checkout@v4
 
       - name: Setup Java JDK
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
-          distribution: 'zulu'
-          java-version: '17'
+          distribution: "zulu"
+          java-version: "17"
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v2
+        uses: android-actions/setup-android@v3
 
-      - name: Build APK with Capacitor/Cordova
-        run: |
-          if [ -d "android" ]; then
-            cd android && ./gradlew assembleDebug
-          else
-            echo "No android folder found, check build config"
-          fi
+      - name: Grant execute permission for gradlew
+        run: chmod +x android_v2/gradlew
 
-      - name: Upload APK Artifact
-        uses: actions/upload-artifact@v3
+      - name: Build debug APK
+        working-directory: android_v2
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
         with:
-          name: RadarHD-app
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: antrosapiens-v2-debug
+          path: android_v2/app/build/outputs/apk/debug/app-debug.apk
+
+      # Práctica estándar de la comunidad para repartir un APK de prueba desde CI: un
+      # GitHub Release con el archivo adjunto, en vez de un "artifact" (que viene
+      # zippeado y solo se baja bien desde el sitio de escritorio de GitHub, no desde
+      # la app móvil ni con curl anónimo). El Release da un link fijo y directo al
+      # .apk, instalable con un solo toque desde el navegador del teléfono.
+      - name: Publicar Release con el APK
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-${{ github.run_number }}
+          name: "APK de prueba #${{ github.run_number }}"
+          body: "Build automático de android_v2 desde ${{ github.sha }}."
+          files: android_v2/app/build/outputs/apk/debug/app-debug.apk
+          prerelease: true
