@@ -389,6 +389,23 @@
         else if (cont.id === 'escalaFilters') escalaActiva = val;
     }
 
+    // --- Coincidencia de escala: robusta a nulos/vacíos/"indeterminada" y a mayúsculas/espacios.
+    // "Todos" (filtroEscala vacío) desactiva el filtro por completo: no hay restricción numérica.
+    // Un registro sin clasificar (null/""/"indeterminada", p. ej. evidencia recién capturada
+    // cuya organización aún no tiene banda asignada en prospectos) nunca se descarta por una
+    // banda estricta: no hay base para excluirlo, solo para no poder confirmarlo.
+    function normalizarEscala(v) {
+        return String(v == null ? "" : v).trim().toLowerCase();
+    }
+
+    function escalaCoincide(itemEscala, filtroEscala) {
+        const filtro = normalizarEscala(filtroEscala);
+        if (!filtro) return true; // "Todos" / null / undefined / "" => sin restricción
+        const item = normalizarEscala(itemEscala);
+        if (!item || item === "indeterminada") return true; // no descarta sin clasificar
+        return item === filtro;
+    }
+
     // --- Filtros VERTICAL y ESCALA: se pueblan con valores únicos y conteos reales de /expedientes ---
     async function cargarFiltroProspectos(containerId, loadingId, campo) {
         const cont = document.getElementById(containerId);
@@ -432,7 +449,7 @@
             let items = data.expedientes || [];
             if (categoriaActiva) items = items.filter(p => p.categoria === categoriaActiva);
             if (verticalActiva) items = items.filter(p => p.vertical === verticalActiva);
-            if (escalaActiva) items = items.filter(p => p.escala === escalaActiva);
+            items = items.filter(p => escalaCoincide(p.escala, escalaActiva));
             if (q) items = items.filter(p => (p.nombre || "").toLowerCase().includes(q));
             count.textContent = `${items.length} expediente(s)`;
             if (!items.length) {
