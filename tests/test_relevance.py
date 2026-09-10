@@ -34,6 +34,42 @@ def test_detectar_empresa_sin_nombre_propio():
     assert detectar_empresa("las startups enfrentan un año difícil") is None
 
 
+# ── Incidente real 2026-09-10: siglas de cargo/regulador detectadas como
+# empresa, con ICP 79-99 en INDAGAR (CEO, CNBV) ──────────────────────────────
+
+def test_detectar_empresa_ignora_cargo_ceo():
+    # Antes: "CEO" (sigla por forma) se detectaba como la organización.
+    assert detectar_empresa(
+        "CEO de Kavak regresa a dirigir la startup en México tras despido "
+        "de country manager"
+    ) == "Kavak"
+
+
+def test_detectar_empresa_ignora_regulador_cnbv():
+    # Antes: "CNBV" (el regulador bancario de México) se detectaba como
+    # empresa, no la fintech real mencionada (Albo).
+    assert detectar_empresa(
+        "CNBV multa a la fintech Albo con 9 mdp por permitir intercambio "
+        "de criptomonedas"
+    ) == "Albo"
+
+
+def test_detectar_empresa_ignora_otros_cargos_y_reguladores():
+    assert detectar_empresa("CFO renuncia tras resultados del trimestre") is None
+    assert detectar_empresa("SAT investiga a empresas de facturación") is None
+    assert detectar_empresa("IMSS reporta aumento en afiliaciones") is None
+
+
+def test_detectar_empresa_ignora_palabra_comun_lana():
+    # Antes: "Lana" (palabra común, no nombre propio de empresa) se detectaba.
+    assert detectar_empresa("Lana es una forma común de decir dinero") is None
+
+
+def test_detectar_empresa_ignora_plural_nuevas():
+    # _STOP_CAP ya tenía "nueva"/"nuevo" pero no el plural.
+    assert detectar_empresa("Nuevas reglas afectan al sector fintech") is None
+
+
 # ── marcadores de opinión / tendencia / listículo ────────────────────────────
 
 def test_es_opinion_detecta_marcadores():

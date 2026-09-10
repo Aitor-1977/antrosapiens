@@ -68,7 +68,11 @@ _STOP_CAP = {
     "lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo",
     "mexico", "colombia", "chile", "peru", "argentina", "brasil", "brazil",
     "panama", "latam", "latinoamerica", "america", "espana",
-    "nuevo", "nueva", "mas", "menos", "gran", "gobierno", "estado", "pais",
+    "nuevo", "nueva", "nuevos", "nuevas", "mas", "menos", "gran", "gobierno",
+    "estado", "pais",
+    # Incidente real 2026-09-10: "Lana" (palabra común, no nombre de empresa)
+    # detectada como organización en un titular.
+    "lana",
 }
 
 # Términos genéricos de sector: describen el rubro, no a la empresa.
@@ -78,6 +82,19 @@ _GENERICOS_SECTOR = {
     "empresa", "empresas", "compania", "companias", "firma", "banco", "bancos",
     "plataforma", "app", "aplicacion", "mercado", "sector", "industria",
     "tecnologia", "digital", "ronda", "serie",
+}
+
+# Siglas que NUNCA son empresa: cargos ejecutivos y organismos de gobierno/
+# regulación. detectar_empresa() las trata como _es_sigla() por forma (todo
+# mayúsculas), pero no son una entidad nombrada — son un rol o un regulador.
+# Incidente real 2026-09-10: "CEO de Kavak regresa..." detectó "CEO"; "CNBV
+# multa a la fintech Albo..." detectó "CNBV" (el regulador bancario de
+# México, no una empresa), con ICP 79 y 99 respectivamente.
+_SIGLAS_NO_EMPRESA = {
+    "ceo", "cfo", "cto", "coo", "cmo", "cpo", "chro", "cio", "cro",
+    "cnbv", "sat", "imss", "infonavit", "inegi", "profeco", "condusef",
+    "banxico", "shcp", "sec", "irs", "ftc",
+    "ong", "pyme", "pymes", "ia", "roi", "kpi", "kpis",
 }
 
 
@@ -105,7 +122,7 @@ def detectar_empresa(titulo: str) -> Optional[str]:
             if not _es_sigla(limpio):
                 continue
         base = _sin_acentos(limpio).lower()
-        if base in _STOP_CAP or base in _GENERICOS_SECTOR:
+        if base in _STOP_CAP or base in _GENERICOS_SECTOR or base in _SIGLAS_NO_EMPRESA:
             continue
         primera = limpio[0]
         if primera.isupper() or _es_sigla(limpio):
@@ -186,6 +203,9 @@ GIGANTES: tuple[str, ...] = (
     "ibm", "oracle", "salesforce", "sap", "cisco", "adobe", "dell",
     "hewlett packard", "hewlett-packard", "qualcomm", "broadcom",
     "servicenow", "palantir", "accenture", "workday",
+    # Organizaciones/fundaciones globales reales pero fuera del ICP de HD
+    # (no son startups LATAM en escalamiento). Incidente real 2026-09-10.
+    "wikimedia",
 )
 
 # Términos que indican que NO es una empresa prospecto: gobierno, premios,
