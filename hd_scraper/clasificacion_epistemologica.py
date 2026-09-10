@@ -466,6 +466,11 @@ _ATRIBUCION = tuple(
 # que un verbo declarativo.
 _COMILLAS = re.compile(r'["“”«»]')
 
+# Marcador de fuente tan válido como un verbo declarativo ("según el CEO",
+# "de acuerdo con el experto"), aunque el sujeto no sea un nombre propio
+# capturable. Se busca sobre `plano` (sin acentos/mayúsculas).
+_MARCADOR_SEGUN = re.compile(r"\b(?:segun|de acuerdo con)\b")
+
 # Ventana alrededor del cargo dentro de la cual un nombre propio se considera
 # atribuido a él. 80 caracteres cubre «Juan Pérez, director de operaciones de
 # Acme» en ambos sentidos sin cruzar a otra oración de un titular.
@@ -662,6 +667,168 @@ def _vinculado_a_org(texto: str, plano: str, pos_cargo: int, org: str,
         if d_otra < d_org:
             return False
     return True
+
+
+# ── Estados de atribución de cita (ampliación 2026-09-10, autorizado por el
+# operador —Mario— para la pantalla de prospección) ─────────────────────────
+# Pregunta DISTINTA de `clasificar()` (peso epistemológico: cuánta autoridad
+# tiene quien habla). Aquí solo importa si el texto ATRIBUYE la cita a alguien
+# identificable y si esa atribución quedó capturada en `persona_citada`/
+# `cargo`, o si el texto la tiene pero el pipeline la perdió. Reutiliza el
+# mismo léxico/patrones de más arriba (cargo, señal de habla, nombre por
+# atribución o aposición, autoidentificación) — cero patrones nuevos.
+#
+# Determinista y grounded: el "fragmento" guardado es SIEMPRE un recorte
+# literal del texto original (o de `persona_citada`/`cargo` ya declarados),
+# nunca una paráfrasis ni una invención. Sin evidencia textual, no hay
+# fragmento (`None`), nunca una cadena vacía fabricada.
+
+ATRIB_EXPLICITA = "atribucion_explicita"
+ATRIB_EXPLICITA_NO_EXTRAIDA = "atribucion_explicita_no_extraida"
+ATRIB_AMBIGUA = "ambiguo"
+ATRIB_SIN_ATRIBUCION = "sin_atribucion"
+
+ESTADOS_ATRIBUCION: tuple[str, ...] = (
+    ATRIB_EXPLICITA, ATRIB_EXPLICITA_NO_EXTRAIDA, ATRIB_AMBIGUA, ATRIB_SIN_ATRIBUCION,
+)
+
+_MARGEN_FRAGMENTO = 20
+
+
+@dataclass(frozen=True)
+class EstadoAtribucion:
+    estado: str
+    nombre: str | None
+    cargo: str | None
+    fragmento: str | None
+    razon: str
+
+
+def _fragmento_alrededor(texto: str, inicio: int, fin: int,
+                         margen: int = _MARGEN_FRAGMENTO) -> str:
+    """Recorte LITERAL del texto original alrededor de [inicio, fin), como
+    evidencia citable del hallazgo. Nunca reconstruye ni resume."""
+    ini = max(0, inicio - margen)
+    f = min(len(texto), fin + margen)
+    return texto[ini:f].strip()
+
+
+def clasificar_atribucion(evidencia: dict) -> EstadoAtribucion:
+    """Estado de atribución de la cita de una evidencia.
+
+    Distingue cuatro casos, en este orden:
+
+    1. **atribucion_explicita** — ``persona_citada`` ya viene declarada en la
+       fila (dato estructural con prioridad, igual que en
+       ``identificar_enunciador``).
+    2. **atribucion_explicita_no_extraida** — el texto SÍ nombra a quien habla
+       (nombre propio adjunto a un cargo con señal de habla, nombre por verbo
+       declarativo/"según X", o autoidentificación en primera persona), pero
+       ``persona_citada`` quedó ``NULL`` al ingerir — los cuatro conectores de
+       Fase 1 nunca la extraen (ver docstring del módulo). Es un hueco de
+       extracción, no ausencia de atribución en el texto.
+    3. **ambiguo** — hay una referencia a quien habla (un cargo con señal de
+       habla, o una autoidentificación de rol) pero sin nombre propio
+       resoluble, o un cargo mencionado sin señal de habla cercana (podría ser
+       mera mención de tercero, no una declaración).
+    4. **sin_atribucion** — el texto no referencia a nadie que hable: ni
+       cargo, ni nombre por atribución, ni autoidentificación.
+
+    Determinista, sin IA, sin red: mismo texto ⇒ mismo estado.
+    """
+    texto = evidencia.get("cita_textual") or ""
+    org = (evidencia.get("empresa_mencionada") or "")
+    medio = (evidencia.get("nombre_medio") or "")
+    persona_declarada = (evidencia.get("persona_citada") or "").strip()
+    cargo_declarado = (evidencia.get("cargo") or "").strip()
+
+    # 1 · Ya extraída: el conector o una corrida previa ya la capturó.
+    if persona_declarada:
+        fragmento = persona_declarada + (f", {cargo_declarado}" if cargo_declarado else "")
+        return EstadoAtribucion(
+            ATRIB_EXPLICITA, persona_declarada, cargo_declarado or None, fragmento,
+            "persona_citada ya declarada en la fila",
+        )
+
+    vetados = tuple(v for v in (normalizar(org), normalizar(medio)) if v)
+    plano = _plano(texto)
+    hallazgo = _buscar_cargo(plano)
+
+    if hallazgo is not None and _hay_senal_de_habla(texto, hallazgo[0].start()):
+        cargo_frag = texto[hallazgo[0].start():hallazgo[0].end()].strip()
+        nombre = _nombre_adjunto_al_cargo(texto, hallazgo[0], vetados)
+        if nombre:
+            fragmento = _fragmento_alrededor(texto, hallazgo[0].start(), hallazgo[0].end())
+            return EstadoAtribucion(
+                ATRIB_EXPLICITA_NO_EXTRAIDA, nombre, cargo_frag, fragmento,
+                "nombre propio + cargo + señal de habla en el texto, pero "
+                "persona_citada quedó NULL al ingerir",
+            )
+        nombre_verbo = _nombre_por_atribucion(texto, vetados)
+        if nombre_verbo:
+            fragmento = _fragmento_alrededor(texto, hallazgo[0].start(), hallazgo[0].end())
+            return EstadoAtribucion(
+                ATRIB_EXPLICITA_NO_EXTRAIDA, nombre_verbo, cargo_frag, fragmento,
+                "nombre por verbo declarativo/'según X' junto a cargo con señal "
+                "de habla, sin extraer",
+            )
+        return EstadoAtribucion(
+            ATRIB_AMBIGUA, None, cargo_frag, cargo_frag,
+            "cargo con señal de habla pero sin nombre propio adjunto: se sabe "
+            "el rol, no quién es la persona",
+        )
+
+    nombre_solo = _nombre_por_atribucion(texto, vetados)
+    if nombre_solo:
+        m = re.search(re.escape(nombre_solo), texto)
+        fragmento = (_fragmento_alrededor(texto, m.start(), m.end())
+                    if m else nombre_solo)
+        return EstadoAtribucion(
+            ATRIB_EXPLICITA_NO_EXTRAIDA, nombre_solo, None, fragmento,
+            "nombre atribuido por verbo declarativo o 'según X', sin cargo ni "
+            "extracción previa",
+        )
+
+    auto = _buscar_autoidentificacion(plano)
+    if auto is not None and not es_opinion(texto) and _hay_situacion_concreta(texto):
+        m_auto = auto[0]
+        fragmento = _fragmento_alrededor(texto, m_auto.start(), m_auto.end())
+        return EstadoAtribucion(
+            ATRIB_EXPLICITA_NO_EXTRAIDA, None, fragmento, fragmento,
+            "autoidentificación en primera persona ('soy CEO', 'fui despedido') "
+            "con situación concreta, sin extraer",
+        )
+
+    # "según <cargo>"/"de acuerdo con <cargo>" (p. ej. "según experto") es un
+    # marcador de fuente igual de válido que un verbo declarativo, aunque
+    # `experto` no sea un nombre propio capturable por `_NOMBRE`: hay alguien
+    # citado, solo que sin nombre. Se busca en la MISMA ventana que
+    # `_hay_senal_de_habla` (hallazgo del cargo, hallazgo del audit real
+    # 2026-09-10: "impulsan la innovación..., según experto" se perdía como
+    # sin_atribucion sin este chequeo).
+    if hallazgo is not None:
+        ini = max(0, hallazgo[0].start() - _VENTANA)
+        fin = min(len(plano), hallazgo[0].end() + _VENTANA)
+        if _MARCADOR_SEGUN.search(plano[ini:fin]):
+            cargo_frag = texto[hallazgo[0].start():hallazgo[0].end()].strip()
+            return EstadoAtribucion(
+                ATRIB_AMBIGUA, None, cargo_frag, cargo_frag,
+                "cargo introducido por 'según'/'de acuerdo con' pero sin "
+                "nombre propio capturable",
+            )
+
+    # Un cargo mencionado SIN señal de habla ni marcador de fuente cercano no
+    # es una atribución ambigua: es la ausencia de atribución. «Oracle
+    # despide a 21 mil empleados» menciona "empleados" como objeto del
+    # despido, no como fuente de una declaración — no hay ninguna cita que
+    # atribuir a nadie. Distinto de los casos de arriba (señal de habla o
+    # 'según'), donde SÍ hay una declaración sin nombre resoluble: eso sigue
+    # siendo `ambiguo`.
+    return EstadoAtribucion(
+        ATRIB_SIN_ATRIBUCION, None, None, None,
+        "sin cargo, nombre por atribución, autoidentificación ni "
+        "persona_citada: el texto no referencia a quién habla",
+    )
 
 
 def identificar_enunciador(evidencia: dict,

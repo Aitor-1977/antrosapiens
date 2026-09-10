@@ -174,11 +174,33 @@
     let escalaActiva = "";
     const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
-    // Regla 13 (incertidumbre): sin persona_citada ni cargo, "no disponible" —
-    // NUNCA se infiere ni se completa con la organización o el medio.
+    // Estados de atribución (auditoría 2026-09-10): distingue si el texto
+    // identifica a quién habla, si lo identifica pero el pipeline no lo
+    // capturó (detectado en el texto, no confirmado en la base), si es
+    // ambiguo, o si no hay atribución. Nunca se completa con la organización
+    // o el medio — Regla 13 (incertidumbre): sin dato, se dice explícitamente
+    // que no lo hay, no se infiere.
     function quienHabla(ev) {
+        const estado = ev.estado_atribucion;
         const persona = String(ev.persona_citada || "").trim();
         const cargo = String(ev.cargo || "").trim();
+        const fragmento = String(ev.fragmento_atribucion || "").trim();
+
+        if (estado === "atribucion_explicita") {
+            if (persona && cargo) return `${persona} (${cargo})`;
+            if (persona) return persona;
+            return cargo || "no disponible";
+        }
+        if (estado === "atribucion_explicita_no_extraida") {
+            return `${fragmento || "detectado"} — en el texto, no confirmado en la base`;
+        }
+        if (estado === "ambiguo") {
+            return `ambiguo — se menciona '${fragmento || "un cargo"}' sin nombre claro`;
+        }
+        if (estado === "sin_atribucion") {
+            return "sin atribución en el texto";
+        }
+        // Compatibilidad si el backend aún no manda estado_atribucion.
         if (persona && cargo) return `${persona} (${cargo})`;
         if (persona) return persona;
         if (cargo) return cargo;
@@ -486,6 +508,8 @@
                     tipo_evento: ev.tipo_evento,
                     persona_citada: ev.persona_citada,
                     cargo: ev.cargo,
+                    estado_atribucion: ev.estado_atribucion,
+                    fragmento_atribucion: ev.fragmento_atribucion,
                 })),
                 validacion_cientifica: {
                     hipotesis_bloqueada: !!(p.validacion_cientifica && p.validacion_cientifica.hipotesis_bloqueada),
