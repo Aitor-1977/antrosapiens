@@ -2222,7 +2222,7 @@ from ..observatorio import (
     riesgos_culturales,
 )
 from .. import expediente_vivo as _exp_vivo
-from ..relevance import _sin_acentos
+from ..relevance import GIGANTES, _sin_acentos
 from ..publicador import (
     generar_csv,
     generar_html,
@@ -2328,6 +2328,15 @@ def _construir_expedientes(categorias: list[str] | None, limite: int = 30) -> di
         cat_estructural = categorias_prospecto.get(key)
         if cat_estructural:
             data["categoria"] = cat_estructural
+        # Gigante tecnológico reconocible (GIGANTES, relevance.py): forzado a
+        # Corporativo SIEMPRE, sin importar si tiene fila en `prospectos` ni
+        # bajo qué categoria se etiquetó la consulta que la capturó. Cierra el
+        # hueco que dejaba pasar candidatos sin fila estructural (incidente
+        # real: Anthropic con ICP 81, sin fila en prospectos, 2026-09-10). No
+        # borra evidencia: solo dejan de calificar como candidato ICP, mismo
+        # patrón que la exclusión por escala 501+/201-500 en android_v2.
+        elif any(g in _sin_acentos(key) for g in GIGANTES):
+            data["categoria"] = "Corporativo"
 
     if cats:
         orgs = {key: data for key, data in orgs.items() if data["categoria"] in cats}
