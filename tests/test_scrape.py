@@ -76,6 +76,21 @@ def test_scrape_luego_evidencias_visibles(cli):
     assert r.json()["total"] >= 1
 
 
+def test_evidencias_expone_resumen_fuente_de_punta_a_punta(cli):
+    """Auditoría 2026-09-10 (P0): el <description> del feed (fixture con
+    ronda fechada, la primera entrada de FIXTURE_RSS) sobrevive
+    scrape -> persistencia -> API, distinto de cita_textual."""
+    cli.post("/scrape", json={"empresa": "Nubank", "tipo_evento": "ronda",
+                              "connectors": ["google_news"]}, headers=H)
+    r = cli.get("/evidencias", params={"empresa": "Nubank"})
+    items = r.json()["items"]
+    con_resumen = [it for it in items if it["resumen_fuente"]]
+    assert con_resumen, "resumen_fuente debe llegar poblado a /evidencias"
+    it = con_resumen[0]
+    assert it["resumen_fuente"] != it["cita_textual"]
+    assert "fintech brasileña" in it["resumen_fuente"]
+
+
 def test_evidencias_limpio_expone_organizacion_y_omite_ruido(cli, db):
     # Siembra una evidencia de ruido (giganta + "abre sucursal") directamente.
     from hd_scraper.db.models import ESTADO_OK, ahora_iso

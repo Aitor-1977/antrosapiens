@@ -40,7 +40,11 @@ from .google_news import _struct_time_a_iso
 # es el ``nombre_medio`` autoritativo que se persiste.
 FEEDS_DEFAULT: dict[str, str] = {
     "Startupeable": "https://startupeable.com/feed/",
-    "Contxto": "https://contxto.com/feed/",
+    # Contxto migró su feed a rutas con prefijo de idioma (auditoría
+    # 2026-09-10, P0): la URL anterior devuelve 404 verificado en vivo; esta
+    # SÍ responde 200 con entradas válidas. Recuperación de una fuente ya
+    # declarada, no una fuente nueva.
+    "Contxto": "https://contxto.com/es/feed/",
     "LAVCA": "https://www.lavca.org/feed/",
     "LatamList": "https://latamlist.com/feed/",
     "Bloomberg Línea": "https://www.bloomberglinea.com/arc/outboundfeeds/rss/?outputType=xml",
@@ -94,6 +98,11 @@ class RssFijosConnector(Connector):
                     "link": link,
                     "medio": medio,
                     "fecha_publicacion": _struct_time_a_iso(entry.get("published_parsed")),
+                    # Resumen/descripción del feed. Ya se leía para el filtro
+                    # de mención literal (línea arriba); antes se descartaba
+                    # al normalizar (auditoría 2026-09-10, P0). Se conserva
+                    # aparte de ``cita_textual``: no es una cita literal.
+                    "resumen": resumen,
                     "empresa": query.empresa,
                     "tipo_evento": query.tipo_evento,
                 }
@@ -129,5 +138,6 @@ class RssFijosConnector(Connector):
             fecha_publicacion=m.get("fecha_publicacion"),
             persona_citada=None,
             cargo=None,
+            resumen_fuente=(m.get("resumen") or "").strip() or None,
             connector=self.name,
         )

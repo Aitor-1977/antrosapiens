@@ -10,6 +10,7 @@ FIXTURE_RSS = """<?xml version="1.0" encoding="UTF-8"?>
     <link>https://news.google.com/rss/articles/ABC123?oc=5</link>
     <pubDate>Wed, 01 Jul 2026 10:00:00 GMT</pubDate>
     <source url="https://www.bloomberglinea.com">Bloomberg Línea</source>
+    <description>La fintech brasileña cierra una ronda liderada por fondos regionales.</description>
   </item>
   <item>
     <title>Nota sin fecha sobre Nubank</title>
@@ -47,6 +48,25 @@ def test_normalize_no_interpreta_usa_estructura(monkeypatch):
     assert rec.cita_textual.startswith("Nubank anuncia")
     assert rec.nombre_medio == "Bloomberg Línea"
     assert rec.empresa_mencionada == "Nubank"
+
+
+def test_normalize_conserva_resumen_fuente_distinto_de_cita_textual(monkeypatch):
+    """Auditoría 2026-09-10 (P0): el <description>/<summary> del feed se
+    conserva en resumen_fuente, NUNCA se mezcla con cita_textual (que sigue
+    siendo solo el título) ni se etiqueta como cita de una persona."""
+    c = _connector(monkeypatch)
+    items = list(c.search(QuerySpec(empresa="Nubank", tipo_evento="ronda")))
+    rec0 = c.normalize(items[0])
+    assert rec0.resumen_fuente == (
+        "La fintech brasileña cierra una ronda liderada por fondos regionales."
+    )
+    assert rec0.resumen_fuente != rec0.cita_textual
+    assert rec0.persona_citada is None  # resumen no se confunde con una cita
+
+    # La segunda entrada no trae <description>: resumen_fuente es None, nunca
+    # se sintetiza ni se copia del título para rellenarlo.
+    rec1 = c.normalize(items[1])
+    assert rec1.resumen_fuente is None
 
 
 def test_valida_ok_y_no_fechado(monkeypatch):

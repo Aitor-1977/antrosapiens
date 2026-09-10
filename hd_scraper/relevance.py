@@ -164,12 +164,28 @@ NO_LATAM: tuple[str, ...] = (
 # Marcas GIGANTES (tecnología global, comida rápida, consumo masivo). No son
 # prospectos de HD (empresas en fase de escala con deuda cultural); su aparición
 # en un titular casi siempre es ruido internacional, no un candidato LATAM.
+#
+# Ampliación 2026-09-10 (autorizado por el operador, incidente real: Anthropic
+# apareció con ICP 81 por no tener fila en `prospectos` — ver
+# app.py:_construir_expedientes, que reutiliza esta MISMA tupla para forzar
+# categoria='Corporativo' sin depender de una fila manual). Se agregan
+# laboratorios de IA y grandes tecnológicas de capitalización masiva:
+# reconocibles por cualquier persona como "gigante tecnológico", nunca startup.
 GIGANTES: tuple[str, ...] = (
     "google", "alphabet", "amazon", "meta", "facebook", "instagram", "whatsapp",
     "apple", "microsoft", "netflix", "tesla", "samsung", "huawei", "tiktok",
     "nvidia", "intel", "spotify", "sony", "disney", "nike", "adidas",
     "wendy", "mcdonald", "burger king", "starbucks", "walmart", "coca-cola",
     "coca cola", "pepsi", "nestle", "unilever",
+    # Laboratorios de IA (incidente Anthropic, 2026-09-10).
+    "anthropic", "openai", "chatgpt", "deepmind", "mistral ai", "xai",
+    "perplexity ai",
+    # Grandes tecnológicas de capitalización masiva (mismo criterio, a
+    # petición del operador: "cualquier persona reconocería como gigante
+    # tecnológico, no como startup").
+    "ibm", "oracle", "salesforce", "sap", "cisco", "adobe", "dell",
+    "hewlett packard", "hewlett-packard", "qualcomm", "broadcom",
+    "servicenow", "palantir", "accenture", "workday",
 )
 
 # Términos que indican que NO es una empresa prospecto: gobierno, premios,

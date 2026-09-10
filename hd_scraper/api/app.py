@@ -289,6 +289,10 @@ def _row_a_evidencia(row) -> dict:
         "empresa_mencionada": row["empresa_mencionada"],
         "persona_citada": row["persona_citada"],
         "cargo": row["cargo"],
+        # Resumen/descripción declarado por la fuente (auditoría 2026-09-10,
+        # P0): distinto de cita_textual (título). None si la fuente no lo
+        # declaró o si el registro es previo a esta corrección.
+        "resumen_fuente": row["resumen_fuente"] if "resumen_fuente" in row.keys() else None,
         "tipo_evento": row["tipo_evento"],
         "origen_declaracion": row["origen_declaracion"],
         "categoria": row["categoria"],
@@ -2218,7 +2222,7 @@ from ..observatorio import (
     riesgos_culturales,
 )
 from .. import expediente_vivo as _exp_vivo
-from ..relevance import _sin_acentos
+from ..relevance import GIGANTES, _sin_acentos
 from ..publicador import (
     generar_csv,
     generar_html,
@@ -2324,6 +2328,15 @@ def _construir_expedientes(categorias: list[str] | None, limite: int = 30) -> di
         cat_estructural = categorias_prospecto.get(key)
         if cat_estructural:
             data["categoria"] = cat_estructural
+        # Gigante tecnológico reconocible (GIGANTES, relevance.py): forzado a
+        # Corporativo SIEMPRE, sin importar si tiene fila en `prospectos` ni
+        # bajo qué categoria se etiquetó la consulta que la capturó. Cierra el
+        # hueco que dejaba pasar candidatos sin fila estructural (incidente
+        # real: Anthropic con ICP 81, sin fila en prospectos, 2026-09-10). No
+        # borra evidencia: solo dejan de calificar como candidato ICP, mismo
+        # patrón que la exclusión por escala 501+/201-500 en android_v2.
+        elif any(g in _sin_acentos(key) for g in GIGANTES):
+            data["categoria"] = "Corporativo"
 
     if cats:
         orgs = {key: data for key, data in orgs.items() if data["categoria"] in cats}
@@ -2364,6 +2377,10 @@ def _construir_expedientes(categorias: list[str] | None, limite: int = 30) -> di
                 # muestra como "no disponible", nunca lo infiere.
                 "persona_citada": row["persona_citada"],
                 "cargo": row["cargo"],
+                # Resumen/descripción declarado por la fuente (auditoría
+                # 2026-09-10, P0): distinto de "texto" (título/cita_textual).
+                # None si la fuente no lo declaró.
+                "resumen_fuente": fila.get("resumen_fuente"),
                 # Estado de atribución (ampliación 2026-09-10, autorizado por
                 # el operador): distingue si el texto identifica a quién
                 # habla, si lo identifica pero el pipeline no lo capturó

@@ -23,6 +23,10 @@ CREATE TABLE IF NOT EXISTS evidencias (
     fecha_publicacion   TEXT,                   -- ISO 8601; NULL => estado no_fechado
     persona_citada      TEXT,
     cargo               TEXT,
+    -- Resumen/descripción declarado por la fuente (distinto de cita_textual,
+    -- que es el título). NO es cita textual de una persona. NULL si la fuente
+    -- no lo declara (auditoría 2026-09-10, P0).
+    resumen_fuente      TEXT,
     -- Metadatos internos
     connector           TEXT NOT NULL,
     estado              TEXT NOT NULL DEFAULT 'ok',  -- ok | no_fechado

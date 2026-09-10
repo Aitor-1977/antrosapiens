@@ -98,7 +98,20 @@ class Database:
         self._migrar_pipeline_candidato()
         self._migrar_organizacion_mencionada()
         self._migrar_expediente_id_nullable()
+        self._migrar_resumen_fuente()
         self.conn.commit()
+
+    def _migrar_resumen_fuente(self) -> None:
+        """Migración idempotente (auditoría 2026-09-10, autorización P0):
+        añade ``evidencias.resumen_fuente`` a bases persistentes previas a
+        esta corrección. ``CREATE TABLE IF NOT EXISTS`` no altera una tabla
+        ya existente (ver protocolo Capa 0 en CLAUDE.md); el ALTER es un
+        no-op cuando la columna ya existe.
+        """
+        try:
+            self.conn.execute("ALTER TABLE evidencias ADD COLUMN resumen_fuente TEXT")
+        except Exception:
+            pass
 
     def _migrar_expediente_id_nullable(self) -> None:
         """Migración idempotente (2026-08-29, ver §8.3 del documento maestro):
