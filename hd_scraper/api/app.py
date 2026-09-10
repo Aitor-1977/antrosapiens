@@ -2307,6 +2307,26 @@ def _construir_expedientes(categorias: list[str] | None, limite: int = 30) -> di
     for p in db.fetch_all("SELECT nombre, escala FROM prospectos"):
         escalas[(p["nombre"] or "").strip().lower()] = p["escala"] or ""
 
+    # categoria estructural (prospectos.categoria, declarada por el operador al
+    # alta) es la autoridad real sobre el ecosistema de una organización — NO la
+    # categoria de la fila de evidencia, que solo registra bajo qué consulta se
+    # rastreó ese titular en su momento y puede quedar desactualizada (p. ej.
+    # Nubank/Rappi/Kavak/Bitso se rastrearon alguna vez bajo consultas de
+    # "Startup", pero el operador ya las reclasificó como Corporativo en
+    # prospectos el 2026-08-22 — ver seed_prospectos.py). Mismo patrón que
+    # `escalas` arriba: si existe una fila estructural, manda ella.
+    categorias_prospecto: dict[str, str] = {}
+    for p in db.fetch_all("SELECT nombre, categoria FROM prospectos"):
+        categorias_prospecto[(p["nombre"] or "").strip().lower()] = p["categoria"] or ""
+
+    for key, data in orgs.items():
+        cat_estructural = categorias_prospecto.get(key)
+        if cat_estructural:
+            data["categoria"] = cat_estructural
+
+    if cats:
+        orgs = {key: data for key, data in orgs.items() if data["categoria"] in cats}
+
     expedientes = []
     for key, data in orgs.items():
         all_kws = list(data["keywords_set"])
