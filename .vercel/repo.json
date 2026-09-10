@@ -1,0 +1,11 @@
+{
+  "remoteName": "origin",
+  "projects": [
+    {
+      "id": "prj_b3iNVMpDswM4ASQaseBvm0zxQ805",
+      "name": "antrosapiens-api-pro",
+      "directory": ".",
+      "orgId": "team_dsXnFYBNx5hOu4afWgXvHtOu"
+    }
+  ]
+}

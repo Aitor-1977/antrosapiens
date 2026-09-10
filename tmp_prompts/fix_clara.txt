@@ -1,0 +1,9 @@
+Usa la variable de entorno HD_DATABASE_URL para conectarte a la base de datos.
+
+Primero corre este SELECT y muestrame el resultado exacto:
+SELECT id, organizacion, estado FROM expedientes_candidatos WHERE organizacion = 'Clara';
+
+Si aparece exactamente una fila con estado='candidato', entonces corre:
+UPDATE expedientes_candidatos SET estado='abierto' WHERE organizacion = 'Clara' AND estado='candidato';
+
+Despues corre de nuevo el SELECT para confirmar el cambio, y dime cuantas filas se actualizaron.

@@ -22,7 +22,7 @@ La auditoría del ecosistema (2026-07-25, ver `../ARQUITECTURA_ECOSISTEMA.md`)
 encontró que **RadarHD hoy duplica la función de inferencia** de Motor A:
 - Tiene 13 *engines* propios (`inference`, `scoring`, `dictamenPericial`,
   `contradiction`, `ecosistema`, `onlife`, `priorizacion`, `recomendacion`, …).
-- Usa **LLMs** (Gemini/NVIDIA/Anthropic/ZenMux) para clasificar y peritar
+- Usa **LLMs** (Gemini/NVIDIA/ZenMux) para clasificar y peritar
   (`services/llm.ts`, `scoring-llm.ts`).
 - Calcula **localmente** Dolor Cultural, Drift, Onlife, Ecosistema, dictámenes y
   contradicciones — en paralelo (y desacoplado) de las Capas 3–18 de Motor A.

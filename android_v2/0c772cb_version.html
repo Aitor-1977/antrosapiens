@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="es" class="no-js">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
+<title>Antrosapiens · Explorar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Newsreader:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet"/>
+<style>
+  :root{
+    --avena: #F2EDE3;
+    --avena-2: #EAE3D5;
+    --carbon: #2B2B27;
+    --carbon-soft: #5C584E;
+    --line: #D8D0BF;
+    --line-soft: #E2DBCC;
+    --acento: #2D5A27;
+    --acento-suave: #E7EEE2;
+    --gris: #8A8273;
+  }
+  *{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html,body{ margin:0; padding:0; }
+  html{ -webkit-text-size-adjust:100%; text-size-adjust:100%; }
+  body{
+    background: var(--avena);
+    color: var(--carbon);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+    min-height: 100dvh;
+  }
+  .serif{ font-family: 'Newsreader', Georgia, 'Times New Roman', serif; }
+  ::-webkit-scrollbar{ width:0; height:0; background:transparent; }
+
+  /* ---- Header ---- */
+  header.appbar{
+    position: fixed; top:0; left:0; right:0; z-index:40;
+    height: calc(56px + env(safe-area-inset-top, 0px));
+    padding: env(safe-area-inset-top, 0px) 14px 0;
+    display:flex; align-items:center; justify-content:space-between;
+    background: var(--avena);
+    border-bottom: 1px solid var(--line-soft);
+    box-shadow: 0 1px 0 rgba(43,43,39,.04);
+  }
+  .appbar .icon-btn{
+    flex: 0 0 40px; height:40px; width:40px;
+    display:flex; align-items:center; justify-content:center;
+    background:transparent; border:none; color:var(--acento);
+    border-radius: 10px; cursor:pointer;
+  }
+  .appbar .icon-btn:active{ transform: scale(.92); }
+  .appbar h1{
+    flex: 1 1 auto; text-align:center;
+    font-family:'Newsreader', Georgia, serif;
+    font-weight:600; font-size:18px; letter-spacing:.04em;
+    color: var(--carbon); margin:0;
+    white-space: nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .appbar .avatar{
+    flex: 0 0 36px; height:36px; width:36px; border-radius:50%;
+    background: var(--acento-suave); overflow:hidden;
+    border: 1px solid var(--line);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .appbar .avatar img{ width:100%; height:100%; object-fit:cover; }
+
+  /* ---- Main ---- */
+  main{
+    max-width: 760px; margin: 0 auto;
+    padding: calc(56px + env(safe-area-inset-top, 0px) + 18px) 16px calc(96px + env(safe-area-inset-bottom, 0px));
+    display:flex; flex-direction:column; gap:24px;
+  }
+  .hero h2{
+    font-family:'Newsreader', Georgia, serif;
+    font-weight:600; font-size:28px; line-height:1.2;
+    margin:0 0 8px; color:var(--carbon);
+    overflow-wrap:anywhere;
+  }
+  .hero p{ margin:0; color:var(--carbon-soft); font-size:15px; max-width:60ch; }
+  .build-id{
+    margin-top:10px; font-size:10px; letter-spacing:.12em;
+    color:var(--gris); text-transform:uppercase;
+  }
+
+  /* ---- Sections ---- */
+  .section{ display:flex; flex-direction:column; gap:10px; }
+  .section .label{
+    font-size:11px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--gris);
+  }
+  .section .hint{ font-size:12px; color:var(--gris); line-height:1.4; }
+  hr.div{ border:none; border-top:1px solid var(--line-soft); width:33%; margin:6px 0; }
+
+  /* ---- Chips ---- */
+  .chips{ display:flex; flex-wrap:wrap; gap:8px; }
+  .chip{
+    border:1px solid var(--line); background:transparent;
+    color:var(--carbon-soft);
+    padding:9px 14px; border-radius:999px;
+    font-family:'Inter', sans-serif; font-size:13px; cursor:pointer;
+    min-height:40px; min-width:0;
+    touch-action: manipulation; -webkit-user-select:none; user-select:none;
+    transition: background .15s, color .15s, border-color .15s;
+  }
+  .chip:hover{ background: var(--avena-2); }
+  .chip.active{
+    background: var(--acento); color:#fff; border-color:var(--acento);
+  }
+  .chip:active{ transform: scale(.96); }
+
+  /* ---- Search ---- */
+  .search-wrap{ position:relative; }
+  .search-wrap .s-icon{
+    position:absolute; left:4px; top:50%; transform:translateY(-50%);
+    color:var(--gris); pointer-events:none; font-size:20px;
+  }
+  .search{
+    width:100%; background:transparent; border:none;
+    border-bottom:2px solid var(--line);
+    padding:12px 8px 12px 34px;
+    font-family:'Newsreader', Georgia, serif; font-size:17px; color:var(--carbon);
+    outline:none;
+  }
+  .search::placeholder{ color:var(--gris); }
+  .search:focus{ border-color: var(--acento); }
+
+  /* ---- Verified cards ---- */
+  .verified-card{
+    border-left:4px solid var(--acento);
+    background: var(--acento-suave);
+    border-radius:10px; padding:14px 16px;
+    display:flex; flex-direction:column; gap:6px;
+    overflow:hidden;
+  }
+  .verified-card .row{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .verified-card .name{ font-family:'Newsreader',serif; font-weight:600; font-size:18px; color:var(--carbon); overflow-wrap:anywhere; min-width:0; }
+  .verified-card .tag{
+    font-size:10px; letter-spacing:.06em; text-transform:uppercase;
+    background:var(--acento); color:#fff; padding:2px 8px; border-radius:999px;
+    flex:0 0 auto;
+  }
+  .verified-card .meta{ font-size:11px; color:var(--gris); letter-spacing:.04em; text-transform:uppercase; overflow-wrap:anywhere; }
+  .verified-card .quote{ font-style:italic; color:var(--carbon-soft); font-size:14px; overflow-wrap:anywhere; word-break:break-word; margin:0; }
+  .verified-card .src{ font-size:12px; color:var(--gris); overflow-wrap:anywhere; }
+
+  .state-msg{ font-size:13px; color:var(--gris); padding:6px 2px; }
+
+  /* ---- Observar screen ---- */
+  #screen-observar{ display:none; min-height:100dvh; background:var(--avena); }
+  #screen-observar header{
+    position:sticky; top:0; z-index:50; height:56px;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 14px; background:var(--avena); border-bottom:1px solid var(--line-soft);
+  }
+  #screen-observar h1.title{
+    font-family:'Newsreader',serif; font-weight:600; font-size:18px;
+    letter-spacing:.06em; text-transform:uppercase; color:var(--carbon); margin:0;
+  }
+  .obs-bar{
+    position:sticky; top:56px; z-index:40; height:44px;
+    display:flex; align-items:center; padding:0 16px;
+    background:var(--avena); border-bottom:1px solid var(--line-soft);
+  }
+  .obs-bar p{ margin:0; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--gris); }
+  .obs-bar b{ color:var(--carbon); font-weight:600; }
+  .obs-main{ max-width:65ch; margin:0 auto; padding:28px 20px 80px; }
+  .obs-main .kicker{ font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--gris); margin:0 0 4px; }
+  .obs-main h2{ font-family:'Newsreader',serif; font-weight:600; font-size:30px; line-height:1.15; color:var(--carbon); margin:0 0 12px; }
+  .obs-estado{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:12px; color:var(--gris); margin:0 0 18px; }
+  .obs-estado .archivo{ background:#F6E9C9; color:#8a6d1f; font-weight:600; font-size:10px; letter-spacing:.06em; text-transform:uppercase; padding:2px 8px; border-radius:999px; }
+  .obs-orden{ font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--gris); margin:0 0 16px; }
+  .timeline{ position:relative; padding-left:28px; border-left:2px solid var(--line); margin-left:6px; }
+  .tl-item{ position:relative; margin-bottom:34px; }
+  .tl-item .dot{ position:absolute; left:-37px; top:4px; width:14px; height:14px; border-radius:50%; background:var(--gris); border:3px solid var(--avena); }
+  .tl-item .fecha{ font-size:12px; color:var(--gris); margin:0 0 10px; }
+  .tl-card{ background:#fff; border:1px solid var(--line-soft); border-radius:14px; overflow:hidden; }
+  .tl-card .hecho{ padding:18px; border-bottom:1px solid var(--line-soft); background:#FBF7EF; }
+  .tl-card .hecho .lbl{ font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--acento); }
+  .tl-card .hecho p{ margin:8px 0 0; color:var(--carbon); line-height:1.55; }
+  .tl-card .hecho .fuente{ display:inline-block; margin-top:10px; font-size:10px; letter-spacing:.05em; text-transform:uppercase; background:var(--avena-2); color:var(--carbon-soft); padding:2px 8px; border-radius:6px; }
+  .tl-card .vacio{ padding:18px; }
+  .tl-card .vacio .lbl{ font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--gris); }
+  .tl-card .vacio p{ margin:8px 0 0; color:var(--carbon-soft); }
+  .lectura{ margin-top:34px; background:#fff; border:1px solid var(--line-soft); border-radius:14px; padding:18px; }
+  .lectura .lbl{ font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--acento); }
+  .lectura p.sub{ margin:6px 0 0; font-size:11px; color:var(--gris); }
+  .lectura textarea{
+    width:100%; margin-top:10px; font-family:'Newsreader',serif; font-style:italic;
+    font-size:16px; color:var(--carbon); background:transparent;
+    border:1px solid var(--line); border-radius:10px; padding:12px; outline:none; resize:vertical;
+  }
+  .lectura textarea:focus{ border-color:var(--acento); }
+
+  /* ---- Bottom nav (flat) ---- */
+  nav.bottom{
+    position:fixed; bottom:0; left:0; right:0; z-index:50;
+    display:flex; align-items:stretch;
+    background:var(--avena);
+    border-top:1px solid var(--line-soft);
+    padding:6px 2px calc(6px + env(safe-area-inset-bottom, 0px));
+  }
+  nav.bottom a{
+    flex:1 1 0; min-width:0;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:3px; padding:8px 2px;
+    min-height:52px;
+    color:var(--gris); text-decoration:none;
+    border-radius:12px; cursor:pointer;
+    touch-action: manipulation; -webkit-user-select:none; user-select:none;
+    transition: color .15s, background .15s;
+  }
+  nav.bottom a .mat{ font-size:22px; line-height:1; }
+  nav.bottom a .txt{ font-family:'Inter',sans-serif; font-size:9px; letter-spacing:.02em; text-align:center; }
+  nav.bottom a:active{ transform: scale(.92); }
+  nav.bottom a.active{ color:var(--acento); background: var(--acento-suave); }
+  .mat{ font-family:'Material Symbols Outlined'; font-weight:normal; font-style:normal; font-feature-settings:'liga'; }
+  .mat.filled{ font-variation-settings:'FILL' 1; }
+</style>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet"/>
+</head>
+<body>
+
+<!-- ============ EXPLORAR ============ -->
+<div id="screen-explorar">
+  <header class="appbar">
+    <button class="icon-btn" aria-label="Menú">
+      <span class="mat">menu</span>
+    </button>
+    <h1>ANTROSAPIENS</h1>
+    <div class="avatar" aria-label="Perfil">
+      <span class="mat" style="color:var(--acento)">visibility</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <h2 class="serif">¿Qué quieres investigar?</h2>
+      <p>Explora organizaciones, señales y fenómenos que merecen una mirada más cercana.</p>
+      <p class="build-id" id="buildId">BUILD: —</p>
+    </section>
+
+    <!-- Candidatos verificados -->
+    <section class="section" id="candidatosVerificados">
+      <div style="display:flex; align-items:baseline; justify-content:space-between; gap:8px; flex-wrap:wrap;">
+        <span class="serif" style="font-weight:600; font-size:20px; overflow-wrap:anywhere;">Candidatos verificados</span>
+        <span class="meta" id="verificadosCount" style="font-size:11px; color:var(--gris); letter-spacing:.04em; text-transform:uppercase; white-space:nowrap;"></span>
+      </div>
+      <p class="hint">Evidencia primaria citada: autodeclaración o huella práctica de la propia organización. No es coincidencia de palabras clave.</p>
+      <div id="verificadosList" class="section" style="gap:10px;">
+        <p class="state-msg" id="verificadosLoading">Cargando candidatos verificados…</p>
+      </div>
+    </section>
+
+    <hr class="div"/>
+
+    <!-- Search -->
+    <section class="search-wrap">
+      <span class="mat s-icon">search</span>
+      <input class="search" type="text" placeholder="Escribe una organización, fenómeno, sector o pregunta…"/>
+    </section>
+
+    <!-- Filters -->
+    <section class="section">
+      <span class="label">Región</span>
+      <div class="chips" id="regionFilters">
+        <button class="chip" data-region="Toda LATAM">Toda LATAM</button>
+        <button class="chip" data-region="México">México</button>
+        <button class="chip" data-region="México y Centroamérica">México y Centroamérica</button>
+        <button class="chip" data-region="Sudamérica">Sudamérica</button>
+      </div>
+    </section>
+
+    <hr class="div"/>
+
+    <section class="section">
+      <span class="label">Foco</span>
+      <div class="chips" id="focoFilters">
+        <button class="chip active" data-cat="">Todos</button>
+        <span class="state-msg" id="focoLoading">Cargando categorías…</span>
+      </div>
+    </section>
+
+    <hr class="div"/>
+
+    <section class="section">
+      <span class="label">Vertical</span>
+      <div class="chips" id="verticalFilters">
+        <button class="chip active" data-val="">Todos</button>
+        <span class="state-msg" id="verticalLoading">Cargando verticales…</span>
+      </div>
+    </section>
+
+    <hr class="div"/>
+
+    <section class="section">
+      <span class="label">Escala</span>
+      <div class="chips" id="escalaFilters">
+        <button class="chip active" data-val="">Todos</button>
+        <span class="state-msg" id="escalaLoading">Cargando escalas…</span>
+      </div>
+    </section>
+  </main>
+
+  <nav class="bottom">
+    <a id="btnExplorarNav" class="active">
+      <span class="mat filled">explore</span>
+      <span class="txt">EXPLORAR</span>
+    </a>
+    <a id="btnObservarNav">
+      <span class="mat">visibility</span>
+      <span class="txt">OBSERVAR</span>
+    </a>
+    <a id="btnTriangularNav">
+      <span class="mat">change_history</span>
+      <span class="txt">TRIANGULAR</span>
+    </a>
+    <a id="btnFijarNav">
+      <span class="mat">push_pin</span>
+      <span class="txt">FIJAR</span>
+    </a>
+  </nav>
+</div>
+
+<!-- ============ OBSERVAR ============ -->
+<div id="screen-observar">
+  <header>
+    <button class="icon-btn" id="btnVolverObservar" aria-label="Volver">
+      <span class="mat">arrow_back</span>
+    </button>
+    <h1 class="title">Antrosapiens</h1>
+    <div style="flex:0 0 40px;"></div>
+  </header>
+  <div class="obs-bar">
+    <p>Observando: <b id="observarBarraNombre"></b></p>
+  </div>
+  <div class="obs-main">
+    <p class="kicker" id="observarExp"></p>
+    <h2 id="observarNombre"></h2>
+    <p class="obs-estado" id="observarEstado"></p>
+    <p class="obs-orden">Cronología · de más reciente a más antigua</p>
+    <div class="timeline" id="observarTimeline"></div>
+    <div class="lectura" id="observarLectura"></div>
+  </div>
+</div>
+
+<script src="build_info.js"></script>
+<script>
+(function(){
+  "use strict";
+  const API = "https://antrosapiens-api-pro.vercel.app";
+
+  // ---- helpers ----
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const $ = (id) => document.getElementById(id);
+
+  function fetchJSON(url, ms){
+    ms = ms || 5000;
+    const ctrl = new AbortController();
+    const t = setTimeout(function(){ ctrl.abort(); }, ms);
+    var sep = (url.indexOf("?") === -1) ? "?" : "&";
+    var urlBust = url + sep + "t=" + Date.now();
+    return fetch(urlBust, { signal: ctrl.signal, headers: { "Accept": "application/json" } })
+      .then(function(res){
+        if(!res.ok) throw new Error("http_" + res.status);
+        return res.json();
+      })
+      .finally(function(){ clearTimeout(t); });
+  }
+
+  // ---- build id ----
+  (function(){
+    const el = $("buildId");
+    if (el) el.textContent = "BUILD: " + (window.BUILD_ID || "desconocido");
+  })();
+
+  // ---- region detection ----
+  const REGION_HINTS = [
+    {chip:"México", rx:/(\bMéxico\b|\bméxico\b|\bmexico\b|\bmexicano(s)?\b|\bmexicana(s)?\b|\bcdmx\b|\bmonterrey\b|\bguadalajara\b|\bpuebla\b|\bquerétaro\b|\bqueretaro\b)/i},
+    {chip:"México y Centroamérica", rx:/(\bméxico\b|\bmexico\b|\bmexicanos?\b|\bmexicana(s)?\b|\bcdmx\b|\bmonterrey\b|\bguadalajara\b|\bpuebla\b|\bquerétaro\b|\bqueretaro\b|\bcosta rica\b|\bpanamá\b|\bpanama\b|\bguatemala\b|\bhonduras\b|\bel salvador\b|\bnicaragua\b)/i},
+    {chip:"Sudamérica", rx:/(\bchile\b|\bcolombia\b|\buruguay\b|\bargentina\b|\bperú\b|\bperu\b|\becuador\b|\bvenezuela\b|\bolivia\b|\bparaguay\b|\bbrazil\b|\bbrasil\b|\bbogotá\b|\bsantiago\b|\bmontevideo\b|\bbuenos aires\b|\blima\b)/i}
+  ];
+  function regionDe(it){
+    const t = ((it.organizacion||"") + " " + (it.cita_textual||"") + " " + (it.nombre_medio||"")).toLowerCase();
+    for (const r of REGION_HINTS){ if (r.rx.test(t)) return r.chip; }
+    return null;
+  }
+
+  // ---- state ----
+  let regionActiva = "México";
+  const REGION_TODAS = "Toda LATAM";
+  let verificadosItems = [];
+
+  const TIPO_LABEL = {
+    senal_primaria_autodeclaracion: "Autodeclaración",
+    senal_primaria_huella_practica: "Huella práctica"
+  };
+
+  // ---- region chips ----
+  const regionGroup = $("regionFilters");
+  regionGroup.querySelectorAll("button").forEach(function(btn){
+    if (btn.dataset.region === regionActiva) setActiveChip(regionGroup, btn);
+    btn.addEventListener("click", function(){
+      regionActiva = this.dataset.region;
+      setActiveChip(regionGroup, this);
+      renderVerificados();
+    });
+  });
+
+  function setActiveChip(group, btn){
+    group.querySelectorAll("button").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+  }
+
+  // ---- verified candidates ----
+  function filtrarVerificados(items){
+    if (regionActiva === REGION_TODAS) return items;
+    return items.filter(it => (it.regionDe ?? null) === regionActiva);
+  }
+
+  function renderVerificados(){
+    const cont = $("verificadosList");
+    const count = $("verificadosCount");
+    const visibles = filtrarVerificados(verificadosItems);
+    count.textContent = visibles.length + " verificado(s)";
+    if (!visibles.length){
+      cont.innerHTML = '<p class="state-msg">Sin datos en radar' + (regionActiva === REGION_TODAS ? "" : " en esta región") + '.</p>';
+      return;
+    }
+    cont.innerHTML = visibles.map(function(it){
+      return '' +
+        '<div class="verified-card">' +
+          '<div class="row">' +
+            '<span class="name">'+ esc(it.organizacion) +'</span>' +
+            '<span class="tag">Verificado</span>' +
+            '<span class="meta">'+ esc(TIPO_LABEL[it.tipo_epistemologico] || it.tipo_epistemologico || "") +'</span>' +
+          '</div>' +
+          '<p class="quote">'+ esc(it.cita_textual || "") +'</p>' +
+          '<p class="src">'+ esc(it.nombre_medio || "") +'</p>' +
+        '</div>';
+    }).join("");
+  }
+
+  function cargarCandidatosVerificados(){
+    const loading = $("verificadosLoading");
+    fetchJSON(API + "/verificados?limite=50")
+      .then(function(data){
+        if (loading) loading.remove();
+        verificadosItems = (data.items || []).map(function(it){ return Object.assign({}, it, { regionDe: regionDe(it) }); });
+        renderVerificados();
+      })
+      .catch(function(){
+        if (loading) loading.textContent = "Sin datos en radar.";
+      });
+  }
+
+  // ---- foco (categorías) ----
+  function cargarCategorias(){
+    const cont = $("focoFilters");
+    const loading = $("focoLoading");
+    fetchJSON(API + "/prospectos/categorias")
+      .then(function(data){
+        if (loading) loading.remove();
+        const cats = (data && data.categorias) || {};
+        Object.keys(cats).forEach(function(nombre){
+          const btn = document.createElement("button");
+          btn.className = "chip";
+          btn.dataset.cat = nombre;
+          btn.textContent = nombre + " (" + cats[nombre] + ")";
+          btn.addEventListener("click", function(){ seleccionarEn(cont, btn); });
+          cont.appendChild(btn);
+        });
+        const todos = cont.querySelector('button[data-cat=""]');
+        if (todos) todos.addEventListener("click", function(){ seleccionarEn(cont, todos); });
+      })
+      .catch(function(){
+        if (loading) loading.textContent = "Sin datos en radar.";
+      });
+  }
+  function seleccionarEn(group, btn){
+    group.querySelectorAll("button").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+  }
+
+  // ---- vertical / escala desde /expedientes ----
+  let verticalActiva = "";
+  let escalaActiva = "";
+  function cargarFiltroProspectos(containerId, loadingId, campo){
+    const cont = $(containerId);
+    const loading = $(loadingId);
+    fetchJSON(API + "/expedientes?limite=100")
+      .then(function(data){
+        if (loading) loading.remove();
+        const conteo = {};
+        (data.expedientes || []).forEach(function(p){
+          const v = String(p[campo] || "").trim();
+          if (!v) return;
+          conteo[v] = (conteo[v] || 0) + 1;
+        });
+        Object.keys(conteo).sort().forEach(function(valor){
+          const btn = document.createElement("button");
+          btn.className = "chip";
+          btn.dataset.val = valor;
+          btn.textContent = valor + " (" + conteo[valor] + ")";
+          btn.addEventListener("click", function(){
+            cont.querySelectorAll("button").forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+            if (cont.id === "verticalFilters") verticalActiva = valor;
+            else if (cont.id === "escalaFilters") escalaActiva = valor;
+          });
+          cont.appendChild(btn);
+        });
+        const todos = cont.querySelector('button[data-val=""]');
+        if (todos) todos.addEventListener("click", function(){
+          cont.querySelectorAll("button").forEach(b => b.classList.remove("active"));
+          todos.classList.add("active");
+          if (cont.id === "verticalFilters") verticalActiva = "";
+          else if (cont.id === "escalaFilters") escalaActiva = "";
+        });
+      })
+      .catch(function(){
+        if (loading) loading.textContent = "Sin datos en radar.";
+      });
+  }
+
+  // ---- observar screen ----
+  let expedienteActual = null;
+
+  function mostrarObservar(p){
+    expedienteActual = p;
+    $("observarExp").textContent = (p.categoria || "") + " · " + (p.scoring || "?");
+    $("observarNombre").textContent = p.nombre || "";
+    $("observarBarraNombre").textContent = p.nombre || "";
+
+    const val = p.validacion_cientifica || {};
+    const vacios = val.hipotesis_bloqueada
+      ? (val.recomendacion || "Evidencia insuficiente para validar.")
+      : "Sin vacíos críticos registrados.";
+
+    const evidencias = (p.evidencias || []).slice().sort(function(a,b){
+      return (Date.parse(b && b.fecha) || 0) - (Date.parse(a && a.fecha) || 0);
+    });
+
+    const fechas = evidencias.map(ev => Date.parse(ev && ev.fecha)).filter(t => !isNaN(t));
+    const soloDia = (t) => new Date(t).toISOString().slice(0,10);
+    const estado = $("observarEstado");
+    if (fechas.length){
+      const masReciente = Math.max.apply(null, fechas);
+      const masAntigua = Math.min.apply(null, fechas);
+      const doceMeses = new Date(); doceMeses.setFullYear(doceMeses.getFullYear() - 1);
+      const archivo = masReciente < doceMeses.getTime()
+        ? '<span class="archivo">Archivo histórico</span>' : '';
+      estado.innerHTML = '<span>'+ esc(soloDia(masAntigua)) + ' — ' + esc(soloDia(masReciente)) +'</span>' + archivo;
+    } else {
+      estado.innerHTML = '<span>Sin fechas de evidencia registradas</span>';
+    }
+
+    $("observarTimeline").innerHTML = evidencias.map(function(ev){
+      return '' +
+        '<div class="tl-item">' +
+          '<div class="dot"></div>' +
+          '<p class="fecha">'+ esc(ev.fecha || "") +'</p>' +
+          '<div class="tl-card">' +
+            '<div class="hecho">' +
+              '<span class="lbl">Lo que sabemos</span>' +
+              '<p>'+ esc(ev.texto || "") +'</p>' +
+              (ev.fuente ? '<span class="fuente">Fuente: '+ esc(ev.fuente) +'</span>' : '') +
+            '</div>' +
+            '<div class="vacio">' +
+              '<span class="lbl">Lo que no sabemos</span>' +
+              '<p>'+ esc(vacios) +'</p>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+    }).join("");
+
+    $("observarLectura").innerHTML = '' +
+      '<span class="lbl">Tu lectura</span>' +
+      '<p class="sub">Sobre el conjunto de la cronología.</p>' +
+      '<textarea rows="4" placeholder="Escribe tu interpretación aquí…"></textarea>';
+
+    setNavActive("btnObservarNav");
+    $("screen-explorar").style.display = "none";
+    $("screen-observar").style.display = "block";
+    window.scrollTo(0,0);
+  }
+
+  $("btnVolverObservar").addEventListener("click", function(){
+    $("screen-observar").style.display = "none";
+    $("screen-explorar").style.display = "block";
+    setNavActive("btnExplorarNav");
+  });
+
+  // ---- bottom nav ----
+  function setNavActive(id){
+    document.querySelectorAll("nav.bottom a").forEach(a => a.classList.remove("active"));
+    const el = $(id); if (el) el.classList.add("active");
+  }
+  $("btnExplorarNav").addEventListener("click", function(e){
+    e.preventDefault();
+    $("screen-observar").style.display = "none";
+    $("screen-explorar").style.display = "block";
+    setNavActive("btnExplorarNav");
+  });
+  $("btnObservarNav").addEventListener("click", function(e){
+    e.preventDefault();
+    if (expedienteActual){
+      $("screen-explorar").style.display = "none";
+      $("screen-observar").style.display = "block";
+      setNavActive("btnObservarNav");
+    }
+  });
+  ["btnTriangularNav","btnFijarNav"].forEach(function(id){
+    $(id).addEventListener("click", function(e){ e.preventDefault(); });
+  });
+
+  // ---- init ----
+  cargarCategorias();
+  cargarFiltroProspectos("verticalFilters", "verticalLoading", "vertical");
+  cargarFiltroProspectos("escalaFilters", "escalaLoading", "escala");
+  cargarCandidatosVerificados();
+})();
+</script>
+</body></html>

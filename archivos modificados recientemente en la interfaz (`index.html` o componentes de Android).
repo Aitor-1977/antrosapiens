@@ -1,0 +1,65 @@
+[33md44cddc[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m fix: harden Android build delivery verification
+ android_v2/.gitignore              |   3 [32m+[m
+ android_v2/app/build.gradle.kts    |  35 [32m+++[m
+ .../main/assets/public/index.html  | 134 [32m++++++++[m[31m--[m
+ 3 files changed, 146 insertions(+), 26 deletions(-)
+[33mb560ca7[m fix(android_v2): EXPLORAR muestra solo Candidatos verificados, elimina Señal detectada/unicornios
+ .../main/assets/public/index.html  | 78 [32m+[m[31m----------[m
+ 1 file changed, 3 insertions(+), 75 deletions(-)
+[33m5a57ac2[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Merge pull request #2 from Aitor-1977/claude/antrolabs-android-v2-connectivity-x7qsa3
+[33mb921b5f[m[33m ([m[1;31morigin/claude/antrolabs-android-v2-connectivity-x7qsa3[m[33m)[m feat(api,android_v2): endpoint GET /verificados + sección "Candidatos verificados"
+ .../main/assets/public/index.html  |  51 [32m++++[m
+ hd_scraper/api/app.py              |  18 [32m++[m
+ .../candidatos_verificados.py      |  62 [32m++++[m
+ .../test_candidatos_verificados.py | 143 [32m++++++++++[m
+ 4 files changed, 274 insertions(+)
+[33m01512f0[m[33m ([m[1;32mclaude/antrolabs-android-v2-connectivity-x7qsa3[m[33m)[m fix(clasificacion): reintentar y saltar evidencia tras caída de conexión de red
+ hd_scraper/clasificacion_store.py  | 81 [32m+++++++++[m[31m--[m
+ hd_scraper/db/database.py          | 18 [32m+++[m
+ scripts/clasificar_evidencia.py    |  3 [32m+[m
+ ...clasificacion_epistemologica.py | 77 [32m++++++++++[m
+ 4 files changed, 166 insertions(+), 13 deletions(-)
+[33m47caa84[m fix(promocion): preferir la fila mas reciente de prospectos, no la mas vieja
+ hd_scraper/promocion_store.py      | 15 [32m+++++++++[m[31m--[m
+ tests/test_promocion_candidatos.py | 12 [32m+++++++++[m
+ 2 files changed, 25 insertions(+), 2 deletions(-)
+[33m16fd091[m feat(promocion): promover expedientes 'abierto' a 'candidato' (Entrega 3)
+ CLAUDE.md                          |   2 [32m+[m
+ hd_scraper/promocion_candidatos.py |  74 [32m+++[m
+ hd_scraper/promocion_store.py      | 112 [32m+++++[m
+ scripts/promover_candidatos.py     |  60 [32m+++[m
+ tests/test_promocion_candidatos.py | 226 [32m++++++++++[m
+ 5 files changed, 474 insertions(+)
+[33m921eb19[m fix(prospectos): reclasificar 7 unicornios de Startup a Corporativo
+ hd_scraper/seed_prospectos.py | 27 [32m++++++++++++[m[31m----[m
+ tests/test_seed_prospectos.py |  4 [32m++[m[31m-[m
+ 2 files changed, 23 insertions(+), 8 deletions(-)
+[33mad06d01[m fix(clasificacion): exigir señal de habla y aposición real, no proximidad
+ ...clasificacion_epistemologica.py | 74 [32m++++++++[m[31m---[m
+ ...clasificacion_epistemologica.py | 28 [32m++++[m
+ 2 files changed, 86 insertions(+), 16 deletions(-)
+[33me6a5753[m docs(clasificacion): fecha de autorizacion del operador 2026-08-21
+ CLAUDE.md                                  | 2 [32m+[m[31m-[m
+ hd_scraper/clasificacion_epistemologica.py | 2 [32m+[m[31m-[m
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+[33md96ba8b[m feat(clasificacion): clasificador epistemologico de la evidencia (Entrega 2)
+ CLAUDE.md                          |  27 [32m+[m[31m-[m
+ ...clasificacion_epistemologica.py | 532 [32m++++++++++[m
+ hd_scraper/clasificacion_store.py  | 174 [32m+++[m
+ hd_scraper/db/schema.sql           |  39 [32m+[m
+ hd_scraper/db/schema_postgres.sql  |  40 [32m+[m
+ scripts/clasificar_evidencia.py    |  77 [32m++[m
+ ...clasificacion_epistemologica.py | 187 [32m++++[m
+ 7 files changed, 1074 insertions(+), 2 deletions(-)
+[33m6cbfb64[m merge: traer la interfaz EXPLORAR/OBSERVAR desde main
+[33m93a7011[m wip: interfaz EXPLORAR/OBSERVAR antes del cambio de presentacion
+ .../main/assets/public/index.html  | 100 [32m+++++++++[m[31m-[m
+ 1 file changed, 92 insertions(+), 8 deletions(-)
+[33m4e6a030[m ui(android_v2): la señal detectada pierde autoridad de hallazgo
+ .../src/main/assets/public/index.html  | 8 [32m++++++[m[31m--[m
+ 1 file changed, 6 insertions(+), 2 deletions(-)
+[33m4f41f15[m feat(api,android_v2): exponer campo escala en expedientes y CORS para app
+ .../main/assets/public/index.html  | 683 [32m++++++[m[31m----[m
+ .../python/hd_scraper/api/app.py   |   5 [32m+[m
+ hd_scraper/api/app.py              |  35 [32m+[m
+ 3 files changed, 466 insertions(+), 257 deletions(-)

@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Observar Corporación Andina - AntroSapiens V3</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Newsreader:ital,wght@0,400;0,500;0,700;1,400&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --surface: #FCFAED;
+            --primary: #091426;
+            --outline-variant: rgba(0,0,0,0.1);
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--surface);
+            color: var(--primary);
+            line-height: 1.6;
+        }
+        .font-newsreader { font-family: 'Newsreader', serif; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
+        .editorial-width { max-width: 65ch; margin-inline: auto; }
+        .card-shadow { box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+    </style>
+</head>
+<body class="min-h-screen pb-24">
+    <!-- Top App Bar -->
+    <header class="sticky top-0 z-50 bg-[#FCFAED]/95 backdrop-blur-sm border-b border-black/5 px-4 h-16 flex items-center justify-between">
+        <button class="p-2">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <h1 class="font-newsreader text-xl font-medium uppercase tracking-wider text-[#091426]">AntroSapiens V3</h1>
+        <div class="w-10"></div>
+    </header>
+
+    <main class="px-6 pt-8 editorial-width">
+        <div class="mb-8">
+            <p class="font-mono text-xs text-slate-500 uppercase tracking-widest mb-1">EXP. OBS-2024-09</p>
+            <h2 class="font-newsreader text-5xl font-medium leading-tight mb-4 text-[#091426]">Observar Corporación Andina</h2>
+            <p class="text-lg text-slate-700">
+                <span class="font-bold text-[#2d5a27]">Por qué estamos mirando esto:</span> La reciente reestructuración de la cadena de suministro sugiere un cambio en las dinámicas de poder territoriales, afectando a las comunidades extractivas locales.
+            </p>
+        </div>
+
+        <!-- Timeline Section -->
+        <div class="relative pl-8 border-l border-slate-200 ml-2">
+            <!-- Entry 1 -->
+            <div class="mb-12 relative">
+                <div class="absolute -left-10 top-2 w-4 h-4 rounded-full bg-slate-300 border-4 border-[#FCFAED]"></div>
+                <p class="font-mono text-xs text-slate-500 mb-4 tracking-tighter">2024.10.15 :: 09:30</p>
+                
+                <div class="bg-white/50 rounded-2xl border border-slate-200 overflow-hidden card-shadow">
+                    <div class="p-6 bg-[#fef2e2]/30 border-b border-slate-100">
+                        <div class="flex items-center gap-2 mb-3">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2d5a27" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M8 7h6"/><path d="M8 11h8"/></svg>
+                            <span class="font-mono text-xs font-bold text-[#2d5a27] uppercase tracking-wider">Lo que sabemos (Hecho)</span>
+                        </div>
+                        <p class="text-slate-800 leading-relaxed">Se anunció una nueva operación de adquisición de tierras en la cuenca sur, consolidando el 45% de los derechos de agua disponibles en la región.</p>
+                        <div class="mt-4">
+                            <span class="font-mono text-[10px] bg-slate-200 px-2 py-1 rounded text-slate-600 uppercase">Fuente: DOC-OF-88</span>
+                        </div>
+                    </div>
+                    
+                    <div class="p-6 border-b border-slate-100 border-dashed">
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="text-lg">?</span>
+                            <span class="font-mono text-xs font-bold text-slate-500 uppercase tracking-wider">Lo que no sabemos (Vacíos)</span>
+                        </div>
+                        <p class="text-slate-600">¿Quiénes son los beneficiarios finales de la adquisición? Falta verificar el impacto en el caudal ecológico aguas abajo.</p>
+                    </div>
+
+                    <div class="p-6">
+                        <div class="flex items-center gap-2 mb-3">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2d5a27" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"/></svg>
+                            <span class="font-mono text-xs font-bold text-[#2d5a27] uppercase tracking-wider">Tu Lectura (Interpretación)</span>
+                        </div>
+                        <p class="font-newsreader text-xl italic text-slate-800 leading-relaxed">
+                            Esta consolidación no es solo económica, es una estrategia de control hídrico que desplazará a los pequeños productores en un plazo de 3 a 5 años, alterando la estructura social de la cuenca.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Entry 2 -->
+            <div class="mb-12 relative">
+                <div class="absolute -left-10 top-2 w-4 h-4 rounded-full bg-slate-300 border-4 border-[#FCFAED]"></div>
+                <p class="font-mono text-xs text-slate-500 mb-4 tracking-tighter">2024.10.12 :: 14:15</p>
+                
+                <div class="bg-white/50 rounded-2xl border border-slate-200 overflow-hidden card-shadow opacity-90">
+                    <div class="p-6 bg-[#fef2e2]/30 border-b border-slate-100">
+                        <div class="flex items-center gap-2 mb-3">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2d5a27" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M8 7h6"/><path d="M8 11h8"/></svg>
+                            <span class="font-mono text-xs font-bold text-[#2d5a27] uppercase tracking-wider">Lo que sabemos (Hecho)</span>
+                        </div>
+                        <p class="text-slate-800">Renuncia inesperada del director de sostenibilidad comunitaria tras la publicación del informe de impacto ambiental preliminar.</p>
+                    </div>
+                    
+                    <div class="p-6 border-b border-slate-100 border-dashed">
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="text-lg">?</span>
+                            <span class="font-mono text-xs font-bold text-slate-500 uppercase tracking-wider">Lo que no sabemos (Vacíos)</span>
+                        </div>
+                        <p class="text-slate-600">¿Hubo presiones internas previas a la renuncia? Se requiere acceso a la correspondencia interna filtrada.</p>
+                    </div>
+
+                    <div class="p-6">
+                        <div class="flex items-center gap-2 mb-3">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2d5a27" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"/></svg>
+                            <span class="font-mono text-xs font-bold text-[#2d5a27] uppercase tracking-wider">Tu Lectura (Interpretación)</span>
+                        </div>
+                        <p class="font-newsreader text-xl italic text-slate-400">Escriba su interpretación aquí...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Call to Action -->
+        <div class="flex justify-center mt-12 mb-20">
+            <button class="bg-[#173814] text-[#fbfaee] px-8 py-4 rounded-xl flex items-center gap-3 font-medium hover:bg-[#091426] transition-colors shadow-lg active:scale-95 duration-150">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="m9 12 2 2 4-4"/></svg>
+                Triangular evidencia
+            </button>
+        </div>
+    </main>
+
+    <!-- Bottom Nav Bar -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-[#fef2e2]/95 backdrop-blur-md border-t border-black/5 px-6 py-4 flex justify-between items-center max-w-screen-sm mx-auto z-50">
+        <div class="flex flex-col items-center gap-1 opacity-60">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            <span class="text-[10px] font-bold uppercase tracking-widest">Explorar</span>
+        </div>
+        <div class="flex flex-col items-center gap-1 text-[#2d5a27]">
+            <div class="bg-[#2d5a27]/10 px-6 py-1 rounded-full flex flex-col items-center">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+            </div>
+            <span class="text-[10px] font-bold uppercase tracking-widest">Observar</span>
+        </div>
+        <div class="flex flex-col items-center gap-1 opacity-60">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+            <span class="text-[10px] font-bold uppercase tracking-widest">Triangular</span>
+        </div>
+        <div class="flex flex-col items-center gap-1 opacity-60">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 19 9 2-9-18-9 18 9-2Zm0 0v-8"/></svg>
+            <span class="text-[10px] font-bold uppercase tracking-widest">Fijar</span>
+        </div>
+    </nav>
+</body>
+</html>

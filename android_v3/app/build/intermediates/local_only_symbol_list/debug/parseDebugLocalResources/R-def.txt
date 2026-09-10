@@ -1,0 +1,6 @@
+R_DEF: Internal format may change without notice
+local
+drawable antrosapiens_logo
+mipmap ic_launcher
+string app_name
+style Theme.AntrolabsHD

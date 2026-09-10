@@ -1,0 +1,1174 @@
+diff --git a/android_v2/app/src/main/assets/public/index.html b/android_v2/app/src/main/assets/public/index.html
+index 008e8e9..bb36b8e 100644
+--- a/android_v2/app/src/main/assets/public/index.html
++++ b/android_v2/app/src/main/assets/public/index.html
+@@ -1,547 +1,646 @@
+ <!DOCTYPE html>
+-
+-<html class="light" lang="es"><head>
++<html lang="es" class="no-js">
++<head>
+ <meta charset="utf-8"/>
+-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+-<title>Explorar - Antrosapiens V3</title>
+-<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400&amp;family=Newsreader:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+-<script id="tailwind-config">
+-  tailwind.config = {
+-    darkMode: "class",
+-    theme: {
+-      extend: {
+-        "colors": {
+-                "on-tertiary-fixed-variant": "#703800",
+-                "on-secondary": "#ffffff",
+-                "on-secondary-container": "#007353",
+-                "error-container": "#ffdad6",
+-                "on-tertiary-container": "#ffb277",
+-                "surface-bright": "#fff8f2",
+-                "surface-tint": "#3b6934",
+-                "surface-container-low": "#fef2e2",
+-                "tertiary-fixed": "#ffdcc4",
+-                "surface-variant": "#ece1d1",
+-                "on-secondary-fixed-variant": "#00513a",
+-                "on-primary": "#ffffff",
+-                "inverse-surface": "#363025",
+-                "tertiary-fixed-dim": "#ffb781",
+-                "error": "#ba1a1a",
+-                "surface-container-highest": "#ece1d1",
+-                "tertiary-container": "#7e4000",
+-                "on-surface": "#201b11",
+-                "outline": "#72796e",
+-                "secondary-fixed-dim": "#7bd8b1",
+-                "on-secondary-fixed": "#002115",
+-                "on-error-container": "#93000a",
+-                "secondary-container": "#97f5cc",
+-                "surface-dim": "#e4d9c9",
+-                "inverse-primary": "#a1d494",
+-                "primary-fixed": "#bcf0ae",
+-                "on-primary-fixed": "#002201",
+-                "secondary": "#006c4e",
+-                "on-background": "#201b11",
+-                "on-tertiary-fixed": "#2f1400",
+-                "outline-variant": "#c2c9bb",
+-                "surface": "#fff8f2",
+-                "on-error": "#ffffff",
+-                "on-primary-container": "#9dd090",
+-                "on-surface-variant": "#42493e",
+-                "primary-fixed-dim": "#a1d494",
+-                "surface-container-high": "#f2e7d6",
+-                "on-primary-fixed-variant": "#23501e",
+-                "surface-container": "#f8ecdc",
+-                "on-tertiary": "#ffffff",
+-                "surface-container-lowest": "#ffffff",
+-                "primary-container": "#2d5a27",
+-                "primary": "#154212",
+-                "tertiary": "#5c2d00",
+-                "background": "#fff8f2",
+-                "inverse-on-surface": "#fbefdf",
+-                "secondary-fixed": "#97f5cc"
+-        },
+-        "borderRadius": {
+-                "DEFAULT": "0.125rem",
+-                "lg": "0.25rem",
+-                "xl": "0.5rem",
+-                "full": "0.75rem"
+-        },
+-        "spacing": {
+-                "stack-sm": "8px",
+-                "stack-lg": "32px",
+-                "stack-md": "16px",
+-                "gutter": "24px",
+-                "container-max": "1120px",
+-                "reading-width": "65ch",
+-                "section-gap": "64px",
+-                "margin-mobile": "16px"
+-        },
+-        "fontFamily": {
+-                "metadata-code": [
+-                        "JetBrains Mono"
+-                ],
+-                "ui-label": [
+-                        "Inter"
+-                ],
+-                "headline-md-mobile": [
+-                        "Newsreader"
+-                ],
+-                "body-reading": [
+-                        "Newsreader"
+-                ],
+-                "display-lg": [
+-                        "Newsreader"
+-                ],
+-                "headline-md": [
+-                        "Newsreader"
+-                ]
+-        },
+-        "fontSize": {
+-                "metadata-code": [
+-                        "13px",
+-                        {
+-                                "lineHeight": "18px",
+-                                "fontWeight": "400"
+-                        }
+-                ],
+-                "ui-label": [
+-                        "14px",
+-                        {
+-                                "lineHeight": "20px",
+-                                "letterSpacing": "0.01em",
+-                                "fontWeight": "500"
+-                        }
+-                ],
+-                "headline-md-mobile": [
+-                        "24px",
+-                        {
+-                                "lineHeight": "32px",
+-                                "fontWeight": "500"
+-                        }
+-                ],
+-                "body-reading": [
+-                        "20px",
+-                        {
+-                                "lineHeight": "32px",
+-                                "fontWeight": "400"
+-                        }
+-                ],
+-                "display-lg": [
+-                        "48px",
+-                        {
+-                                "lineHeight": "56px",
+-                                "letterSpacing": "-0.02em",
+-                                "fontWeight": "600"
+-                        }
+-                ],
+-                "headline-md": [
+-                        "32px",
+-                        {
+-                                "lineHeight": "40px",
+-                                "fontWeight": "500"
+-                        }
+-                ]
+-        }
+-},
+-    },
+-  }
+-</script>
+-<style>
+-        .material-symbols-outlined {
+-            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+-        }
+-        .material-symbols-outlined.filled {
+-            font-variation-settings: 'FILL' 1;
+-        }
+-        
+-        /* Hide scrollbar for a cleaner editorial look */
+-        ::-webkit-scrollbar {
+-            width: 0px;
+-            background: transparent;
+-        }
+-    </style>
++<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
++<title>Antrosapiens · Explorar</title>
++<link rel="preconnect" href="https://fonts.googleapis.com"/>
++<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
++<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Newsreader:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet"/>
+ <style>
+-    html {
+-      -webkit-text-size-adjust: 100%;
+-      text-size-adjust: 100%;
+-    }
+-    body {
+-      min-height: max(884px, 100dvh);
+-    }
+-  </style>
++  :root{
++    --avena: #F2EDE3;
++    --avena-2: #EAE3D5;
++    --carbon: #2B2B27;
++    --carbon-soft: #5C584E;
++    --line: #D8D0BF;
++    --line-soft: #E2DBCC;
++    --acento: #2D5A27;
++    --acento-suave: #E7EEE2;
++    --gris: #8A8273;
++  }
++  *{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
++  html,body{ margin:0; padding:0; }
++  html{ -webkit-text-size-adjust:100%; text-size-adjust:100%; }
++  body{
++    background: var(--avena);
++    color: var(--carbon);
++    font-family: 'Inter', system-ui, -apple-system, sans-serif;
++    font-size: 15px;
++    line-height: 1.5;
++    min-height: 100dvh;
++  }
++  .serif{ font-family: 'Newsreader', Georgia, 'Times New Roman', serif; }
++  ::-webkit-scrollbar{ width:0; height:0; background:transparent; }
++
++  /* ---- Header ---- */
++  header.appbar{
++    position: fixed; top:0; left:0; right:0; z-index:40;
++    height: calc(56px + env(safe-area-inset-top, 0px));
++    padding: env(safe-area-inset-top, 0px) 14px 0;
++    display:flex; align-items:center; justify-content:space-between;
++    background: var(--avena);
++    border-bottom: 1px solid var(--line-soft);
++    box-shadow: 0 1px 0 rgba(43,43,39,.04);
++  }
++  .appbar .icon-btn{
++    flex: 0 0 40px; height:40px; width:40px;
++    display:flex; align-items:center; justify-content:center;
++    background:transparent; border:none; color:var(--acento);
++    border-radius: 10px; cursor:pointer;
++  }
++  .appbar .icon-btn:active{ transform: scale(.92); }
++  .appbar h1{
++    flex: 1 1 auto; text-align:center;
++    font-family:'Newsreader', Georgia, serif;
++    font-weight:600; font-size:18px; letter-spacing:.04em;
++    color: var(--carbon); margin:0;
++    white-space: nowrap; overflow:hidden; text-overflow:ellipsis;
++  }
++  .appbar .avatar{
++    flex: 0 0 36px; height:36px; width:36px; border-radius:50%;
++    background: var(--acento-suave); overflow:hidden;
++    border: 1px solid var(--line);
++    display:flex; align-items:center; justify-content:center;
++  }
++  .appbar .avatar img{ width:100%; height:100%; object-fit:cover; }
++
++  /* ---- Main ---- */
++  main{
++    max-width: 760px; margin: 0 auto;
++    padding: calc(56px + env(safe-area-inset-top, 0px) + 18px) 16px calc(96px + env(safe-area-inset-bottom, 0px));
++    display:flex; flex-direction:column; gap:24px;
++  }
++  .hero h2{
++    font-family:'Newsreader', Georgia, serif;
++    font-weight:600; font-size:28px; line-height:1.2;
++    margin:0 0 8px; color:var(--carbon);
++    overflow-wrap:anywhere;
++  }
++  .hero p{ margin:0; color:var(--carbon-soft); font-size:15px; max-width:60ch; }
++  .build-id{
++    margin-top:10px; font-size:10px; letter-spacing:.12em;
++    color:var(--gris); text-transform:uppercase;
++  }
++
++  /* ---- Sections ---- */
++  .section{ display:flex; flex-direction:column; gap:10px; }
++  .section .label{
++    font-size:11px; letter-spacing:.14em; text-transform:uppercase;
++    color:var(--gris);
++  }
++  .section .hint{ font-size:12px; color:var(--gris); line-height:1.4; }
++  hr.div{ border:none; border-top:1px solid var(--line-soft); width:33%; margin:6px 0; }
++
++  /* ---- Chips ---- */
++  .chips{ display:flex; flex-wrap:wrap; gap:8px; }
++  .chip{
++    border:1px solid var(--line); background:transparent;
++    color:var(--carbon-soft);
++    padding:9px 14px; border-radius:999px;
++    font-family:'Inter', sans-serif; font-size:13px; cursor:pointer;
++    min-height:40px; min-width:0;
++    touch-action: manipulation; -webkit-user-select:none; user-select:none;
++    transition: background .15s, color .15s, border-color .15s;
++  }
++  .chip:hover{ background: var(--avena-2); }
++  .chip.active{
++    background: var(--acento); color:#fff; border-color:var(--acento);
++  }
++  .chip:active{ transform: scale(.96); }
++
++  /* ---- Search ---- */
++  .search-wrap{ position:relative; }
++  .search-wrap .s-icon{
++    position:absolute; left:4px; top:50%; transform:translateY(-50%);
++    color:var(--gris); pointer-events:none; font-size:20px;
++  }
++  .search{
++    width:100%; background:transparent; border:none;
++    border-bottom:2px solid var(--line);
++    padding:12px 8px 12px 34px;
++    font-family:'Newsreader', Georgia, serif; font-size:17px; color:var(--carbon);
++    outline:none;
++  }
++  .search::placeholder{ color:var(--gris); }
++  .search:focus{ border-color: var(--acento); }
++
++  /* ---- Verified cards ---- */
++  .verified-card{
++    border-left:4px solid var(--acento);
++    background: var(--acento-suave);
++    border-radius:10px; padding:14px 16px;
++    display:flex; flex-direction:column; gap:6px;
++    overflow:hidden;
++    overflow-wrap: anywhere; word-break: break-word;
++  }
++  .verified-card .row{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
++  .verified-card .name{ font-family:'Newsreader',serif; font-weight:600; font-size:18px; color:var(--carbon); overflow-wrap:anywhere; min-width:0; }
++  .verified-card .tag{
++    font-size:10px; letter-spacing:.06em; text-transform:uppercase;
++    background:var(--acento); color:#fff; padding:2px 8px; border-radius:999px;
++    flex:0 0 auto;
++  }
++  .verified-card .meta{ font-size:11px; color:var(--gris); letter-spacing:.04em; text-transform:uppercase; overflow-wrap:anywhere; }
++  .verified-card .quote{ font-style:italic; color:var(--carbon-soft); font-size:14px; overflow-wrap:anywhere; word-break:break-word; margin:0; }
++  .verified-card .src{ font-size:12px; color:var(--gris); overflow-wrap:anywhere; }
++
++  .state-msg{ font-size:13px; color:var(--gris); padding:6px 2px; }
++
++  /* ---- Observar screen ---- */
++  #screen-observar{ display:none; min-height:100dvh; background:var(--avena); }
++  #screen-observar header{
++    position:sticky; top:0; z-index:50; height:56px;
++    display:flex; align-items:center; justify-content:space-between;
++    padding:0 14px; background:var(--avena); border-bottom:1px solid var(--line-soft);
++  }
++  #screen-observar h1.title{
++    font-family:'Newsreader',serif; font-weight:600; font-size:18px;
++    letter-spacing:.06em; text-transform:uppercase; color:var(--carbon); margin:0;
++  }
++  .obs-bar{
++    position:sticky; top:56px; z-index:40; height:44px;
++    display:flex; align-items:center; padding:0 16px;
++    background:var(--avena); border-bottom:1px solid var(--line-soft);
++  }
++  .obs-bar p{ margin:0; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--gris); }
++  .obs-bar b{ color:var(--carbon); font-weight:600; }
++  .obs-main{ max-width:65ch; margin:0 auto; padding:28px 20px 80px; }
++  .obs-main .kicker{ font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--gris); margin:0 0 4px; }
++  .obs-main h2{ font-family:'Newsreader',serif; font-weight:600; font-size:30px; line-height:1.15; color:var(--carbon); margin:0 0 12px; }
++  .obs-estado{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:12px; color:var(--gris); margin:0 0 18px; }
++  .obs-estado .archivo{ background:#F6E9C9; color:#8a6d1f; font-weight:600; font-size:10px; letter-spacing:.06em; text-transform:uppercase; padding:2px 8px; border-radius:999px; }
++  .obs-orden{ font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--gris); margin:0 0 16px; }
++  .timeline{ position:relative; padding-left:28px; border-left:2px solid var(--line); margin-left:6px; }
++  .tl-item{ position:relative; margin-bottom:34px; }
++  .tl-item .dot{ position:absolute; left:-37px; top:4px; width:14px; height:14px; border-radius:50%; background:var(--gris); border:3px solid var(--avena); }
++  .tl-item .fecha{ font-size:12px; color:var(--gris); margin:0 0 10px; }
++  .tl-card{ background:#fff; border:1px solid var(--line-soft); border-radius:14px; overflow:hidden; }
++  .tl-card .hecho{ padding:18px; border-bottom:1px solid var(--line-soft); background:#FBF7EF; }
++  .tl-card .hecho .lbl{ font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--acento); }
++  .tl-card .hecho p{ margin:8px 0 0; color:var(--carbon); line-height:1.55; }
++  .tl-card .hecho .fuente{ display:inline-block; margin-top:10px; font-size:10px; letter-spacing:.05em; text-transform:uppercase; background:var(--avena-2); color:var(--carbon-soft); padding:2px 8px; border-radius:6px; }
++  .tl-card .vacio{ padding:18px; }
++  .tl-card .vacio .lbl{ font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--gris); }
++  .tl-card .vacio p{ margin:8px 0 0; color:var(--carbon-soft); }
++  .lectura{ margin-top:34px; background:#fff; border:1px solid var(--line-soft); border-radius:14px; padding:18px; }
++  .lectura .lbl{ font-size:11px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--acento); }
++  .lectura p.sub{ margin:6px 0 0; font-size:11px; color:var(--gris); }
++  .lectura textarea{
++    width:100%; margin-top:10px; font-family:'Newsreader',serif; font-style:italic;
++    font-size:16px; color:var(--carbon); background:transparent;
++    border:1px solid var(--line); border-radius:10px; padding:12px; outline:none; resize:vertical;
++  }
++  .lectura textarea:focus{ border-color:var(--acento); }
++
++  /* ---- Bottom nav (flat) ---- */
++  nav.bottom{
++    position:fixed; bottom:0; left:0; right:0; z-index:50;
++    display:flex; align-items:stretch;
++    background:var(--avena);
++    border-top:1px solid var(--line-soft);
++    min-height:52px; touch-action: manipulation;
++    padding:6px 2px calc(6px + env(safe-area-inset-bottom, 0px));
++  }
++  nav.bottom a{
++    flex:1 1 0; min-width:0;
++    display:flex; flex-direction:column; align-items:center; justify-content:center;
++    gap:3px; padding:8px 2px;
++    min-height:52px;
++    color:var(--gris); text-decoration:none;
++    border-radius:12px; cursor:pointer;
++    touch-action: manipulation; -webkit-user-select:none; user-select:none;
++    transition: color .15s, background .15s;
++  }
++  nav.bottom a .mat{ font-size:22px; line-height:1; }
++  nav.bottom a .txt{ font-family:'Inter',sans-serif; font-size:9px; letter-spacing:.02em; text-align:center; }
++  nav.bottom a:active{ transform: scale(.92); }
++  nav.bottom a.active{ color:var(--acento); background: var(--acento-suave); }
++  .mat{ font-family:'Material Symbols Outlined'; font-weight:normal; font-style:normal; font-feature-settings:'liga'; }
++  .mat.filled{ font-variation-settings:'FILL' 1; }
++</style>
++<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0&display=swap" rel="stylesheet"/>
+ </head>
+-<body class="bg-surface text-on-surface min-h-screen flex flex-col font-ui-label selection:bg-primary-container selection:text-on-primary-container">
++<body>
++
++<!-- ============ EXPLORAR ============ -->
+ <div id="screen-explorar">
+-<!-- TopAppBar -->
+-<header class="bg-surface dark:bg-surface-dim border-b border-outline/20 docked full-width top-0 z-40 fixed">
+-<div class="flex justify-between items-center px-margin-mobile md:px-gutter h-16 w-full max-w-container-max mx-auto">
+-<button aria-label="Menu" class="flex items-center justify-center h-full hover:bg-surface-container-low dark:hover:bg-surface-container-highest transition-colors active:opacity-80 active:scale-95 duration-150 transition-all">
+-<span class="material-symbols-outlined text-primary dark:text-primary-fixed-dim" data-icon="menu">menu</span>
+-</button>
+-<h1 class="font-headline-md text-headline-md text-primary dark:text-primary-fixed-dim tracking-tight text-center flex-1">ANTROSAPIENS V3</h1>
+-<button aria-label="User profile settings" class="flex items-center justify-center h-full hover:bg-surface-container-low dark:hover:bg-surface-container-highest transition-colors active:opacity-80 active:scale-95 duration-150 transition-all">
+-<div class="w-8 h-8 rounded-full bg-secondary-container flex items-center justify-center text-on-secondary-container font-metadata-code text-metadata-code uppercase overflow-hidden ring-1 ring-outline">
+-<img alt="User profile settings" class="object-cover w-full h-full" data-alt="A macro photography style portrait of a researcher's eye reflecting a glowing digital map of South America. The lighting is soft and cinematic, favoring a mineral color palette with earthy tones and subtle hints of vibrant clinical mint. The overall mood is intellectual and focused, evoking a sense of deep observation." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAS-uqvGfqu_Z9NzV4prGUqQOMsHahWckSCR7ilXryvKDKuS1fg90qhoCY2K9IFjWPqMRK_n49bAhbj0yN6NSGDkpXmpXDABijTcIM9L4kmuu5BfR1xxLSpFYOlnYPobOC1fWWPST2qTB9nAManGOIYgYH0aoE73TOwnGm4KuOM_TNZ8E_GTiVNPDtWG90tb5HmqhrkF_9SwsKdT7YgWHOSdD2Hi8AwYhGSsexV5ODAuUhDBO8kOwjHxg"/>
+-</div>
+-</button>
+-</div>
+-</header>
+-<!-- Main Canvas -->
+-<main class="flex-1 w-full max-w-3xl mx-auto pt-[96px] pb-[120px] px-margin-mobile md:px-gutter flex flex-col gap-stack-lg">
+-<!-- Header Section -->
+-<section class="flex flex-col gap-stack-sm pt-8">
+-<h2 class="font-display-lg text-display-lg text-on-surface">¿Qué quieres investigar?</h2>
+-<p class="font-body-reading text-body-reading text-on-surface-variant max-w-xl">
+-                Explora organizaciones, señales y fenómenos que podrían merecer una mirada más cercana.
+-            </p>
+-</section>
+-<!-- Candidatos verificados (Entrega 3): expedientes ya promovidos con evidencia primaria citada. Distinto de las tarjetas de "Señal detectada" de más abajo, que son solo coincidencia de palabras clave sin verificar. -->
+-<section id="candidatosVerificados" class="flex flex-col gap-stack-sm">
+-<div class="flex items-baseline justify-between">
+-<h3 class="font-headline-md-mobile text-headline-md-mobile text-on-surface">Candidatos verificados</h3>
+-<span id="verificadosCount" class="font-metadata-code text-metadata-code text-outline"></span>
+-</div>
+-<p class="font-metadata-code text-xs text-outline/70 leading-snug">
+-                Evidencia primaria citada: autodeclaración o huella práctica de la propia organización. No es coincidencia de palabras clave.
+-            </p>
+-<div id="verificadosList" class="flex flex-col gap-stack-sm">
+-<span id="verificadosLoading" class="font-metadata-code text-metadata-code text-outline">Cargando candidatos verificados…</span>
+-</div>
+-</section>
+-<hr class="border-outline-variant/30"/>
+-<!-- Search Input -->
+-<section class="w-full relative group">
+-<div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+-<span class="material-symbols-outlined text-outline-variant group-focus-within:text-primary transition-colors" data-icon="search">search</span>
+-</div>
+-<input class="w-full bg-transparent border-b-2 border-outline-variant focus:border-primary py-4 pl-12 pr-4 font-body-reading text-body-reading text-on-surface placeholder:text-outline focus:ring-0 focus:outline-none transition-colors" placeholder="Escribe una organización, fenómeno, sector o pregunta..." type="text"/>
+-</section>
+-<!-- Filters Section (Bento/Tactile structure) -->
+-<section class="flex flex-col gap-stack-md mt-4">
+-<!-- Region Filter -->
+-<div class="flex flex-col gap-stack-sm">
+-<label class="font-metadata-code text-metadata-code text-outline tracking-wider uppercase">REGIÓN</label>
+-<div class="flex flex-wrap gap-stack-sm">
+-<button class="px-4 py-2 border border-outline-variant/30 text-on-surface-variant rounded-full font-body-reading text-ui-label hover:bg-surface-container-high transition-colors focus:bg-primary focus:text-on-primary focus:border-primary">Toda LATAM</button>
+-<button class="px-4 py-2 border border-outline-variant/30 text-on-surface-variant rounded-full font-body-reading text-ui-label hover:bg-surface-container-high transition-colors focus:bg-primary focus:text-on-primary focus:border-primary">México</button>
+-<button class="px-4 py-2 border border-outline-variant/30 text-on-surface-variant rounded-full font-body-reading text-ui-label hover:bg-surface-container-high transition-colors focus:bg-primary focus:text-on-primary focus:border-primary">México y Centroamérica</button>
+-<button class="px-4 py-2 border border-outline-variant/30 text-on-surface-variant rounded-full font-body-reading text-ui-label hover:bg-surface-container-high transition-colors focus:bg-primary focus:text-on-primary focus:border-primary">Sudamérica</button>
+-</div>
+-</div>
+-<hr class="border-outline-variant/30 w-1/3 my-2"/>
+-<!-- Focus Filter (poblado dinámicamente desde el backend real) -->
+-<div class="flex flex-col gap-stack-sm">
+-<label class="font-metadata-code text-metadata-code text-outline tracking-wider uppercase">FOCO</label>
+-<div id="focoFilters" class="flex flex-wrap gap-stack-sm">
+-<button data-cat="" class="px-4 py-2 border border-primary bg-primary text-on-primary rounded-full font-body-reading text-ui-label transition-colors">Todos</button>
+-                <span id="focoLoading" class="font-metadata-code text-metadata-code text-outline self-center">Cargando categorías…</span>
+-        </div>
+-</div>
+-<hr class="border-outline-variant/30 w-1/3 my-2"/>
+-<!-- Vertical Filter (poblado dinámicamente desde el backend real) -->
+-<div class="flex flex-col gap-stack-sm">
+-<label class="font-metadata-code text-metadata-code text-outline tracking-wider uppercase">VERTICAL</label>
+-<div id="verticalFilters" class="flex flex-wrap gap-stack-sm">
+-<button data-val="" class="px-4 py-2 border border-primary bg-primary text-on-primary rounded-full font-body-reading text-ui-label transition-colors">Todos</button>
+-<span id="verticalLoading" class="font-metadata-code text-metadata-code text-outline self-center">Cargando verticales…</span>
+-</div>
+-</div>
+-<hr class="border-outline-variant/30 w-1/3 my-2"/>
+-<!-- Escala Filter (poblado dinámicamente desde el backend real) -->
+-<div class="flex flex-col gap-stack-sm">
+-<label class="font-metadata-code text-metadata-code text-outline tracking-wider uppercase">ESCALA</label>
+-<div id="escalaFilters" class="flex flex-wrap gap-stack-sm">
+-<button data-val="" class="px-4 py-2 border border-primary bg-primary text-on-primary rounded-full font-body-reading text-ui-label transition-colors">Todos</button>
+-<span id="escalaLoading" class="font-metadata-code text-metadata-code text-outline self-center">Cargando escalas…</span>
+-</div>
+-</div>
+-</section>
+-<!-- EXPLORAR renderiza únicamente "Candidatos verificados" (GET /verifiedos). Sin Hallazgos ni Señal detectada: esa sección consumía /expedientes y mostraba corporativos/unicornios. -->
+-</main>
+-<!-- BottomNavBar -->
+-<nav class="bg-surface dark:bg-surface-container-lowest border-t border-outline/20 bg-surface/95 backdrop-blur-none fixed bottom-0 left-0 w-full flex items-center px-1 py-2 pb-safe md:max-w-container-max md:left-1/2 md:-translate-x-1/2 z-50">
+-<!-- EXPLORAR (Active) -->
+-<a id="btnExplorarNav" class="flex-1 min-w-0 flex flex-col items-center justify-center text-primary dark:text-primary-fixed-dim bg-primary-container/10 rounded-xl py-1 active:scale-90 duration-200 ease-in-out transition-transform" href="#">
+-<span class="material-symbols-outlined filled" data-icon="explore" data-weight="fill">explore</span>
+-<span class="font-ui-label leading-tight mt-1 text-[9px] text-center break-words">EXPLORAR</span>
+-</a>
+-<!-- OBSERVAR (Inactive) -->
+-<a id="btnObservarNav" class="flex-1 min-w-0 flex flex-col items-center justify-center text-outline dark:text-outline-variant py-1 hover:text-secondary dark:hover:text-secondary-fixed active:scale-90 duration-200 ease-in-out transition-transform" href="#">
+-<span class="material-symbols-outlined" data-icon="visibility">visibility</span>
+-<span class="font-ui-label leading-tight mt-1 text-[9px] text-center break-words">OBSERVAR</span>
+-</a>
+-<!-- TRIANGULAR (Inactive) -->
+-<a class="flex-1 min-w-0 flex flex-col items-center justify-center text-outline dark:text-outline-variant py-1 hover:text-secondary dark:hover:text-secondary-fixed active:scale-90 duration-200 ease-in-out transition-transform" href="#">
+-<span class="material-symbols-outlined" data-icon="change_history">change_history</span>
+-<span class="font-ui-label leading-tight mt-1 text-[9px] text-center break-words">TRIANGULAR</span>
+-</a>
+-<!-- FIJAR (Inactive) -->
+-<a class="flex-1 min-w-0 flex flex-col items-center justify-center text-outline dark:text-outline-variant py-1 hover:text-secondary dark:hover:text-secondary-fixed active:scale-90 duration-200 ease-in-out transition-transform" href="#">
+-<span class="material-symbols-outlined" data-icon="push_pin">push_pin</span>
+-<span class="font-ui-label leading-tight mt-1 text-[9px] text-center break-words">FIJAR</span>
+-</a>
+-</nav>
+-</div>
+-<div id="screen-observar" style="display:none">
+-<header class="sticky top-0 z-50 bg-[#FCFAED]/95 backdrop-blur-sm border-b border-black/5 px-4 h-16 flex items-center justify-between">
+-    <button id="btnVolverObservar" class="p-2">
+-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
++  <header class="appbar">
++    <button class="icon-btn" aria-label="Menú">
++      <span class="mat">menu</span>
+     </button>
+-    <h1 class="font-newsreader text-xl font-medium uppercase tracking-wider text-[#091426]">AntroSapiens V3</h1>
+-    <div class="w-10"></div>
+-    </header>
+-    <div id="observarBarra" class="sticky top-16 z-40 bg-[#FCFAED] border-b border-black/5 px-4 h-12 flex items-center">
+-        <p class="font-mono text-xs text-slate-500 uppercase tracking-widest truncate" style="max-width:65ch;margin-inline:auto;width:100%">Observando: <span id="observarBarraNombre" class="text-[#091426]"></span></p>
+-    </div>
+-<main class="px-6 pt-8" style="max-width:65ch;margin-inline:auto">
+-    <div class="mb-8">
+-        <p id="observarExp" class="font-mono text-xs text-slate-500 uppercase tracking-widest mb-1"></p>
+-        <h2 id="observarNombre" class="font-newsreader text-2xl md:text-4xl font-medium leading-tight mb-4 text-[#091426] break-words"></h2>
+-        <!-- Estado temporal del expediente: rango de fechas + aviso de archivo. -->
+-        <p id="observarEstado" class="font-mono text-xs text-slate-500 flex items-center gap-2 flex-wrap"></p>
++    <h1>ANTROSAPIENS</h1>
++    <div class="avatar" aria-label="Perfil">
++      <span class="mat" style="color:var(--acento)">visibility</span>
+     </div>
+-    <!-- Orden declarado de la cronología, idéntico en todos los expedientes. -->
+-    <p id="observarOrden" class="font-mono text-xs text-slate-500 uppercase tracking-widest mb-4"></p>
+-    <div id="observarTimeline" class="relative pl-8 border-l border-slate-200 ml-2"></div>
+-    <!-- Lectura del investigador: una sola vez, al cierre de la cronología. -->
+-    <div id="observarLectura" class="mt-8 mb-16"></div>
+-</main>
++  </header>
++
++  <main>
++    <section class="hero">
++      <h2 class="serif">¿Qué quieres investigar?</h2>
++      <p>Explora organizaciones, señales y fenómenos que merecen una mirada más cercana.</p>
++      <p class="build-id" id="buildId">BUILD: —</p>
++    </section>
++
++    <!-- Search -->
++    <section class="search-wrap">
++      <span class="mat s-icon">search</span>
++      <input class="search" type="text" placeholder="Escribe una organización, fenómeno, sector o pregunta…"/>
++    </section>
++
++    <!-- Filters -->
++    <section class="section">
++      <span class="label">Región</span>
++      <div class="chips" id="regionFilters">
++        <button class="chip" data-region="Toda LATAM">Toda LATAM</button>
++        <button class="chip" data-region="México">México</button>
++        <button class="chip" data-region="México y Centroamérica">México y Centroamérica</button>
++        <button class="chip" data-region="Sudamérica">Sudamérica</button>
++      </div>
++    </section>
++
++    <hr class="div"/>
++
++    <!-- Foco -->
++    <section class="section">
++      <span class="label">Foco</span>
++      <div class="chips" id="focoFilters">
++        <button class="chip active" data-cat="">Todos</button>
++        <span class="state-msg" id="focoLoading">Cargando categorías…</span>
++      </div>
++    </section>
++
++    <hr class="div"/>
++
++    <section class="section">
++      <span class="label">Vertical</span>
++      <div class="chips" id="verticalFilters">
++        <button class="chip active" data-val="">Todos</button>
++        <span class="state-msg" id="verticalLoading">Cargando verticales…</span>
++      </div>
++    </section>
++
++    <hr class="div"/>
++
++    <section class="section">
++      <span class="label">Escala</span>
++      <div class="chips" id="escalaFilters">
++        <button class="chip active" data-val="">Todos</button>
++        <span class="state-msg" id="escalaLoading">Cargando escalas…</span>
++      </div>
++    </section>
++
++    <hr class="div"/>
++
++    <!-- Candidatos verificados -->
++    <section class="section" id="candidatosVerificados">
++      <div style="display:flex; align-items:baseline; justify-content:space-between; gap:8px; flex-wrap:wrap;">
++        <span class="serif" style="font-weight:600; font-size:20px; overflow-wrap:anywhere;">Candidatos verificados</span>
++        <span class="meta" id="verificadosCount" style="font-size:11px; color:var(--gris); letter-spacing:.04em; text-transform:uppercase; white-space:nowrap;"></span>
++      </div>
++      <p class="hint">Evidencia primaria citada: autodeclaración o huella práctica de la propia organización. No es coincidencia de palabras clave.</p>
++      <div id="verificadosList" class="section" style="gap:10px;">
++        <p class="state-msg" id="verificadosLoading">Cargando candidatos verificados…</p>
++      </div>
++    </section>
++  </main>
++
++  <nav class="bottom">
++    <a id="btnExplorarNav" class="active">
++      <span class="mat filled">explore</span>
++      <span class="txt">EXPLORAR</span>
++    </a>
++    <a id="btnObservarNav">
++      <span class="mat">visibility</span>
++      <span class="txt">OBSERVAR</span>
++    </a>
++    <a id="btnTriangularNav">
++      <span class="mat">change_history</span>
++      <span class="txt">TRIANGULAR</span>
++    </a>
++    <a id="btnFijarNav">
++      <span class="mat">push_pin</span>
++      <span class="txt">FIJAR</span>
++    </a>
++  </nav>
++</div>
++
++<!-- ============ OBSERVAR ============ -->
++<div id="screen-observar">
++  <header>
++    <button class="icon-btn" id="btnVolverObservar" aria-label="Volver">
++      <span class="mat">arrow_back</span>
++    </button>
++    <h1 class="title">Antrosapiens</h1>
++    <div style="flex:0 0 40px;"></div>
++  </header>
++  <div class="obs-bar">
++    <p>Observando: <b id="observarBarraNombre"></b></p>
++  </div>
++  <div class="obs-main">
++    <p class="kicker" id="observarExp"></p>
++    <h2 id="observarNombre"></h2>
++    <p class="obs-estado" id="observarEstado"></p>
++    <p class="obs-orden">Cronología · de más reciente a más antigua</p>
++    <div class="timeline" id="observarTimeline"></div>
++    <div class="lectura" id="observarLectura"></div>
++  </div>
+ </div>
++
++<script src="build_info.js"></script>
+ <script>
+-        const API = "https://antrosapiens-api-pro.vercel.app";
+-        let categoriaActiva = "";
+-        let verticalActiva = "";
+-        let escalaActiva = "";
+-        const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+-
+-        let expedienteActual = null;
+-
+-        function mostrarObservar(p) {
+-            expedienteActual = p;
+-            document.getElementById('observarExp').textContent = 'EXP. ' + (p.categoria || '') + ' · ' + (p.scoring || '?');
+-            document.getElementById('observarNombre').textContent = p.nombre || '';
+-            document.getElementById('observarBarraNombre').textContent = p.nombre || '';
+-            const tl = document.getElementById('observarTimeline');
+-            const val = p.validacion_cientifica || {};
+-            const vacios = val.hipotesis_bloqueada ? (val.recomendacion || 'Evidencia insuficiente para validar.') : 'Sin vacios criticos registrados.';
+-
+-            // Orden de presentación: de más reciente a más antigua. Se ordena aquí
+-            // para que el encabezado declarado valga en TODOS los expedientes y no
+-            // dependa del orden en que llegue el arreglo. No altera los datos.
+-            const evidencias = (p.evidencias || []).slice().sort((a, b) => {
+-                const ta = Date.parse(a && a.fecha) || 0;
+-                const tb = Date.parse(b && b.fecha) || 0;
+-                return tb - ta;
+-            });
+-
+-            // Rango temporal del expediente y aviso de archivo (>12 meses).
+-            const fechas = evidencias.map(ev => Date.parse(ev && ev.fecha)).filter(t => !isNaN(t));
+-            const soloDia = (t) => new Date(t).toISOString().slice(0, 10);
+-            const estado = document.getElementById('observarEstado');
+-            if (fechas.length) {
+-                const masReciente = Math.max(...fechas);
+-                const masAntigua = Math.min(...fechas);
+-                const doceMeses = new Date();
+-                doceMeses.setFullYear(doceMeses.getFullYear() - 1);
+-                const archivo = masReciente < doceMeses.getTime()
+-                    ? '<span class="px-2 py-0.5 rounded bg-amber-100 text-amber-800 font-bold uppercase tracking-wider">Archivo histórico</span>'
+-                    : '';
+-                estado.innerHTML = `<span>${esc(soloDia(masAntigua))} — ${esc(soloDia(masReciente))}</span>${archivo}`;
+-            } else {
+-                estado.innerHTML = '<span>Sin fechas de evidencia registradas</span>';
+-            }
++(function(){
++  "use strict";
++  const API = "https://antrosapiens-api-pro.vercel.app";
++
++  // ---- helpers ----
++  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
++  const $ = (id) => document.getElementById(id);
+ 
+-            document.getElementById('observarOrden').textContent =
+-                'Cronología · de más reciente a más antigua';
+-
+-            tl.innerHTML = evidencias.map(ev => `
+-                <div class="mb-12 relative">
+-                    <div class="absolute -left-10 top-2 w-4 h-4 rounded-full bg-slate-300 border-4 border-[#FCFAED]"></div>
+-                    <p class="font-mono text-xs text-slate-500 mb-4">${esc(ev.fecha || '')}</p>
+-                    <div class="bg-white/50 rounded-2xl border border-slate-200 overflow-hidden">
+-                        <div class="p-6 bg-[#fef2e2]/30 border-b border-slate-100">
+-                            <span class="font-mono text-xs font-bold text-[#2d5a27] uppercase tracking-wider">Lo que sabemos (Hecho)</span>
+-                            <p class="text-slate-800 leading-relaxed mt-2">${esc(ev.texto || '')}</p>
+-                            <div class="mt-4"><span class="font-mono text-[10px] bg-slate-200 px-2 py-1 rounded text-slate-600 uppercase">Fuente: ${esc(ev.fuente || '')}</span></div>
+-                        </div>
+-                        <div class="p-6">
+-                            <span class="font-mono text-xs font-bold text-slate-500 uppercase tracking-wider">Lo que no sabemos (Vacios)</span>
+-                            <p class="text-slate-600 mt-2">${esc(vacios)}</p>
+-                        </div>
+-                    </div>
+-                </div>
+-            `).join('');
+-
+-            // Una sola lectura por expediente, al final de toda la cronología:
+-            // intercalada entre evidencias no se sabía a cuál se refería.
+-            document.getElementById('observarLectura').innerHTML = `
+-                <div class="bg-white/50 rounded-2xl border border-slate-200 p-6">
+-                    <span class="font-mono text-xs font-bold text-[#2d5a27] uppercase tracking-wider">Tu Lectura (Interpretacion)</span>
+-                    <p class="font-mono text-xs text-slate-500 mt-1">Sobre el conjunto de la cronología.</p>
+-                    <textarea class="w-full mt-2 font-newsreader text-lg italic text-slate-800 bg-transparent border border-slate-200 rounded-lg p-3" rows="4" placeholder="Escribe tu interpretacion aqui..."></textarea>
+-                </div>`;
+-
+-            document.getElementById('screen-explorar').style.display = 'none';
+-            document.getElementById('screen-observar').style.display = 'block';
++  async function fetchJSON(url, ms){
++    var esperas = [2500, 5000];
++    for (var intento = 1; intento <= 3; intento++) {
++      try {
++        var res = await fetch(url);
++        if (res.status === 502 || res.status === 503 || res.status === 504) {
++          if (intento < 3) { await new Promise(function(r){ setTimeout(r, esperas[intento-1]); }); continue; }
++          throw new Error("backend_no_disponible");
+         }
++        return await res.json();
++      } catch (e) {
++        if (intento < 3) { await new Promise(function(r){ setTimeout(r, esperas[intento-1]); }); continue; }
++        throw e;
++      }
++    }
++  }
+ 
+-        document.getElementById('btnVolverObservar').addEventListener('click', () => {
+-            document.getElementById('screen-observar').style.display = 'none';
+-            document.getElementById('screen-explorar').style.display = 'block';
+-        });
++  const REGION_HINTS = [
++    {chip:"México", rx:/méxico|mexico|cdmx|monterrey|guadalajara|puebla|querétaro|queretaro|sheinbaum/},
++    {chip:"México y Centroamérica", rx:/méxico|mexico|cdmx|monterrey|guadalajara|puebla|querétaro|queretaro|sheinbaum|costa rica|panamá|panama|guatemala|honduras|el salvador|nicaragua/},
++    {chip:"Sudamérica", rx:/chile|colombia|uruguay|argentina|perú|peru|ecuador|venezuela|bolivia|paraguay|brazil|brasil|bogotá|bogota|santiago|montevideo|buenos aires|lima/}
++  ];
+ 
+-        // --- Filtro REGIÓN: comportamiento visual tipo radio (sin datos backend aún) ---
+-        document.querySelectorAll('section .flex-wrap').forEach(group => {
+-            if (group.id === 'focoFilters') return; // FOCO se maneja aparte, con datos reales
+-            group.querySelectorAll('button').forEach(button => {
+-                button.addEventListener('click', function() {
+-                    group.querySelectorAll('button').forEach(btn => {
+-                        btn.classList.remove('bg-primary', 'text-on-primary', 'border-primary');
+-                        btn.classList.add('border-outline-variant/30', 'text-on-surface-variant');
+-                    });
+-                    this.classList.add('bg-primary', 'text-on-primary', 'border-primary');
+-                    this.classList.remove('border-outline-variant/30', 'text-on-surface-variant');
+-                });
+-            });
+-        });
++  (function(){
++    const el = document.getElementById("buildId");
++    if (el) el.textContent = "BUILD: " + (window.BUILD_ID || "desconocido");
++  })();
++
++  function regionDe(it){
++    const t = ((it.organizacion||"") + " " + (it.cita_textual||"") + " " + (it.nombre_medio||"")).toLowerCase();
++    for (const r of REGION_HINTS){ if (r.rx.test(t)) return r.chip; }
++    return null;
++  }
++
++  // ---- state ----
++  let regionActiva = "México";
++  const REGION_TODAS = "Toda LATAM";
++  let verificadosItems = [];
++
++  const TIPO_LABEL = {
++    senal_primaria_autodeclaracion: "Autodeclaración",
++    senal_primaria_huella_practica: "Huella práctica"
++  };
+ 
+-        // --- Candidatos verificados (Entrega 3): GET /verificados, distinto de /expedientes ---
+-        const TIPO_LABEL = {
+-            senal_primaria_autodeclaracion: 'Autodeclaración',
+-            senal_primaria_huella_practica: 'Huella práctica',
+-        };
+-
+-        async function cargarCandidatosVerificados() {
+-            const cont = document.getElementById('verificadosList');
+-            const loading = document.getElementById('verificadosLoading');
+-            const count = document.getElementById('verificadosCount');
+-            try {
+-                const res = await fetch(`${API}/verificados?limite=50`);
+-                const data = await res.json();
+-                loading.remove();
+-                const items = data.items || [];
+-                count.textContent = `${items.length} verificado(s)`;
+-                if (!items.length) {
+-                    cont.innerHTML = `<p class="font-body-reading text-body-reading text-on-surface-variant">Aún no hay candidatos verificados.</p>`;
+-                    return;
++  // ---- region chips ----
++  const regionGroup = $("regionFilters");
++  regionGroup.querySelectorAll("button").forEach(function(btn){
++    if (btn.dataset.region === regionActiva) setActiveChip(regionGroup, btn);
++    btn.addEventListener("click", function(){
++      regionActiva = this.dataset.region;
++      setActiveChip(regionGroup, this);
++      renderVerificados();
++    });
++  });
++
++  function setActiveChip(group, btn){
++    group.querySelectorAll("button").forEach(b => b.classList.remove("active"));
++    btn.classList.add("active");
++  }
++
++  // ---- verified candidates ----
++  function filtrarVerificados(items){
++    if (regionActiva === REGION_TODAS) return items;
++    return items.filter(it => (it.regionDe ?? null) === regionActiva);
++  }
++
++  function renderVerificados(){
++    const cont = $("verificadosList");
++    const count = $("verificadosCount");
++    const visibles = filtrarVerificados(verificadosItems);
++    count.textContent = visibles.length + " verificado(s)";
++    if (!visibles.length){
++      cont.innerHTML = '<p class="state-msg">Sin datos en radar' + (regionActiva === REGION_TODAS ? "" : " en esta región") + '.</p>';
++      return;
++    }
++    cont.innerHTML = visibles.map(function(it){
++      return '' +
++        '<div class="verified-card">' +
++          '<div class="row">' +
++            '<span class="name">'+ esc(it.organizacion) +'</span>' +
++            '<span class="tag">Verificado</span>' +
++            '<span class="meta">'+ esc(TIPO_LABEL[it.tipo_epistemologico] || it.tipo_epistemologico || "") +'</span>' +
++          '</div>' +
++          '<p class="quote">'+ esc(it.cita_textual || "") +'</p>' +
++          '<p class="src">'+ esc(it.nombre_medio || "") +'</p>' +
++        '</div>';
++    }).join("");
++  }
++
++  async function cargarCandidatosVerificados(){
++    const loading = document.getElementById('verificadosLoading');
++    const ESPERAS = [2500, 5000];
++    const esReintentable = (res) => res && (res.status === 502 || res.status === 503 || res.status === 504);
++    for (let intento = 1; intento <= 3; intento++) {
++        try {
++            const res = await fetch(API + "/verificados?limite=50");
++            if (esReintentable(res)) {
++                if (intento < 3) {
++                    loading.textContent = "Calentando backend… reintento " + intento + " de 3";
++                    await new Promise(r => setTimeout(r, ESPERAS[intento - 1]));
++                    continue;
+                 }
+-                cont.innerHTML = items.map(it => `
+-                    <div class="p-4 border-l-4 border-secondary bg-secondary-container/20 rounded-lg flex flex-col gap-2">
+-                        <div class="flex items-center gap-2 flex-wrap">
+-                            <span class="font-headline-md-mobile text-on-surface text-lg">${esc(it.organizacion)}</span>
+-                            <span class="px-2 py-0.5 rounded-full text-xs font-metadata-code bg-secondary text-on-secondary uppercase">Verificado</span>
+-                            <span class="font-metadata-code text-metadata-code text-outline">${esc(TIPO_LABEL[it.tipo_epistemologico] || it.tipo_epistemologico)}</span>
+-                        </div>
+-                        <p class="font-body-reading text-on-surface-variant text-sm italic">${esc(it.cita_textual || '')}</p>
+-                        <p class="font-metadata-code text-metadata-code text-outline">${esc(it.nombre_medio || '')}</p>
+-                    </div>
+-                `).join('');
+-            } catch (e) {
+-                loading.textContent = 'No se pudieron cargar los candidatos verificados (backend no disponible).';
++                throw new Error('backend_no_disponible');
+             }
+-        }
+-
+-        // --- Filtro FOCO: se puebla con las categorías reales del backend ---
+-        async function cargarCategorias() {
+-            const cont = document.getElementById('focoFilters');
+-            const loading = document.getElementById('focoLoading');
+-            try {
+-                const res = await fetch(`${API}/prospectos/categorias`);
+-                const data = await res.json();
+-                loading.remove();
+-                const cats = data.categorias || {};
+-                Object.keys(cats).forEach(nombre => {
+-                    const btn = document.createElement('button');
+-                    btn.dataset.cat = nombre;
+-                    btn.className = "px-4 py-2 border border-outline-variant/30 text-on-surface-variant rounded-full font-body-reading text-ui-label hover:bg-surface-container-high transition-colors";
+-                    btn.textContent = `${nombre} (${cats[nombre]})`;
+-                    btn.addEventListener('click', () => seleccionarFoco(btn));
+-                    cont.appendChild(btn);
+-                });
+-                document.querySelector('#focoFilters button[data-cat=""]').addEventListener('click', function() {
+-                    seleccionarFoco(this);
+-                });
+-            } catch (e) {
+-                loading.textContent = "No se pudieron cargar las categorías (backend no disponible).";
++            const data = await res.json();
++            loading.remove();
++            verificadosItems = (data.items || []).map(function(it){ return Object.assign({}, it, { regionDe: regionDe(it) }); });
++            renderVerificados();
++            return;
++        } catch (e) {
++            if (intento < 3) {
++                loading.textContent = "Calentando backend… reintento " + intento + " de 3";
++                await new Promise(r => setTimeout(r, ESPERAS[intento - 1]));
++                continue;
+             }
++            loading.textContent = 'No se pudieron cargar los candidatos verificados (backend no disponible).';
+         }
++    }
++}
+ 
+-        function seleccionarFoco(btnSeleccionado) {
+-            categoriaActiva = btnSeleccionado.dataset.cat || "";
+-            document.querySelectorAll('#focoFilters button').forEach(btn => {
+-                btn.classList.remove('bg-primary', 'text-on-primary', 'border-primary');
+-                btn.classList.add('border-outline-variant/30', 'text-on-surface-variant');
+-            });
+-            btnSeleccionado.classList.add('bg-primary', 'text-on-primary', 'border-primary');
+-            btnSeleccionado.classList.remove('border-outline-variant/30', 'text-on-surface-variant');
+-        }
++function cargarCategorias(){
++    const cont = $("focoFilters");
++    const loading = $("focoLoading");
++    fetchJSON(API + "/prospectos/categorias")
++      .then(function(data){
++        if (loading) loading.remove();
++        const cats = (data && data.categorias) || {};
++        Object.keys(cats).forEach(function(nombre){
++          const btn = document.createElement("button");
++          btn.className = "chip";
++          btn.dataset.cat = nombre;
++          btn.textContent = nombre + " (" + cats[nombre] + ")";
++          btn.addEventListener("click", function(){ seleccionarEn(cont, btn); });
++          cont.appendChild(btn);
++        });
++        const todos = cont.querySelector('button[data-cat=""]');
++        if (todos) todos.addEventListener("click", function(){ seleccionarEn(cont, todos); });
++      })
++      .catch(function(){
++        if (loading) loading.textContent = "Sin datos en radar.";
++      });
++  }
++  function seleccionarEn(group, btn){
++    group.querySelectorAll("button").forEach(b => b.classList.remove("active"));
++    btn.classList.add("active");
++  }
+ 
+-        // --- Selección visual genérica (misma lógica que FOCO) para VERTICAL y ESCALA ---
+-        function seleccionarFiltro(cont, btnSeleccionado) {
+-            cont.querySelectorAll('button').forEach(btn => {
+-                btn.classList.remove('bg-primary', 'text-on-primary', 'border-primary');
+-                btn.classList.add('border-outline-variant/30', 'text-on-surface-variant');
+-            });
+-            btnSeleccionado.classList.add('bg-primary', 'text-on-primary', 'border-primary');
+-            btnSeleccionado.classList.remove('border-outline-variant/30', 'text-on-surface-variant');
+-            const val = btnSeleccionado.dataset.val || "";
+-            if (cont.id === 'verticalFilters') verticalActiva = val;
+-            else if (cont.id === 'escalaFilters') escalaActiva = val;
+-        }
++  // ---- vertical / escala desde /expedientes ----
++  let verticalActiva = "";
++  let escalaActiva = "";
++  function cargarFiltroProspectos(containerId, loadingId, campo){
++    const cont = $(containerId);
++    const loading = $(loadingId);
++    fetchJSON(API + "/expedientes?limite=100")
++      .then(function(data){
++        if (loading) loading.remove();
++        const conteo = {};
++        (data.expedientes || []).forEach(function(p){
++          const v = String(p[campo] || "").trim();
++          if (!v) return;
++          conteo[v] = (conteo[v] || 0) + 1;
++        });
++        Object.keys(conteo).sort().forEach(function(valor){
++          const btn = document.createElement("button");
++          btn.className = "chip";
++          btn.dataset.val = valor;
++          btn.textContent = valor + " (" + conteo[valor] + ")";
++          btn.addEventListener("click", function(){
++            cont.querySelectorAll("button").forEach(b => b.classList.remove("active"));
++            btn.classList.add("active");
++            if (cont.id === "verticalFilters") verticalActiva = valor;
++            else if (cont.id === "escalaFilters") escalaActiva = valor;
++          });
++          cont.appendChild(btn);
++        });
++        const todos = cont.querySelector('button[data-val=""]');
++        if (todos) todos.addEventListener("click", function(){
++          cont.querySelectorAll("button").forEach(b => b.classList.remove("active"));
++          todos.classList.add("active");
++          if (cont.id === "verticalFilters") verticalActiva = "";
++          else if (cont.id === "escalaFilters") escalaActiva = "";
++        });
++      })
++      .catch(function(){
++        if (loading) loading.textContent = "Sin datos en radar.";
++      });
++  }
+ 
+-        // --- Filtros VERTICAL y ESCALA: se pueblan con valores únicos y conteos reales de /expedientes ---
+-        async function cargarFiltroProspectos(containerId, loadingId, campo) {
+-            const cont = document.getElementById(containerId);
+-            const loading = document.getElementById(loadingId);
+-            try {
+-                const res = await fetch(`${API}/expedientes?limite=100`);
+-                const data = await res.json();
+-                loading.remove();
+-                const conteo = {};
+-                (data.expedientes || []).forEach(p => {
+-                    const v = String(p[campo] || "").trim();
+-                    if (!v) return;
+-                    conteo[v] = (conteo[v] || 0) + 1;
+-                });
+-                Object.keys(conteo).sort().forEach(valor => {
+-                    const btn = document.createElement('button');
+-                    btn.dataset.val = valor;
+-                    btn.className = "px-4 py-2 border border-outline-variant/30 text-on-surface-variant rounded-full font-body-reading text-ui-label hover:bg-surface-container-high transition-colors";
+-                    btn.textContent = `${valor} (${conteo[valor]})`;
+-                    btn.addEventListener('click', () => seleccionarFiltro(cont, btn));
+-                    cont.appendChild(btn);
+-                });
+-                const todos = cont.querySelector('button[data-val=""]');
+-                if (todos) todos.addEventListener('click', () => seleccionarFiltro(cont, todos));
+-            } catch (e) {
+-                loading.textContent = "No se pudo cargar (backend no disponible).";
+-            }
+-        }
++  // ---- observar screen ----
++  let expedienteActual = null;
+ 
+-        // --- Comenzar exploración / Hallazgos ELIMINADO: esa sección consumía GET /expedientes
+-        //     y mostraba corporativos y unicornios. EXPLORAR ahora renderiza solo "Candidatos verificados" (GET /verificados). ---
++  function mostrarObservar(p){
++    expedienteActual = p;
++    $("observarExp").textContent = (p.categoria || "") + " · " + (p.scoring || "?");
++    $("observarNombre").textContent = p.nombre || "";
++    $("observarBarraNombre").textContent = p.nombre || "";
+ 
+-        cargarCategorias();
+-        cargarFiltroProspectos('verticalFilters', 'verticalLoading', 'vertical');
+-        cargarFiltroProspectos('escalaFilters', 'escalaLoading', 'escala');
+-        cargarCandidatosVerificados();
++    const val = p.validacion_cientifica || {};
++    const vacios = val.hipotesis_bloqueada
++      ? (val.recomendacion || "Evidencia insuficiente para validar.")
++      : "Sin vacíos críticos registrados.";
+ 
+-        document.getElementById('btnExplorarNav').addEventListener('click', (e) => {
+-            e.preventDefault();
+-            document.getElementById('screen-observar').style.display = 'none';
+-            document.getElementById('screen-explorar').style.display = 'block';
+-        });
++    const evidencias = (p.evidencias || []).slice().sort(function(a,b){
++      return (Date.parse(b && b.fecha) || 0) - (Date.parse(a && a.fecha) || 0);
++    });
+ 
+-        document.getElementById('btnObservarNav').addEventListener('click', (e) => {
+-            e.preventDefault();
+-            if (expedienteActual) {
+-                document.getElementById('screen-explorar').style.display = 'none';
+-                document.getElementById('screen-observar').style.display = 'block';
+-            } else {
+-                alert('Selecciona un hallazgo en Explorar primero');
+-            }
+-        });
+-    </script>
+-</body></html>
+\ No newline at end of file
++    const fechas = evidencias.map(ev => Date.parse(ev && ev.fecha)).filter(t => !isNaN(t));
++    const soloDia = (t) => new Date(t).toISOString().slice(0,10);
++    const estado = $("observarEstado");
++    if (fechas.length){
++      const masReciente = Math.max.apply(null, fechas);
++      const masAntigua = Math.min.apply(null, fechas);
++      const doceMeses = new Date(); doceMeses.setFullYear(doceMeses.getFullYear() - 1);
++      const archivo = masReciente < doceMeses.getTime()
++        ? '<span class="archivo">Archivo histórico</span>' : '';
++      estado.innerHTML = '<span>'+ esc(soloDia(masAntigua)) + ' — ' + esc(soloDia(masReciente)) +'</span>' + archivo;
++    } else {
++      estado.innerHTML = '<span>Sin fechas de evidencia registradas</span>';
++    }
++
++    $("observarTimeline").innerHTML = evidencias.map(function(ev){
++      return '' +
++        '<div class="tl-item">' +
++          '<div class="dot"></div>' +
++          '<p class="fecha">'+ esc(ev.fecha || "") +'</p>' +
++          '<div class="tl-card">' +
++            '<div class="hecho">' +
++              '<span class="lbl">Lo que sabemos</span>' +
++              '<p>'+ esc(ev.texto || "") +'</p>' +
++              (ev.fuente ? '<span class="fuente">Fuente: '+ esc(ev.fuente) +'</span>' : '') +
++            '</div>' +
++            '<div class="vacio">' +
++              '<span class="lbl">Lo que no sabemos</span>' +
++              '<p>'+ esc(vacios) +'</p>' +
++            '</div>' +
++          '</div>' +
++        '</div>';
++    }).join("");
++
++    $("observarLectura").innerHTML = '' +
++      '<span class="lbl">Tu lectura</span>' +
++      '<p class="sub">Sobre el conjunto de la cronología.</p>' +
++      '<textarea rows="4" placeholder="Escribe tu interpretación aquí…"></textarea>';
++
++    setNavActive("btnObservarNav");
++    $("screen-explorar").style.display = "none";
++    $("screen-observar").style.display = "block";
++    window.scrollTo(0,0);
++  }
++
++  $("btnVolverObservar").addEventListener("click", function(){
++    $("screen-observar").style.display = "none";
++    $("screen-explorar").style.display = "block";
++    setNavActive("btnExplorarNav");
++  });
++
++  // ---- bottom nav ----
++  function setNavActive(id){
++    document.querySelectorAll("nav.bottom a").forEach(a => a.classList.remove("active"));
++    const el = $(id); if (el) el.classList.add("active");
++  }
++  $("btnExplorarNav").addEventListener("click", function(e){
++    e.preventDefault();
++    $("screen-observar").style.display = "none";
++    $("screen-explorar").style.display = "block";
++    setNavActive("btnExplorarNav");
++  });
++  $("btnObservarNav").addEventListener("click", function(e){
++    e.preventDefault();
++    if (expedienteActual){
++      $("screen-explorar").style.display = "none";
++      $("screen-observar").style.display = "block";
++      setNavActive("btnObservarNav");
++    }
++  });
++  ["btnTriangularNav","btnFijarNav"].forEach(function(id){
++    $(id).addEventListener("click", function(e){ e.preventDefault(); });
++  });
++
++  // ---- init ----
++  cargarCategorias();
++  cargarFiltroProspectos("verticalFilters", "verticalLoading", "vertical");
++  cargarFiltroProspectos("escalaFilters", "escalaLoading", "escala");
++  cargarCandidatosVerificados();
++})();
++</script>
++</body></html>

@@ -1,0 +1,1 @@
+total=50 | junk_google=50 | short_le20=50 | real_body=0

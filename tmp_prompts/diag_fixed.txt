@@ -1,0 +1,16 @@
+Muestra: 50 evidencias google_news con cuerpo_completo
+
+tipo_epistemologico                | solo_titular | con_cuerpo_completo
+------------------------------------------------------------------------
+senal_primaria_autodeclaracion     |    0 ( 0.0%) |    0 ( 0.0%)
+senal_primaria_huella_practica     |    0 ( 0.0%) |    0 ( 0.0%)
+corroborante                       |    0 ( 0.0%) |    0 ( 0.0%)
+contextual                         |   50 (100.0%) |   50 (100.0%)
+------------------------------------------------------------------------
+TOTAL                              |   50        |   50
+
+Transiciones (titular -> cuerpo):
+  contextual -> contextual: 50
+
+Filas que CAMBIARON de tipo: 0 / 50 (0.0%)
+Ejemplos de cambio (id, antes, despues):

@@ -1,0 +1,6 @@
+id=1 origen='prensa' lt=122 lc=11
+  cuerpo[:200]='Google News'
+id=2 origen='prensa' lt=56 lc=11
+  cuerpo[:200]='Google News'
+id=3 origen='prensa' lt=103 lc=11
+  cuerpo[:200]='Google News'

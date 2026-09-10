@@ -1,0 +1,11 @@
+No toques clasificacion_epistemologica.py, promocion_candidatos.py, ni la app android_v2. Esos ya funcionan y quedan intactos.
+
+Tarea unica: mejorar la materia prima que llega al extractor.
+
+Los 4 conectores (google_news.py, job_boards.py, gdelt.py, rss_fijos.py) hoy capturan solo el titular. Necesito que google_news.py capture tambien el cuerpo completo del articulo, no solo el titulo, siguiendo el enlace de la fuente y extrayendo el texto principal de la pagina.
+
+Guarda ese cuerpo en un campo nuevo en la tabla evidencias (por ejemplo cuerpo_completo), sin borrar ni tocar cita_textual, que sigue siendo el titular.
+
+Luego, corre clasificar_evidencia.py en modo dry-run sobre una muestra de 50 evidencias que ya tengan cuerpo_completo, y comparame la distribucion de tipo_epistemologico contra la que obtuvimos hoy con solo titulares.
+
+No apliques nada a produccion todavia. Solo el diagnostico comparativo.

@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Nivel 3: El Peritaje - Inquiry-7429</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&amp;family=Newsreader:opsz,wght@6..72,400;500;600&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary": "#091426",
+                        "tertiary-container": "#1a2a3e",
+                        "surface-container-high": "#eae9dc",
+                        "ink-blue": "#1E293B",
+                        "on-surface-variant": "#45474c",
+                        "secondary-fixed-dim": "#a9cfb9",
+                        "on-primary-fixed": "#111c2d",
+                        "tertiary": "#041528",
+                        "background": "#fcfaed",
+                        "on-secondary-container": "#476a58",
+                        "on-surface": "#1b1c14",
+                        "secondary": "#436653",
+                        "on-secondary-fixed": "#002113",
+                        "slate-text": "#334155",
+                        "stone-blue": "#475569",
+                        "surface-container": "#f0eee1",
+                        "primary-container": "#1e293b",
+                        "surface-container-highest": "#e5e3d6",
+                        "surface-container-lowest": "#ffffff",
+                        "parchment": "#FCFAED",
+                        "surface-bright": "#fcfaed",
+                        "on-tertiary": "#ffffff",
+                        "outline": "#75777d",
+                        "outline-variant": "#c5c6cd",
+                        "on-secondary-fixed-variant": "#2c4e3d",
+                        "surface-container-low": "#f6f4e7",
+                        "on-background": "#1b1c14",
+                        "error-container": "#ffdad6",
+                        "moss-green": "#2D4F3E",
+                        "surface": "#fcfaed",
+                        "inverse-on-surface": "#f3f1e4",
+                        "on-primary": "#ffffff",
+                        "on-secondary": "#ffffff",
+                        "tertiary-fixed-dim": "#b7c8e1",
+                        "inverse-surface": "#303129",
+                        "amber-question": "#D97706",
+                        "on-primary-container": "#8590a6",
+                        "primary-fixed-dim": "#bcc7de",
+                        "on-primary-fixed-variant": "#3c475a",
+                        "on-error-container": "#93000a",
+                        "on-tertiary-fixed": "#0b1c30",
+                        "on-tertiary-fixed-variant": "#38485d",
+                        "terracotta-alert": "#991B1B",
+                        "surface-dim": "#dcdace",
+                        "inverse-primary": "#bcc7de",
+                        "tertiary-fixed": "#d3e4fe",
+                        "surface-tint": "#545f73",
+                        "on-tertiary-container": "#8191a9",
+                        "error": "#ba1a1a",
+                        "on-error": "#ffffff",
+                        "secondary-container": "#c2e9d2",
+                        "surface-variant": "#e5e3d6",
+                        "secondary-fixed": "#c5ebd4",
+                        "primary-fixed": "#d8e3fb"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "margin-desktop": "64px",
+                        "gutter": "16px",
+                        "visual-silence": "48px",
+                        "touch-target": "48px",
+                        "margin-mobile": "24px"
+                    },
+                    "fontFamily": {
+                        "metadata": ["JetBrains Mono"],
+                        "mono-technical": ["JetBrains Mono"],
+                        "mono-label": ["JetBrains Mono"],
+                        "body-reading-mobile": ["Newsreader"],
+                        "display-lg": ["Newsreader"],
+                        "headline-md": ["Newsreader"],
+                        "headline-md-mobile": ["Newsreader"],
+                        "body-reading": ["Newsreader"],
+                        "ui": ["Inter"]
+                    },
+                    "fontSize": {
+                        "metadata": ["11px", { "lineHeight": "14px", "fontWeight": "400" }],
+                        "mono-technical": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "mono-label": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500" }],
+                        "body-reading-mobile": ["18px", { "lineHeight": "1.7", "fontWeight": "400" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "headline-md": ["32px", { "lineHeight": "40px", "fontWeight": "500" }],
+                        "headline-md-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "500" }],
+                        "body-reading": ["20px", { "lineHeight": "1.7", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            background-color: #fcfaed; /* parchment */
+            color: #1b1c14; /* on-surface */
+        }
+        
+        .material-symbols-outlined {
+            font-family: 'Material Symbols Outlined';
+            font-weight: normal;
+            font-style: normal;
+            font-size: 24px;
+            line-height: 1;
+            letter-spacing: normal;
+            text-transform: none;
+            display: inline-block;
+            white-space: nowrap;
+            word-wrap: normal;
+            direction: ltr;
+            -webkit-font-feature-settings: 'liga';
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .focus-column {
+            max-width: 65ch;
+            margin: 0 auto;
+        }
+
+        .field-input {
+            appearance: none;
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid rgba(71, 85, 105, 0.2); /* stone-blue tint */
+            border-radius: 0;
+            padding: 8px 0;
+            width: 100%;
+            line-height: 1.7;
+        }
+        
+        .field-input:focus {
+            outline: none;
+            border-bottom-color: #1E293B; /* ink-blue */
+            font-family: 'Newsreader', serif;
+        }
+
+        .ambient-shadow {
+            box-shadow: 0 10px 25px -5px rgba(30, 41, 59, 0.05), 0 8px 10px -6px rgba(30, 41, 59, 0.01);
+        }
+
+        .seal-texture {
+            background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+            pointer-events: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="font-body-reading min-h-screen relative overflow-x-hidden bg-parchment">
+<!-- TopAppBar -->
+<header class="flex justify-between items-center w-full px-margin-mobile h-touch-target text-primary dark:text-primary-fixed shadow-sm opacity-90 docked full-width top-0 bg-surface-container-low dark:bg-tertiary-container transition-colors duration-300 ease-in-out z-40 relative md:px-margin-desktop">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined cursor-pointer hover:bg-surface-variant dark:hover:bg-primary-container p-2 rounded-full transition-colors" data-icon="fingerprint" data-weight="fill" style="font-variation-settings: 'FILL' 1;">fingerprint</span>
+<div>
+<h1 class="font-headline-md-mobile text-headline-md-mobile font-bold tracking-tight">Inquiry-7429 • Field Evidence</h1>
+<p class="font-mono-technical text-mono-technical text-ink-blue dark:text-primary-fixed-dim">Peritaje Final</p>
+</div>
+</div>
+<!-- Desktop Nav Cluster -->
+<nav class="hidden md:flex items-center gap-8 font-ui">
+<a class="text-on-surface-variant dark:text-on-tertiary-container hover:bg-surface-variant dark:hover:bg-primary-container px-4 py-2 rounded-lg transition-colors text-sm font-medium flex items-center gap-2" href="#"><span class="material-symbols-outlined text-sm">inventory_2</span>Evidence</a>
+<a class="text-on-surface-variant dark:text-on-tertiary-container hover:bg-surface-variant dark:hover:bg-primary-container px-4 py-2 rounded-lg transition-colors text-sm font-medium flex items-center gap-2" href="#"><span class="material-symbols-outlined text-sm">hub</span>Nodes</a>
+<a class="text-primary dark:text-primary-fixed font-bold bg-surface-variant dark:bg-primary-container px-4 py-2 rounded-lg transition-colors text-sm font-medium flex items-center gap-2" href="#"><span class="material-symbols-outlined text-sm">article</span>Peritaje</a>
+<a class="text-on-surface-variant dark:text-on-tertiary-container hover:bg-surface-variant dark:hover:bg-primary-container px-4 py-2 rounded-lg transition-colors text-sm font-medium flex items-center gap-2" href="#"><span class="material-symbols-outlined text-sm">menu_book</span>Glossary</a>
+</nav>
+<span class="material-symbols-outlined cursor-pointer hover:bg-surface-variant dark:hover:bg-primary-container p-2 rounded-full transition-colors" data-icon="cloud_done">cloud_done</span>
+</header>
+<main class="pt-visual-silence pb-32 md:pb-visual-silence px-margin-mobile md:px-margin-desktop flex gap-8">
+<!-- Editor Canvas -->
+<article class="flex-1 bg-surface-container-lowest ambient-shadow rounded-xl p-8 md:p-16 relative overflow-hidden min-h-[707px]">
+<div class="absolute inset-0 seal-texture"></div>
+<div class="focus-column relative z-10">
+<header class="mb-visual-silence text-center">
+<h2 class="font-metadata text-metadata text-stone-blue tracking-widest uppercase mb-4">Dictamen Antropológico</h2>
+<h1 class="font-display-lg text-display-lg text-primary mb-6">Síntesis Final</h1>
+<div class="h-px w-24 bg-outline-variant mx-auto"></div>
+</header>
+<section class="mb-12">
+<h3 class="font-mono-technical text-mono-technical text-stone-blue mb-4 flex items-center gap-2">
+<span class="text-xs text-outline">01.</span> Anthropological Question
+                    </h3>
+<p class="font-body-reading text-body-reading text-on-surface leading-[1.7] border-b border-stone-blue/20 pb-4">¿Cómo ha impactado la deuda cultural en las interacciones cotidianas del nodo observado?</p>
+</section>
+<section class="mb-12">
+<h3 class="font-mono-technical text-mono-technical text-stone-blue mb-4 flex items-center gap-2">
+<span class="text-xs text-outline">02.</span> Main Findings (Hallazgo Principal)
+                    </h3>
+<p class="font-body-reading text-body-reading text-on-surface leading-[1.7] border-b border-stone-blue/20 pb-4">Se ha identificado un patrón consistente de evasión en las zonas de alta fricción social, correlacionado directamente con el nivel de deuda cultural acumulada en los artefactos compartidos.</p>
+</section>
+<section class="mb-16">
+<h3 class="font-mono-technical text-mono-technical text-stone-blue mb-4 flex items-center gap-2">
+<span class="text-xs text-outline">03.</span> Detailed Synthesis
+                    </h3>
+<div class="prose prose-stone prose-lg font-body-reading text-body-reading text-on-surface">
+<textarea class="field-input w-full min-h-[300px] resize-y" placeholder="Construct the narrative synthesis, referencing specific evidence tokens..."></textarea>
+</div>
+</section>
+<!-- Sello Inmutable -->
+<section class="mt-16 pt-8 border-t border-outline-variant/30 flex flex-col items-center">
+<div class="bg-surface-container-low p-6 rounded-lg w-full max-w-md text-center border border-outline-variant/20 shadow-sm">
+<h4 class="font-mono-label text-metadata text-stone-blue uppercase tracking-widest mb-2 flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-sm">lock</span> Sello Inmutable
+        </h4>
+<div class="font-mono-technical text-xs text-on-surface-variant break-all mb-4 bg-surface-container-lowest p-2 rounded">
+            SHA-256: 8f434346648f6b96df89dda901c5176b10a6d83961dd3c1ac88b59b2dc327aa4
+        </div>
+<p class="font-body-reading-mobile text-sm text-stone-blue italic">Signed by Dr. E. Vance, Lead Anthropologist</p>
+</div>
+</section>
+<div class="mt-12 flex justify-center">
+<button class="h-14 px-10 font-ui text-sm font-semibold text-white bg-primary hover:bg-ink-blue rounded-lg shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-3 group w-full md:w-auto justify-center">
+<span class="material-symbols-outlined text-lg group-hover:rotate-12 transition-transform">verified</span>
+                        Sellar Peritaje
+                    </button>
+</div>
+</div>
+</article>
+<!-- Inspector Drawer (Desktop Only for simplicity in this view, typically responsive) -->
+<aside class="hidden xl:flex flex-col h-full w-80 rounded-r-xl bg-surface-container-lowest shadow-md sticky top-24 max-h-[calc(100vh-6rem)] overflow-y-auto p-margin-mobile gap-4 transition-transform duration-300 ease-in-out">
+<div class="flex items-center justify-between mb-4 border-b border-outline-variant/20 pb-4">
+<h2 class="font-ui text-lg font-semibold text-primary dark:text-primary-fixed">Inspector</h2>
+<span class="material-symbols-outlined text-stone-blue text-sm cursor-pointer hover:text-primary">close</span>
+</div>
+<div class="flex flex-col gap-4">
+<p class="font-mono-label text-metadata text-outline mb-2">Original Evidence Traversal</p>
+<!-- Evidence Card Mini -->
+<a class="block bg-surface-container-low border border-stone-blue/10 rounded p-4 ambient-shadow cursor-pointer hover:border-moss-green/50 hover:shadow-md transition-all group" href="#">
+<div class="flex justify-between items-start mb-2">
+<span class="font-mono-label text-metadata text-moss-green bg-secondary-container/50 px-2 py-0.5 rounded-sm group-hover:bg-moss-green group-hover:text-white transition-colors">Nivel 1</span>
+<span class="material-symbols-outlined text-sm text-stone-blue group-hover:text-primary transition-colors">open_in_new</span>
+</div>
+<p class="font-body-reading-mobile text-body-reading-mobile text-sm line-clamp-3 mb-2 text-on-surface-variant">Transcript 42B: The subject explicitly avoided the plaza during peak hours, citing 'historical weight'.</p>
+<div class="text-right">
+<span class="font-metadata text-metadata text-outline">ev_42B_a8f9</span>
+</div>
+</a>
+<!-- Evidence Card Mini -->
+<a class="block bg-surface-container-low border border-stone-blue/10 rounded p-4 ambient-shadow cursor-pointer hover:border-amber-question/50 hover:shadow-md transition-all group" href="#">
+<div class="flex justify-between items-start mb-2">
+<span class="font-mono-label text-metadata text-amber-question bg-error-container/30 px-2 py-0.5 rounded-sm group-hover:bg-amber-question group-hover:text-white transition-colors">Nivel 2</span>
+<span class="material-symbols-outlined text-sm text-stone-blue group-hover:text-primary transition-colors">open_in_new</span>
+</div>
+<p class="font-body-reading-mobile text-body-reading-mobile text-sm line-clamp-3 mb-2 text-on-surface-variant">Artifact #12 shows minimal wear patterns, contradicting the assumed heavy usage in communal rituals.</p>
+<div class="text-right">
+<span class="font-metadata text-metadata text-outline">art_12_c2b1</span>
+</div>
+</a>
+</div>
+</aside>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-gutter py-2 docked full-width bottom-0 rounded-t-xl border-t border-outline-variant/10 bg-surface-bright dark:bg-tertiary">
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-tertiary-container w-12 h-12 hover:opacity-80" href="#">
+<span class="material-symbols-outlined" data-icon="inventory_2">inventory_2</span>
+<span class="font-mono-label text-metadata mt-1 hidden">Evidence</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-tertiary-container w-12 h-12 hover:opacity-80" href="#">
+<span class="material-symbols-outlined" data-icon="hub">hub</span>
+<span class="font-mono-label text-metadata mt-1 hidden">Nodes</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-secondary-container dark:bg-on-secondary-fixed-variant rounded-full w-12 h-12 scale-95 transition-transform duration-150 hover:opacity-80" href="#">
+<span class="material-symbols-outlined text-moss-green dark:text-secondary-fixed-dim" data-icon="article">article</span>
+<span class="font-mono-label text-metadata mt-1 hidden">Peritaje</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-tertiary-container w-12 h-12 hover:opacity-80" href="#">
+<span class="material-symbols-outlined" data-icon="menu_book">menu_book</span>
+<span class="font-mono-label text-metadata mt-1 hidden">Glossary</span>
+</a>
+</nav>
+</body></html>

@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Nivel 2: Mesa de Relaciones</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;700&amp;family=Newsreader:ital,wght@0,400;0,600;1,400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface": "#fcfaed",
+                      "surface-container-high": "#eae9dc",
+                      "surface-container": "#f0eee1",
+                      "surface-container-highest": "#e5e3d6",
+                      "on-primary-fixed": "#111c2e",
+                      "surface-container-low": "#f6f4e7",
+                      "surface-container-lowest": "#ffffff",
+                      "tertiary-fixed": "#e3e1ec",
+                      "on-tertiary": "#ffffff",
+                      "outline-variant": "#c5c6cd",
+                      "primary-fixed-dim": "#bcc7df",
+                      "on-primary-fixed-variant": "#3d475b",
+                      "on-error": "#ffffff",
+                      "primary-container": "#111c2e",
+                      "on-error-container": "#93000a",
+                      "error-container": "#ffdad6",
+                      "primary-fixed": "#d8e2fc",
+                      "on-primary": "#ffffff",
+                      "on-secondary-fixed-variant": "#00513a",
+                      "background": "#fcfaed",
+                      "inverse-on-surface": "#f3f1e4",
+                      "on-background": "#1b1c14",
+                      "secondary-fixed": "#97f5cc",
+                      "inverse-surface": "#303129",
+                      "tertiary-fixed-dim": "#c6c5cf",
+                      "on-secondary": "#ffffff",
+                      "tertiary-container": "#1a1b22",
+                      "on-surface": "#1b1c14",
+                      "on-tertiary-container": "#83838c",
+                      "inverse-primary": "#bcc7df",
+                      "surface-dim": "#dcdace",
+                      "secondary": "#006c4e",
+                      "on-tertiary-fixed-variant": "#46464e",
+                      "on-secondary-fixed": "#002115",
+                      "secondary-container": "#97f5cc",
+                      "outline": "#75777d",
+                      "on-primary-container": "#7a849b",
+                      "error": "#ba1a1a",
+                      "surface-tint": "#545f74",
+                      "secondary-fixed-dim": "#7bd8b1",
+                      "on-tertiary-fixed": "#1a1b22",
+                      "surface-bright": "#fcfaed",
+                      "on-surface-variant": "#45474c",
+                      "surface-variant": "#e5e3d6",
+                      "tertiary": "#000000",
+                      "primary": "#000000",
+                      "on-secondary-container": "#007353",
+                      "mineral-blue": "#545f74",
+                      "mineral-gray": "#c5c6cd"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "margin-tablet": "40px",
+                      "thumb-zone-bottom": "120px",
+                      "unit": "4px",
+                      "gutter": "16px",
+                      "touch-target": "48px",
+                      "margin-mobile": "20px"
+              },
+              "fontFamily": {
+                      "ui-label": ["Inter"],
+                      "narrative-display-mobile": ["Newsreader"],
+                      "narrative-display": ["Newsreader"],
+                      "technical-caps": ["JetBrains Mono"],
+                      "technical-data": ["JetBrains Mono"],
+                      "narrative-body": ["Newsreader"],
+                      "ui-control": ["Inter"]
+              },
+              "fontSize": {
+                      "ui-label": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                      "narrative-display-mobile": ["32px", {"lineHeight": "38px", "fontWeight": "600"}],
+                      "narrative-display": ["40px", {"lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                      "technical-caps": ["11px", {"lineHeight": "16px", "fontWeight": "700"}],
+                      "technical-data": ["13px", {"lineHeight": "18px", "fontWeight": "400"}],
+                      "narrative-body": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                      "ui-control": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+              }
+            },
+          },
+        }
+    </script>
+<style>
+        body {
+            background-color: theme('colors.surface-dim');
+            color: theme('colors.on-surface');
+            overflow: hidden;
+            touch-action: none;
+        }
+        
+        .corkboard {
+            position: relative;
+            width: 200vw;
+            height: 200vh;
+            left: -50vw;
+            top: -50vh;
+            cursor: grab;
+        }
+        
+        .corkboard:active {
+            cursor: grabbing;
+        }
+        
+        .evidence-card {
+            position: absolute;
+            background-color: theme('colors.surface');
+            border: 1px solid theme('colors.mineral-gray');
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            width: 320px;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .evidence-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
+        }
+        
+        .evidence-card.active {
+            border-color: theme('colors.mineral-blue');
+            border-width: 2px;
+            z-index: 10;
+        }
+        
+        .tension-line {
+            position: absolute;
+            transform-origin: 0 50%;
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        .tension-reinforce {
+            border-top: 2px solid theme('colors.mineral-blue');
+        }
+        
+        .tension-contradict {
+            border-top: 1px dashed theme('colors.outline');
+        }
+        
+        /* Inner shadow for etched effect */
+        .etched {
+            box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
+        }
+        
+        .shader-overlay {
+            mix-blend-mode: multiply;
+            opacity: 0.15;
+            pointer-events: none;
+        }
+        
+        /* Ensure top bar stays above content */
+        header { z-index: 50; }
+        
+        /* Thumb zone controls */
+        .thumb-controls {
+            position: fixed;
+            bottom: theme('spacing.thumb-zone-bottom');
+            right: theme('spacing.margin-mobile');
+            z-index: 40;
+        }
+        
+        @media (min-width: 768px) {
+            .thumb-controls {
+                right: theme('spacing.margin-tablet');
+            }
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body>
+<!-- Background Shader Overlay -->
+
+<!-- TopAppBar (From JSON with modifications for layout) -->
+<header class="bg-surface dark:bg-surface-dim docked full-width top-0 border-b border-outline-variant dark:border-outline flat no shadows transition-all duration-300 ease-in-out sticky top-0 z-50 flex items-center justify-between px-margin-mobile h-touch-target">
+<div class="flex items-center gap-4">
+<button class="h-touch-target w-touch-target flex items-center justify-center hover:bg-surface-container-high dark:hover:bg-surface-container-highest transition-colors rounded-full text-on-surface-variant dark:text-outline">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<div class="flex flex-col">
+<span class="font-technical-caps text-technical-caps text-on-surface-variant">Pregunta Antropológica</span>
+<h1 class="font-narrative-display-mobile text-narrative-display-mobile text-primary dark:text-primary-fixed truncate max-w-[60vw]">¿Cómo se construye la legitimidad social en entornos de alta volatilidad financiera?</h1>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="h-8 w-8 rounded-full bg-surface-variant border border-outline flex items-center justify-center overflow-hidden">
+<span class="material-symbols-outlined text-on-surface-variant text-sm">person</span>
+</div>
+</div>
+</header>
+<!-- Main Workspace (Corkboard) -->
+<main class="w-full h-[calc(100vh-48px-120px)] relative overflow-hidden bg-surface-dim" id="workspace-container">
+<div class="corkboard" id="corkboard">
+<!-- SVG layer for drawing connections dynamically -->
+<svg class="absolute inset-0 w-full h-full pointer-events-none z-0" id="connections-svg">
+<defs>
+<marker id="arrowhead" markerheight="7" markerwidth="10" orient="auto" refx="9" refy="3.5">
+<polygon fill="#545f74" points="0 0, 10 3.5, 0 7"></polygon>
+</marker>
+</defs>
+<!-- Lines will be drawn here by JS -->
+</svg>
+<!-- Evidence Cards -->
+<div class="evidence-card p-4 flex flex-col gap-3 rounded-lg" id="card-1" style="left: 45vw; top: 40vh;">
+<div class="flex justify-between items-start">
+<span class="font-technical-caps text-technical-caps text-on-surface-variant">OBS-042</span>
+<span class="font-technical-caps text-technical-caps text-outline">14:32</span>
+</div>
+<p class="font-narrative-body text-narrative-body text-on-surface">
+                    El informante clave (P.L.) insiste en que el efectivo sigue siendo preferido no por evasión, sino por "tangibilidad en tiempos inciertos".
+                </p>
+<div class="pt-2 border-t border-mineral-gray flex justify-between items-center mt-2">
+<span class="font-technical-data text-technical-data text-on-surface-variant opacity-70 truncate max-w-[200px]">e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855</span>
+<button class="text-mineral-blue hover:opacity-70">
+<span class="material-symbols-outlined text-lg">more_horiz</span>
+</button>
+</div>
+</div>
+<div class="evidence-card p-4 flex flex-col gap-3 rounded-lg" id="card-2" style="left: 55vw; top: 55vh;">
+<div class="flex justify-between items-start">
+<span class="font-technical-caps text-technical-caps text-on-surface-variant">DOC-018</span>
+<span class="font-technical-caps text-technical-caps text-outline">Ayer</span>
+</div>
+<p class="font-narrative-body text-narrative-body text-on-surface">
+                    Análisis de transacciones informales en mercado central: uso extendido de pagarés manuscritos basados en confianza comunitaria, ignorando tasas oficiales.
+                </p>
+<div class="pt-2 border-t border-mineral-gray flex justify-between items-center mt-2">
+<span class="font-technical-data text-technical-data text-on-surface-variant opacity-70 truncate max-w-[200px]">8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92</span>
+<button class="text-mineral-blue hover:opacity-70">
+<span class="material-symbols-outlined text-lg">more_horiz</span>
+</button>
+</div>
+</div>
+<div class="evidence-card p-4 flex flex-col gap-3 rounded-lg" id="card-3" style="left: 35vw; top: 60vh;">
+<div class="flex justify-between items-start">
+<span class="font-technical-caps text-technical-caps text-on-surface-variant">ENT-009</span>
+<span class="font-technical-caps text-technical-caps text-outline">12/10</span>
+</div>
+<p class="font-narrative-body text-narrative-body text-on-surface">
+                    "Los bancos cambian las reglas cada mes; mi vecino lleva 20 años cumpliendo su palabra." - Comerciante local contrastando instituciones formales vs informales.
+                </p>
+<div class="pt-2 border-t border-mineral-gray flex justify-between items-center mt-2">
+<span class="font-technical-data text-technical-data text-on-surface-variant opacity-70 truncate max-w-[200px]">4a44dc15364204a80fe80e9039455cc1608281820fe2b24f1e5233ade6af1dd5</span>
+<button class="text-mineral-blue hover:opacity-70">
+<span class="material-symbols-outlined text-lg">more_horiz</span>
+</button>
+</div>
+</div>
+<div class="evidence-card p-4 flex flex-col gap-3 rounded-lg" id="card-4" style="left: 60vw; top: 35vh;">
+<div class="flex justify-between items-start">
+<span class="font-technical-caps text-technical-caps text-on-surface-variant">DAT-088</span>
+<span class="font-technical-caps text-technical-caps text-outline">08:15</span>
+</div>
+<p class="font-narrative-body text-narrative-body text-on-surface">
+                    Incremento del 300% en descargas de billeteras virtuales en el último trimestre, según reporte de la cámara fintech.
+                </p>
+<div class="pt-2 border-t border-mineral-gray flex justify-between items-center mt-2">
+<span class="font-technical-data text-technical-data text-on-surface-variant opacity-70 truncate max-w-[200px]">ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad</span>
+<button class="text-mineral-blue hover:opacity-70">
+<span class="material-symbols-outlined text-lg">more_horiz</span>
+</button>
+</div>
+</div>
+</div>
+</main>
+<!-- Thumb Zone Controls (Floating above corkboard, below header) -->
+<div class="thumb-controls flex flex-col gap-4">
+<button class="h-12 w-12 rounded-full bg-surface-container-highest border border-mineral-gray flex items-center justify-center shadow-sm hover:bg-surface-variant transition-colors group">
+<span class="material-symbols-outlined text-on-surface group-hover:text-mineral-blue">add</span>
+</button>
+<button class="h-12 w-12 rounded-full bg-surface-container-highest border border-mineral-gray flex items-center justify-center shadow-sm hover:bg-surface-variant transition-colors group">
+<span class="material-symbols-outlined text-on-surface group-hover:text-mineral-blue">filter_list</span>
+</button>
+<button class="h-14 w-14 rounded-full bg-[theme('colors.mineral-blue')] flex items-center justify-center shadow-md hover:opacity-90 transition-opacity">
+<span class="material-symbols-outlined text-surface" style="font-variation-settings: 'FILL' 1;">hub</span>
+</button>
+</div>
+<!-- BottomNavBar (From JSON) -->
+<nav class="bg-surface-container-low dark:bg-surface-container docked full-width bottom-0 rounded-t-xl border-t border-outline-variant dark:border-outline flat no shadows fixed bottom-0 w-full z-50 flex justify-around items-center px-2 pb-4 h-thumb-zone-bottom md:hidden">
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant hover:opacity-80 scale-95 active:scale-90 transition-transform h-16 w-16" href="#">
+<span class="material-symbols-outlined mb-1 text-2xl">menu_book</span>
+<span class="font-ui-label text-ui-label text-center">Cuaderno</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant hover:opacity-80 scale-95 active:scale-90 transition-transform h-16 w-16" href="#">
+<span class="material-symbols-outlined mb-1 text-2xl">sensors</span>
+<span class="font-ui-label text-ui-label text-center">Señales</span>
+</a>
+<!-- Active state matches "Relaciones" intent -->
+<a class="flex flex-col items-center justify-center bg-secondary-container dark:bg-on-secondary-fixed-variant text-on-secondary-container dark:text-secondary-fixed rounded-full px-4 py-1 hover:opacity-80 scale-95 active:scale-90 transition-transform h-16 min-w-[72px]" href="#">
+<span class="material-symbols-outlined mb-1 text-2xl" style="font-variation-settings: 'FILL' 1;">hub</span>
+<span class="font-ui-label text-ui-label text-center">Relaciones</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant hover:opacity-80 scale-95 active:scale-90 transition-transform h-16 w-16" href="#">
+<span class="material-symbols-outlined mb-1 text-2xl">verified</span>
+<span class="font-ui-label text-ui-label text-center">Peritaje</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant hover:opacity-80 scale-95 active:scale-90 transition-transform h-16 w-16" href="#">
+<span class="material-symbols-outlined mb-1 text-2xl">search</span>
+<span class="font-ui-label text-ui-label text-center">Consulta</span>
+</a>
+</nav>
+<script>
+        // Simple panning logic for the corkboard
+        const container = document.getElementById('workspace-container');
+        const corkboard = document.getElementById('corkboard');
+        let isDragging = false;
+        let startX, startY, initialLeft, initialTop;
+
+        container.addEventListener('mousedown', (e) => {
+            if (e.target.closest('.evidence-card') || e.target.closest('.thumb-controls')) return;
+            isDragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            const rect = corkboard.getBoundingClientRect();
+            // Get relative left/top based on container
+            const containerRect = container.getBoundingClientRect();
+            initialLeft = rect.left - containerRect.left;
+            initialTop = rect.top - containerRect.top;
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            corkboard.style.left = `${initialLeft + dx}px`;
+            corkboard.style.top = `${initialTop + dy}px`;
+        });
+
+        window.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+
+        // Touch support for panning
+        container.addEventListener('touchstart', (e) => {
+             if (e.target.closest('.evidence-card') || e.target.closest('.thumb-controls')) return;
+            isDragging = true;
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+            const rect = corkboard.getBoundingClientRect();
+            const containerRect = container.getBoundingClientRect();
+            initialLeft = rect.left - containerRect.left;
+            initialTop = rect.top - containerRect.top;
+        });
+
+        window.addEventListener('touchmove', (e) => {
+            if (!isDragging) return;
+            const dx = e.touches[0].clientX - startX;
+            const dy = e.touches[0].clientY - startY;
+            corkboard.style.left = `${initialLeft + dx}px`;
+            corkboard.style.top = `${initialTop + dy}px`;
+        });
+
+        window.addEventListener('touchend', () => {
+            isDragging = false;
+        });
+
+        // Simple drawing of connections between cards (mock logic for visual)
+        function drawConnections() {
+            const svg = document.getElementById('connections-svg');
+            svg.innerHTML = ''; // Clear existing
+            
+            const cards = document.querySelectorAll('.evidence-card');
+            if(cards.length < 2) return;
+
+            // Helper to get center of element relative to corkboard
+            function getCenter(el) {
+                const rect = el.getBoundingClientRect();
+                const corkboardRect = corkboard.getBoundingClientRect();
+                return {
+                    x: (rect.left - corkboardRect.left) + rect.width / 2,
+                    y: (rect.top - corkboardRect.top) + rect.height / 2
+                };
+            }
+
+            // Draw line between 1 and 2 (Reinforcement)
+            const p1 = getCenter(cards[0]);
+            const p2 = getCenter(cards[1]);
+            
+            const line1 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line1.setAttribute('x1', p1.x);
+            line1.setAttribute('y1', p1.y);
+            line1.setAttribute('x2', p2.x);
+            line1.setAttribute('y2', p2.y);
+            line1.setAttribute('stroke', '#545f74'); // mineral-blue
+            line1.setAttribute('stroke-width', '2');
+            svg.appendChild(line1);
+
+            // Draw line between 1 and 3 (Contradiction - dashed)
+            const p3 = getCenter(cards[2]);
+            const line2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line2.setAttribute('x1', p1.x);
+            line2.setAttribute('y1', p1.y);
+            line2.setAttribute('x2', p3.x);
+            line2.setAttribute('y2', p3.y);
+            line2.setAttribute('stroke', '#c5c6cd'); // outline-variant
+            line2.setAttribute('stroke-width', '1.5');
+            line2.setAttribute('stroke-dasharray', '5,5');
+            svg.appendChild(line2);
+            
+             // Draw line between 1 and 4 (Contradiction - dashed)
+            const p4 = getCenter(cards[3]);
+            const line3 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line3.setAttribute('x1', p1.x);
+            line3.setAttribute('y1', p1.y);
+            line3.setAttribute('x2', p4.x);
+            line3.setAttribute('y2', p4.y);
+            line3.setAttribute('stroke', '#c5c6cd'); // outline-variant
+            line3.setAttribute('stroke-width', '1.5');
+            line3.setAttribute('stroke-dasharray', '5,5');
+            svg.appendChild(line3);
+        }
+
+        // Draw initial connections
+        setTimeout(drawConnections, 100);
+        
+        // Redraw on window resize just in case
+        window.addEventListener('resize', drawConnections);
+
+    </script>
+</body></html>

@@ -1,0 +1,28 @@
+import os
+import psycopg2
+
+# Nos conectamos a Neon usando tu variable de entorno
+url = os.environ.get("HD_DATABASE_URL")
+conn = psycopg2.connect(url)
+cur = conn.cursor()
+
+# Detectamos el nombre exacto de tus columnas en la tabla prospectos
+cur.execute("SELECT column_name FROM information_schema.columns WHERE table_name = 'prospectos';")
+cols = [r[0] for r in cur.fetchall()]
+
+# Ajustamos automáticamente por si usaste 'nombre' u 'organizacion'
+col_org = 'organizacion' if 'organizacion' in cols else 'nombre'
+col_cat = 'categoria_de_organizacion' if 'categoria_de_organizacion' in cols else 'categoria'
+if 'foco' in cols and col_cat == 'categoria': 
+    col_cat = 'foco'
+
+# Cirugía fina: eliminamos la versión "Corporativo"
+query = f"DELETE FROM prospectos WHERE {col_org} IN ('Clip', 'Konfío') AND {col_cat} = 'Corporativo';"
+cur.execute(query)
+conn.commit()
+
+print(f"¡Listo! Se eliminaron {cur.rowcount} duplicados. Clip y Konfío ahora respiran como pura Startup.")
+
+cur.close()
+conn.close()
+

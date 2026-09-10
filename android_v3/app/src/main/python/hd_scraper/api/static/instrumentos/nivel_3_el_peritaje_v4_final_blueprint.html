@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Dictamen Antropológico - Nivel 3</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;family=Newsreader:wght@400;600&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-dim": "#d9dbce",
+                      "tertiary-fixed-dim": "#f5bb89",
+                      "surface-container": "#edefe1",
+                      "outline": "#78776f",
+                      "on-secondary-fixed-variant": "#44483b",
+                      "surface-container-low": "#f3f5e7",
+                      "primary-fixed": "#e5e3d6",
+                      "on-surface": "#1a1d14",
+                      "inverse-primary": "#c8c7bb",
+                      "on-primary-container": "#737369",
+                      "on-primary-fixed-variant": "#47473e",
+                      "olive-deep": "#3E4235",
+                      "surface-tint": "#5f5f55",
+                      "on-error": "#ffffff",
+                      "on-secondary": "#ffffff",
+                      "error-container": "#ffdad6",
+                      "inverse-on-surface": "#f0f2e4",
+                      "secondary-fixed": "#e1e4d2",
+                      "on-secondary-fixed": "#191d12",
+                      "on-primary": "#ffffff",
+                      "error": "#ba1a1a",
+                      "surface-container-highest": "#e2e4d6",
+                      "secondary": "#5c6052",
+                      "on-tertiary-fixed-variant": "#653e17",
+                      "on-background": "#1a1d14",
+                      "surface-container-lowest": "#ffffff",
+                      "inference-slate": "#4A4E54",
+                      "surface-container-high": "#e8e9dc",
+                      "on-tertiary": "#ffffff",
+                      "outline-variant": "#c8c7bd",
+                      "surface-bright": "#f9fbec",
+                      "secondary-fixed-dim": "#c5c8b7",
+                      "on-surface-variant": "#474740",
+                      "friccion-clay": "#6B4423",
+                      "on-primary-fixed": "#1b1c14",
+                      "primary": "#5f5f55",
+                      "surface": "#f9fbec",
+                      "clay-accent": "#8B5E34",
+                      "background": "#f9fbec",
+                      "tertiary": "#80552c",
+                      "on-secondary-container": "#606456",
+                      "parchment": "#FCFAED",
+                      "inverse-surface": "#2f3228",
+                      "primary-container": "#fcfaed",
+                      "primary-fixed-dim": "#c8c7bb",
+                      "tertiary-container": "#fff8f5",
+                      "on-error-container": "#93000a",
+                      "tertiary-fixed": "#ffdcc1",
+                      "parchment-dim": "#2A2D24",
+                      "on-tertiary-container": "#97683d",
+                      "amber-accent": "#D48C00",
+                      "surface-variant": "#e2e4d6",
+                      "on-tertiary-fixed": "#2e1600",
+                      "secondary-container": "#dee1cf"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "rhythm": "8px",
+                      "margin-desktop": "64px",
+                      "margin-mobile": "20px",
+                      "touch-min": "48px",
+                      "gutter": "16px"
+              },
+              "fontFamily": {
+                      "ui-label": ["Inter"],
+                      "narrative-body": ["Newsreader"],
+                      "data-hash": ["JetBrains Mono"],
+                      "narrative-h1": ["Newsreader"],
+                      "narrative-body-mobile": ["Newsreader"],
+                      "ui-button": ["Inter"],
+                      "data-mono": ["JetBrains Mono"],
+                      "narrative-display": ["Newsreader"]
+              },
+              "fontSize": {
+                      "ui-label": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "500"}],
+                      "narrative-body": ["19px", {"lineHeight": "32px", "fontWeight": "400"}],
+                      "data-hash": ["11px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                      "narrative-h1": ["32px", {"lineHeight": "1.3", "fontWeight": "600"}],
+                      "narrative-body-mobile": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                      "ui-button": ["14px", {"lineHeight": "16px", "letterSpacing": "0.03em", "fontWeight": "600"}],
+                      "data-mono": ["13px", {"lineHeight": "20px", "fontWeight": "400"}],
+                      "narrative-display": ["42px", {"lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "600"}]
+              }
+            }
+          }
+        }
+    </script>
+<style>
+        /* Specific overrides for the "notebook" aesthetic */
+        body {
+            background-color: #FCFAED; /* parchment */
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        /* Ariadne's Thread connection lines */
+        .thread-line {
+            position: absolute;
+            left: 11px;
+            top: 24px;
+            bottom: -24px;
+            width: 1px;
+            background-color: #c8c7bd; /* outline-variant */
+            z-index: 0;
+        }
+        
+        .thread-node {
+            position: absolute;
+            left: 8px;
+            top: 8px;
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background-color: #3E4235; /* olive-deep */
+            z-index: 1;
+            box-shadow: 0 0 0 4px #FCFAED;
+        }
+        
+        .thread-subnode-line {
+            position: absolute;
+            left: -16px;
+            top: 14px;
+            width: 16px;
+            height: 1px;
+            background-color: #c8c7bd;
+        }
+        
+        /* Custom animation for the sealing process */
+        @keyframes stamp-seal {
+            0% { transform: scale(1.5); opacity: 0; }
+            50% { transform: scale(0.9); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .sealed-stamp {
+            animation: stamp-seal 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            display: none;
+        }
+        
+        /* Hide scrollbar for a cleaner look */
+        ::-webkit-scrollbar {
+            width: 0px;
+            background: transparent;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="text-on-surface antialiased overflow-x-hidden selection:bg-tertiary-fixed selection:text-on-tertiary-fixed">
+<!-- TopAppBar -->
+<header class="flex justify-between items-center w-full px-margin-mobile h-16 bg-parchment dark:bg-parchment-dim sticky top-0 z-40">
+<button class="h-touch-min w-touch-min flex justify-center items-center rounded-full hover:bg-surface-container-low transition-colors text-olive-deep dark:text-primary-fixed">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<h1 class="font-narrative-h1 text-narrative-h1 text-olive-deep dark:text-primary-fixed tracking-tight">Anthropological Inquiry</h1>
+<button class="h-touch-min w-touch-min flex justify-center items-center rounded-full hover:bg-surface-container-low transition-colors text-olive-deep dark:text-primary-fixed">
+<span class="material-symbols-outlined">sync</span>
+</button>
+</header>
+<!-- Main Content Container -->
+<main class="w-full mx-auto px-margin-mobile pt-4 pb-48 relative min-h-screen flex justify-center">
+<div class="w-full max-w-[65ch]">
+<!-- Metadata Header (JetBrains Mono) -->
+<div class="flex justify-between items-end mb-8 border-b border-outline-variant pb-3">
+<div class="flex flex-col gap-1.5">
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-[14px]">memory</span>
+<span class="font-data-hash text-data-hash uppercase">SHA-256: 7F2A95B2E8D...</span>
+</div>
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined text-[14px]">location_on</span>
+<span class="font-data-mono text-data-mono">19.4326° N, 99.1332° W</span>
+</div>
+</div>
+<div class="text-right flex flex-col items-end gap-1.5">
+<div class="flex items-center gap-2">
+<span class="font-data-hash text-data-hash text-olive-deep flex items-center gap-1 bg-surface-container-low px-1.5 py-0.5 rounded border border-outline-variant/30">
+<span class="material-symbols-outlined text-[12px]">check</span> REGLA G0
+                            </span>
+<span class="font-data-mono text-data-mono text-on-surface-variant bg-surface-container-low px-2 py-0.5 rounded">NIVEL 3</span>
+</div>
+<span class="font-data-mono text-data-mono text-on-surface-variant">24 OCT 2023</span>
+</div>
+</div>
+<!-- Document Title -->
+<h2 class="font-narrative-display text-narrative-display text-olive-deep mb-10 leading-tight">Dictamen Antropológico Final</h2>
+<!-- The Narrative Canvas with Ariadne's Thread -->
+<article class="relative text-on-surface/90">
+<!-- Continuous background thread line -->
+<div class="absolute left-[11px] top-2 bottom-0 w-px bg-outline-variant/50"></div>
+<!-- Paragraph 1 -->
+<section class="relative pl-10 mb-8">
+<div class="thread-node"></div>
+<p class="font-narrative-body-mobile text-narrative-body-mobile mb-2">
+                    En base a las observaciones documentadas durante el período de inmersión intensiva (Señales Nivel 0 y Evidencias Nivel 1) y el subsecuente análisis relacional, se establece la presente conclusión metodológica.
+                </p>
+<div class="flex gap-2 items-center text-on-surface-variant opacity-70">
+<span class="material-symbols-outlined text-[12px]">rebase_edit</span>
+<span class="font-data-hash text-data-hash">SÍNTESIS GENERADA</span>
+</div>
+</section>
+<!-- Paragraph 2 with Sub-nodes (Evidence Tracing) -->
+<section class="relative pl-10 mb-8">
+<div class="thread-node"></div>
+<p class="font-narrative-body-mobile text-narrative-body-mobile mb-4">
+                    La apropiación del espacio público en la zona designada no obedece a una simple carencia de infraestructura estatal, sino que opera como un mecanismo deliberado de cohesión social y resistencia simbólica.
+                </p>
+<!-- Traceable Evidence blocks embedded in the thread -->
+<div class="flex flex-col gap-3 pl-2 mt-4 border-l border-outline-variant/30 ml-1">
+<button class="relative pl-6 bg-surface-container-low p-3 rounded-r-lg border-l-2 border-olive-deep shadow-sm text-left hover:bg-surface-container transition-colors w-full cursor-pointer active:scale-[0.98]">
+<div class="thread-subnode-line"></div>
+<div class="flex justify-between items-start mb-1">
+<span class="font-data-hash text-data-hash text-olive-deep flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]" style="font-variation-settings: 'FILL' 1;">menu_book</span>
+                                DOC-REF-04A
+                            </span>
+<span class="material-symbols-outlined text-[14px] text-outline-variant">open_in_new</span>
+</div>
+<p class="font-data-mono text-data-mono text-on-surface-variant leading-relaxed">
+                            "El mercado efímero actúa como nodo articulador, redefiniendo las fronteras de vecindad cada jueves."
+                        </p>
+</button>
+<button class="relative pl-6 bg-surface-container-low p-3 rounded-r-lg border-l-2 border-clay-accent shadow-sm text-left hover:bg-surface-container transition-colors w-full cursor-pointer active:scale-[0.98]">
+<div class="thread-subnode-line"></div>
+<div class="flex justify-between items-start mb-1">
+<span class="font-data-hash text-data-hash text-clay-accent flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">visibility</span>
+                                OBS-DIR-88
+                            </span>
+<span class="material-symbols-outlined text-[14px] text-outline-variant">open_in_new</span>
+</div>
+<p class="font-data-mono text-data-mono text-on-surface-variant leading-relaxed">
+                            Registro fotográfico del patrón de circulación asimétrico en la plaza central.
+                        </p>
+</button>
+</div>
+</section>
+<!-- Paragraph 3 -->
+<section class="relative pl-10 mb-12">
+<div class="thread-node"></div>
+<p class="font-narrative-body-mobile text-narrative-body-mobile">
+                    Por consiguiente, las intervenciones urbanísticas propuestas deben incorporar esta matriz relacional preexistente para evitar la fricción ontológica y el rechazo estructural por parte de los residentes.
+                </p>
+</section>
+<!-- End of thread indicator -->
+<div class="relative pl-10 flex items-center justify-center -ml-5 text-outline-variant">
+<span class="material-symbols-outlined">change_history</span>
+</div>
+</article>
+<!-- Sealed Stamp Visualization (Hidden by default, shown via JS) -->
+<div class="sealed-stamp absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center w-48 h-48 rounded-full border-4 border-olive-deep bg-parchment/90 backdrop-blur-sm z-30 pointer-events-none" id="seal-stamp">
+<span class="material-symbols-outlined text-[64px] text-olive-deep mb-2" style="font-variation-settings: 'FILL' 1;">verified</span>
+<span class="font-ui-label text-ui-label text-olive-deep text-center">DICTAMEN<br/>SELLADO</span>
+</div>
+</div>
+</main>
+<!-- Floating Action Button Area -->
+<div class="fixed bottom-[96px] left-0 w-full px-margin-mobile z-40 flex justify-center pointer-events-none">
+<!-- Interactive target needs pointer-events-auto -->
+<button class="pointer-events-auto w-full max-w-[340px] bg-olive-deep text-parchment font-ui-button text-ui-button h-[56px] rounded-full flex items-center justify-center gap-3 shadow-lg relative overflow-hidden transition-transform duration-200 active:scale-95 group" id="seal-button">
+<span class="material-symbols-outlined relative z-10 group-active:animate-pulse">fingerprint</span>
+<span class="relative z-10 tracking-wide">Mantener pulsado para Sellar Peritaje</span>
+<!-- Progress Fill Background -->
+<div class="absolute left-0 top-0 bottom-0 bg-secondary opacity-90 w-0 z-0" id="seal-progress"></div>
+</button>
+</div>
+<!-- Inline Feedback Toast -->
+<div class="fixed top-20 left-1/2 -translate-x-1/2 bg-surface-dim text-on-surface font-ui-label text-ui-label px-4 py-2 rounded-full shadow-sm opacity-0 transition-opacity duration-300 pointer-events-none z-50 flex items-center gap-2" id="feedback-toast">
+<span class="material-symbols-outlined text-[16px]">sync</span>
+<span>Sincronizando Ontología...</span>
+</div>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-2 border-t border-outline-variant dark:border-outline bg-surface-container dark:bg-inverse-surface h-[80px]">
+<!-- Inactive: Observation -->
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant h-[48px] w-[48px] hover:bg-surface-container-high dark:hover:bg-surface-variant transition-all rounded-full">
+<span class="material-symbols-outlined">visibility</span>
+</button>
+<!-- Inactive: Description -->
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant h-[48px] w-[48px] hover:bg-surface-container-high dark:hover:bg-surface-variant transition-all rounded-full">
+<span class="material-symbols-outlined">menu_book</span>
+</button>
+<!-- Inactive: Analysis -->
+<button class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant h-[48px] w-[48px] hover:bg-surface-container-high dark:hover:bg-surface-variant transition-all rounded-full">
+<span class="material-symbols-outlined">rebase_edit</span>
+</button>
+<!-- Active: Theory / Peritaje (Index 3 - diamond) -->
+<div class="flex flex-col items-center justify-center bg-secondary-container dark:bg-secondary text-on-secondary-container dark:text-on-secondary rounded-full h-[48px] w-[48px] scale-95 transition-transform duration-150 ease-out shadow-inner">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">diamond</span>
+</div>
+</nav>
+<script>
+        // Long Press Logic for the "Seal" Button
+        const button = document.getElementById('seal-button');
+        const progress = document.getElementById('seal-progress');
+        const stamp = document.getElementById('seal-stamp');
+        const toast = document.getElementById('feedback-toast');
+        
+        let pressTimer;
+        let isPressed = false;
+        const requiredHoldTime = 1000; // 1.0 seconds as per requirements
+
+        function startPress(e) {
+            if (e.type === 'mousedown' && e.button !== 0) return; // Only left click
+            e.preventDefault();
+            isPressed = true;
+            
+            // Visual feedback - start filling
+            progress.style.transition = `width ${requiredHoldTime}ms linear`;
+            progress.style.width = '100%';
+
+            pressTimer = setTimeout(() => {
+                if(isPressed) {
+                    completeAction();
+                }
+            }, requiredHoldTime);
+        }
+
+        function cancelPress() {
+            isPressed = false;
+            clearTimeout(pressTimer);
+            // Revert progress
+            progress.style.transition = 'width 0.2s ease-out';
+            progress.style.width = '0%';
+        }
+
+        function completeAction() {
+            // Action executed
+            button.innerHTML = '<span class="material-symbols-outlined relative z-10" style="font-variation-settings: \'FILL\' 1;">lock</span><span class="relative z-10">Peritaje Sellado</span>';
+            button.classList.replace('bg-olive-deep', 'bg-outline');
+            button.classList.add('pointer-events-none');
+            
+            // Show Stamp
+            stamp.style.display = 'flex';
+            
+            // Show Toast (Zero pop-ups, inline fade out)
+            toast.style.opacity = '1';
+            
+            setTimeout(() => {
+                toast.innerHTML = '<span class="material-symbols-outlined text-[16px]">check_circle</span><span>Captura Exitosa</span>';
+                setTimeout(() => {
+                    toast.style.opacity = '0';
+                }, 2000); // Auto-fade within 2 seconds
+            }, 1000);
+        }
+
+        // Event listeners for mobile and desktop
+        button.addEventListener('mousedown', startPress);
+        button.addEventListener('touchstart', startPress, {passive: false});
+        
+        window.addEventListener('mouseup', cancelPress);
+        window.addEventListener('touchend', cancelPress);
+        window.addEventListener('touchcancel', cancelPress);
+    </script>
+</body></html>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AntrolabsHD</string>
+    <style name="Theme.AntrolabsHD" parent="Theme.AppCompat.NoActionBar">
+        <item name="colorPrimary">#2E7D64</item>
+        <item name="colorPrimaryDark">#111715</item>
+        <item name="colorAccent">#2E7D64</item>
+        <item name="android:windowBackground">#111715</item>
+        <item name="android:statusBarColor">#111715</item>
+    </style>
+</resources>

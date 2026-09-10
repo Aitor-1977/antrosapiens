@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Nivel 3: El Peritaje (AntroSapiens V4)</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&amp;family=Hanken+Grotesk:ital,wght@0,100..900;1,100..900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "primary-fixed-dim": "#abcdcd",
+                      "on-secondary-fixed-variant": "#364e00",
+                      "surface-tint": "#446464",
+                      "on-error-container": "#93000a",
+                      "on-primary-fixed-variant": "#2c4c4c",
+                      "on-background": "#1b1c15",
+                      "on-primary-fixed": "#002020",
+                      "tertiary": "#670f17",
+                      "on-surface": "#1b1c15",
+                      "on-primary-container": "#9ec0bf",
+                      "surface-container-high": "#e9e9dd",
+                      "inverse-on-surface": "#f2f1e5",
+                      "inverse-primary": "#abcdcd",
+                      "tertiary-container": "#87272b",
+                      "surface": "#fbfaee",
+                      "surface-dim": "#dbdbcf",
+                      "on-secondary-container": "#4e6e00",
+                      "tertiary-fixed": "#ffdad8",
+                      "tertiary-fixed-dim": "#ffb3b0",
+                      "inverse-surface": "#303129",
+                      "on-tertiary": "#ffffff",
+                      "on-tertiary-container": "#ff9f9d",
+                      "on-tertiary-fixed": "#410006",
+                      "surface-bright": "#fbfaee",
+                      "surface-container-highest": "#e4e3d7",
+                      "on-secondary": "#ffffff",
+                      "secondary-container": "#c8f17a",
+                      "error": "#ba1a1a",
+                      "surface-variant": "#e4e3d7",
+                      "surface-container-low": "#f5f4e8",
+                      "on-primary": "#ffffff",
+                      "surface-container": "#efeee3",
+                      "error-container": "#ffdad6",
+                      "on-error": "#ffffff",
+                      "surface-container-lowest": "#ffffff",
+                      "primary-container": "#2f4f4f",
+                      "on-surface-variant": "#414848",
+                      "secondary": "#496800",
+                      "outline-variant": "#c1c8c7",
+                      "outline": "#717878",
+                      "secondary-fixed-dim": "#add461",
+                      "primary-fixed": "#c6e9e9",
+                      "background": "#fbfaee",
+                      "secondary-fixed": "#c8f17a",
+                      "primary": "#173838",
+                      "on-tertiary-fixed-variant": "#832428",
+                      "on-secondary-fixed": "#131f00"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "stack-md": "24px",
+                      "gutter": "32px",
+                      "stack-lg": "48px",
+                      "unit": "8px",
+                      "stack-sm": "12px",
+                      "margin-page": "64px"
+              },
+              "fontFamily": {
+                      "headline-md": [
+                              "Newsreader"
+                      ],
+                      "headline-lg-mobile": [
+                              "Newsreader"
+                      ],
+                      "headline-lg": [
+                              "Newsreader"
+                      ],
+                      "display-lg": [
+                              "Newsreader"
+                      ],
+                      "label-sm": [
+                              "Hanken Grotesk"
+                      ],
+                      "body-lg": [
+                              "Newsreader"
+                      ],
+                      "label-lg": [
+                              "Hanken Grotesk"
+                      ],
+                      "body-md": [
+                              "Newsreader"
+                      ]
+              },
+              "fontSize": {
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "1.3",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "headline-lg-mobile": [
+                              "28px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "display-lg": [
+                              "48px",
+                              {
+                                      "lineHeight": "1.1",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label-sm": [
+                              "12px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "letterSpacing": "0.03em",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "body-lg": [
+                              "18px",
+                              {
+                                      "lineHeight": "1.7",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label-lg": [
+                              "14px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "1.6",
+                                      "fontWeight": "400"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<style>
+        body {
+            background-color: theme('colors.background');
+            color: theme('colors.on-background');
+        }
+        .paper-shadow {
+            box-shadow: 0 4px 12px rgba(47, 79, 79, 0.05), 0 1px 3px rgba(47, 79, 79, 0.1);
+        }
+        .border-linen {
+            border-color: theme('colors.surface-dim');
+        }
+      </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="min-h-screen pb-stack-lg md:pb-0 flex flex-col md:flex-row">
+<!-- Mobile Top App Bar -->
+<header class="md:hidden flex items-center justify-between px-margin-mobile h-16 w-full top-0 sticky bg-background border-b border-surface-dim z-40">
+<button class="p-2 text-on-surface-variant hover:bg-surface-variant transition-colors rounded-full">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">menu</span>
+</button>
+<h1 class="font-headline-md text-headline-md font-bold text-primary-container truncate px-4">Investigation &gt; Rituals</h1>
+<button class="p-2 text-on-surface-variant hover:bg-surface-variant transition-colors rounded-full">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">settings</span>
+</button>
+</header>
+<!-- Desktop Side Nav (Implied Table of Contents style) -->
+<nav class="hidden md:flex flex-col w-64 border-r border-surface-dim bg-surface-container-low min-h-screen p-stack-md sticky top-0 z-40">
+<div class="mb-stack-lg">
+<h2 class="font-headline-md text-headline-md font-bold text-primary-container mb-unit">AntroSapiens</h2>
+<p class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Field Laboratory V4</p>
+</div>
+<ul class="space-y-unit flex-grow">
+<li>
+<a class="flex items-center gap-stack-sm p-stack-sm rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors font-label-lg text-label-lg" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">book_2</span>
+                    Journal
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-stack-sm p-stack-sm rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors font-label-lg text-label-lg" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">archive</span>
+                    Evidence
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-stack-sm p-stack-sm rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors font-label-lg text-label-lg" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">hub</span>
+                    Relations
+                </a>
+</li>
+<li>
+<a class="flex items-center gap-stack-sm p-stack-sm rounded-lg text-primary-container bg-surface-container-high font-label-lg text-label-lg" href="#">
+<span class="material-symbols-outlined text-primary-container" style="font-variation-settings: 'FILL' 1;">analytics</span>
+                    Synthesis
+                </a>
+</li>
+</ul>
+<div class="mt-auto pt-stack-md border-t border-surface-dim">
+<div class="flex items-center gap-stack-sm p-stack-sm text-on-surface-variant font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[18px]">account_circle</span>
+                 Lead Investigator
+             </div>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="flex-grow flex justify-center p-stack-md md:p-margin-page relative pb-48">
+<div class="w-full max-w-[960px] flex flex-col gap-stack-lg">
+<!-- Header Section -->
+<header class="border-b border-surface-dim pb-stack-md"><div class="flex flex-col gap-unit">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-outline font-mono">INQ-492</span>
+<span class="inline-flex items-center gap-1 px-3 py-1 bg-tertiary/10 text-tertiary rounded-full font-label-sm text-label-sm">
+<span class="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span>
+Fase Final
+</span>
+</div>
+<h1 class="font-display-lg text-display-lg text-on-background mt-unit">Dictamen Final</h1>
+<p class="font-body-md text-body-md text-on-surface-variant mt-stack-sm">
+Nivel 3: El Peritaje Antropológico sobre Rituales de Criptoactivos.
+</p>
+</div></header>
+<div class="flex flex-col gap-stack-lg">
+<!-- Summary Section -->
+<section class="bg-surface-container-low rounded-lg p-stack-md border border-surface-dim">
+<div class="space-y-stack-md">
+<div>
+<h4 class="font-label-sm text-label-sm text-tertiary uppercase tracking-wider mb-unit">Pregunta Antropológica</h4>
+<p class="font-headline-md text-headline-md text-on-surface">¿Cómo se construye la legitimidad social en entornos de alta volatilidad financiera?</p>
+</div>
+<div class="pt-stack-sm border-t border-surface-dim">
+<h4 class="font-label-sm text-label-sm text-secondary uppercase tracking-wider mb-unit">Hallazgo Principal</h4>
+<p class="font-body-lg text-body-lg text-on-surface">El 'HODL' no es una estrategia económica, sino un ritual de pertenencia que valida el estatus moral del individuo ante el grupo.</p>
+</div>
+</div>
+</section>
+<!-- Evidence Inspector (Scrollable) -->
+<section>
+<h3 class="font-headline-md text-headline-md text-on-background mb-stack-sm flex items-center gap-unit">
+<span class="material-symbols-outlined text-outline">archive</span>
+Inspector de Evidencias
+</h3>
+<div class="flex flex-col gap-stack-sm">
+<div class="bg-surface rounded-lg p-4 border border-surface-dim paper-shadow">
+<div class="flex justify-between items-center mb-2">
+<span class="font-mono text-[12px] text-outline">OBS-442</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Actor: @cryptopriest</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface italic">"La venta temprana se penaliza... a través del ostracismo social..."</p>
+</div>
+<div class="bg-surface rounded-lg p-4 border border-surface-dim paper-shadow">
+<div class="flex justify-between items-center mb-2">
+<span class="font-mono text-[12px] text-outline">OBS-501</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Actor: @diamond_hands</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface italic">"El dolor de la caída es el fuego que purifica nuestra convicción."</p>
+</div>
+</div>
+</section>
+<!-- Narrative Synthesis -->
+<section class="bg-surface rounded-lg p-stack-md border border-surface-dim paper-shadow">
+<h2 class="font-headline-lg text-headline-lg text-on-background mb-stack-md border-b border-surface-dim pb-unit">Síntesis del Investigador</h2>
+<div class="prose prose-neutral font-body-lg text-body-lg leading-relaxed text-on-surface space-y-stack-md">
+<p class="first-letter:text-5xl first-letter:font-headline-md first-letter:text-tertiary first-letter:mr-3 first-letter:float-left">L</p>
+<p>as observaciones recopiladas revelan una estructura de creencias profundamente arraigada. Los sujetos exhiben comportamientos consistentes con rituales de purificación económica, donde la retención trasciende lo financiero para convertirse en un imperativo moral.</p>
+<p>La volatilidad no es riesgo, sino una prueba de fe. Aquellos que resisten son dotados de un estatus elevado dentro de la jerarquía social del grupo.</p>
+</div>
+</section>
+</div>
+</div>
+</main>
+<!-- Floating Action Button (Desktop only as per constraints, contextual to Synthesis) -->
+<button aria-label="Anotación Final" class="hidden md:flex fixed bottom-margin-page right-margin-page bg-primary-container text-on-primary hover:bg-on-primary-fixed-variant transition-colors shadow-lg rounded-full p-4 items-center justify-center z-50 group">
+<span class="material-symbols-outlined text-[24px]">edit_note</span>
+<span class="max-w-0 overflow-hidden whitespace-nowrap group-hover:max-w-xs transition-all duration-300 ease-in-out font-label-lg text-label-lg group-hover:ml-2 group-hover:mr-1 opacity-0 group-hover:opacity-100">
+            Anotación Final
+        </span>
+</button>
+<!-- Mobile Bottom Nav Bar -->
+<nav class="md:hidden flex justify-around items-center w-full bg-surface-container-low pb-safe fixed bottom-0 z-50 border-t border-border-subtle h-[72px]">
+<a class="flex flex-col items-center justify-center text-on-surface-variant py-1 w-1/4" href="#">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 0;">book_2</span>
+<span class="font-label-sm text-[10px]">Journal</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant py-1 w-1/4" href="#">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 0;">archive</span>
+<span class="font-label-sm text-[10px]">Evidence</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant py-1 w-1/4" href="#">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 0;">hub</span>
+<span class="font-label-sm text-[10px]">Relations</span>
+</a>
+<a class="flex flex-col items-center justify-center text-primary-container border-t-2 border-primary-container py-1 w-1/4" href="#">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 1;">analytics</span>
+<span class="font-label-sm text-[10px] font-bold">Synthesis</span>
+</a>
+</nav>
+<div class="md:hidden fixed bottom-[72px] left-0 w-full p-4 bg-gradient-to-t from-background to-transparent z-40">
+<div class="flex flex-col gap-3">
+<button class="w-full h-12 bg-primary-container text-on-primary rounded-full font-label-lg text-label-lg flex items-center justify-center gap-2 shadow-lg">
+<span class="material-symbols-outlined">history_edu</span>
+Sellar Peritaje
+</button>
+<button class="w-full h-12 bg-surface-container-high text-on-surface rounded-full font-label-lg text-label-lg flex items-center justify-center gap-2 border border-outline-variant">
+<span class="material-symbols-outlined">edit_note</span>
+Anotación Final
+</button>
+</div>
+</div></body></html>

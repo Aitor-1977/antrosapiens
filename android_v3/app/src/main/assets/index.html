@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AntroLab — Evidence Hub</title>
+  <style>
+    :root {
+      --bg: #FCFAED;
+      --text: #091426;
+      --accent: #2d5a27;
+      --border: #e0dcc8;
+    }
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: serif;
+      margin: 0;
+      padding: 16px;
+    }
+    header {
+      border-bottom: 2px solid var(--accent);
+      padding-bottom: 8px;
+      margin-bottom: 16px;
+    }
+    h1 { margin: 0; font-size: 1.5rem; color: var(--accent); }
+    .subtitle { font-size: 0.85rem; font-family: sans-serif; opacity: 0.8; }
+    .card {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 16px;
+    }
+    .capa-tag {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-family: monospace;
+      padding: 2px 6px;
+      background: var(--border);
+      border-radius: 4px;
+      margin-bottom: 6px;
+    }
+    .evidence-text { font-style: italic; margin-bottom: 8px; }
+    .meta { font-family: monospace; font-size: 0.75rem; color: #555; }
+    .human-block {
+      margin-top: 12px;
+      padding-top: 8px;
+      border-top: 1px dashed var(--border);
+    }
+    button {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>ANTROLAB</h1>
+    <div class="subtitle">Laboratorio de Antropología de la Innovación — Evidence Hub</div>
+  </header>
+  <main id="app">
+    <div class="card">
+      <span class="capa-tag">CAPA 0 — RAW (HECHO)</span>
+      <div class="evidence-text">"Esperando la inyección directa de observaciones antropológicas locales y captura cruda..."</div>
+      <div class="meta">ID: EV-INIT | Trazabilidad: Standby</div>
+      <div class="human-block">
+        <span class="capa-tag">HUMAN BLOCK</span>
+        <p style="font-family: sans-serif; font-size: 0.8rem; margin: 4px 0 8px 0;">Estado: Requiere validación del antropólogo</p>
+        <button disabled>VALIDAR CASO</button>
+      </div>
+    </div>
+  </main>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        fetch("datos_antrolab.json")
+            .then(r => r.json())
+            .then(data => {
+                const corpus = data.corpus_antropologico;
+                if (corpus && corpus.length > 0) {
+                    const item = corpus[0];
+                    const card = document.querySelector(".capa-0, [class*='capa']");
+                    if (card) {
+                        card.innerHTML = `
+                        <div style="font-size: 0.8em; font-weight: bold; color: #15803d;">CAPA 0 — SEÑAL NEON DB</div>
+                        <blockquote style="font-style: italic; margin: 8px 0;">"${item.contenido || item.fragmento_evidencia}"</blockquote>
+                        <div style="font-size: 0.75em; color: #6b7280;">ID: ${item.senal_id} | Canal: ${item.canal || 'Neon DB'}</div>
+                        <hr style="margin: 8px 0; border: 0; border-top: 1px dashed #ccc;">
+                        <div style="font-size: 0.8em;"><strong>Discurso:</strong> ${item.discurso}</div>
+                        <div style="font-size: 0.8em;"><strong>Práctica:</strong> ${item.practica_observada}</div>
+                        <div style="font-size: 0.8em; color: #991b1b; margin-top: 4px;"><strong>Tensión:</strong> ${item.tipo_tension}</div>`;
+                    }
+                }
+            });
+    });
+    </script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+connectors:
+  'google_news' -> 3626
+  'rss_fijos' -> 9
+cuerpo_by_conn:
+  'google_news' -> 50
+sample rows:

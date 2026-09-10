@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Nivel 1: Mesa de Evidencias</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&amp;family=Newsreader:opsz,wght@6..72,400;500;600&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary-fixed-dim": "#a9cfb9",
+                        "tertiary-fixed": "#d3e4fe",
+                        "on-primary-fixed": "#111c2d",
+                        "parchment": "#FCFAED",
+                        "on-tertiary-container": "#8191a9",
+                        "on-secondary-fixed": "#002113",
+                        "inverse-surface": "#303129",
+                        "error": "#ba1a1a",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-variant": "#e5e3d6",
+                        "on-primary-fixed-variant": "#3c475a",
+                        "on-tertiary-fixed": "#0b1c30",
+                        "surface-container-highest": "#e5e3d6",
+                        "background": "#f0eee1", /* neutral laboratory surface */
+                        "slate-text": "#334155",
+                        "on-error": "#ffffff",
+                        "on-surface-variant": "#45474c",
+                        "secondary-fixed": "#c5ebd4",
+                        "tertiary-container": "#1a2a3e",
+                        "on-secondary": "#ffffff",
+                        "surface-container-high": "#eae9dc",
+                        "primary-fixed": "#d8e3fb",
+                        "on-error-container": "#93000a",
+                        "outline-variant": "#c5c6cd",
+                        "inverse-on-surface": "#f3f1e4",
+                        "error-container": "#ffdad6",
+                        "on-tertiary": "#ffffff",
+                        "primary-container": "#1e293b",
+                        "outline": "#75777d",
+                        "surface-dim": "#dcdace",
+                        "on-primary-container": "#8590a6",
+                        "tertiary-fixed-dim": "#b7c8e1",
+                        "surface-bright": "#fcfaed",
+                        "on-surface": "#1b1c14",
+                        "surface-container": "#f0eee1",
+                        "primary": "#091426",
+                        "terracotta-alert": "#991B1B",
+                        "ink-blue": "#1E293B",
+                        "on-secondary-fixed-variant": "#2c4e3d",
+                        "tertiary": "#041528",
+                        "on-background": "#1b1c14",
+                        "stone-blue": "#475569",
+                        "primary-fixed-dim": "#bcc7de",
+                        "moss-green": "#2D4F3E",
+                        "secondary": "#436653",
+                        "amber-question": "#D97706",
+                        "secondary-container": "#c2e9d2",
+                        "surface-tint": "#545f73",
+                        "on-tertiary-fixed-variant": "#38485d",
+                        "inverse-primary": "#bcc7de",
+                        "on-primary": "#ffffff",
+                        "surface-container-low": "#f6f4e7",
+                        "on-secondary-container": "#476a58",
+                        "surface": "#fcfaed",
+                        "mineral-blue": "#8492a6",
+                        "clinical-mint": "#047857"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "touch-target": "48px",
+                        "margin-desktop": "64px",
+                        "visual-silence": "48px",
+                        "margin-mobile": "24px",
+                        "gutter": "16px",
+                        "evidence-pad": "32px"
+                    },
+                    "fontFamily": {
+                        "display-lg": ["Newsreader"],
+                        "mono-label": ["JetBrains Mono"],
+                        "metadata": ["JetBrains Mono"],
+                        "body-reading": ["Newsreader"],
+                        "body-reading-mobile": ["Newsreader"],
+                        "mono-technical": ["JetBrains Mono"],
+                        "headline-md-mobile": ["Newsreader"],
+                        "headline-md": ["Newsreader"]
+                    },
+                    "fontSize": {
+                        "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                        "mono-label": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                        "metadata": ["11px", {"lineHeight": "14px", "fontWeight": "400"}],
+                        "body-reading": ["20px", {"lineHeight": "32px", "fontWeight": "400"}],
+                        "body-reading-mobile": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                        "mono-technical": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "headline-md-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "500"}],
+                        "headline-md": ["32px", {"lineHeight": "40px", "fontWeight": "500"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            background-color: theme('colors.background');
+            color: theme('colors.on-background');
+            min-height: max(884px, 100dvh);
+        }
+        
+        .evidence-card {
+            background-color: theme('colors.parchment');
+            border: 1px solid theme('colors.mineral-blue');
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        }
+
+        .focus-column {
+            max-width: 65ch;
+            margin: 0 auto;
+        }
+        
+        /* Subtle texture for parchment */
+        .texture-overlay {
+            position: absolute;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.02'/%3E%3C/svg%3E");
+            pointer-events: none;
+            opacity: 0.5;
+            mix-blend-mode: multiply;
+        }
+
+        .status-validated {
+            border-left: 3px solid theme('colors.clinical-mint');
+        }
+        
+        .status-pending {
+            border-left: 3px solid theme('colors.mineral-blue');
+        }
+    </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col pb-24 md:pb-0 md:pl-80 bg-background">
+<!-- TopAppBar -->
+<header class="fixed top-0 left-0 w-full z-40 bg-background/90 backdrop-blur-sm shadow-sm transition-colors duration-300 ease-in-out">
+<div class="flex justify-between items-center w-full px-margin-mobile md:px-margin-desktop h-touch-target focus-column">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-primary font-light">biotech</span>
+<h1 class="font-mono-technical text-mono-technical text-primary tracking-tight">
+                INQ-7429_FIELD_EVIDENCE
+            </h1>
+</div>
+<span class="material-symbols-outlined text-clinical-mint">cloud_sync</span>
+</div>
+</header>
+<!-- Navigation Drawer (Desktop) -->
+<nav class="hidden md:flex fixed top-0 left-0 h-full w-80 border-r border-mineral-blue/20 bg-background flex-col p-margin-mobile gap-4 z-50 pt-24 Slide-in transition-all duration-300">
+<div class="mb-8">
+<h2 class="font-mono-technical text-primary tracking-widest text-sm uppercase">Methodology</h2>
+</div>
+<ul class="flex flex-col gap-2">
+<li>
+<a class="flex items-center gap-3 p-3 rounded-sm hover:bg-surface-variant transition-colors duration-300 ease-in-out text-stone-blue font-mono-label" href="#">
+<span class="material-symbols-outlined">menu_book</span>
+                Glossary
+            </a>
+</li>
+<li>
+<a class="flex items-center gap-3 p-3 rounded-sm hover:bg-surface-variant transition-colors duration-300 ease-in-out text-stone-blue font-mono-label" href="#">
+<span class="material-symbols-outlined">group_work</span>
+                Persona Nodes
+            </a>
+</li>
+<li>
+<a class="flex items-center gap-3 p-3 rounded-sm hover:bg-surface-variant transition-colors duration-300 ease-in-out text-stone-blue font-mono-label" href="#">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+                Cultural Debt
+            </a>
+</li>
+</ul>
+</nav>
+<!-- Main Content Canvas -->
+<main class="flex-grow pt-24 px-margin-mobile md:px-margin-desktop w-full focus-column relative">
+<div class="mb-visual-silence text-center">
+<h2 class="font-display-lg text-display-lg text-primary mb-4">Nivel 1: Mesa de Evidencias</h2>
+<p class="font-body-reading-mobile text-body-reading-mobile md:font-body-reading md:text-body-reading text-slate-text max-w-[50ch] mx-auto">
+            A curated collection of signals extracted from field observations. Review, annotate, and synthesize to establish rigorous foundational hypotheses.
+        </p>
+</div>
+<div class="space-y-8 relative">
+<!-- Evidence Card 1 -->
+<article class="evidence-card rounded-sm relative status-validated overflow-hidden">
+<div class="texture-overlay"></div>
+<div class="p-evidence-pad flex flex-col h-full gap-6 relative z-10">
+<header class="flex justify-between items-start border-b border-mineral-blue/20 pb-4">
+<div class="flex items-center gap-3">
+<span class="font-mono-label text-mineral-blue bg-surface-container px-2 py-1 rounded-sm">ID: TGM-882</span>
+<span class="flex items-center gap-1 text-clinical-mint font-mono-label">
+<span class="material-symbols-outlined text-[14px]">check_circle</span>
+                            Validated
+                        </span>
+</div>
+<span class="material-symbols-outlined text-mineral-blue font-light">description</span>
+</header>
+<div class="flex-grow space-y-4">
+<h3 class="font-headline-md-mobile text-headline-md-mobile text-primary leading-tight">
+                        Uso de terminología religiosa en foros locales
+                    </h3>
+<p class="font-body-reading-mobile text-body-reading-mobile text-slate-text">
+                        Analysis indicates a 40% increase in theological framing when discussing community resource allocation during Q3.
+                    </p>
+</div>
+<footer class="flex justify-start items-end pt-4 gap-4">
+<button class="px-4 py-2 flex items-center justify-center font-mono-label text-mono-label text-secondary hover:text-moss-green hover:bg-secondary-container/20 rounded-sm transition-colors border border-transparent hover:border-mineral-blue/30 group">
+<span class="material-symbols-outlined mr-2 text-[18px] group-hover:scale-110 transition-transform">edit_document</span>
+                        Annotate
+                    </button>
+<button class="px-4 py-2 flex items-center justify-center font-mono-label text-mono-label text-stone-blue hover:text-primary hover:bg-surface-variant/50 rounded-sm transition-colors border border-transparent hover:border-mineral-blue/30 group">
+<span class="material-symbols-outlined mr-2 text-[18px] group-hover:scale-110 transition-transform">schema</span>
+                        Relate
+                    </button>
+</footer>
+</div>
+</article>
+<!-- Evidence Card 2 -->
+<article class="evidence-card rounded-sm relative status-pending overflow-hidden">
+<div class="texture-overlay"></div>
+<div class="p-evidence-pad flex flex-col h-full gap-6 relative z-10">
+<header class="flex justify-between items-start border-b border-mineral-blue/20 pb-4">
+<div class="flex items-center gap-3">
+<span class="font-mono-label text-mineral-blue bg-surface-container px-2 py-1 rounded-sm">ID: ECO-104</span>
+<span class="flex items-center gap-1 text-amber-question font-mono-label">
+<span class="material-symbols-outlined text-[14px]">pending</span>
+                            Pending Review
+                        </span>
+</div>
+<span class="material-symbols-outlined text-mineral-blue font-light">account_balance</span>
+</header>
+<div class="flex-grow space-y-4">
+<h3 class="font-headline-md-mobile text-headline-md-mobile text-primary leading-tight">
+                        Rituales de purificación económica
+                    </h3>
+<p class="font-body-reading-mobile text-body-reading-mobile text-slate-text">
+                        Observational data details specific protocols enacted by merchants prior to finalizing high-risk debt transfers.
+                    </p>
+</div>
+<footer class="flex justify-start items-end pt-4 gap-4">
+<button class="px-4 py-2 flex items-center justify-center font-mono-label text-mono-label text-secondary hover:text-moss-green hover:bg-secondary-container/20 rounded-sm transition-colors border border-transparent hover:border-mineral-blue/30 group">
+<span class="material-symbols-outlined mr-2 text-[18px] group-hover:scale-110 transition-transform">edit_document</span>
+                        Annotate
+                    </button>
+<button class="px-4 py-2 flex items-center justify-center font-mono-label text-mono-label text-stone-blue hover:text-primary hover:bg-surface-variant/50 rounded-sm transition-colors border border-transparent hover:border-mineral-blue/30 group">
+<span class="material-symbols-outlined mr-2 text-[18px] group-hover:scale-110 transition-transform">code_blocks</span>
+                        Code
+                    </button>
+</footer>
+</div>
+</article>
+</div>
+</main>
+<!-- BottomNavBar (Mobile - Android First) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-gutter py-3 bg-surface border-t border-mineral-blue/20 transition-colors duration-300 ease-in-out pb-safe">
+<a class="flex flex-col items-center justify-center text-moss-green group" href="#">
+<div class="bg-secondary-container/50 rounded-full px-5 py-1 mb-1">
+<span class="material-symbols-outlined font-light text-[24px]">inventory_2</span>
+</div>
+<span class="font-mono-label text-[10px]">Evidence</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary group" href="#">
+<div class="px-5 py-1 mb-1">
+<span class="material-symbols-outlined font-light text-[24px]">schema</span>
+</div>
+<span class="font-mono-label text-[10px]">Nodes</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary group" href="#">
+<div class="px-5 py-1 mb-1">
+<span class="material-symbols-outlined font-light text-[24px]">plagiarism</span>
+</div>
+<span class="font-mono-label text-[10px]">Reports</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary group" href="#">
+<div class="px-5 py-1 mb-1">
+<span class="material-symbols-outlined font-light text-[24px]">menu_book</span>
+</div>
+<span class="font-mono-label text-[10px]">Glossary</span>
+</a>
+</nav>
+</body></html>
