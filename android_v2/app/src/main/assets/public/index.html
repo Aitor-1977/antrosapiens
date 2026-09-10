@@ -431,6 +431,14 @@
             let items = (dataExp.expedientes || []).filter(p => p.categoria === CATEGORIA_ICP);
             if (verticalActiva) items = items.filter(p => p.vertical === verticalActiva);
             items = items.filter(p => escalaCoincide(p.escala, escalaActiva));
+            // Doctrina de ICP (fija, no depende del filtro de escala que el operador
+            // pueda tocar): "Startup mediana, 10-49 empleados" excluye SIEMPRE escala
+            // 201-500 y 501+, aunque categoria diga "Startup". Caso real que motivó
+            // esto: Jüsto y Frubana están en prospectos con escala "501+" (cientos de
+            // empleados, +USD 250M levantados cada una) y aparecían como candidatos
+            // ICP 100 solo por tener categoria='Startup'. No descarta "indeterminada"
+            // (sin dato estructural, per escalaCoincide arriba).
+            items = items.filter(p => !["201-500", "501+"].includes(normalizarEscala(p.escala)));
             if (q) items = items.filter(p => (p.nombre || "").toLowerCase().includes(q));
             items = items.map(p => ({
                 ...p,
