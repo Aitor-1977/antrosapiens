@@ -109,3 +109,26 @@ profundidad** (scoring, Deuda Cultural, ICP, decisor), de forma **determinista**
   colapsado como respaldo read-only. El contrato `GET /corpus` NO cambia: el
   texto crudo de GDELT/Google News sigue fluyendo a `evidencias` y es servible
   para el consumidor técnico. Implementación: app (interfaz) → `IndagacionScreen`.
+
+- **Diagnóstico 2026-09-10 (solo lectura, sin commits) — verificación de rutas
+  pedidas por el operador:**
+  1. `android_v2` (único directorio Android de este repo; `android_v3` **no
+     existe** aquí) carga los expedientes por red, no por JSON empaquetado:
+     `android_v2/app/src/main/assets/public/index.html:405,450-451`
+     (`fetch(\`${API}/expedientes?...\`)`, `fetch(\`${API}/verificados?...\`)`).
+     El WebView (`MainActivity.kt:37-38,82`) solo sirve el HTML/JS local vía
+     `WebViewAssetLoader`; los datos siempre vienen de la API remota
+     (`antrosapiens-api-pro.vercel.app`).
+  2. `sandbox/motor_epistemico.py` **no existe** en este repo (verificado con
+     `find`).
+  3. `CuradorAntropologico` **no existe** en este repo (`grep -r` sobre todo el
+     árbol: 0 resultados). `clasificacion_epistemologica.py` y
+     `promocion_candidatos.py` no pueden llamarlo.
+  4. N/A (ver punto 3).
+  5. Suite completa: **1010 passed** (no existe `./venv/bin/python` en este
+     entorno; se corrió con el intérprete real del contenedor,
+     `/usr/local/bin/python3 -m pytest -q`).
+
+  Los puntos 2-4 no corresponden a `Aitor-1977/antrosapiens`: probablemente
+  pertenecen a otro repo (Motor B/RadarHD u otra ruta local del operador), no
+  a este. Sin cambios de código ni commits en este diagnóstico.
