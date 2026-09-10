@@ -98,6 +98,22 @@ DIRECTORIO_SEMILLA: tuple[tuple[str, str, str, str, str], ...] = (
     ("Banco Santander México", "Corporativo", "Banca", "https://www.santander.com.mx", "501+"),
     ("Arca Continental", "Corporativo", "Bebidas", "https://www.arcacontal.com", "501+"),
     ("Grupo Salinas", "Corporativo", "Conglomerado", "https://www.gruposalinas.com", "501+"),
+    # Agregadas 2026-09-10: aparecían como categoria='Startup' en /expedientes
+    # porque `detectar_empresa()` las detectó correctamente como sujeto de
+    # titulares reales (ej. "Banorte y Rappi reciben multa...", "HSBC México
+    # otorga financiamiento a Jüsto", "Oracle despide a 21 mil empleados") pero
+    # sin fila en `prospectos` no había categoria estructural que corrigiera la
+    # de la evidencia (a diferencia de FEMSA/BBVA México arriba, que ya estaban
+    # en esta misma lista). Misma regla que las reclasificadas de abajo: bancos
+    # y corporativos globales consolidados, nunca startups.
+    ("Banorte", "Corporativo", "Banca", "https://www.banorte.com", "501+"),
+    # "HSBC" (no "HSBC México"): detectar_empresa() extrae ese nombre literal
+    # de los titulares reales ("HSBC México otorga..." -> "HSBC") — la clave de
+    # búsqueda en _construir_expedientes es el nombre detectado en minúsculas,
+    # así que la fila de prospectos tiene que coincidir exactamente con eso.
+    ("HSBC", "Corporativo", "Banca", "https://www.hsbc.com.mx", "501+"),
+    ("Oracle", "Corporativo", "Servicios de tecnología", "https://www.oracle.com", "501+"),
+    ("Maersk", "Corporativo", "Logística / Transporte marítimo", "https://www.maersk.com", "501+"),
     # Reclasificadas desde Startup por decisión del operador (Mario, 2026-08-22):
     # el ICP de HD excluye unicornios y grandes corporativos consolidados, no
     # por tamaño de plantilla sino por estatus de mercado (valuación pública
