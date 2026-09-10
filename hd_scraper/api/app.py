@@ -2353,6 +2353,14 @@ def _construir_expedientes(categorias: list[str] | None, limite: int = 30) -> di
                 "url": row["url_fuente"],
                 "tipo_evento": row["tipo_evento"],
                 "confianza": row["confianza"],
+                # Opcionales del contrato (CLAUDE.md: "Contrato de datos"): quién
+                # habló y con qué cargo, cuando la fuente lo declara. Faltaban
+                # aquí aunque ya existen en `evidencias` — sin ellos la pantalla
+                # de prospección no puede responder "¿quién habló?" (auditoría
+                # 2026-09-10). None cuando no está disponible; el frontend lo
+                # muestra como "no disponible", nunca lo infiere.
+                "persona_citada": row["persona_citada"],
+                "cargo": row["cargo"],
             })
 
         patrones = _detectar_patrones(all_kws)
