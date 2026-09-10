@@ -58,12 +58,29 @@ class Database:
         self.conn.execute("PRAGMA foreign_keys = ON;")
 
     def _connect_postgres(self, dsn: str) -> None:
+        import time
+
         import psycopg
         from psycopg.rows import dict_row
 
         # psycopg acepta el prefijo postgres:// directamente. Neon/Vercel ya
         # incluyen sslmode=require en la cadena.
-        self.conn = psycopg.connect(dsn, row_factory=dict_row)
+        #
+        # Neon (plan serverless) suspende el cómputo tras inactividad; la
+        # PRIMERA conexión tras la suspensión reactiva la base y puede tardar
+        # bastante más que una conexión normal. Sin connect_timeout, psycopg
+        # esperaba indefinidamente y la función serverless de Vercel se
+        # colgaba sin devolver ni error (evidencia real, 2026-09-10: /health y
+        # /expedientes sin respuesta 55s+ tras un rato sin tráfico, <1s en la
+        # siguiente petición inmediata). Un timeout corto + un reintento cubre
+        # el caso común (la base ya despertó a mitad del primer intento) sin
+        # dejar la función colgada indefinidamente. Cabe dentro de los 60s de
+        # maxDuration configurados en vercel.json.
+        try:
+            self.conn = psycopg.connect(dsn, row_factory=dict_row, connect_timeout=10)
+        except psycopg.OperationalError:
+            time.sleep(1)
+            self.conn = psycopg.connect(dsn, row_factory=dict_row, connect_timeout=25)
 
     # -- Traducción de marcadores --------------------------------------
     def _q(self, sql: str) -> str:
