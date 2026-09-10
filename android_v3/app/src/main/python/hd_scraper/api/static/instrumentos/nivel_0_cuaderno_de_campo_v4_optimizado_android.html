@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Nivel 0: Cuaderno de Campo - AntroSapiens V4</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600&amp;family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-secondary-fixed": "#131f00",
+                        "on-tertiary-fixed": "#410006",
+                        "on-secondary-fixed-variant": "#364e00",
+                        "on-primary-fixed-variant": "#2c4c4c",
+                        "on-error-container": "#93000a",
+                        "on-secondary": "#ffffff",
+                        "outline": "#717878",
+                        "primary-fixed": "#c6e9e9",
+                        "on-error": "#ffffff",
+                        "inverse-surface": "#303129",
+                        "error-container": "#ffdad6",
+                        "on-surface-variant": "#414848",
+                        "on-primary-container": "#9ec0bf",
+                        "error": "#ba1a1a",
+                        "tertiary-container": "#87272b",
+                        "primary-container": "#2f4f4f",
+                        "surface-container-highest": "#e4e3d7",
+                        "inverse-primary": "#abcdcd",
+                        "tertiary-fixed": "#ffdad8",
+                        "on-primary": "#ffffff",
+                        "on-background": "#1b1c15",
+                        "tertiary-fixed-dim": "#ffb3b0",
+                        "surface-tint": "#446464",
+                        "secondary": "#496800",
+                        "on-secondary-container": "#4e6e00",
+                        "on-tertiary-fixed-variant": "#832428",
+                        "secondary-container": "#c8f17a",
+                        "surface-dim": "#dbdbcf",
+                        "on-primary-fixed": "#002020",
+                        "surface-container-high": "#e9e9dd",
+                        "on-tertiary-container": "#ff9f9d",
+                        "surface": "#fbfaee",
+                        "on-surface": "#1b1c15",
+                        "secondary-fixed": "#c8f17a",
+                        "surface-container-low": "#f5f4e8",
+                        "surface-container": "#efeee3",
+                        "surface-variant": "#e4e3d7",
+                        "outline-variant": "#c1c8c7",
+                        "background": "#fbfaee",
+                        "secondary-fixed-dim": "#add461",
+                        "primary": "#173838",
+                        "primary-fixed-dim": "#abcdcd",
+                        "on-tertiary": "#ffffff",
+                        "inverse-on-surface": "#f2f1e5",
+                        "surface-bright": "#fbfaee",
+                        "tertiary": "#670f17",
+                        "surface-container-lowest": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "gutter": "32px",
+                        "stack-sm": "12px",
+                        "unit": "8px",
+                        "stack-md": "24px",
+                        "stack-lg": "48px",
+                        "margin-page": "64px",
+                        "margin-mobile": "20px"
+                    },
+                    "fontFamily": {
+                        "display-lg": ["Newsreader"],
+                        "headline-lg-mobile": ["Newsreader"],
+                        "body-md": ["Newsreader"],
+                        "body-lg": ["Newsreader"],
+                        "label-sm": ["Hanken Grotesk"],
+                        "headline-lg": ["Newsreader"],
+                        "label-lg": ["Hanken Grotesk"],
+                        "headline-md": ["Newsreader"]
+                    },
+                    "fontSize": {
+                        "display-lg": ["48px", { "lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "400" }],
+                        "headline-lg-mobile": ["28px", { "lineHeight": "1.2", "fontWeight": "500" }],
+                        "body-md": ["16px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "body-lg": ["18px", { "lineHeight": "1.7", "fontWeight": "400" }],
+                        "label-sm": ["12px", { "lineHeight": "1.2", "letterSpacing": "0.03em", "fontWeight": "500" }],
+                        "headline-lg": ["32px", { "lineHeight": "1.2", "fontWeight": "500" }],
+                        "label-lg": ["14px", { "lineHeight": "1.2", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "headline-md": ["24px", { "lineHeight": "1.3", "fontWeight": "500" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { background-color: theme('colors.background'); color: theme('colors.on-background'); }
+        .journal-grid { max-width: 720px; margin: 0 auto; }
+        .paper-shadow { box-shadow: 0 4px 12px -2px rgba(47, 79, 79, 0.05); }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col pb-24 bg-[#fcfaed]">
+<!-- TopAppBar -->
+<header class="bg-background text-on-background font-headline-md text-headline-md w-full top-0 sticky border-b border-border-subtle z-40 transition-none flex items-center justify-between px-margin-mobile md:px-margin-page h-16">
+<div class="flex items-center gap-4">
+<button aria-label="Menu" class="text-on-surface-variant hover:bg-surface-variant rounded-full transition-colors flex items-center justify-center w-12 h-12">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">menu</span>
+</button>
+<h1 class="font-headline-md text-headline-md font-bold text-primary truncate">Investigación: Culturas Emergentes</h1>
+</div>
+<button aria-label="Settings" class="text-on-surface-variant hover:bg-surface-variant rounded-full transition-colors flex items-center justify-center w-12 h-12">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">settings</span>
+</button>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-grow pt-8 px-margin-mobile md:px-0">
+<article class="journal-grid w-full">
+<!-- Context Header -->
+<div class="mb-stack-lg">
+<div class="inline-flex items-center gap-2 px-3 py-1 bg-surface-container rounded-sm border border-outline-variant mb-4 shadow-sm">
+<span class="material-symbols-outlined text-[16px] text-tertiary" style="font-variation-settings: 'FILL' 1;">explore</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-medium">Foco Actual</span>
+</div>
+<!-- The Big Question -->
+<h2 class="font-display-lg text-display-lg md:text-[56px] text-tertiary leading-tight mb-6 text-[32px]">
+                    ¿Qué ritual cultural sostiene el uso de criptoactivos en economías emergentes?
+                </h2>
+<!-- Purpose Statement -->
+<p class="font-body-lg text-body-lg text-on-surface-variant italic border-l-2 border-outline-variant pl-4">
+                    Comprender este sustrato cultural es vital para mapear la resiliencia sistémica frente a la inestabilidad institucional.
+                </p>
+</div>
+<!-- Bento Layout for Evidence and Notes -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-gutter mb-stack-lg">
+<!-- Latest Evidence Card -->
+<div class="md:col-span-7 bg-surface rounded-DEFAULT border border-outline-variant paper-shadow p-6 relative overflow-hidden group">
+<div class="absolute top-0 left-0 w-1 h-full bg-secondary"></div>
+<header class="flex justify-between items-start mb-4">
+<div>
+<span class="inline-block font-label-sm text-label-sm text-secondary bg-secondary-container px-2 py-0.5 rounded-sm mb-2 font-medium">Evidencia Reciente</span>
+<h3 class="font-headline-md text-headline-md text-on-surface">Uso de terminología religiosa en foros locales</h3>
+</div>
+<button class="text-outline hover:text-on-surface transition-colors w-12 h-12">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">bookmark_add</span>
+</button>
+</header>
+<p class="font-body-md text-body-md text-on-surface-variant mb-6">
+                        Análisis discursivo preliminar revela una adopción de léxico devocional ('hodl', 'salvación', 'fe en el protocolo') para racionalizar la volatilidad del activo, estructurando comunidades de práctica cerradas.
+                    </p>
+<footer class="flex items-center gap-3 pt-4 border-t border-surface-variant">
+<span class="material-symbols-outlined text-[18px] text-outline" style="font-variation-settings: 'FILL' 0;">source</span>
+<span class="font-label-sm text-label-sm text-outline uppercase tracking-widest font-medium">Fuente: TGM-882 • Hace 2 horas</span>
+</footer>
+</div>
+<!-- Researcher Note -->
+<div class="md:col-span-5 bg-[#fcfaf5] rounded-DEFAULT border border-surface-variant p-6 relative">
+<div class="absolute top-4 right-4 text-surface-variant opacity-50">
+<span class="material-symbols-outlined text-[48px]" style="font-variation-settings: 'FILL' 0;">edit_document</span>
+</div>
+<h4 class="font-label-lg text-label-lg text-on-surface uppercase tracking-widest mb-4 flex items-center gap-2">
+<span class="w-2 h-2 bg-primary rounded-full"></span>
+                        Nota del Investigador
+                    </h4>
+<p class="font-body-md text-body-md text-on-surface italic leading-relaxed">
+                        "Observamos patrones similares a los ritos de iniciación comunitarios. La 'barrera de entrada' tecnológica actúa como un filtro ordálico; superar la complejidad técnica (crear una wallet, asegurar semillas) otorga estatus y pertenencia al grupo."
+                    </p>
+<div class="mt-4 text-right">
+<span class="font-label-sm text-label-sm text-outline-variant font-medium">14 Nov 2024</span>
+</div>
+</div>
+</div>
+<!-- Hypotheses and Open Questions -->
+<div class="border-t border-outline-variant pt-stack-lg">
+<h3 class="font-headline-lg text-headline-lg text-on-surface mb-stack-md">Vectores de Indagación</h3>
+<ul class="space-y-6">
+<!-- Item 1 -->
+<li class="flex items-start gap-4 p-4 hover:bg-surface-container-low rounded-DEFAULT transition-colors bg-surface-container-lowest border border-outline-variant shadow-sm mb-4">
+<div class="mt-1 flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-surface-container border border-outline-variant">
+<span class="material-symbols-outlined text-primary text-[18px]" style="font-variation-settings: 'FILL' 0;">psychology</span>
+</div>
+<div>
+<span class="font-label-sm text-label-sm text-outline uppercase tracking-wider block mb-1 font-medium">Hipótesis Activa</span>
+<p class="font-body-lg text-body-lg text-on-surface">La tenencia de activos funciona como marcador de identidad, trascendiendo el valor de intercambio económico para consolidar lazos sociales.</p>
+</div>
+</li>
+<!-- Item 2 -->
+<li class="flex items-start gap-4 p-4 hover:bg-surface-container-low rounded-DEFAULT transition-colors bg-surface-container-lowest border border-outline-variant shadow-sm mb-4">
+<div class="mt-1 flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-surface-container border border-outline-variant">
+<span class="material-symbols-outlined text-tertiary text-[18px]" style="font-variation-settings: 'FILL' 0;">help</span>
+</div>
+<div>
+<span class="font-label-sm text-label-sm text-outline uppercase tracking-wider block mb-1 font-medium">Pregunta Abierta</span>
+<p class="font-body-lg text-body-lg text-on-surface">¿Quiénes son los actores invisibles en la cadena de intercambio que facilitan la conversión entre la economía formal y este ecosistema ritualizado?</p>
+</div>
+</li>
+</ul>
+</div>
+</article>
+</main>
+<!-- BottomNavBar -->
+<nav class="bg-surface-container-low fixed bottom-0 w-full z-50 border-t border-border-subtle flex justify-around items-center pb-safe md:hidden">
+<!-- Active Tab: Journal -->
+<button class="flex flex-col items-center justify-center text-primary border-t-2 border-primary px-4 flex-1 transition-none h-12">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 1;">book_2</span>
+<span class="font-label-sm text-label-sm font-medium">Journal</span>
+</button>
+<!-- Inactive Tabs -->
+<button class="flex flex-col items-center justify-center text-on-surface-variant px-4 flex-1 hover:bg-surface-container-high transition-none border-t-2 border-transparent h-12">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 0;">archive</span>
+<span class="font-label-sm text-label-sm font-medium">Evidence</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant px-4 flex-1 hover:bg-surface-container-high transition-none border-t-2 border-transparent h-12">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 0;">hub</span>
+<span class="font-label-sm text-label-sm font-medium">Relations</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant px-4 flex-1 hover:bg-surface-container-high transition-none border-t-2 border-transparent h-12">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 0;">analytics</span>
+<span class="font-label-sm text-label-sm font-medium">Synthesis</span>
+</button>
+</nav>
+</body></html>

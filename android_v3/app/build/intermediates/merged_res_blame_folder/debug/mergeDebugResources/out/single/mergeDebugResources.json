@@ -1,0 +1,26 @@
+[
+    {
+        "merged": "com.hamacadigital.antrosapiens.v2.app-debug-24:/mipmap-xxhdpi_ic_launcher.png.flat",
+        "source": "com.hamacadigital.antrosapiens.v2.app-main-26:/mipmap-xxhdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.hamacadigital.antrosapiens.v2.app-debug-24:/mipmap-hdpi_ic_launcher.png.flat",
+        "source": "com.hamacadigital.antrosapiens.v2.app-main-26:/mipmap-hdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.hamacadigital.antrosapiens.v2.app-debug-24:/mipmap-mdpi_ic_launcher.png.flat",
+        "source": "com.hamacadigital.antrosapiens.v2.app-main-26:/mipmap-mdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.hamacadigital.antrosapiens.v2.app-debug-24:/mipmap-xhdpi_ic_launcher.png.flat",
+        "source": "com.hamacadigital.antrosapiens.v2.app-main-26:/mipmap-xhdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.hamacadigital.antrosapiens.v2.app-debug-24:/mipmap-xxxhdpi_ic_launcher.png.flat",
+        "source": "com.hamacadigital.antrosapiens.v2.app-main-26:/mipmap-xxxhdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.hamacadigital.antrosapiens.v2.app-debug-24:/drawable-nodpi_antrosapiens_logo.png.flat",
+        "source": "com.hamacadigital.antrosapiens.v2.app-main-26:/drawable-nodpi/antrosapiens_logo.png"
+    }
+]

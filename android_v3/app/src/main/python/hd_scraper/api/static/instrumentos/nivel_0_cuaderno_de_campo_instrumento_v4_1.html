@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Cuaderno de Campo - Nivel 0</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&amp;family=Newsreader:opsz,wght@6..72,400;500;600&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary": "#091426",
+                        "tertiary-container": "#1a2a3e",
+                        "surface-container-high": "#eae9dc",
+                        "ink-blue": "#1E293B",
+                        "on-surface-variant": "#45474c",
+                        "secondary-fixed-dim": "#a9cfb9",
+                        "on-primary-fixed": "#111c2d",
+                        "tertiary": "#041528",
+                        "background": "#fcfaed",
+                        "on-secondary-container": "#476a58",
+                        "on-surface": "#1b1c14",
+                        "secondary": "#436653",
+                        "on-secondary-fixed": "#002113",
+                        "slate-text": "#334155",
+                        "stone-blue": "#475569",
+                        "surface-container": "#f0eee1",
+                        "primary-container": "#1e293b",
+                        "surface-container-highest": "#e5e3d6",
+                        "surface-container-lowest": "#ffffff",
+                        "parchment": "#FCFAED",
+                        "surface-bright": "#fcfaed",
+                        "on-tertiary": "#ffffff",
+                        "outline": "#75777d",
+                        "outline-variant": "#c5c6cd",
+                        "on-secondary-fixed-variant": "#2c4e3d",
+                        "surface-container-low": "#f6f4e7",
+                        "on-background": "#1b1c14",
+                        "error-container": "#ffdad6",
+                        "moss-green": "#2D4F3E",
+                        "surface": "#fcfaed",
+                        "inverse-on-surface": "#f3f1e4",
+                        "on-primary": "#ffffff",
+                        "on-secondary": "#ffffff",
+                        "tertiary-fixed-dim": "#b7c8e1",
+                        "inverse-surface": "#303129",
+                        "amber-question": "#D97706",
+                        "on-primary-container": "#8590a6",
+                        "primary-fixed-dim": "#bcc7de",
+                        "on-primary-fixed-variant": "#3c475a",
+                        "on-error-container": "#93000a",
+                        "on-tertiary-fixed": "#0b1c30",
+                        "on-tertiary-fixed-variant": "#38485d",
+                        "terracotta-alert": "#991B1B",
+                        "surface-dim": "#dcdace",
+                        "inverse-primary": "#bcc7de",
+                        "tertiary-fixed": "#d3e4fe",
+                        "surface-tint": "#545f73",
+                        "on-tertiary-container": "#8191a9",
+                        "error": "#ba1a1a",
+                        "on-error": "#ffffff",
+                        "secondary-container": "#c2e9d2",
+                        "surface-variant": "#e5e3d6",
+                        "secondary-fixed": "#c5ebd4",
+                        "primary-fixed": "#d8e3fb"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "margin-desktop": "64px",
+                        "gutter": "16px",
+                        "visual-silence": "48px",
+                        "touch-target": "48px",
+                        "margin-mobile": "24px"
+                    },
+                    "fontFamily": {
+                        "metadata": ["JetBrains Mono"],
+                        "mono-technical": ["JetBrains Mono"],
+                        "mono-label": ["JetBrains Mono"],
+                        "body-reading-mobile": ["Newsreader"],
+                        "display-lg": ["Newsreader"],
+                        "headline-md": ["Newsreader"],
+                        "headline-md-mobile": ["Newsreader"],
+                        "body-reading": ["Newsreader"]
+                    },
+                    "fontSize": {
+                        "metadata": ["11px", { "lineHeight": "14px", "fontWeight": "400" }],
+                        "mono-technical": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "mono-label": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500" }],
+                        "body-reading-mobile": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "headline-md": ["32px", { "lineHeight": "40px", "fontWeight": "500" }],
+                        "headline-md-mobile": ["24px", { "lineHeight": "32px", "fontWeight": "500" }],
+                        "body-reading": ["20px", { "lineHeight": "32px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .focus-column { max-width: 65ch; margin: 0 auto; }
+        .ariadne-thread { border-left: 1px dashed var(--tw-colors-stone-blue); opacity: 0.3; }
+        .paper-layer { 
+            background-color: var(--tw-colors-surface-container-lowest);
+            border: 1px solid rgba(71, 85, 105, 0.1); 
+            box-shadow: 0 4px 20px -2px rgba(30, 41, 59, 0.05);
+        }
+        .rotated-card { transform: rotate(1deg); }
+        .input-baseline { border-bottom: 1px solid rgba(71, 85, 105, 0.3); }
+        .input-baseline:focus { outline: none; border-bottom-color: var(--tw-colors-primary); }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-parchment text-primary min-h-screen flex flex-col font-body-reading antialiased">
+<!-- TopAppBar (Web & Mobile) -->
+<header class="flex justify-between items-center w-full px-margin-mobile h-touch-target bg-surface dark:bg-surface shadow-sm opacity-90 docked full-width top-0 z-40 bg-surface-container-low dark:bg-tertiary-container transition-colors duration-300 ease-in-out md:px-margin-desktop">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-primary dark:text-primary-fixed" data-icon="fingerprint">fingerprint</span>
+<div class="flex flex-col">
+<span class="font-headline-md-mobile text-headline-md-mobile text-primary dark:text-primary-fixed">Inquiry-7429 • Field Evidence</span>
+<span class="font-mono-technical text-mono-technical text-ink-blue dark:text-primary-fixed-dim">Nivel 0: Cuaderno de Campo</span>
+</div>
+</div>
+<!-- Desktop Nav Cluster -->
+<nav class="hidden md:flex items-center gap-8">
+<a class="text-on-surface-variant dark:text-on-tertiary-container hover:bg-surface-variant dark:hover:bg-primary-container px-4 py-2 rounded transition-colors duration-300 ease-in-out" href="#">
+<div class="flex flex-col items-center">
+<span class="material-symbols-outlined mb-1" data-icon="inventory_2">inventory_2</span>
+<span class="font-mono-label text-metadata">inventory_2</span>
+</div>
+</a>
+<a class="text-on-surface-variant dark:text-on-tertiary-container hover:bg-surface-variant dark:hover:bg-primary-container px-4 py-2 rounded transition-colors duration-300 ease-in-out" href="#">
+<div class="flex flex-col items-center">
+<span class="material-symbols-outlined mb-1" data-icon="hub">hub</span>
+<span class="font-mono-label text-metadata">hub</span>
+</div>
+</a>
+<a class="text-primary dark:text-primary-fixed font-bold hover:bg-surface-variant dark:hover:bg-primary-container px-4 py-2 rounded transition-colors duration-300 ease-in-out bg-surface-variant" href="#">
+<div class="flex flex-col items-center">
+<span class="material-symbols-outlined mb-1" data-icon="article" data-weight="fill" style="font-variation-settings: 'FILL' 1;">article</span>
+<span class="font-mono-label text-metadata">article</span>
+</div>
+</a>
+<a class="text-on-surface-variant dark:text-on-tertiary-container hover:bg-surface-variant dark:hover:bg-primary-container px-4 py-2 rounded transition-colors duration-300 ease-in-out" href="#">
+<div class="flex flex-col items-center">
+<span class="material-symbols-outlined mb-1" data-icon="menu_book">menu_book</span>
+<span class="font-mono-label text-metadata">menu_book</span>
+</div>
+</a>
+</nav>
+<button class="md:hidden text-primary" id="drawer-toggle">
+<span class="material-symbols-outlined" data-icon="cloud_done">cloud_done</span>
+</button>
+<span class="hidden md:block material-symbols-outlined text-primary dark:text-primary-fixed" data-icon="cloud_done">cloud_done</span>
+</header>
+<!-- NavigationDrawer (Hidden by default, triggered by toggle) -->
+<div class="fixed inset-y-0 left-0 transform -translate-x-full h-full w-80 rounded-r-xl bg-surface-container-low dark:bg-tertiary shadow-md transition-all duration-300 z-50 flex flex-col p-margin-mobile gap-4 md:hidden" id="nav-drawer">
+<div class="flex justify-between items-center mb-6">
+<span class="font-headline-md text-primary">Methodology</span>
+<button class="text-primary p-2" id="drawer-close">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<nav class="flex flex-col gap-2">
+<a class="flex items-center gap-4 p-3 rounded-lg text-moss-green dark:text-secondary-fixed-dim font-bold hover:bg-surface-container-high dark:hover:bg-tertiary-container transition-colors" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">menu_book</span>
+<span class="font-body-reading-mobile text-body-reading-mobile">Glossary</span>
+</a>
+<a class="flex items-center gap-4 p-3 rounded-lg text-stone-blue dark:text-on-tertiary-container hover:bg-surface-container-high dark:hover:bg-tertiary-container transition-colors" href="#">
+<span class="material-symbols-outlined">group_work</span>
+<span class="font-body-reading-mobile text-body-reading-mobile">Persona Nodes</span>
+</a>
+<a class="flex items-center gap-4 p-3 rounded-lg text-stone-blue dark:text-on-tertiary-container hover:bg-surface-container-high dark:hover:bg-tertiary-container transition-colors" href="#">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+<span class="font-body-reading-mobile text-body-reading-mobile">Cultural Debt</span>
+</a>
+</nav>
+</div>
+<!-- Main Content Canvas -->
+<main class="flex-grow w-full px-margin-mobile md:px-margin-desktop py-visual-silence pb-32 md:pb-visual-silence overflow-y-auto">
+<div class="focus-column space-y-12 relative">
+<!-- Contextual Thread Indicator -->
+<div class="absolute -left-8 md:-left-16 top-0 bottom-0 ariadne-thread hidden sm:block"></div>
+<!-- Central Anthropological Question -->
+<section class="space-y-4">
+<div class="flex items-center gap-3 text-stone-blue">
+<span class="material-symbols-outlined text-sm">explore</span>
+<span class="font-mono-label text-metadata uppercase tracking-widest">Pregunta Central</span>
+</div>
+<h1 class="font-display-lg text-display-lg text-primary leading-tight">
+                    ¿Cómo se construye la legitimidad social en entornos de alta volatilidad financiera?
+                </h1>
+</section>
+<!-- Research Focus -->
+<section class="paper-layer p-8 rounded-lg rotated-card relative">
+<div class="absolute top-4 right-4 flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-amber-question animate-pulse"></span>
+<span class="font-mono-technical text-metadata text-stone-blue">Foco Activo</span>
+</div>
+<h2 class="font-headline-md text-headline-md text-primary mb-4">Focus on crypto-rituals in emerging economies.</h2>
+<p class="font-body-reading text-body-reading text-on-surface-variant">
+                    Initial observations suggest a correlation between economic instability and the adoption of decentralized consensus mechanisms not merely as tools, but as new forms of social truth-making.
+                </p>
+<div class="mt-6 flex justify-end">
+<span class="font-mono-technical text-metadata text-outline">SHA-256: 8f4e2...a1c9</span>
+</div>
+</section>
+<!-- Field Notes Entry -->
+<section class="space-y-6 pt-8">
+<div class="flex items-center gap-3 text-stone-blue mb-4">
+<span class="material-symbols-outlined text-sm">edit_note</span>
+<span class="font-mono-label text-metadata uppercase tracking-widest">Anotaciones de Campo</span>
+</div>
+<div class="space-y-4">
+<input class="w-full bg-transparent border-0 input-baseline font-body-reading text-body-reading text-primary placeholder:text-outline-variant py-2" placeholder="Observación preliminar..." type="text"/>
+<input class="w-full bg-transparent border-0 input-baseline font-body-reading text-body-reading text-primary placeholder:text-outline-variant py-2" placeholder="Contexto emergente..." type="text"/>
+</div>
+<div class="flex gap-4 pt-4">
+<button class="h-touch-target px-6 rounded text-moss-green font-mono-technical text-mono-technical hover:bg-secondary-container transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">check_circle</span>
+                        Validate Signal
+                    </button>
+<button class="h-touch-target px-6 rounded text-terracotta-alert font-mono-technical text-mono-technical hover:bg-error-container transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">cancel</span>
+                        Reject Noise
+                    </button>
+</div>
+</section>
+<!-- Saturation Indicator -->
+<section class="pt-12">
+<div class="flex flex-col items-center justify-center p-8 border border-outline-variant/20 rounded-xl bg-surface-container-low">
+<span class="font-mono-label text-metadata text-stone-blue mb-6">Saturation Depth</span>
+<!-- SVG Saturation Graphic -->
+<div class="w-full max-w-xs h-16 relative flex items-center justify-center">
+<svg class="w-full h-full" preserveaspectratio="none" viewbox="0 0 100 20">
+<path class="text-outline-variant" d="M0,10 Q25,20 50,10 T100,10" fill="none" stroke="currentColor" stroke-width="0.5"></path>
+<path class="text-ink-blue" d="M0,10 Q25,5 50,10 T80,10" fill="none" stroke="currentColor" stroke-width="1.5"></path>
+<circle class="fill-ink-blue" cx="80" cy="10" r="2"></circle>
+</svg>
+</div>
+<div class="flex justify-between w-full max-w-xs mt-2 font-mono-technical text-metadata text-stone-blue">
+<span>Initiation</span>
+<span>Saturation</span>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-gutter py-2 bg-surface-bright dark:bg-tertiary border-t border-outline-variant/10 docked full-width bottom-0 rounded-t-xl">
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-tertiary-container w-12 h-12 hover:opacity-80 transition-transform duration-150" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="inventory_2">inventory_2</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-tertiary-container w-12 h-12 hover:opacity-80 transition-transform duration-150" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="hub">hub</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-secondary-container dark:bg-on-secondary-fixed-variant rounded-full w-12 h-12 hover:opacity-80 scale-95 transition-transform duration-150" href="#">
+<span class="material-symbols-outlined text-moss-green dark:text-secondary-fixed-dim" data-icon="article" data-weight="fill" style="font-variation-settings: 'FILL' 1;">article</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-on-tertiary-container w-12 h-12 hover:opacity-80 transition-transform duration-150" href="#">
+<span class="material-symbols-outlined mb-1" data-icon="menu_book">menu_book</span>
+</a>
+</nav>
+<script>
+        // Drawer Toggle Logic
+        const drawer = document.getElementById('nav-drawer');
+        const toggleBtn = document.getElementById('drawer-toggle');
+        const closeBtn = document.getElementById('drawer-close');
+
+        toggleBtn.addEventListener('click', () => {
+            drawer.classList.remove('-translate-x-full');
+        });
+
+        closeBtn.addEventListener('click', () => {
+            drawer.classList.add('-translate-x-full');
+        });
+        
+        // Input baseline dynamic style simulation
+        const inputs = document.querySelectorAll('.input-baseline');
+        inputs.forEach(input => {
+            input.addEventListener('focus', () => {
+                input.parentElement.classList.add('opacity-100');
+            });
+            input.addEventListener('blur', () => {
+                if(input.value === '') {
+                     input.parentElement.classList.remove('opacity-100');
+                }
+            });
+        });
+    </script>
+</body></html>

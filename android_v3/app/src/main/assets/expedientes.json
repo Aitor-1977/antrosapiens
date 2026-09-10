@@ -1,0 +1,21 @@
+[
+  {
+    "organizacion": "Organización de Prueba AntroLab",
+    "estado_comercial": "PRIORIZADO",
+    "score": 95,
+    "total_evidencias": 3,
+    "razon_score": "Alta tensión y convergencia detectada en campo.",
+    "evidencias": [
+      {
+        "situacion": "Conflicto operativo en mandos medios",
+        "tension": "Quiebre cultural",
+        "fecha": "2026-08-25"
+      }
+    ],
+    "acercamiento": {
+      "por_que_contactar": "Existe una tensión crítica en la operación actual.",
+      "pregunta_entrada": "¿Cómo están abordando el desgaste operativo en la línea de mandos medios?",
+      "proximo_paso": "AGENDAR LLAMADA COMERCIAL - SPRINT $210K"
+    }
+  }
+]

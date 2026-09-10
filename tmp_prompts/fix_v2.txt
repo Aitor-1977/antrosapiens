@@ -1,0 +1,14 @@
+Trabaja unicamente sobre el proyecto en ~/antrosapiens/android_v2
+
+No toques nada en ~/antrosapiens/android_v3, ese proyecto queda abandonado, ignoralo por completo.
+
+Necesito tres cosas en android_v2:
+
+1. En el archivo Kotlin donde se configura el WebView (busca MainActivity.kt dentro de android_v2/app/src/main/java/), agrega esta linea si no existe ya:
+webView.settings.cacheMode = WebSettings.LOAD_NO_CACHE
+
+2. En la pantalla EXPLORAR (dentro de android_v2/app/src/main/assets/public/index.html), agrega un texto pequeno y visible, en una esquina, con un timestamp o numero de version que cambie cada vez que se compile.
+
+3. Verifica si el filtro de region (regionDe) ya esta corregido en este proyecto. Si no esta corregido, arreglalo: cada organizacion debe tener su region calculada antes de que el filtro la use.
+
+Al terminar, dame: confirmacion de que no tocaste android_v3, el texto exacto que debe aparecer en pantalla para confirmar la version nueva, y los comandos completos para compilar (cd android_v2 && bash gradlew clean assembleDebug).

@@ -1,0 +1,79 @@
+{
+  "corpus_antropologico": [
+    {
+      "senal_id": "ff41fe7c-c6e1-42b1-ba67-ca94d6f0c981",
+      "contenido": "El equipo operativo mantiene hojas de cálculo paralelas en Excel a pesar de haber desplegado la nueva plataforma institucional.",
+      "fragmento_evidencia": "El equipo operativo mantiene hojas de cálculo paralelas en Excel a pesar de haber desplegado la nueva plataforma institucional.",
+      "tipo_enunciador": "Actor Operativo",
+      "posicion_enunciador": "Enunciador Situado",
+      "canal": "Web / Scraping",
+      "fecha_observacion": "2026-08-26T07:59:36.329313+00:00",
+      "discurso": "Adopción digital completa del nuevo software operativo por parte del personal.",
+      "practica_observada": "Uso de Excel local como red de seguridad para no perder agilidad en la operación diaria.",
+      "tipo_tension": "DEUDA_CULTURAL",
+      "tension_descripcion": "Deuda cultural: la herramienta formal omite el ritmo de trabajo empírico del actor.",
+      "nivel_confianza": 0.9,
+      "organizacion": "Hamaca Digital"
+    },
+    {
+      "senal_id": "7755fe04-e566-46de-a419-6c26ddeddab6",
+      "contenido": "Vacante solicita 'Project Manager con experiencia en llenar tableros Jira y coordinar mensajes urgentes por WhatsApp'.",
+      "fragmento_evidencia": "Vacante solicita 'Project Manager con experiencia en llenar tableros Jira y coordinar mensajes urgentes por WhatsApp'.",
+      "tipo_enunciador": "Actor Operativo",
+      "posicion_enunciador": "Enunciador Situado",
+      "canal": "Web / Scraping",
+      "fecha_observacion": "2026-08-26T08:01:39.728617+00:00",
+      "discurso": "Procesos ágiles formalizados e institucionalizados en la gestión de proyectos.",
+      "practica_observada": "Uso de WhatsApp como canal primario de gestión informal por sobre la herramienta formal.",
+      "tipo_tension": "DEUDA_CULTURAL",
+      "tension_descripcion": "Saturación de comunicación asíncrona y ruptura de la trazabilidad en Jira.",
+      "nivel_confianza": 0.9,
+      "organizacion": "Hamaca Digital"
+    },
+    {
+      "senal_id": "dc27ef8d-29d5-4e8a-ad38-8acde051373f",
+      "contenido": "Líderes de equipo duplican reportes semanales en diapositivas porque la directiva no revisa los dashboards automáticos.",
+      "fragmento_evidencia": "Líderes de equipo duplican reportes semanales en diapositivas porque la directiva no revisa los dashboards automáticos.",
+      "tipo_enunciador": "Actor Operativo",
+      "posicion_enunciador": "Enunciador Situado",
+      "canal": "Web / Scraping",
+      "fecha_observacion": "2026-08-26T08:01:41.063029+00:00",
+      "discurso": "Toma de decisiones ejecutivas basada en data dashboards en tiempo real.",
+      "practica_observada": "Elaboración manual de presentaciones de alto nivel como ritual de visibilidad organizativa.",
+      "tipo_tension": "RITUAL_ORGANIZACIONAL",
+      "tension_descripcion": "Ritual gerencial que invalida la inversión tecnológica en analítica automática.",
+      "nivel_confianza": 0.9,
+      "organizacion": "Hamaca Digital"
+    },
+    {
+      "senal_id": "96f812ba-ac10-4030-be29-4958fbf34f92",
+      "contenido": "Vacante solicita 'Project Manager con experiencia en llenar tableros Jira y coordinar mensajes urgentes por WhatsApp'.",
+      "fragmento_evidencia": "Vacante solicita 'Project Manager con experiencia en llenar tableros Jira y coordinar mensajes urgentes por WhatsApp'.",
+      "tipo_enunciador": "Actor Operativo",
+      "posicion_enunciador": "Enunciador Situado",
+      "canal": "Web / Scraping",
+      "fecha_observacion": "2026-08-26T08:03:23.207597+00:00",
+      "discurso": "Procesos ágiles formalizados e institucionalizados en la gestión de proyectos.",
+      "practica_observada": "Uso de WhatsApp como canal primario de gestión informal por sobre la herramienta formal.",
+      "tipo_tension": "DEUDA_CULTURAL",
+      "tension_descripcion": "Saturación de comunicación asíncrona y ruptura de la trazabilidad en Jira.",
+      "nivel_confianza": 0.9,
+      "organizacion": "Hamaca Digital"
+    },
+    {
+      "senal_id": "e0f795ae-cbe8-4383-9fbd-43843ab085b9",
+      "contenido": "Líderes de equipo duplican reportes semanales en diapositivas porque la directiva no revisa los dashboards automáticos.",
+      "fragmento_evidencia": "Líderes de equipo duplican reportes semanales en diapositivas porque la directiva no revisa los dashboards automáticos.",
+      "tipo_enunciador": "Actor Operativo",
+      "posicion_enunciador": "Enunciador Situado",
+      "canal": "Web / Scraping",
+      "fecha_observacion": "2026-08-26T08:03:24.459738+00:00",
+      "discurso": "Toma de decisiones ejecutivas basada en data dashboards en tiempo real.",
+      "practica_observada": "Elaboración manual de presentaciones de alto nivel como ritual de visibilidad organizativa.",
+      "tipo_tension": "RITUAL_ORGANIZACIONAL",
+      "tension_descripcion": "Ritual gerencial que invalida la inversión tecnológica en analítica automática.",
+      "nivel_confianza": 0.9,
+      "organizacion": "Hamaca Digital"
+    }
+  ]
+}

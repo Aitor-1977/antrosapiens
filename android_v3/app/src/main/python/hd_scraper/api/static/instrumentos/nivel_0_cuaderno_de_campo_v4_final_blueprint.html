@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Cuaderno de Campo</title>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Google Fonts & Material Symbols -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;family=Newsreader:ital,wght@0,400;0,600;1,400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind Configuration -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-dim": "#d9dbce",
+                        "tertiary-fixed-dim": "#f5bb89",
+                        "surface-container": "#edefe1",
+                        "outline": "#78776f",
+                        "on-secondary-fixed-variant": "#44483b",
+                        "surface-container-low": "#f3f5e7",
+                        "primary-fixed": "#e5e3d6",
+                        "on-surface": "#1a1d14",
+                        "inverse-primary": "#c8c7bb",
+                        "on-primary-container": "#737369",
+                        "on-primary-fixed-variant": "#47473e",
+                        "olive-deep": "#3E4235",
+                        "surface-tint": "#5f5f55",
+                        "on-error": "#ffffff",
+                        "on-secondary": "#ffffff",
+                        "error-container": "#ffdad6",
+                        "inverse-on-surface": "#f0f2e4",
+                        "secondary-fixed": "#e1e4d2",
+                        "on-secondary-fixed": "#191d12",
+                        "on-primary": "#ffffff",
+                        "error": "#ba1a1a",
+                        "surface-container-highest": "#e2e4d6",
+                        "secondary": "#5c6052",
+                        "on-tertiary-fixed-variant": "#653e17",
+                        "on-background": "#1a1d14",
+                        "surface-container-lowest": "#ffffff",
+                        "inference-slate": "#4A4E54",
+                        "surface-container-high": "#e8e9dc",
+                        "on-tertiary": "#ffffff",
+                        "outline-variant": "#c8c7bd",
+                        "surface-bright": "#f9fbec",
+                        "secondary-fixed-dim": "#c5c8b7",
+                        "on-surface-variant": "#474740",
+                        "friccion-clay": "#6B4423",
+                        "on-primary-fixed": "#1b1c14",
+                        "primary": "#5f5f55",
+                        "surface": "#f9fbec",
+                        "clay-accent": "#8B5E34",
+                        "background": "#f9fbec",
+                        "tertiary": "#80552c",
+                        "on-secondary-container": "#606456",
+                        "parchment": "#FCFAED",
+                        "inverse-surface": "#2f3228",
+                        "primary-container": "#fcfaed",
+                        "primary-fixed-dim": "#c8c7bb",
+                        "tertiary-container": "#fff8f5",
+                        "on-error-container": "#93000a",
+                        "tertiary-fixed": "#ffdcc1",
+                        "parchment-dim": "#2A2D24",
+                        "on-tertiary-container": "#97683d",
+                        "amber-accent": "#D48C00",
+                        "surface-variant": "#e2e4d6",
+                        "on-tertiary-fixed": "#2e1600",
+                        "secondary-container": "#dee1cf"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "rhythm": "8px",
+                        "margin-desktop": "64px",
+                        "margin-mobile": "20px",
+                        "touch-min": "48dp",
+                        "gutter": "16px"
+                    },
+                    "fontFamily": {
+                        "ui-label": ["Inter"],
+                        "narrative-body": ["Newsreader"],
+                        "data-hash": ["JetBrains Mono"],
+                        "narrative-h1": ["Newsreader"],
+                        "narrative-body-mobile": ["Newsreader"],
+                        "ui-button": ["Inter"],
+                        "data-mono": ["JetBrains Mono"],
+                        "narrative-display": ["Newsreader"]
+                    },
+                    "fontSize": {
+                        "ui-label": ["14px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "500" }],
+                        "narrative-body": ["19px", { "lineHeight": "32px", "fontWeight": "400" }],
+                        "data-hash": ["11px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500" }],
+                        "narrative-h1": ["32px", { "lineHeight": "1.3", "fontWeight": "600" }],
+                        "narrative-body-mobile": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "ui-button": ["14px", { "lineHeight": "16px", "letterSpacing": "0.03em", "fontWeight": "600" }],
+                        "data-mono": ["13px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "narrative-display": ["42px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            background-color: #FCFAED; /* parchment */
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        /* Auto-hide header transition */
+        .header-hidden {
+            transform: translateY(-100%);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="min-h-screen text-on-surface font-narrative-body-mobile selection:bg-surface-dim selection:text-olive-deep">
+<!-- TopAppBar Shared Component -->
+<header class="sticky top-0 z-40 transition-transform duration-300 ease-in-out bg-parchment flex justify-between items-center w-full px-margin-mobile h-16 shadow-[0_1px_0_rgba(62,66,53,0.05)]" id="main-header">
+<button aria-label="Menu" class="h-[48dp] w-[48dp] flex items-center justify-center text-outline hover:bg-surface-container-low transition-colors rounded-full">
+<span class="material-symbols-outlined" data-icon="menu">menu</span>
+</button>
+<h1 class="font-narrative-h1 text-narrative-h1 text-olive-deep flex-1 text-center truncate tracking-tight">Anthropological Inquiry</h1>
+<button aria-label="Sync" class="h-[48dp] w-[48dp] flex items-center justify-center text-outline hover:bg-surface-container-low transition-colors rounded-full">
+<span class="material-symbols-outlined" data-icon="sync">sync</span>
+</button>
+</header>
+<!-- Main Canvas -->
+<main class="pt-6 pb-[120px] px-margin-mobile md:px-margin-desktop max-w-[65ch] mx-auto relative flex flex-col gap-8">
+<!-- Ariadne's Thread (Visual anchor line) -->
+<div class="absolute left-[24px] md:left-[44px] top-6 bottom-0 w-[1px] bg-outline-variant opacity-40 pointer-events-none"></div>
+<!-- Section: The Inquiry -->
+<header class="pl-6 border-l-2 border-olive-deep mb-4">
+<h2 class="font-narrative-h1 text-narrative-h1 text-olive-deep leading-tight text-balance">
+                ¿Cómo se construye la legitimidad social en entornos de alta volatilidad financiera?
+            </h2>
+</header>
+<!-- Narrative Nodes (Field Notes) -->
+<article class="flex flex-col gap-8 relative">
+<!-- Node 1 -->
+<section class="pl-6 relative group cursor-text">
+<div class="absolute -left-[4px] top-2 w-[9px] h-[9px] rounded-full bg-parchment border-[1.5px] border-outline-variant group-hover:border-olive-deep transition-colors"></div>
+<div class="flex items-center gap-2 mb-1.5 opacity-70">
+<span class="font-data-hash text-data-hash text-olive-deep">#SEQ-994A</span>
+<span class="w-[3px] h-[3px] rounded-full bg-outline-variant"></span>
+<time class="font-data-hash text-data-hash text-on-surface-variant">10:42 AM · 14.11.2023</time>
+</div>
+<p class="font-narrative-body-mobile text-narrative-body-mobile text-on-surface">
+                    La observación inicial en el mercado de criptoactivos sugiere una fuerte correlación entre la narrativa de "descentralización" y la confianza del usuario, a pesar de las caídas de mercado del 30% la semana pasada. Los informantes locales insisten en que la volatilidad es "el precio de la libertad".
+                </p>
+</section>
+<!-- Node 2 -->
+<section class="pl-6 relative group cursor-text">
+<div class="absolute -left-[4px] top-2 w-[9px] h-[9px] rounded-full bg-parchment border-[1.5px] border-outline-variant group-hover:border-olive-deep transition-colors"></div>
+<div class="flex items-center gap-2 mb-1.5 opacity-70">
+<span class="font-data-hash text-data-hash text-olive-deep">#SEQ-994B</span>
+<span class="w-[3px] h-[3px] rounded-full bg-outline-variant"></span>
+<time class="font-data-hash text-data-hash text-on-surface-variant">11:15 AM · 14.11.2023</time>
+</div>
+<p class="font-narrative-body-mobile text-narrative-body-mobile text-on-surface">
+                    Interesante fricción lingüística: el término "inversión" está siendo reemplazado activamente por "participación en la red". Esta sustitución ontológica parece blindar a los actores frente a las críticas convencionales de riesgo financiero. La arquitectura del lenguaje modela la percepción del riesgo.
+                </p>
+</section>
+<!-- Node 3 (Elevated Signal) -->
+<section class="pl-6 relative group">
+<div class="absolute -left-[4px] top-4 w-[9px] h-[9px] rounded-full bg-surface-dim border-[1.5px] border-olive-deep"></div>
+<div class="flex items-center gap-2 mb-1.5 opacity-70">
+<span class="font-data-hash text-data-hash text-olive-deep">#SEQ-994C</span>
+<span class="w-[3px] h-[3px] rounded-full bg-outline-variant"></span>
+<time class="font-data-hash text-data-hash text-on-surface-variant">02:30 PM · 14.11.2023</time>
+</div>
+<div class="bg-surface-container-low p-5 rounded-lg border border-surface-dim shadow-[0_4px_12px_rgba(62,66,53,0.03)] mt-2">
+<p class="font-narrative-body-mobile text-narrative-body-mobile text-on-surface italic">
+                        "No estamos perdiendo dinero, estamos pagando por la educación del algoritmo. Es un costo de transferencia estructural."
+                    </p>
+<p class="font-data-mono text-data-mono text-on-surface-variant mt-3 text-right">
+                        — Sujeto 04 (Entrevista no estructurada)
+                    </p>
+</div>
+</section>
+</article>
+<!-- Status Notification (Auto-fades) -->
+<div class="flex justify-center mt-8 transition-opacity duration-1000 ease-in-out opacity-100" id="sync-toast">
+<div class="inline-flex items-center gap-2.5 bg-surface-bright px-4 py-2 rounded-full border border-surface-dim shadow-sm">
+<span class="material-symbols-outlined text-outline" style="font-size: 16px;">cloud_sync</span>
+<span class="font-data-mono text-data-mono text-outline tracking-tight">Sincronización de señales en curso...</span>
+</div>
+</div>
+</main>
+<!-- BottomNavBar Shared Component -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-2 bg-surface-container h-[72px] shadow-[0_-1px_10px_rgba(62,66,53,0.02)]">
+<!-- Tab 1: Observation (Active) -->
+<button aria-label="Observation" class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-full h-[48dp] w-[48dp] scale-95 transition-transform duration-150 ease-out">
+<span class="material-symbols-outlined" data-icon="visibility" data-weight="fill" style="font-variation-settings: 'FILL' 1;">visibility</span>
+</button>
+<!-- Tab 2: Description (Inactive) -->
+<button aria-label="Description" class="flex flex-col items-center justify-center text-on-surface-variant h-[48dp] w-[48dp] hover:bg-surface-container-high transition-all rounded-full">
+<span class="material-symbols-outlined" data-icon="menu_book">menu_book</span>
+</button>
+<!-- Tab 3: Analysis (Inactive) -->
+<button aria-label="Analysis" class="flex flex-col items-center justify-center text-on-surface-variant h-[48dp] w-[48dp] hover:bg-surface-container-high transition-all rounded-full">
+<span class="material-symbols-outlined" data-icon="rebase_edit">rebase_edit</span>
+</button>
+<!-- Tab 4: Theory (Inactive) -->
+<button aria-label="Theory" class="flex flex-col items-center justify-center text-on-surface-variant h-[48dp] w-[48dp] hover:bg-surface-container-high transition-all rounded-full">
+<span class="material-symbols-outlined" data-icon="diamond">diamond</span>
+</button>
+</nav>
+<!-- Interaction Scripts -->
+<script>
+        // Auto-fade status toast
+        document.addEventListener("DOMContentLoaded", () => {
+            const toast = document.getElementById('sync-toast');
+            if (toast) {
+                setTimeout(() => {
+                    toast.classList.remove('opacity-100');
+                    toast.classList.add('opacity-0');
+                    setTimeout(() => toast.remove(), 1000); // Remove from DOM after fade
+                }, 2500); // Wait 2.5 seconds before fading
+            }
+        });
+
+        // Hide header on scroll down, show on scroll up (Minimalist focus)
+        let lastScrollTop = 0;
+        const header = document.getElementById('main-header');
+        
+        window.addEventListener('scroll', () => {
+            let scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            if (scrollTop > lastScrollTop && scrollTop > 50) {
+                // Scrolling down
+                header.classList.add('header-hidden');
+            } else {
+                // Scrolling up
+                header.classList.remove('header-hidden');
+            }
+            lastScrollTop = scrollTop <= 0 ? 0 : scrollTop; // For Mobile or negative scrolling
+        }, { passive: true });
+    </script>
+</body></html>

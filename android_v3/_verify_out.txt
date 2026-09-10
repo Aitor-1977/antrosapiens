@@ -1,0 +1,6 @@
+assets index.html en APK: ['assets/public/index.html']
+ruta interna: assets/public/index.html
+sha256 interno: 3956b9a18848ab5a59e94295d58cfbdfa1f2a6f265d4cc06bf00fda303f68bc1
+fuente: app/src/main/assets/public/index.html
+sha256 fuente: 091dc5d2bd876c66f94b867d64eb845bac98cb5c395be560fd94c37a9569bdbb
+COINCIDEN: False

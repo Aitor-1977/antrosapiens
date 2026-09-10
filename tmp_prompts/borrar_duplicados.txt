@@ -1,0 +1,8 @@
+Corre este DELETE directo contra la base de datos usando la variable de entorno HD_DATABASE_URL (la misma cadena real de Neon que ya usamos hoy para promover_candidatos), NO uses el SQL Editor del navegador.
+
+DELETE FROM prospectos WHERE id IN (2205, 2206, 2207, 2208, 2213);
+
+Despues corre este SELECT y muestrame el resultado exacto:
+SELECT id, nombre, categoria, creado_en FROM prospectos WHERE nombre IN ('Nubank','Rappi','Kavak','Bitso','Uala') ORDER BY nombre;
+
+Confirma cuantas filas borro el DELETE.

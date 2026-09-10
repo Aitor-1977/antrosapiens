@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Nivel 2: Mesa de Relaciones (V4)</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&amp;family=JetBrains+Mono:wght@400&amp;family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-secondary-fixed": "#2f1500",
+                      "tertiary-container": "#374559",
+                      "on-secondary": "#ffffff",
+                      "secondary-container": "#fe932c",
+                      "surface-container-highest": "#e6e2d8",
+                      "primary-fixed-dim": "#95d3ba",
+                      "on-error": "#ffffff",
+                      "tertiary-fixed-dim": "#b9c7e0",
+                      "secondary": "#904d00",
+                      "surface-container-low": "#f7f3e8",
+                      "inverse-on-surface": "#f4f1e6",
+                      "on-primary-fixed": "#002117",
+                      "on-secondary-container": "#663500",
+                      "on-primary-fixed-variant": "#0b513d",
+                      "surface-tint": "#2b6954",
+                      "on-tertiary": "#ffffff",
+                      "outline-variant": "#bfc9c3",
+                      "tertiary-fixed": "#d5e3fd",
+                      "tertiary": "#212f42",
+                      "surface": "#fdf9ee",
+                      "surface-container-high": "#ece8dd",
+                      "on-surface": "#1c1c15",
+                      "surface-variant": "#e6e2d8",
+                      "background": "#fdf9ee",
+                      "on-error-container": "#93000a",
+                      "surface-container-lowest": "#ffffff",
+                      "on-secondary-fixed-variant": "#6e3900",
+                      "on-tertiary-fixed": "#0d1c2f",
+                      "primary-container": "#064e3b",
+                      "error": "#ba1a1a",
+                      "on-surface-variant": "#404944",
+                      "secondary-fixed-dim": "#ffb77d",
+                      "inverse-primary": "#95d3ba",
+                      "primary-fixed": "#b0f0d6",
+                      "on-primary-container": "#80bea6",
+                      "primary": "#003527",
+                      "outline": "#707974",
+                      "on-background": "#1c1c15",
+                      "on-primary": "#ffffff",
+                      "inverse-surface": "#31312a",
+                      "surface-dim": "#dddacf",
+                      "error-container": "#ffdad6",
+                      "surface-bright": "#fdf9ee",
+                      "on-tertiary-container": "#a4b2ca",
+                      "secondary-fixed": "#ffdcc3",
+                      "on-tertiary-fixed-variant": "#3a485c",
+                      "surface-container": "#f1eee3"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "gutter": "2rem",
+                      "stack-loose": "2.5rem",
+                      "stack-compact": "0.75rem",
+                      "margin-page": "4rem",
+                      "margin-mobile": "1.25rem"
+              },
+              "fontFamily": {
+                      "display-lg": [
+                              "Newsreader"
+                      ],
+                      "headline-lg": [
+                              "Newsreader"
+                      ],
+                      "body-md": [
+                              "Newsreader"
+                      ],
+                      "caption": [
+                              "Inter"
+                      ],
+                      "label-sm": [
+                              "Inter"
+                      ],
+                      "body-lg": [
+                              "Newsreader"
+                      ],
+                      "mono-code": [
+                              "JetBrains Mono"
+                      ],
+                      "headline-lg-mobile": [
+                              "Newsreader"
+                      ]
+              },
+              "fontSize": {
+                      "display-lg": [
+                              "48px",
+                              {
+                                      "lineHeight": "1.1",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "body-md": [
+                              "17px",
+                              {
+                                      "lineHeight": "1.6",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "caption": [
+                              "14px",
+                              {
+                                      "lineHeight": "1.4",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label-sm": [
+                              "13px",
+                              {
+                                      "lineHeight": "1.4",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-lg": [
+                              "20px",
+                              {
+                                      "lineHeight": "1.6",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "mono-code": [
+                              "14px",
+                              {
+                                      "lineHeight": "1.5",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-lg-mobile": [
+                              "28px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "fontWeight": "500"
+                              }
+                      ]
+              }
+            },
+          }
+        }
+      </script>
+<style>
+        .paper-texture {
+            background-color: #fdf9ee;
+            background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23noise)' opacity='0.05'/%3E%3C/svg%3E");
+        }
+        .edge-stroke {
+            border: 1px solid rgba(112, 121, 116, 0.1);
+        }
+        .pinned-shadow {
+            box-shadow: 0 4px 6px -1px rgba(144, 77, 0, 0.05), 0 2px 4px -1px rgba(144, 77, 0, 0.03);
+        }
+        .thread-reinforces {
+            border-left: 2px solid #707974;
+            opacity: 0.3;
+        }
+        .thread-contradicts {
+            border-left: 2px dashed #ba1a1a;
+            opacity: 0.5;
+        }
+        .thread-opens {
+            border-left: 1px dotted #707974;
+            opacity: 0.4;
+        }
+      </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background paper-texture min-h-screen flex flex-col font-body-md antialiased pb-24">
+<!-- TopAppBar -->
+<header class="w-full top-0 sticky bg-background border-b border-outline-variant flex justify-between items-center px-gutter py-stack-sm z-40">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary" data-icon="microscope">smb_share</span>
+<div class="flex flex-col">
+<span class="font-mono-code text-mono-code text-outline uppercase tracking-wider">INQ-492</span>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile font-medium text-primary tracking-tight">AntroSapiens V4</h1>
+<span class="font-caption text-caption text-on-surface-variant">Investigation &gt; Relations</span>
+</div>
+</div>
+<button class="hover:bg-surface-container-low transition-colors rounded-full p-2 active:opacity-70">
+<span class="material-symbols-outlined text-primary" data-icon="sync">sync</span>
+</button>
+</header>
+<!-- Main Workspace -->
+<main class="flex-grow flex flex-col p-margin-mobile gap-stack-loose relative">
+<!-- Controls -->
+<div class="flex justify-between items-center bg-surface-container-highest px-4 py-3 rounded-lg edge-stroke pinned-shadow">
+<h2 class="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest">Mesa de Trabajo</h2>
+<div class="flex gap-2">
+<button class="bg-primary text-on-primary font-label-sm text-label-sm px-3 py-1.5 rounded-full hover:bg-primary-container transition-colors">Relacionar</button>
+<button class="border border-outline text-on-surface font-label-sm text-label-sm px-3 py-1.5 rounded-full hover:bg-surface-variant transition-colors">Codificar</button>
+</div>
+</div>
+<!-- Evidence Connections Area -->
+<div class="relative flex flex-col gap-8 ml-4">
+<!-- Card 1 -->
+<div class="bg-surface-container-lowest p-5 rounded-lg edge-stroke pinned-shadow transform rotate-1 relative z-10 w-full max-w-sm">
+<div class="absolute top-0 left-0 w-full h-1 bg-secondary opacity-80 rounded-t-lg"></div>
+<div class="flex justify-between items-start mb-2">
+<span class="font-mono-code text-mono-code text-secondary">TGM-902</span>
+<span class="bg-surface-container text-on-surface-variant font-caption text-[11px] px-2 py-0.5 rounded-full border border-outline-variant">Observación</span>
+</div>
+<h3 class="font-headline-lg-mobile text-[22px] font-medium leading-tight mb-2">Rituales de Desconexión</h3>
+<p class="text-on-surface-variant text-sm line-clamp-3">Los sujetos muestran un patrón sistemático de alejamiento físico de sus dispositivos durante la primera hora post-despertar, contraviniendo el modelo predictivo de hiperconectividad matutina.</p>
+</div>
+<!-- Thread: Contradicts -->
+<div class="absolute left-6 top-[120px] h-24 thread-contradicts w-0 z-0">
+<div class="absolute top-1/2 -left-3 transform -translate-y-1/2 bg-error-container text-on-error-container font-mono-code text-[10px] px-1.5 py-0.5 rounded border border-error">
+                    [!] CONTRADICE
+                </div>
+</div>
+<!-- Card 2 (Contradiction) -->
+<div class="bg-surface-container-lowest p-5 rounded-lg edge-stroke pinned-shadow relative z-10 w-full max-w-sm ml-6 border-l-4 border-l-error">
+<div class="flex justify-between items-start mb-2">
+<span class="font-mono-code text-mono-code text-outline">REP-044</span>
+<span class="bg-surface-container text-on-surface-variant font-caption text-[11px] px-2 py-0.5 rounded-full border border-outline-variant">Reporte Oficial</span>
+</div>
+<p class="text-on-surface-variant text-sm italic">"El engagement matutino representa el pico de interacción digital para el segmento demográfico analizado, con conexión inmediata al despertar."</p>
+</div>
+<!-- Thread: Reinforces -->
+<div class="absolute left-[38px] top-[340px] h-20 thread-reinforces w-0 z-0">
+<div class="absolute top-1/2 -left-2 transform -translate-y-1/2 bg-surface-variant text-on-surface-variant font-mono-code text-[10px] px-1.5 py-0.5 rounded border border-outline-variant">
+                    [+] REFUERZA
+                </div>
+</div>
+<!-- Card 3 (Reinforcement) -->
+<div class="bg-surface-container-lowest p-5 rounded-lg edge-stroke pinned-shadow transform -rotate-1 relative z-10 w-full max-w-sm ml-12">
+<div class="flex justify-between items-start mb-2">
+<span class="font-mono-code text-mono-code text-tertiary-container">ENT-112</span>
+<span class="bg-surface-container text-on-surface-variant font-caption text-[11px] px-2 py-0.5 rounded-full border border-outline-variant">Entrevista</span>
+</div>
+<p class="text-on-surface-variant text-sm">Sujeto relata ansiedad si revisa el móvil antes del café, estableciendo una 'zona libre' física en la cocina.</p>
+</div>
+<!-- Thread: Opens Question -->
+<div class="absolute left-6 top-[150px] h-[350px] thread-opens w-0 z-0 -ml-4">
+<div class="absolute bottom-4 -left-3 transform bg-tertiary-container text-on-tertiary font-mono-code text-[10px] px-1.5 py-0.5 rounded border border-tertiary">
+                    [?] ABRE INTERROGANTE
+                </div>
+</div>
+<!-- Card 4 (Question) -->
+<div class="bg-surface-variant p-4 rounded-lg edge-stroke border border-outline-variant border-dashed mt-8 ml-2 w-[90%]">
+<h4 class="font-headline-lg-mobile text-[18px] font-medium text-tertiary-container mb-1">¿Espacios Liminales Analógicos?</h4>
+<p class="font-caption text-caption text-on-surface-variant">Si la desconexión es intencional y ritualizada, ¿qué objetos físicos actúan como anclas en estos micro-espacios temporales?</p>
+</div>
+</div>
+<!-- Floating Action Button for Hypothesis -->
+<div class="fixed bottom-24 right-4 z-40">
+<button class="bg-secondary text-on-secondary shadow-sm px-4 py-3 rounded-xl flex items-center gap-2 hover:bg-on-secondary-fixed transition-colors">
+<span class="material-symbols-outlined" data-icon="lightbulb">lightbulb</span>
+<span class="font-label-sm text-label-sm tracking-wide">Elevar a Hipótesis</span>
+</button>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-3 bg-surface-container border-t border-outline-variant rounded-t-full shadow-sm">
+<button class="flex flex-col items-center justify-center text-on-surface-variant px-5 py-2 hover:bg-surface-variant rounded-full scale-95 transition-transform duration-150 ease-in-out">
+<span class="material-symbols-outlined" data-icon="book_5">book_5</span>
+<span class="font-label-lg text-label-sm mt-1">Journal</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant px-5 py-2 hover:bg-surface-variant rounded-full scale-95 transition-transform duration-150 ease-in-out">
+<span class="material-symbols-outlined" data-icon="biotech">biotech</span>
+<span class="font-label-lg text-label-sm mt-1">Evidence</span>
+</button>
+<button class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-full px-5 py-2 scale-95 transition-transform duration-150 ease-in-out">
+<span class="material-symbols-outlined" data-icon="account_tree" data-weight="fill" style="font-variation-settings: 'FILL' 1;">account_tree</span>
+<span class="font-label-lg text-label-sm mt-1 font-semibold">Relations</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant px-5 py-2 hover:bg-surface-variant rounded-full scale-95 transition-transform duration-150 ease-in-out">
+<span class="material-symbols-outlined" data-icon="analytics">analytics</span>
+<span class="font-label-lg text-label-sm mt-1">Synthesis</span>
+</button>
+</nav>
+</body></html>
