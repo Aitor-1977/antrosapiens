@@ -38,6 +38,7 @@ from .. import drift_compare as _drift_compare
 from .. import onlife as _onlife
 from .. import pipeline_comercial as _pipeline
 from ..analisis import analizar
+from ..clasificacion_epistemologica import clasificar_atribucion
 from ..clasificacion_store import clasificar_lote
 from ..curaduria import curar
 from ..dictamen import generar_dictamen, generar_ranking
@@ -2346,6 +2347,8 @@ def _construir_expedientes(categorias: list[str] | None, limite: int = 30) -> di
 
         evidencias = []
         for row in data["evidencias_raw"]:
+            fila = dict(row)
+            atrib = clasificar_atribucion(fila)
             evidencias.append({
                 "texto": row["cita_textual"],
                 "fuente": row["nombre_medio"],
@@ -2361,6 +2364,15 @@ def _construir_expedientes(categorias: list[str] | None, limite: int = 30) -> di
                 # muestra como "no disponible", nunca lo infiere.
                 "persona_citada": row["persona_citada"],
                 "cargo": row["cargo"],
+                # Estado de atribución (ampliación 2026-09-10, autorizado por
+                # el operador): distingue si el texto identifica a quién
+                # habla, si lo identifica pero el pipeline no lo capturó
+                # (atribucion_explicita_no_extraida), si es ambiguo o si no
+                # hay atribución. `fragmento_atribucion` es un recorte
+                # LITERAL del texto, nunca una paráfrasis — ver
+                # clasificacion_epistemologica.clasificar_atribucion.
+                "estado_atribucion": atrib.estado,
+                "fragmento_atribucion": atrib.fragmento,
             })
 
         patrones = _detectar_patrones(all_kws)
