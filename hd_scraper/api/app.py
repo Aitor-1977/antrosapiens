@@ -289,6 +289,10 @@ def _row_a_evidencia(row) -> dict:
         "empresa_mencionada": row["empresa_mencionada"],
         "persona_citada": row["persona_citada"],
         "cargo": row["cargo"],
+        # Resumen/descripción declarado por la fuente (auditoría 2026-09-10,
+        # P0): distinto de cita_textual (título). None si la fuente no lo
+        # declaró o si el registro es previo a esta corrección.
+        "resumen_fuente": row["resumen_fuente"] if "resumen_fuente" in row.keys() else None,
         "tipo_evento": row["tipo_evento"],
         "origen_declaracion": row["origen_declaracion"],
         "categoria": row["categoria"],
@@ -2364,6 +2368,10 @@ def _construir_expedientes(categorias: list[str] | None, limite: int = 30) -> di
                 # muestra como "no disponible", nunca lo infiere.
                 "persona_citada": row["persona_citada"],
                 "cargo": row["cargo"],
+                # Resumen/descripción declarado por la fuente (auditoría
+                # 2026-09-10, P0): distinto de "texto" (título/cita_textual).
+                # None si la fuente no lo declaró.
+                "resumen_fuente": fila.get("resumen_fuente"),
                 # Estado de atribución (ampliación 2026-09-10, autorizado por
                 # el operador): distingue si el texto identifica a quién
                 # habla, si lo identifica pero el pipeline no lo capturó

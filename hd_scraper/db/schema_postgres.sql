@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS evidencias (
     fecha_publicacion   TEXT,
     persona_citada      TEXT,
     cargo               TEXT,
+    resumen_fuente      TEXT,
     connector           TEXT NOT NULL,
     estado              TEXT NOT NULL DEFAULT 'ok',
     raw_hash            TEXT,

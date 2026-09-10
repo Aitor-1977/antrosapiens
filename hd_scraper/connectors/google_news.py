@@ -91,6 +91,12 @@ class GoogleNewsConnector(Connector):
                 "link": entry.get("link", ""),
                 "fuente": fuente,
                 "fecha_publicacion": _struct_time_a_iso(entry.get("published_parsed")),
+                # Resumen/descripción que el feed adjunta a la entrada. Antes
+                # se retenía solo en el crudo comprimido y se descartaba al
+                # normalizar (auditoría 2026-09-10, P0): se conserva aquí
+                # para persistirlo en ``resumen_fuente``, SIN convertirlo en
+                # ``cita_textual`` (no es una cita literal).
+                "resumen": entry.get("summary", ""),
                 # Contexto estructural de la consulta (no del contenido):
                 "empresa": query.empresa,
                 "tipo_evento": query.tipo_evento,
@@ -131,5 +137,6 @@ class GoogleNewsConnector(Connector):
             fecha_publicacion=m.get("fecha_publicacion"),
             persona_citada=None,   # el RSS no la provee de forma estructural
             cargo=None,
+            resumen_fuente=(m.get("resumen") or "").strip() or None,
             connector=self.name,
         )

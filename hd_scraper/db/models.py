@@ -214,6 +214,17 @@ class EvidenceRecord:
     persona_citada: Optional[str] = None
     cargo: Optional[str] = None
 
+    # --- Resumen/descripción declarado por la fuente (auditoría 2026-09-10,
+    # autorización P0 del operador) ---
+    # Campo DISTINTO de ``cita_textual``. ``cita_textual`` es el título (lo que
+    # ya se persistía); ``resumen_fuente`` es el resumen/descripción que la
+    # propia fuente adjunta al ítem (p. ej. el <description>/<summary> de un
+    # feed RSS). NO es una cita textual de una persona ni se etiqueta como tal:
+    # es texto editorial de la fuente, conservado tal cual, sin reinterpretar.
+    # None cuando la fuente no declara resumen (nunca se sintetiza ni se copia
+    # del título para rellenar el campo).
+    resumen_fuente: Optional[str] = None
+
     # --- Extracción objetiva Nivel 1 (Motor A) ---
     keywords: list = field(default_factory=list)   # etiquetas de señal genéricas
     confianza: float = 0.0                          # calidad objetiva de la extracción 0–1

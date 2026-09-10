@@ -66,17 +66,18 @@ def _escribir_evidencia(db: Database, record: EvidenceRecord) -> bool:
         INSERT INTO evidencias (
             cita_textual, fecha_extraccion, url_fuente, nombre_medio,
             empresa_mencionada, tipo_evento, origen_declaracion, hash_dedup,
-            fecha_publicacion, persona_citada, cargo,
+            fecha_publicacion, persona_citada, cargo, resumen_fuente,
             connector, estado, raw_hash, categoria, keywords, confianza,
             clave_contenido, hash_contenido, calidad_captura, creado_en
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT (hash_dedup) DO NOTHING
         """,
         (
             record.cita_textual, record.fecha_extraccion, record.url_fuente,
             record.nombre_medio, record.empresa_mencionada, record.tipo_evento,
             record.origen_declaracion, record.hash_dedup, record.fecha_publicacion,
-            record.persona_citada, record.cargo, record.connector, record.estado,
+            record.persona_citada, record.cargo, record.resumen_fuente,
+            record.connector, record.estado,
             record.raw_hash, record.categoria,
             json.dumps(record.keywords, ensure_ascii=False), record.confianza,
             record.clave_contenido, record.hash_contenido, record.calidad_captura,

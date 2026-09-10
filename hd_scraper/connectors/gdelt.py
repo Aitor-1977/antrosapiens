@@ -134,5 +134,9 @@ class GdeltConnector(Connector):
             fecha_publicacion=m.get("fecha_publicacion"),
             persona_citada=None,   # GDELT ArtList no la provee de forma estructural
             cargo=None,
+            # GDELT en modo ArtList no expone ningún campo de resumen/snippet
+            # (solo title/url/domain/seendate/language): techo real de la
+            # fuente, no pérdida de extracción (auditoría 2026-09-10, P0).
+            resumen_fuente=None,
             connector=self.name,
         )

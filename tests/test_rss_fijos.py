@@ -1,6 +1,6 @@
 import pytest
 
-from hd_scraper.connectors.rss_fijos import RssFijosConnector, _normalizar_texto
+from hd_scraper.connectors.rss_fijos import FEEDS_DEFAULT, RssFijosConnector, _normalizar_texto
 from hd_scraper.db.models import ESTADO_NO_FECHADO, ESTADO_OK, QuerySpec
 from hd_scraper.pipeline import run_connector
 
@@ -110,3 +110,22 @@ def test_feed_caido_dos_corridas_dispara_alerta(db, monkeypatch):
     run_connector(db, c2, QuerySpec(empresa="Nubank", tipo_evento="lanzamiento"))
     roto = db.fetch_one("SELECT * FROM salud_fuentes WHERE fuente='rss_fijos:FeedRoto'")
     assert roto["fallos_consecutivos"] == 2 and roto["alerta"] == 1
+
+
+def test_normalize_conserva_resumen_fuente_distinto_de_cita_textual(monkeypatch):
+    """Auditoría 2026-09-10 (P0): el <description> del feed (ya leído para el
+    filtro de mención literal) se conserva en resumen_fuente, no se descarta
+    al normalizar."""
+    c = _connector(monkeypatch)
+    items = list(c.search(QuerySpec(empresa="Nubank", tipo_evento="lanzamiento")))
+    recs = {c.normalize(it).nombre_medio: c.normalize(it) for it in items}
+    assert recs["Startupeable"].resumen_fuente == "La fintech anuncia expansión."
+    assert recs["Contxto"].resumen_fuente == "Cobertura regional."
+    assert recs["Startupeable"].resumen_fuente != recs["Startupeable"].cita_textual
+
+
+def test_contxto_url_default_es_la_que_responde_en_vivo():
+    """Auditoría 2026-09-10 (P0): la URL anterior (/feed/) devuelve 404 en
+    vivo (verificado); Contxto migró su feed a rutas con prefijo de idioma.
+    Recuperación de una fuente ya declarada, no adición de una nueva."""
+    assert FEEDS_DEFAULT["Contxto"] == "https://contxto.com/es/feed/"
