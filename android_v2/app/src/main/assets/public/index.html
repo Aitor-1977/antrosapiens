@@ -397,7 +397,13 @@
         const cont = document.getElementById(containerId);
         const loading = document.getElementById(loadingId);
         try {
-            const res = await fetch(`${API}/expedientes?limite=100`);
+            // El filtro de categoría se manda AL SERVIDOR (no se pide todo y se filtra
+            // después): /expedientes ordena por score_icp entre TODAS las categorías, así
+            // que los primeros 100 sin filtrar pueden no traer ni un solo Startup si hay
+            // más de 100 VC/Incubadora/Corporativo con mejor score. Eso hacía que las
+            // pastillas de VERTICAL/ESCALA contaran organizaciones que la lista de
+            // candidatos ni siquiera puede mostrar.
+            const res = await fetch(`${API}/expedientes?categoria=${encodeURIComponent(CATEGORIA_ICP)}&limite=100`);
             const data = await res.json();
             loading.remove();
             const conteo = {};
@@ -436,8 +442,13 @@
         seccion.classList.remove('hidden');
         lista.innerHTML = `<p class="text-sm text-[#111111]/70">Curando candidatos…</p>`;
         try {
+            // El filtro de categoría se manda AL SERVIDOR (no se pide todo y se filtra
+            // después): /expedientes ordena por score_icp entre TODAS las categorías, así
+            // que los primeros 100 sin filtrar pueden no traer ni un solo Startup si hay
+            // más de 100 VC/Incubadora/Corporativo con mejor score. Eso causaba "0
+            // candidatos" aun con Startups reales en la base.
             const [resExp, resVer] = await Promise.all([
-                fetch(`${API}/expedientes?limite=100`),
+                fetch(`${API}/expedientes?categoria=${encodeURIComponent(CATEGORIA_ICP)}&limite=100`),
                 fetch(`${API}/verificados?limite=50`).catch(() => null),
             ]);
             const dataExp = await resExp.json();
