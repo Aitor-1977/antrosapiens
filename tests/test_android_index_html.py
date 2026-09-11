@@ -45,9 +45,12 @@ def test_no_hay_arreglos_de_datos_mock_hardcodeados():
     # aparece en pantalla llega vía fetch(), no de un literal embebido.
     for marcador in ("mockData", "mock_data", "datosFalsos", "FAKE_", "DUMMY"):
         assert marcador not in html
-    # Los tres endpoints reales que consume la pantalla, todos vía fetch().
-    assert re.search(r"fetch\(`\$\{API\}/expedientes", html)
-    assert re.search(r"fetch\(`\$\{API\}/verificados", html)
+    # Los tres endpoints reales que consume la pantalla, todos vía fetch()
+    # (directo o envuelto en fetchConReintento(), que solo agrega un reintento
+    # sobre el mismo fetch() real ante los timeouts intermitentes del backend
+    # confirmados 2026-09-11 — nunca sustituye la llamada por datos de prueba).
+    assert re.search(r"fetch(?:ConReintento)?\(`\$\{API\}/expedientes", html)
+    assert re.search(r"fetch(?:ConReintento)?\(`\$\{API\}/verificados", html)
 
 
 # ── Componente 10: las 4 operaciones integradas en un solo archivo ─────────

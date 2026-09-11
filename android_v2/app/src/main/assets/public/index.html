@@ -173,6 +173,23 @@
     let escalaActiva = "";
     const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
+    // El backend (Vercel) ha mostrado timeouts intermitentes bajo ráfagas de
+    // peticiones concurrentes (confirmado 2026-09-11: varias peticiones
+    // idénticas disparadas a la vez fallan más seguido que la misma petición
+    // en solitario). Un solo reintento tras una pausa corta no arregla la
+    // causa de fondo, pero evita que un timeout puntual se muestre como error
+    // permanente en pantalla.
+    async function fetchConReintento(url, intentos = 2, esperaMs = 1200) {
+        for (let i = 0; i < intentos; i++) {
+            try {
+                return await fetch(url);
+            } catch (e) {
+                if (i === intentos - 1) throw e;
+                await new Promise(r => setTimeout(r, esperaMs));
+            }
+        }
+    }
+
     // Estados de atribución (auditoría 2026-09-10): distingue si el texto
     // identifica a quién habla, si lo identifica pero el pipeline no lo
     // capturó (detectado en el texto, no confirmado en la base), si es
@@ -403,7 +420,7 @@
             // más de 100 VC/Incubadora/Corporativo con mejor score. Eso hacía que las
             // pastillas de VERTICAL/ESCALA contaran organizaciones que la lista de
             // candidatos ni siquiera puede mostrar.
-            const res = await fetch(`${API}/expedientes?categoria=${encodeURIComponent(CATEGORIA_ICP)}&limite=100`);
+            const res = await fetchConReintento(`${API}/expedientes?categoria=${encodeURIComponent(CATEGORIA_ICP)}&limite=100`);
             const data = await res.json();
             loading.remove();
             const conteo = {};
@@ -448,8 +465,8 @@
             // más de 100 VC/Incubadora/Corporativo con mejor score. Eso causaba "0
             // candidatos" aun con Startups reales en la base.
             const [resExp, resVer] = await Promise.all([
-                fetch(`${API}/expedientes?categoria=${encodeURIComponent(CATEGORIA_ICP)}&limite=100`),
-                fetch(`${API}/verificados?limite=50`).catch(() => null),
+                fetchConReintento(`${API}/expedientes?categoria=${encodeURIComponent(CATEGORIA_ICP)}&limite=100`),
+                fetchConReintento(`${API}/verificados?limite=50`).catch(() => null),
             ]);
             const dataExp = await resExp.json();
 
@@ -570,9 +587,15 @@
 
     document.getElementById('btnExplorar').addEventListener('click', cargarHallazgos);
 
-    cargarFiltroProspectos('verticalFilters', 'verticalLoading', 'vertical');
-    cargarFiltroProspectos('escalaFilters', 'escalaLoading', 'escala');
-    cargarHallazgos();
+    // Secuencial, no concurrente: el backend ha mostrado timeouts intermitentes
+    // cuando varias peticiones idénticas llegan juntas (ver fetchConReintento
+    // más arriba). Cargar de a una reduce cuánta carga concurrente genera la
+    // propia pantalla, aunque no resuelve la causa de fondo en el servidor.
+    (async () => {
+        await cargarFiltroProspectos('verticalFilters', 'verticalLoading', 'vertical');
+        await cargarFiltroProspectos('escalaFilters', 'escalaLoading', 'escala');
+        await cargarHallazgos();
+    })();
 
     document.getElementById('btnExplorarNav').addEventListener('click', (e) => {
         e.preventDefault();
