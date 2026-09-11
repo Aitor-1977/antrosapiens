@@ -39,12 +39,27 @@ def _resolve_database_url() -> str:
     """Resuelve la URL de la base según prioridad.
 
     1. HD_DATABASE_URL (override explícito).
-    2. DATABASE_URL / POSTGRES_URL / POSTGRES_PRISMA_URL (los que inyecta Vercel
-       al conectar Postgres). Producción usa Postgres: sin memoria temporal.
+    2. POSTGRES_URL / POSTGRES_PRISMA_URL / DATABASE_URL (los que inyecta Vercel
+       al conectar Postgres/Neon). Producción usa Postgres: sin memoria temporal.
     3. Fallback SQLite (solo desarrollo local; en Vercel apunta a /tmp para no
        romper la lectura mientras no haya Postgres conectado).
+
+    Orden de prioridad corregido 2026-09-11 (diagnóstico confirmado por el
+    operador vía Vercel CLI): POSTGRES_URL y POSTGRES_PRISMA_URL son,
+    documentadamente, las cadenas de conexión PGBouncer/pooled de Neon —
+    soportan muchas conexiones lógicas concurrentes de invocaciones
+    serverless sobre un número acotado de conexiones reales a Postgres.
+    DATABASE_URL puede o no ser la pooled según la variante de integración
+    Neon↔Vercel, así que ya no se prueba primero: bajo ráfagas de peticiones
+    concurrentes (evidencia real: una tanda de 4 peticiones idénticas pasó de
+    4/4 OK a 4/4 timeout en rondas sucesivas), leer la conexión directa
+    satura el límite de conexiones de Neon y cada intento de conectar cuelga
+    hasta el timeout. POSTGRES_URL_NON_POOLING (también inyectada por Neon)
+    NUNCA se agrega a esta lista: es la conexión directa, deliberadamente
+    excluida de la selección automática porque en serverless es exactamente
+    la que agota el límite de conexiones.
     """
-    for var in ("HD_DATABASE_URL", "DATABASE_URL", "POSTGRES_URL", "POSTGRES_PRISMA_URL"):
+    for var in ("HD_DATABASE_URL", "POSTGRES_URL", "POSTGRES_PRISMA_URL", "DATABASE_URL"):
         valor = os.getenv(var)
         if valor:
             return valor

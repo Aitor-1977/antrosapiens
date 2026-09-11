@@ -72,15 +72,31 @@ class Database:
         # esperaba indefinidamente y la función serverless de Vercel se
         # colgaba sin devolver ni error (evidencia real, 2026-09-10: /health y
         # /expedientes sin respuesta 55s+ tras un rato sin tráfico, <1s en la
-        # siguiente petición inmediata). Un timeout corto + un reintento cubre
-        # el caso común (la base ya despertó a mitad del primer intento) sin
-        # dejar la función colgada indefinidamente. Cabe dentro de los 60s de
-        # maxDuration configurados en vercel.json.
-        try:
-            self.conn = psycopg.connect(dsn, row_factory=dict_row, connect_timeout=10)
-        except psycopg.OperationalError:
-            time.sleep(1)
-            self.conn = psycopg.connect(dsn, row_factory=dict_row, connect_timeout=25)
+        # siguiente petición inmediata).
+        #
+        # Segunda causa de cuelgue distinta, confirmada 2026-09-11: bajo una
+        # ráfaga de invocaciones serverless concurrentes (cada una con su
+        # propia conexión TCP vía el singleton de `get_db()`), Neon puede
+        # agotar momentáneamente su límite de conexiones; psycopg.connect()
+        # cuelga/lanza OperationalError igual que en el cold-start. Se usa la
+        # cadena pooled (ver `config._resolve_database_url`, prioriza
+        # POSTGRES_URL/POSTGRES_PRISMA_URL sobre DATABASE_URL) para que el
+        # límite real de Postgres no se sature con tan pocas conexiones
+        # concurrentes, y además se reintenta con backoff corto (cubre tanto
+        # el cold-start como un agotamiento momentáneo del pool que se libera
+        # solo en 1-3s) antes de rendirse. Cabe dentro de los 60s de
+        # maxDuration configurados en Vercel.
+        ultimo_error: Exception | None = None
+        for intento, espera in enumerate((0, 1, 3)):
+            if espera:
+                time.sleep(espera)
+            try:
+                timeout = 10 if intento == 0 else 25
+                self.conn = psycopg.connect(dsn, row_factory=dict_row, connect_timeout=timeout)
+                return
+            except psycopg.OperationalError as exc:
+                ultimo_error = exc
+        raise ultimo_error
 
     # -- Traducción de marcadores --------------------------------------
     def _q(self, sql: str) -> str:
