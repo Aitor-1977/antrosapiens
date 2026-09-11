@@ -13,6 +13,10 @@
     "actores": "NO DETERMINADO",
     "practica": "NO DETERMINADO",
     "consecuencia": "NO DETERMINADO",
-    "evidencia_textual": "Validación de estructura de Caso Candidato. Límite de scraping corregido."
+    "evidencia_textual": "Validación de estructura de Caso Candidato. Límite de scraping corregido.",
+    "categoria_tension": "VACÍO",
+    "jerarquia": "Nivel 1: Ruido PR",
+    "estado": "BLOQUEADA",
+    "razon_score": "Descartado (Nivel 1): Ruido superficial sin tensión organizacional."
   }
 ]

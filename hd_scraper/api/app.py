@@ -3778,9 +3778,6 @@ class PipelineIn(BaseModel):
 
 
 @app.post("/pipeline/registrar")
-from sandbox.motor_epistemico import motor_curaduria
-
-@app.post("/pipeline/registrar")
 def pipeline_registrar(payload: PipelineIn,
                        x_ingest_token: Optional[str] = Header(None)) -> dict:
     """Registra o actualiza una organización en el pipeline comercial. Autenticado."""

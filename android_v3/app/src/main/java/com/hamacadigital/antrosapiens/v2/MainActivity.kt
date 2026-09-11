@@ -16,6 +16,6 @@ class MainActivity : AppCompatActivity() {
         webView.settings.allowContentAccess = true
         webView.settings.cacheMode = WebSettings.LOAD_NO_CACHE
 
-        webView.loadUrl("file:///android_asset/index.html")
+        webView.loadUrl("file:///android_asset/public/index.html")
     }
 }
