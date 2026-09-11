@@ -50,6 +50,7 @@ from ..discovery import REGIONES, VERTICALES_HD, queries_para, region_clause
 from ..enrich import enriquecer, google_search_url, linkedin_search_url, sugerir_vertical
 from ..pipeline import run_connector
 from ..relevance import detectar_empresa, evaluar_relevancia
+from ..candidatos_verificados import PAIS_PERMITIDO
 from ..signals import detectar_keywords
 from ..prospectos import nuevo_prospecto, upsert_prospecto
 from ..perfil_fundacional import construir_perfil
@@ -2312,6 +2313,17 @@ def _construir_expedientes(categorias: list[str] | None, limite: int = 30) -> di
     for p in db.fetch_all("SELECT nombre, escala FROM prospectos"):
         escalas[(p["nombre"] or "").strip().lower()] = p["escala"] or ""
 
+    # FASE territorial (mismo criterio ya aplicado en /verificados, ver
+    # PAIS_PERMITIDO en candidatos_verificados.py): país resuelto por nombre
+    # exacto contra prospectos. Solo se guarda cuando SÍ hay un país
+    # declarado; una organización sin fila (o sin país) no entra aquí, así
+    # que el filtro de abajo no la excluye.
+    paises: dict[str, str] = {}
+    for p in db.fetch_all(
+        "SELECT nombre, pais FROM prospectos WHERE pais IS NOT NULL"
+    ):
+        paises[(p["nombre"] or "").strip().lower()] = p["pais"]
+
     # categoria estructural (prospectos.categoria, declarada por el operador al
     # alta) es la autoridad real sobre el ecosistema de una organización — NO la
     # categoria de la fila de evidencia, que solo registra bajo qué consulta se
@@ -2337,6 +2349,12 @@ def _construir_expedientes(categorias: list[str] | None, limite: int = 30) -> di
         # patrón que la exclusión por escala 501+/201-500 en android_v2.
         elif any(g in _sin_acentos(key) for g in GIGANTES):
             data["categoria"] = "Corporativo"
+
+    # FASE territorial: excluye organizaciones cuyo país estructural esté
+    # declarado y no sea PAIS_PERMITIDO. `paises.get(key, PAIS_PERMITIDO)`
+    # hace que la ausencia de dato (sin fila, o fila sin país) nunca excluya.
+    orgs = {key: data for key, data in orgs.items()
+            if paises.get(key, PAIS_PERMITIDO) == PAIS_PERMITIDO}
 
     if cats:
         orgs = {key: data for key, data in orgs.items() if data["categoria"] in cats}
