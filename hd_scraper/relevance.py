@@ -364,7 +364,7 @@ MOTIVO_SUPERFICIAL = "relevancia:sin_profundidad_estructural"  # evento sin Thic
 
 def evaluar_relevancia(
     titulo: str, keywords: list, empresa_identificada: bool,
-    exigir_evento: bool = True,
+    exigir_evento: bool = True, organizacion: str = "",
 ) -> tuple[bool, str]:
     """Decide si un titular de descubrimiento es relevante. Determinista.
 
@@ -377,7 +377,15 @@ def evaluar_relevancia(
       R2  No es geografía fuera de LATAM (España, EE.UU., …).
       R3  No es "no-empresa" (gobierno, premios, academia, reporte de mercado).
       R4  No es ruido mediático (deportes, espectáculos, clima, promos).
-      R5  No es marca gigante global (no es perfil HD).
+      R5  La organización IDENTIFICADA no es una marca gigante global (no es
+          perfil HD). IDENTIDAD ≠ RELACIÓN/CONTEXTO (corrección 2026-09-11,
+          autorizada por el operador): que el titular MENCIONE un gigante por
+          alianza, competencia, financiamiento, ecosistema o adquisición junto
+          a una startup real ya identificada no descarta la evidencia — el
+          Motor A identifica y cura organizaciones, no confunde la presencia
+          de un corporativo en el contexto con la identidad corporativa del
+          prospecto. Si ``organizacion`` no se provee (compatibilidad), se
+          conserva el criterio anterior sobre el titular completo.
       R6  No es evento superficial sin profundidad estructural (PR, premios,
           conferencias, movimientos bursátiles rutinarios).
       R7  Hay una empresa identificable (nombre propio o consulta dirigida).
@@ -394,7 +402,8 @@ def evaluar_relevancia(
         return False, MOTIVO_NO_EMPRESA
     if _contiene(t, RUIDO_MEDIATICO):
         return False, MOTIVO_RUIDO
-    if _contiene(t, GIGANTES):
+    objetivo_gigante = _norm(organizacion) if organizacion else t
+    if _contiene(objetivo_gigante, GIGANTES):
         return False, MOTIVO_GIGANTE
     if _contiene(t, EVENTOS_SUPERFICIALES):
         return False, MOTIVO_SUPERFICIAL

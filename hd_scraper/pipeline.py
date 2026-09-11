@@ -190,7 +190,8 @@ def run_connector(db: Database, connector: Connector, query: QuerySpec) -> RunRe
             # empresa no se filtran. Se EXIGE un evento de negocio: sin él, la nota
             # casi nunca es un prospecto (era la puerta por la que entraba basura).
             if not query.exact:
-                relevante, motivo = evaluar_relevancia(titulo, record.keywords, empresa_ok)
+                relevante, motivo = evaluar_relevancia(
+                    titulo, record.keywords, empresa_ok, organizacion=detectada or "")
                 if not relevante:
                     _escribir_rechazo(db, connector.name, motivo,
                                       {"meta": raw.meta, "url": raw.url})
