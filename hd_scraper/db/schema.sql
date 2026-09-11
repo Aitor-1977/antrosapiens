@@ -72,6 +72,7 @@ CREATE TABLE IF NOT EXISTS prospectos (
     vertical              TEXT,            -- sector/vertical (declarado o del sitio)
     sitio_web             TEXT,            -- URL del sitio oficial
     linkedin              TEXT,            -- enlace a LinkedIn
+    pais                  TEXT,            -- país de sede/fundación (dato público declarado, no inferido)
     -- Thick Data (discurso corporativo)
     discurso_corporativo  TEXT,            -- cuerpo de texto extraído (tesis, promesa, programa, comunicado…)
     tipo_discurso         TEXT,            -- etiqueta estructural (tesis_inversion|promesa_valor|programa|portafolio|comunicado|reporte|perfil)

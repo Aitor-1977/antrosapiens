@@ -68,6 +68,7 @@ CREATE TABLE IF NOT EXISTS prospectos (
     vertical              TEXT,
     sitio_web             TEXT,
     linkedin              TEXT,
+    pais                  TEXT,
     discurso_corporativo  TEXT,
     tipo_discurso         TEXT,
     url_perfil            TEXT,
@@ -86,6 +87,7 @@ ALTER TABLE prospectos ADD COLUMN IF NOT EXISTS vertical  TEXT;
 ALTER TABLE prospectos ADD COLUMN IF NOT EXISTS sitio_web TEXT;
 ALTER TABLE prospectos ADD COLUMN IF NOT EXISTS linkedin  TEXT;
 ALTER TABLE prospectos ADD COLUMN IF NOT EXISTS escala    TEXT NOT NULL DEFAULT 'indeterminada';
+ALTER TABLE prospectos ADD COLUMN IF NOT EXISTS pais      TEXT;
 
 CREATE INDEX IF NOT EXISTS idx_prospectos_categoria ON prospectos (categoria);
 CREATE INDEX IF NOT EXISTS idx_prospectos_nombre    ON prospectos (nombre);

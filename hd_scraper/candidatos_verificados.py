@@ -18,6 +18,19 @@ _ORDEN_TIPO_PRIMARIO = (
     "senal_primaria_huella_practica",
 )
 
+# FASE territorial (autorizada por el operador —Mario—, 2026-09-11): filtro
+# estructural por país sobre `/verificados`. `expedientes_candidatos.organizacion`
+# es solo un nombre de texto (no una FK a `prospectos`), así que el país se
+# resuelve por coincidencia EXACTA de nombre (LOWER(TRIM(...)), sin fuzzy-match
+# ni embeddings — mismo patrón que `concentrador_evidencia.py`). Cuando no hay
+# fila de `prospectos` que coincida, o esa fila no declara país (`pais IS
+# NULL`), el candidato NO se excluye: la ausencia de dato no es evidencia de
+# que sea de otro país. Solo se excluye cuando SÍ hay un país declarado y ese
+# país no es México. Esto es filtrado estructural sobre un dato ya extraído
+# (país de sede/fundación, público y verificable en `seed_prospectos.py`), no
+# interpretación: no toca `directorio.py` ni su cascada de país de Wikidata.
+PAIS_PERMITIDO = "México"
+
 
 def listar_candidatos_verificados(db, *, limite: int = 50) -> list[dict]:
     """Expedientes 'candidato' con su evidencia primaria citada literalmente.
@@ -25,11 +38,16 @@ def listar_candidatos_verificados(db, *, limite: int = 50) -> list[dict]:
     Determinista: si un expediente tiene varias evidencias primarias, elige la
     de mayor prioridad (`_ORDEN_TIPO_PRIMARIO`) y, dentro del mismo tipo, la
     más antigua (id menor) — mismo insumo, mismo resultado.
+
+    Filtrado territorial: excluye organizaciones cuyo `prospectos.pais`
+    (resuelto por nombre exacto) esté declarado y no sea `PAIS_PERMITIDO`.
     """
     expedientes = db.fetch_all(
-        "SELECT id, organizacion FROM expedientes_candidatos "
-        "WHERE estado = 'candidato' ORDER BY organizacion LIMIT ?",
-        (int(limite),))
+        "SELECT ec.id, ec.organizacion FROM expedientes_candidatos ec "
+        "LEFT JOIN prospectos p ON LOWER(TRIM(p.nombre)) = LOWER(TRIM(ec.organizacion)) "
+        "WHERE ec.estado = 'candidato' AND (p.pais IS NULL OR p.pais = ?) "
+        "ORDER BY ec.organizacion LIMIT ?",
+        (PAIS_PERMITIDO, int(limite)))
 
     orden_caso = " ".join(
         f"WHEN '{tipo}' THEN {i}" for i, tipo in enumerate(_ORDEN_TIPO_PRIMARIO))

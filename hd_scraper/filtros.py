@@ -100,7 +100,7 @@ def _coincide_filtros(nombre: str, filtros: FiltrosRadar) -> bool:
     """
     from .seed_prospectos import DIRECTORIO_SEMILLA
 
-    for sem_nombre, cat, _vert, _sitio, escala in DIRECTORIO_SEMILLA:
+    for sem_nombre, cat, _vert, _sitio, escala, _pais in DIRECTORIO_SEMILLA:
         if sem_nombre == nombre:
             if filtros.categorias and cat not in filtros.categorias:
                 return False

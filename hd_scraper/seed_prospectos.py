@@ -32,72 +32,77 @@ from .db.models import ahora_iso, calcular_hash_prospecto
 
 log = logging.getLogger("hd_scraper.seed")
 
-# Directorio curado: (nombre, categoria, vertical, sitio_web, escala).
+# Directorio curado: (nombre, categoria, vertical, sitio_web, escala, pais).
 # Entidades públicas y verificables del ecosistema de innovación de LATAM.
 # categoria ∈ {VC, Startup, Incubadora, Corporativo} (declarada, estructural).
 # escala ∈ BANDAS: banda de tamaño PÚBLICA y verificable de la organización
 # (autorizado por el operador el 2026-08-01 para habilitar el filtro por tamaño).
 # Es un hecho estructural declarado (rango de plantilla público), NO un juicio;
 # `perfil_fundacional` puede refinarla luego desde la fuente orgánica.
-DIRECTORIO_SEMILLA: tuple[tuple[str, str, str, str, str], ...] = (
+# pais: país de la sede/fundación PÚBLICO y verificable (dato estructural
+# declarado aquí, igual que escala/vertical/sitio_web; NO se infiere del
+# discurso). Añadido por autorización del operador —Mario— para habilitar el
+# filtro territorial en `/verificados` (ver `listar_candidatos_verificados` en
+# `candidatos_verificados.py`, que lo resuelve por nombre exacto).
+DIRECTORIO_SEMILLA: tuple[tuple[str, str, str, str, str, str], ...] = (
     # ── VC · fondos de inversión (equipos pequeños) ───────────────────────
-    ("Kaszek", "VC", "Venture Capital", "https://www.kaszek.com", "11-50"),
-    ("monashees", "VC", "Venture Capital", "https://www.monashees.com.br", "11-50"),
-    ("NXTP Ventures", "VC", "Venture Capital", "https://nxtp.vc", "11-50"),
-    ("ALLVP", "VC", "Venture Capital", "https://allvp.vc", "11-50"),
-    ("Dalus Capital", "VC", "Venture Capital", "https://www.daluscapital.com", "11-50"),
-    ("Cometa", "VC", "Venture Capital", "https://www.cometa.vc", "1-10"),
-    ("Angel Ventures", "VC", "Venture Capital", "https://angelventures.vc", "11-50"),
-    ("Mountain Nazca", "VC", "Venture Capital", "https://www.mountainnazca.com", "11-50"),
-    ("Magma Partners", "VC", "Venture Capital", "https://www.magmapartners.com", "11-50"),
-    ("Amplifica Capital", "VC", "Venture Capital", "https://www.amplifica.capital", "1-10"),
+    ("Kaszek", "VC", "Venture Capital", "https://www.kaszek.com", "11-50", "Argentina"),
+    ("monashees", "VC", "Venture Capital", "https://www.monashees.com.br", "11-50", "Brasil"),
+    ("NXTP Ventures", "VC", "Venture Capital", "https://nxtp.vc", "11-50", "Argentina"),
+    ("ALLVP", "VC", "Venture Capital", "https://allvp.vc", "11-50", "México"),
+    ("Dalus Capital", "VC", "Venture Capital", "https://www.daluscapital.com", "11-50", "México"),
+    ("Cometa", "VC", "Venture Capital", "https://www.cometa.vc", "1-10", "México"),
+    ("Angel Ventures", "VC", "Venture Capital", "https://angelventures.vc", "11-50", "México"),
+    ("Mountain Nazca", "VC", "Venture Capital", "https://www.mountainnazca.com", "11-50", "Colombia"),
+    ("Magma Partners", "VC", "Venture Capital", "https://www.magmapartners.com", "11-50", "Chile"),
+    ("Amplifica Capital", "VC", "Venture Capital", "https://www.amplifica.capital", "1-10", "México"),
 
     # ── Startup ───────────────────────────────────────────────────────────
-    ("Clara", "Startup", "Gastos corporativos / Fintech", "https://www.clara.com", "201-500"),
-    ("Nowports", "Startup", "Logística / Freight", "https://www.nowports.com", "201-500"),
-    ("Jüsto", "Startup", "Supermercado online", "https://www.justo.mx", "501+"),
+    ("Clara", "Startup", "Gastos corporativos / Fintech", "https://www.clara.com", "201-500", "México"),
+    ("Nowports", "Startup", "Logística / Freight", "https://www.nowports.com", "201-500", "México"),
+    ("Jüsto", "Startup", "Supermercado online", "https://www.justo.mx", "501+", "México"),
     # Jüsto se revisó junto con el resto de escala=501+ (decisión del operador,
     # 2026-08-22) y se mantiene en Startup: sin evidencia pública de valuación
     # ≥ US$1000M ni de consolidación regional madura equivalente.
     # Startups tempranas / en crecimiento (bandas públicas aproximadas; el
     # perfil fundacional las refina). Cubren tamaños pequeños/medianos: el ICP
     # real de HD, donde la Deuda Cultural muerde antes del product-market fit.
-    ("Palenca", "Startup", "Infraestructura de datos laborales", "https://palenca.com", "1-10"),
-    ("Trii", "Startup", "Inversión minorista", "https://www.trii.co", "1-10"),
-    ("Toku", "Startup", "Pagos y cobranza", "https://www.trytoku.com", "1-10"),
-    ("Cobre", "Startup", "Pagos B2B", "https://cobre.co", "11-50"),
-    ("Mundi", "Startup", "Comercio / Trade finance", "https://www.mundi.io", "11-50"),
-    ("Kamino", "Startup", "Finanzas para PyME", "https://www.kamino.com.br", "11-50"),
-    ("Trace Finance", "Startup", "Fintech transfronteriza", "https://www.tracefinance.io", "11-50"),
-    ("Divibank", "Startup", "Financiamiento a creadores", "https://www.divibank.co", "11-50"),
-    ("Pomelo", "Startup", "Infraestructura fintech", "https://www.pomelo.la", "51-200"),
-    ("Simetrik", "Startup", "Conciliación financiera", "https://www.simetrik.com", "51-200"),
-    ("Fintual", "Startup", "Inversión", "https://fintual.com", "51-200"),
-    ("Zubale", "Startup", "Retail / Gig economy", "https://www.zubale.com", "51-200"),
+    ("Palenca", "Startup", "Infraestructura de datos laborales", "https://palenca.com", "1-10", "México"),
+    ("Trii", "Startup", "Inversión minorista", "https://www.trii.co", "1-10", "Colombia"),
+    ("Toku", "Startup", "Pagos y cobranza", "https://www.trytoku.com", "1-10", "Chile"),
+    ("Cobre", "Startup", "Pagos B2B", "https://cobre.co", "11-50", "Colombia"),
+    ("Mundi", "Startup", "Comercio / Trade finance", "https://www.mundi.io", "11-50", "México"),
+    ("Kamino", "Startup", "Finanzas para PyME", "https://www.kamino.com.br", "11-50", "Brasil"),
+    ("Trace Finance", "Startup", "Fintech transfronteriza", "https://www.tracefinance.io", "11-50", "México"),
+    ("Divibank", "Startup", "Financiamiento a creadores", "https://www.divibank.co", "11-50", "México"),
+    ("Pomelo", "Startup", "Infraestructura fintech", "https://www.pomelo.la", "51-200", "Argentina"),
+    ("Simetrik", "Startup", "Conciliación financiera", "https://www.simetrik.com", "51-200", "Colombia"),
+    ("Fintual", "Startup", "Inversión", "https://fintual.com", "51-200", "Chile"),
+    ("Zubale", "Startup", "Retail / Gig economy", "https://www.zubale.com", "51-200", "México"),
 
     # ── Incubadora · aceleradoras / builders / soporte de ecosistema ──────
-    ("Start-Up Chile", "Incubadora", "Aceleradora pública", "https://www.startupchile.org", "11-50"),
-    ("Wayra", "Incubadora", "Aceleradora corporativa", "https://www.wayra.com", "51-200"),
-    ("Endeavor", "Incubadora", "Soporte de ecosistema", "https://endeavor.org", "201-500"),
-    ("INCmty", "Incubadora", "Ecosistema de emprendimiento", "https://incmty.com", "11-50"),
-    ("MassChallenge México", "Incubadora", "Aceleradora", "https://masschallenge.org", "51-200"),
-    ("Founder Institute", "Incubadora", "Programa de fundadores", "https://fi.co", "11-50"),
-    ("Socialab", "Incubadora", "Innovación de impacto", "https://socialab.com", "11-50"),
-    ("Platanus Ventures", "Incubadora", "Aceleradora", "https://platan.us", "1-10"),
-    ("500 Global LATAM", "Incubadora", "Aceleradora / VC", "https://500.co", "51-200"),
-    ("Y Combinator", "Incubadora", "Aceleradora", "https://www.ycombinator.com", "51-200"),
+    ("Start-Up Chile", "Incubadora", "Aceleradora pública", "https://www.startupchile.org", "11-50", "Chile"),
+    ("Wayra", "Incubadora", "Aceleradora corporativa", "https://www.wayra.com", "51-200", "España"),
+    ("Endeavor", "Incubadora", "Soporte de ecosistema", "https://endeavor.org", "201-500", "Estados Unidos"),
+    ("INCmty", "Incubadora", "Ecosistema de emprendimiento", "https://incmty.com", "11-50", "México"),
+    ("MassChallenge México", "Incubadora", "Aceleradora", "https://masschallenge.org", "51-200", "México"),
+    ("Founder Institute", "Incubadora", "Programa de fundadores", "https://fi.co", "11-50", "Estados Unidos"),
+    ("Socialab", "Incubadora", "Innovación de impacto", "https://socialab.com", "11-50", "Uruguay"),
+    ("Platanus Ventures", "Incubadora", "Aceleradora", "https://platan.us", "1-10", "Chile"),
+    ("500 Global LATAM", "Incubadora", "Aceleradora / VC", "https://500.co", "51-200", "Estados Unidos"),
+    ("Y Combinator", "Incubadora", "Aceleradora", "https://www.ycombinator.com", "51-200", "Estados Unidos"),
 
     # ── Corporativo (gran escala) ─────────────────────────────────────────
-    ("Mercado Libre", "Corporativo", "E-commerce / Fintech", "https://www.mercadolibre.com", "501+"),
-    ("Globant", "Corporativo", "Servicios de tecnología", "https://www.globant.com", "501+"),
-    ("Grupo Bimbo", "Corporativo", "Alimentos", "https://www.grupobimbo.com", "501+"),
-    ("FEMSA", "Corporativo", "Bebidas / Retail", "https://www.femsa.com", "501+"),
-    ("Falabella", "Corporativo", "Retail", "https://www.falabella.com", "501+"),
-    ("CEMEX", "Corporativo", "Materiales de construcción", "https://www.cemex.com", "501+"),
-    ("BBVA México", "Corporativo", "Banca", "https://www.bbva.mx", "501+"),
-    ("Banco Santander México", "Corporativo", "Banca", "https://www.santander.com.mx", "501+"),
-    ("Arca Continental", "Corporativo", "Bebidas", "https://www.arcacontal.com", "501+"),
-    ("Grupo Salinas", "Corporativo", "Conglomerado", "https://www.gruposalinas.com", "501+"),
+    ("Mercado Libre", "Corporativo", "E-commerce / Fintech", "https://www.mercadolibre.com", "501+", "Argentina"),
+    ("Globant", "Corporativo", "Servicios de tecnología", "https://www.globant.com", "501+", "Argentina"),
+    ("Grupo Bimbo", "Corporativo", "Alimentos", "https://www.grupobimbo.com", "501+", "México"),
+    ("FEMSA", "Corporativo", "Bebidas / Retail", "https://www.femsa.com", "501+", "México"),
+    ("Falabella", "Corporativo", "Retail", "https://www.falabella.com", "501+", "Chile"),
+    ("CEMEX", "Corporativo", "Materiales de construcción", "https://www.cemex.com", "501+", "México"),
+    ("BBVA México", "Corporativo", "Banca", "https://www.bbva.mx", "501+", "México"),
+    ("Banco Santander México", "Corporativo", "Banca", "https://www.santander.com.mx", "501+", "México"),
+    ("Arca Continental", "Corporativo", "Bebidas", "https://www.arcacontal.com", "501+", "México"),
+    ("Grupo Salinas", "Corporativo", "Conglomerado", "https://www.gruposalinas.com", "501+", "México"),
     # Agregadas 2026-09-10: aparecían como categoria='Startup' en /expedientes
     # porque `detectar_empresa()` las detectó correctamente como sujeto de
     # titulares reales (ej. "Banorte y Rappi reciben multa...", "HSBC México
@@ -106,14 +111,14 @@ DIRECTORIO_SEMILLA: tuple[tuple[str, str, str, str, str], ...] = (
     # de la evidencia (a diferencia de FEMSA/BBVA México arriba, que ya estaban
     # en esta misma lista). Misma regla que las reclasificadas de abajo: bancos
     # y corporativos globales consolidados, nunca startups.
-    ("Banorte", "Corporativo", "Banca", "https://www.banorte.com", "501+"),
+    ("Banorte", "Corporativo", "Banca", "https://www.banorte.com", "501+", "México"),
     # "HSBC" (no "HSBC México"): detectar_empresa() extrae ese nombre literal
     # de los titulares reales ("HSBC México otorga..." -> "HSBC") — la clave de
     # búsqueda en _construir_expedientes es el nombre detectado en minúsculas,
     # así que la fila de prospectos tiene que coincidir exactamente con eso.
-    ("HSBC", "Corporativo", "Banca", "https://www.hsbc.com.mx", "501+"),
-    ("Oracle", "Corporativo", "Servicios de tecnología", "https://www.oracle.com", "501+"),
-    ("Maersk", "Corporativo", "Logística / Transporte marítimo", "https://www.maersk.com", "501+"),
+    ("HSBC", "Corporativo", "Banca", "https://www.hsbc.com.mx", "501+", "México"),
+    ("Oracle", "Corporativo", "Servicios de tecnología", "https://www.oracle.com", "501+", "Estados Unidos"),
+    ("Maersk", "Corporativo", "Logística / Transporte marítimo", "https://www.maersk.com", "501+", "Dinamarca"),
     # Reclasificadas desde Startup por decisión del operador (Mario, 2026-08-22):
     # el ICP de HD excluye unicornios y grandes corporativos consolidados, no
     # por tamaño de plantilla sino por estatus de mercado (valuación pública
@@ -124,13 +129,13 @@ DIRECTORIO_SEMILLA: tuple[tuple[str, str, str, str, str], ...] = (
     # el operador, no inferida — este es el operador corrigiendo su propia
     # declaración anterior con evidencia pública nueva, no una heurística
     # automática decidiendo por él.
-    ("Nubank", "Corporativo", "Fintech", "https://nubank.com.br", "501+"),
-    ("Rappi", "Corporativo", "Q-commerce / Delivery", "https://www.rappi.com", "501+"),
-    ("Kavak", "Corporativo", "Autos usados / Marketplace", "https://www.kavak.com", "501+"),
-    ("Bitso", "Corporativo", "Cripto / Fintech", "https://bitso.com", "501+"),
-    ("Clip", "Corporativo", "Pagos", "https://www.clip.mx", "501+"),
-    ("Konfío", "Corporativo", "Fintech PyME", "https://www.konfio.mx", "501+"),
-    ("Ualá", "Corporativo", "Fintech", "https://www.uala.com.ar", "501+"),
+    ("Nubank", "Corporativo", "Fintech", "https://nubank.com.br", "501+", "Brasil"),
+    ("Rappi", "Corporativo", "Q-commerce / Delivery", "https://www.rappi.com", "501+", "Colombia"),
+    ("Kavak", "Corporativo", "Autos usados / Marketplace", "https://www.kavak.com", "501+", "México"),
+    ("Bitso", "Corporativo", "Cripto / Fintech", "https://bitso.com", "501+", "México"),
+    ("Clip", "Corporativo", "Pagos", "https://www.clip.mx", "501+", "México"),
+    ("Konfío", "Corporativo", "Fintech PyME", "https://www.konfio.mx", "501+", "México"),
+    ("Ualá", "Corporativo", "Fintech", "https://www.uala.com.ar", "501+", "Argentina"),
 )
 
 
@@ -153,21 +158,25 @@ def asegurar_directorio_semilla(db: Database) -> int:
     """
     ahora = ahora_iso()
     ok = 0
-    for nombre, categoria, vertical, sitio, escala in DIRECTORIO_SEMILLA:
+    for nombre, categoria, vertical, sitio, escala, pais in DIRECTORIO_SEMILLA:
         try:
             # Si la fila ya existe (base persistente ya sembrada), rellena la
             # banda de tamaño SÓLO si seguía 'indeterminada'; nunca pisa una
             # escala ya declarada (p. ej. la que refine `perfil_fundacional`).
+            # `pais` se rellena con el mismo criterio: sólo si seguía vacío
+            # (NULL), nunca pisa un país ya declarado por otra vía.
             db.execute(
                 """INSERT INTO prospectos
-                     (nombre, categoria, vertical, sitio_web, escala,
+                     (nombre, categoria, vertical, sitio_web, escala, pais,
                       hash_dedup, creado_en, actualizado_en)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                    ON CONFLICT (hash_dedup) DO UPDATE SET
                      escala         = excluded.escala,
+                     pais           = COALESCE(prospectos.pais, excluded.pais),
                      actualizado_en = excluded.actualizado_en
-                   WHERE prospectos.escala = 'indeterminada'""",
-                (nombre, categoria, vertical, sitio, escala,
+                   WHERE prospectos.escala = 'indeterminada'
+                      OR prospectos.pais IS NULL""",
+                (nombre, categoria, vertical, sitio, escala, pais,
                  calcular_hash_prospecto(nombre, categoria), ahora, ahora),
             )
             ok += 1

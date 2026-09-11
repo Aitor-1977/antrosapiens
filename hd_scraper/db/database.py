@@ -99,7 +99,21 @@ class Database:
         self._migrar_organizacion_mencionada()
         self._migrar_expediente_id_nullable()
         self._migrar_resumen_fuente()
+        self._migrar_pais_prospecto()
         self.conn.commit()
+
+    def _migrar_pais_prospecto(self) -> None:
+        """Migración idempotente: añade ``prospectos.pais`` a bases persistentes
+        previas a esta ampliación (FASE territorial). ``CREATE TABLE IF NOT
+        EXISTS`` no altera una tabla ya existente (protocolo Capa 0, CLAUDE.md);
+        el ALTER es un no-op cuando la columna ya existe. No borra datos: solo
+        agrega la columna, con NULL para las filas ya sembradas hasta que
+        ``asegurar_directorio_semilla`` (o una captura futura) la rellene.
+        """
+        try:
+            self.conn.execute("ALTER TABLE prospectos ADD COLUMN pais TEXT")
+        except Exception:
+            pass
 
     def _migrar_resumen_fuente(self) -> None:
         """Migración idempotente (auditoría 2026-09-10, autorización P0):
