@@ -33,7 +33,7 @@ jobs:
 
       - name: Build debug APK
         working-directory: android_v2
-        run: ./gradlew assembleDebug --stacktrace
+        run: ./gradlew clean assembleDebug --stacktrace
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4

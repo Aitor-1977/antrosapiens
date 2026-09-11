@@ -43,7 +43,8 @@ def listar_candidatos_verificados(db, *, limite: int = 50) -> list[dict]:
     (resuelto por nombre exacto) esté declarado y no sea `PAIS_PERMITIDO`.
     """
     expedientes = db.fetch_all(
-        "SELECT ec.id, ec.organizacion FROM expedientes_candidatos ec "
+        "SELECT ec.id, ec.organizacion, p.categoria AS categoria_prospecto "
+        "FROM expedientes_candidatos ec "
         "LEFT JOIN prospectos p ON LOWER(TRIM(p.nombre)) = LOWER(TRIM(ec.organizacion)) "
         "WHERE ec.estado = 'candidato' AND (p.pais IS NULL OR p.pais = ?) "
         "ORDER BY ec.organizacion LIMIT ?",
@@ -57,7 +58,8 @@ def listar_candidatos_verificados(db, *, limite: int = 50) -> list[dict]:
         exp = dict(fila)
         evidencia = db.fetch_one(
             "SELECT ec.tipo_epistemologico, e.cita_textual, e.url_fuente, "
-            "e.nombre_medio FROM evidencia_clasificada ec "
+            "e.nombre_medio, e.fecha_publicacion, e.persona_citada, e.cargo, "
+            "e.categoria AS categoria_evidencia FROM evidencia_clasificada ec "
             "JOIN evidencias e ON e.id = ec.evidencia_id "
             "WHERE ec.expediente_id = ? "
             "AND ec.tipo_epistemologico IN (?, ?) "
@@ -70,11 +72,20 @@ def listar_candidatos_verificados(db, *, limite: int = 50) -> list[dict]:
             # nada: se omite en vez de mostrar una tarjeta vacía).
             continue
         ev = dict(evidencia)
+        # categoria estructural (prospectos.categoria, declarada por el
+        # operador) es la autoridad, igual que en _construir_expedientes;
+        # sin fila en prospectos, cae a la categoria de la propia evidencia
+        # (la etiqueta de la consulta que la capturó).
+        categoria = exp["categoria_prospecto"] or ev["categoria_evidencia"] or ""
         resultado.append({
             "organizacion": exp["organizacion"],
+            "categoria": categoria,
             "tipo_epistemologico": ev["tipo_epistemologico"],
             "cita_textual": ev["cita_textual"],
             "url_fuente": ev["url_fuente"],
             "nombre_medio": ev["nombre_medio"],
+            "fecha_publicacion": ev["fecha_publicacion"],
+            "persona_citada": ev["persona_citada"],
+            "cargo": ev["cargo"],
         })
     return resultado

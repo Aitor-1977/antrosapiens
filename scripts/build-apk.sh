@@ -75,3 +75,37 @@ fi
 echo "==> APK generado:"
 echo "    ${APK}"
 echo "    $(du -h "${APK}" | cut -f1)"
+
+# --- Exportación a la carpeta compartida de descargas del dispositivo -------
+# Empaquetado limpio de punta a punta: además de "clean" antes de compilar
+# (arriba), deja el APK listo donde el operador ya sabe buscarlo, sin un paso
+# manual de `cp`/`adb push` aparte. Autodetecta el destino en vez de asumir
+# una ruta fija:
+#   1. HD_APK_EXPORT_DIR, si el operador lo define explícitamente.
+#   2. ~/storage/downloads — el bind mount que crea `termux-setup-storage` en
+#      Termux hacia la carpeta de Descargas real del sistema Android.
+#   3. /storage/emulated/0/Download — ruta directa, cuando es escribible sin
+#      Termux:API (algunos entornos rooteados/ADB shell).
+# Si ninguna existe o no es escribible, se omite sin fallar el build: el APK
+# ya quedó compilado y localizable en la ruta de Gradle de todos modos.
+if [ -n "${HD_APK_EXPORT_DIR:-}" ]; then
+    DESTINO_DIR="${HD_APK_EXPORT_DIR}"
+elif [ -d "${HOME}/storage/downloads" ]; then
+    DESTINO_DIR="${HOME}/storage/downloads"
+elif [ -d "/storage/emulated/0/Download" ] && [ -w "/storage/emulated/0/Download" ]; then
+    DESTINO_DIR="/storage/emulated/0/Download"
+else
+    DESTINO_DIR=""
+fi
+
+if [ -n "${DESTINO_DIR}" ]; then
+    NOMBRE_DESTINO="antrosapiens-v2-${BUILD_TYPE}.apk"
+    if cp -f "${APK}" "${DESTINO_DIR}/${NOMBRE_DESTINO}" 2>/dev/null; then
+        echo "==> APK exportado a la carpeta de descargas:"
+        echo "    ${DESTINO_DIR}/${NOMBRE_DESTINO}"
+    else
+        echo "ADVERTENCIA: no se pudo copiar el APK a ${DESTINO_DIR} (¿sin permiso de escritura?)." >&2
+    fi
+else
+    echo "Nota: no se encontró una carpeta de descargas compartida (define HD_APK_EXPORT_DIR para forzar una ruta); el APK queda solo en ${APK}."
+fi
