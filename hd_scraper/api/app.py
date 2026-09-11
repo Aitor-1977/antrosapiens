@@ -124,6 +124,38 @@ app.add_middleware(
     allow_headers=["Content-Type", "X-Ingest-Token"],
 )
 
+# --- Fallback ante Postgres no disponible (2026-09-11) --------------------
+#
+# Diagnóstico en producción: bajo cierto tráfico, `Database._connect_postgres`
+# agota sus reintentos (ver hd_scraper/db/database.py) y lanza
+# psycopg.OperationalError — típico de un cold-start de Neon (el cómputo se
+# suspende tras inactividad) o de un agotamiento momentáneo de conexiones. Sin
+# este manejador esa excepción no capturada se convertía en un 500 genérico
+# de FastAPI (o, peor, el cliente se quedaba esperando hasta su propio
+# timeout). Se traduce a un 503 rápido con Retry-After: el cliente (la app
+# Android ya reintenta una vez con fetchConReintento) sabe que debe reintentar
+# en segundos, no que algo está roto. Import perezoso/opcional: los entornos
+# solo-SQLite (tests, dev) no necesitan psycopg instalado.
+try:
+    import psycopg as _psycopg
+except ImportError:  # pragma: no cover - psycopg siempre instalado en producción
+    _psycopg = None
+
+if _psycopg is not None:
+    @app.exception_handler(_psycopg.OperationalError)
+    async def _postgres_no_disponible(request: Request, exc: Exception) -> JSONResponse:
+        return JSONResponse(
+            status_code=503,
+            content={
+                "detail": (
+                    "Backend de datos temporalmente no disponible (posible "
+                    "reactivación de Neon tras inactividad). Reintenta en "
+                    "unos segundos."
+                )
+            },
+            headers={"Retry-After": "5"},
+        )
+
 
 @app.middleware("http")
 async def _etiquetar_request_id(request: Request, call_next):

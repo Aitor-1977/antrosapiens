@@ -82,16 +82,24 @@ class Database:
         # cadena pooled (ver `config._resolve_database_url`, prioriza
         # POSTGRES_URL/POSTGRES_PRISMA_URL sobre DATABASE_URL) para que el
         # límite real de Postgres no se sature con tan pocas conexiones
-        # concurrentes, y además se reintenta con backoff corto (cubre tanto
-        # el cold-start como un agotamiento momentáneo del pool que se libera
-        # solo en 1-3s) antes de rendirse. Cabe dentro de los 60s de
-        # maxDuration configurados en Vercel.
+        # concurrentes, y además se reintenta con backoff corto antes de
+        # rendirse (cubre tanto el cold-start como un agotamiento momentáneo
+        # del pool que se libera en 1-2s).
+        #
+        # Presupuesto de tiempo (2026-09-11, tras restaurar vercel.json con
+        # maxDuration=60): el intento original de 3 reintentos (timeouts
+        # 10/25/25 + esperas 0/1/3) sumaba hasta 64s en el peor caso — MÁS que
+        # los 60s totales de la función, así que ni siquiera dejaba tiempo
+        # para ejecutar la query después de conectar. Se reduce a 2 intentos
+        # (8s + 20s + 1s de espera = 29s peor caso) para dejar margen real al
+        # resto del request. Si ambos fallan, se propaga OperationalError:
+        # `hd_scraper/api/app.py` la traduce a un 503 rápido con
+        # Retry-After en vez de dejar la conexión del cliente colgada.
         ultimo_error: Exception | None = None
-        for intento, espera in enumerate((0, 1, 3)):
+        for intento, (espera, timeout) in enumerate(((0, 8), (1, 20))):
             if espera:
                 time.sleep(espera)
             try:
-                timeout = 10 if intento == 0 else 25
                 self.conn = psycopg.connect(dsn, row_factory=dict_row, connect_timeout=timeout)
                 return
             except psycopg.OperationalError as exc:
