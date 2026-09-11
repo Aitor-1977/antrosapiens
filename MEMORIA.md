@@ -11,13 +11,29 @@ capturaba hechos; por decisión del operador ahora **también analiza en
 profundidad** (scoring, Deuda Cultural, ICP, decisor), de forma **determinista**
 (sin IA ni red obligatoria).
 
-- Repo: `Aitor-1977/hd-prospector` · Deploy: `hd-prospector.vercel.app`
+- Repo: `Aitor-1977/antrosapiens` (nombre actualizado; `hd-prospector` es el nombre
+  interno del servicio, visible en `"service"` de `/health`).
+- Deploy: **4 proyectos Vercel separados**, mismo repo/rama `main`:
+  `antrosapiens-api-pro` (el real, conectado a Neon con los ~5.200 registros de
+  producción y el que consume `android_v2`), `antrosapiens-taow` (Postgres
+  aparte, vacío/de prueba), `antrosapiens-api` y `antrosapiens-core` (caían a
+  SQLite efímero por falta de `DATABASE_URL`/`HD_DATABASE_URL` en Vercel —
+  incidente 2026-09-10, ver Bitácora).
 - Stack: Python / FastAPI · SQLite (local/tests) + PostgreSQL/Neon (producción)
 - Motor B (aparte): `RadarHD` (`Aitor-1977/radarhd`, Next.js) — interpretación con IA.
+- **App Android**: `android_v2/` — app nativa (Kotlin + Compose + WebView).
+  Pantalla principal (`assets/public/index.html`, función `cargarHallazgos()`)
+  consume `GET /expedientes` y `GET /verificados` de `antrosapiens-api-pro`
+  (constante `API` fija en el HTML, línea ~168). Se compila vía GitHub Actions
+  (`.github/workflows/build-apk.yml`, `workflow_dispatch` o push a
+  `android_v2/**`) y publica un GitHub Release `apk-<run_number>` instalable
+  directo desde el navegador del teléfono.
 
 ## Arquitectura (carpeta `hd_scraper/`)
 
-- `connectors/` — fuentes de noticias (Google News RSS, GDELT).
+- `connectors/` — 5 conectores: `google_news.py`, `gdelt.py`, `rss_fijos.py`
+  (8 feeds curados), `job_boards.py` (Greenhouse/Lever/Ashby por slug),
+  `busqueda_dinamica.py` (Tavily, léxico de autodeclaraciones de founders).
 - `pipeline.py` — search → normalize → validate → dedup → escribe evidencia.
 - `relevance.py` — filtro determinista (opinión, geografía, no-empresa, **gigantes**,
   sucesos) + calidad de captura.
@@ -74,13 +90,24 @@ profundidad** (scoring, Deuda Cultural, ICP, decisor), de forma **determinista**
 
 ## Estado técnico
 
-- Pruebas: **185 passed** (`pytest`).
-- Rama: `main` (auto-deploy en Vercel).
+- Pruebas: **1010 passed** (`pytest`, actualizado 2026-09-10).
+- Rama: `main` (auto-deploy en Vercel, 4 proyectos — ver arriba).
 
 ## Pendiente / depende del operador
 
 - Agregar `HUNTER_API_KEY` en Vercel para correos verificados.
 - (Opcional) Base de empresas de pago (Crunchbase/Apollo) para cobertura total.
+- **Revisar en Vercel** las variables `DATABASE_URL`/`HD_DATABASE_URL` de los
+  proyectos `antrosapiens-api` y `antrosapiens-core` (caen a SQLite vacío;
+  `antrosapiens-api-pro`, el que usa la app, está bien).
+- **Rotar la contraseña de Neon** (se expuso en texto plano en el chat el
+  2026-09-10 al pegar una captura de terminal).
+- Configurar `TAVILY_API_KEY` y `DATABASE_URL` como *Secrets* reales en GitHub
+  Actions (repo → Settings → Secrets and variables → Actions) para que
+  `.github/workflows/prospeccion-tavily.yml` deje de fallar en silencio.
+- P1 sin implementar (documentado, no autorizado todavía): regla general para
+  ArchDaily/galerías de fotos y duplicación casi idéntica entre evidencias
+  (ver auditoría de calidad de evidencia, 2026-09-10).
 
 ## Bitácora
 
@@ -129,6 +156,71 @@ profundidad** (scoring, Deuda Cultural, ICP, decisor), de forma **determinista**
      entorno; se corrió con el intérprete real del contenedor,
      `/usr/local/bin/python3 -m pytest -q`).
 
-  Los puntos 2-4 no corresponden a `Aitor-1977/antrosapiens`: probablemente
-  pertenecen a otro repo (Motor B/RadarHD u otra ruta local del operador), no
-  a este. Sin cambios de código ni commits en este diagnóstico.
+  Los puntos 2-4 no corresponden a `Aitor-1977/antrosapiens`: el operador
+  confirmó que se confundió con otra cosa (no era este repo).
+
+- **Bloque de trabajo 2026-09-10 (sesión larga, PRs #14-#21) — resumen:**
+  1. **Exclusión por escala (201-500/501+)**: Jüsto/Frubana aparecían como
+     Startup ICP pese a ser grandes y con cientos de millones levantados;
+     `android_v2` ahora excluye esa banda de escala siempre, sin importar
+     `categoria`.
+  2. **Timeout de Neon**: `_connect_postgres()` (`db/database.py`) sin
+     `connect_timeout` colgaba la función serverless indefinidamente cuando
+     Neon estaba suspendido (evidencia real: 55s+ sin respuesta). Fix:
+     `connect_timeout=10` + un reintento a `connect_timeout=25`.
+  3. **INDAGAR no debe mostrar interpretación antropológica ya hecha**:
+     `cargarHallazgos()` mapeaba los expedientes con spread (`...p`), así que
+     `tipo_deuda`/`deuda_razon`/`angulo_conversacion`/`decisor_sugerido`
+     viajaban al estado de la app aunque no se pintaran. Se reemplazó por una
+     lista blanca explícita (solo dato observable + clasificación Nivel 1).
+     De paso se expusieron `persona_citada`/`cargo` que faltaban.
+  4. **Banorte/HSBC/Oracle/Maersk** aparecían como Startup (usuario reportó
+     "voy a desinstalar la app"): no tenían fila en `prospectos`. Se
+     registraron en `seed_prospectos.py` como `Corporativo`/`501+`.
+  5. **Estados de atribución de cita** (`clasificacion_epistemologica.py`,
+     función `clasificar_atribucion`): 4 estados deterministas
+     (`atribucion_explicita` / `atribucion_explicita_no_extraida` /
+     `ambigua` / `sin_atribucion`) con fragmento literal grounded, expuestos
+     en `/expedientes` y pintados en `quienHabla()` del HTML.
+  6. **Auditoría de calidad/diversidad de evidencia** (solo lectura, sin
+     código): mapeo completo del pipeline, hallazgo de que `google_news` y
+     `rss_fijos` leían un `summary`/`description` más rico del feed y lo
+     descartaban al normalizar (pérdida de extracción real, no techo de
+     fuente); Tavily con 0% del corpus por `TAVILY_API_KEY`/`DATABASE_URL`
+     vacíos en el workflow de GitHub Actions (falla 100% silenciosa, 3
+     corridas "exitosas" con 0 evidencias reales).
+  7. **Corrección P0 de esa auditoría**: nuevo campo `resumen_fuente`
+     (distinto de `cita_textual`, nunca etiquetado como cita) en
+     `google_news.py`/`rss_fijos.py`, persistido y expuesto en
+     `/evidencias`/`/expedientes`; URL de Contxto corregida (`/feed/` → 404
+     real → `/es/feed/`, verificado en vivo).
+  8. **Incidente de producción — SQLite en vez de Postgres**: descubierto al
+     verificar lo anterior. `antrosapiens-api` y `antrosapiens-core` sin
+     `DATABASE_URL`/`HD_DATABASE_URL`/`POSTGRES_URL` en Vercel, caían al
+     fallback `sqlite:////tmp/...` (vacío). `antrosapiens-api-pro` confirmado
+     intacto con los ~5.204 registros reales. **Pendiente del operador**:
+     revisar/copiar la variable de entorno correcta en el dashboard de Vercel
+     para los proyectos afectados (no es algo que se corrija por código).
+  9. **Incidente Anthropic (ICP 81)**: organizaciones sin fila en `prospectos`
+     heredaban por defecto la `categoria` de la consulta de captura
+     (`'Startup'`), sin verificar tamaño real en ningún punto de la fórmula
+     de `score_icp` (solo palabras clave + calidad de captura). Fix: se
+     reutilizó `GIGANTES` (`relevance.py`, ya usado en el filtro de
+     relevancia) ampliada con laboratorios de IA y grandes tecnológicas
+     (Anthropic, OpenAI, IBM, Oracle, Salesforce, SAP…), y
+     `_construir_expedientes` (`api/app.py`) ahora fuerza
+     `categoria='Corporativo'` para cualquier nombre que matchee `GIGANTES`
+     sin fila estructural en `prospectos`.
+  10. **Incidente CEO/CNBV (ICP 79-99)**: `detectar_empresa()` aceptaba
+      cualquier sigla en mayúsculas sin excepción para cargos (CEO/CFO/CTO...)
+      ni reguladores (CNBV, SAT, IMSS...); "CEO de Kavak regresa..." y "CNBV
+      multa a la fintech Albo..." detectaban el cargo/regulador como la
+      empresa. Fix: nuevo `_SIGLAS_NO_EMPRESA` en `relevance.py` + ajustes a
+      `_STOP_CAP` (plural "nuevas/nuevos", "lana"). El operador purgó a mano
+      los registros viejos en Neon directamente vía `psql` antes del fix de
+      código (⚠️ pegó la contraseña de Neon en texto plano en el chat en ese
+      proceso — recomendado rotarla).
+  11. PRs #14 a #21, todos fusionados a `main`, suite completa verde en cada
+      uno (982 → 1010 passed). APK recompilado tras el fix de Anthropic
+      (release `apk-32`, SHA256 del .apk:
+      `0fa9825b593ab1feab26da918b0a1d2c1eba1b08e071bfc37b0e415ba212ca76`).
