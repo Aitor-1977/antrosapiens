@@ -2324,6 +2324,25 @@ def _construir_expedientes(categorias: list[str] | None, limite: int = 30) -> di
     ):
         paises[(p["nombre"] or "").strip().lower()] = p["pais"]
 
+    # Clasificación epistemológica (Entrega 2, evidencia_clasificada) por
+    # evidencia_id: cuello de botella cerrado 2026-09-11 — /expedientes nunca
+    # exponía tipo_epistemologico/enunciador_dominio pese a que ya se
+    # calculan de forma determinista, así que Mario tenía que releer cada
+    # nota para juzgar quién habla y con qué autoridad. Solo lectura: nunca
+    # infiere ni recalcula la clasificación aquí, solo proyecta lo que
+    # `clasificacion_epistemologica.clasificar()` ya produjo. Sin fila
+    # (evidencia aún no clasificada), el lookup simplemente no la contiene y
+    # los campos salen None más abajo — nunca se fabrica un valor.
+    clasificaciones: dict[int, dict] = {}
+    for c in db.fetch_all(
+        "SELECT evidencia_id, tipo_epistemologico, enunciador_dominio "
+        "FROM evidencia_clasificada"
+    ):
+        clasificaciones[c["evidencia_id"]] = {
+            "tipo_epistemologico": c["tipo_epistemologico"],
+            "enunciador_dominio": c["enunciador_dominio"],
+        }
+
     # categoria estructural (prospectos.categoria, declarada por el operador al
     # alta) es la autoridad real sobre el ecosistema de una organización — NO la
     # categoria de la fila de evidencia, que solo registra bajo qué consulta se
@@ -2380,13 +2399,25 @@ def _construir_expedientes(categorias: list[str] | None, limite: int = 30) -> di
         for row in data["evidencias_raw"]:
             fila = dict(row)
             atrib = clasificar_atribucion(fila)
+            clas = clasificaciones.get(row["id"])
             evidencias.append({
+                # Trazabilidad (requisito de la revisión de cierre
+                # 2026-09-11): id real de la fila en `evidencias`, para que
+                # el corpus curado pueda rastrearse hasta la evidencia
+                # original sin ambigüedad.
+                "evidencia_id": row["id"],
                 "texto": row["cita_textual"],
                 "fuente": row["nombre_medio"],
                 "fecha": (row["fecha_publicacion"] or "")[:10],
                 "url": row["url_fuente"],
                 "tipo_evento": row["tipo_evento"],
                 "confianza": row["confianza"],
+                # Clasificación epistemológica ya calculada por Entrega 2
+                # (clasificacion_epistemologica.clasificar(), determinista,
+                # sin IA). None cuando la evidencia aún no fue clasificada —
+                # nunca se infiere aquí.
+                "tipo_epistemologico": clas["tipo_epistemologico"] if clas else None,
+                "enunciador_dominio": clas["enunciador_dominio"] if clas else None,
                 # Opcionales del contrato (CLAUDE.md: "Contrato de datos"): quién
                 # habló y con qué cargo, cuando la fuente lo declara. Faltaban
                 # aquí aunque ya existen en `evidencias` — sin ellos la pantalla
