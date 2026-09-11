@@ -1,0 +1,16 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/index.py": {
+      "includeFiles": "hd_scraper/**",
+      "maxDuration": 60
+    }
+  },
+  "rewrites": [
+    { "source": "/:path*", "destination": "/api/index/:path*" }
+  ],
+  "env": {
+    "HD_RAW_DIR": "/tmp/hd_raw",
+    "HD_RAW_ENABLED": "0"
+  }
+}
