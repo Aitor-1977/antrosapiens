@@ -12,6 +12,11 @@
     .font-serif-voice { font-family: 'Playfair Display', serif; }
     .font-tech { font-family: 'IBM Plex Mono', monospace; }
     ::-webkit-scrollbar { width: 0px; background: transparent; }
+    .campo-pericial:empty::before {
+        content: "Lectura pericial pendiente de redacción manual.";
+        color: rgba(17,17,17,0.4);
+        font-style: italic;
+    }
 </style>
 </head>
 <body class="min-h-screen flex flex-col pb-24">
@@ -232,8 +237,35 @@
         cont.innerHTML = `
             <span class="font-tech text-[10px] bg-[#5A7A00]/10 text-[#5A7A00] px-2 py-0.5 rounded uppercase tracking-wider">En observación</span>
             <h2 class="font-serif-voice text-xl font-bold text-[#111111] mt-3 mb-2">${esc(expedienteActual.nombre || '')}</h2>
-            <p class="font-serif-voice italic text-sm text-[#111111]/80 mb-4">El sellado formal del peritaje (Capa 12, Gobernanza Científica) aún no está conectado a esta pantalla — por ahora solo refleja el expediente que estás observando.</p>
-            <button disabled class="w-full bg-[#111111]/10 text-[#111111]/50 py-3 rounded-lg font-tech text-xs uppercase tracking-widest font-bold cursor-not-allowed">Sellar Peritaje (próximamente)</button>`;
+            <h3 class="font-serif-voice text-lg text-[#111111] mb-2">Lectura Pericial</h3>
+            <!-- Campo editable por el perito humano. Vacío por defecto: el sistema nunca
+                 rellena este espacio con una interpretación generada automáticamente. -->
+            <p id="campoPericial" class="campo-pericial font-serif-voice italic text-sm text-[#111111]/90 mb-4" contenteditable="true" role="textbox" aria-label="Lectura pericial, redactada exclusivamente por el perito humano"></p>
+            <button type="button" id="btnSellarPeritaje" disabled class="w-full bg-[#111111]/20 text-[#111111]/50 py-3 rounded-lg font-tech text-xs uppercase tracking-widest font-bold cursor-not-allowed" aria-disabled="true">Sellar Peritaje (requiere lectura escrita)</button>`;
+        inicializarLecturaPericial();
+    }
+
+    // El botón solo se habilita cuando el perito ha escrito su propia lectura;
+    // el sistema no puede sellar un peritaje sin texto humano. Se re-adjunta cada
+    // vez que actualizarFijar() reconstruye el HTML (innerHTML destruye listeners).
+    function inicializarLecturaPericial() {
+        const campo = document.getElementById('campoPericial');
+        const boton = document.getElementById('btnSellarPeritaje');
+        if (!campo || !boton) return;
+        campo.addEventListener('input', () => {
+            const tieneTexto = campo.textContent.trim().length > 0;
+            boton.disabled = !tieneTexto;
+            boton.setAttribute('aria-disabled', String(!tieneTexto));
+            boton.classList.toggle('bg-[#5A7A00]', tieneTexto);
+            boton.classList.toggle('text-white', tieneTexto);
+            boton.classList.toggle('cursor-not-allowed', !tieneTexto);
+            boton.classList.toggle('bg-[#111111]/20', !tieneTexto);
+            boton.classList.toggle('text-[#111111]/50', !tieneTexto);
+        });
+        boton.addEventListener('click', () => {
+            if (boton.disabled) return;
+            alert('El sellado formal del peritaje (Capa 12, Gobernanza Científica) aún no está conectado a esta pantalla. Tu lectura no se ha guardado ni enviado.');
+        });
     }
 
     function mostrarObservar(p) {

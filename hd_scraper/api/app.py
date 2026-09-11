@@ -31,6 +31,8 @@ from ..db.database import get_db
 from ..db.models import CATEGORIAS, ESTADO_OK, TIPOS_EVENTO, QuerySpec, ahora_iso
 import httpx
 
+from sandbox.motor_epistemico import motor_curaduria
+
 from .. import directorio, hunter
 from .. import candidato as _candidato
 from .. import drift as _drift
@@ -3207,7 +3209,7 @@ def drift_capturar(payload: DriftCapturarIn,
     # Criba de Capa 0: Evaluación de la Tríada Estructural
     dictamen = motor_curaduria.evaluar_triada(nombre, str(payload.notas))
     if not dictamen.get("valida", False):
-        raise HTTPException(400, f"Rechazado por Motor Epistémico (Ruido PR/Sin Tensión): {dictamen.get("jerarquia")}")
+        raise HTTPException(400, f"Rechazado por Motor Epistémico (Ruido PR/Sin Tensión): {dictamen.get('jerarquia')}")
     sitio = payload.sitio_web.strip()
     if not nombre:
         raise HTTPException(400, "org_nombre vacío")
@@ -3281,7 +3283,7 @@ def onlife_observar(payload: OnlifeObservarIn,
     # Criba de Capa 0: Evaluación de la Tríada Estructural
     dictamen = motor_curaduria.evaluar_triada(nombre, str(payload.notas))
     if not dictamen.get("valida", False):
-        raise HTTPException(400, f"Rechazado por Motor Epistémico (Ruido PR/Sin Tensión): {dictamen.get("jerarquia")}")
+        raise HTTPException(400, f"Rechazado por Motor Epistémico (Ruido PR/Sin Tensión): {dictamen.get('jerarquia')}")
     if not nombre:
         raise HTTPException(400, "org_nombre vacío")
 
@@ -3808,7 +3810,7 @@ def pipeline_registrar(payload: PipelineIn,
     # Criba de Capa 0: Evaluación de la Tríada Estructural
     dictamen = motor_curaduria.evaluar_triada(nombre, str(payload.notas))
     if not dictamen.get("valida", False):
-        raise HTTPException(400, f"Rechazado por Motor Epistémico (Ruido PR/Sin Tensión): {dictamen.get("jerarquia")}")
+        raise HTTPException(400, f"Rechazado por Motor Epistémico (Ruido PR/Sin Tensión): {dictamen.get('jerarquia')}")
     if not nombre:
         raise HTTPException(400, "org_nombre vacío")
     try:
@@ -3826,7 +3828,7 @@ def pipeline_avanzar(payload: PipelineIn,
     # Criba de Capa 0: Evaluación de la Tríada Estructural
     dictamen = motor_curaduria.evaluar_triada(nombre, str(payload.notas))
     if not dictamen.get("valida", False):
-        raise HTTPException(400, f"Rechazado por Motor Epistémico (Ruido PR/Sin Tensión): {dictamen.get("jerarquia")}")
+        raise HTTPException(400, f"Rechazado por Motor Epistémico (Ruido PR/Sin Tensión): {dictamen.get('jerarquia')}")
     if not nombre:
         raise HTTPException(400, "org_nombre vacío")
     try:
