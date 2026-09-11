@@ -224,3 +224,65 @@ def test_calidad_alta_media_baja():
 
 def test_calidad_duplicado_fuerza_baja():
     assert calcular_calidad(True, True, True, sin_duplicado=False) == CALIDAD_BAJA
+
+
+# ── Regresión: detectar_empresa() más conservador (auditoría 2026-09-11,     ─
+# hallazgo ALTO) — un verbo o un nombre de persona al inicio del titular NO
+# debe promoverse a organización. Casos reales del reporte del operador.
+
+def test_detectar_empresa_ignora_verbo_de_titular_invertido():
+    # "Cierra Konfío tercera adquisición..." (orden invertido verbo-sujeto,
+    # común en titulares en español): "Cierra" es un verbo conjugado, no un
+    # nombre propio. La organización real ("Konfío") sigue siendo detectable.
+    assert detectar_empresa(
+        "Cierra Konfío tercera adquisición; compra Sr. Pago"
+    ) == "Konfío"
+
+
+def test_detectar_empresa_ignora_nombre_de_persona_tras_cargo():
+    # "Nu México tendrá nuevo CEO: Armando Herrera" — "Armando" (nombre de
+    # pila) y "Herrera" (su apellido, adyacente) no son una organización.
+    # Sin otro candidato en el titular, el resultado correcto es None: no se
+    # inventa una organización a partir de un nombre de persona.
+    assert detectar_empresa(
+        "Nu México tendrá nuevo CEO: Armando Herrera"
+    ) is None
+
+
+def test_detectar_empresa_ignora_nombre_de_pila_seguido_de_apellido():
+    # Control aislado del mecanismo (sin el ruido de "Nu"/"CEO" del caso de
+    # arriba): un nombre de pila conocido, seguido de otro token capitalizado
+    # contiguo (su apellido), no debe producir ninguno de los dos como
+    # organización. La organización real, más adelante, sí se detecta.
+    assert detectar_empresa(
+        "Ana Ríos, CEO de Kavak, anuncia una reestructuración"
+    ) == "Kavak"
+
+
+def test_detectar_empresa_ignora_grupo_y_galeria_genericos():
+    assert detectar_empresa("Grupo anuncia una alianza estratégica en la región") is None
+    assert detectar_empresa("Galería presenta una nueva muestra de arte digital") is None
+    # Con nombre propio pegado, "Grupo"/"Galería" siguen actuando como
+    # genéricos de sector (mismo patrón que "Banco Santander" -> "Santander")
+    # y el token real de la organización sigue siendo detectable.
+    assert detectar_empresa("Grupo Bimbo anuncia recorte de personal") == "Bimbo"
+
+
+def test_detectar_empresa_ignora_sigla_ia_ya_protegida():
+    # "IA" ya estaba en _SIGLAS_NO_EMPRESA antes de esta corrección: control
+    # de no regresión, no un caso nuevo.
+    assert detectar_empresa("IA transforma la forma de invertir en la región") is None
+
+
+def test_detectar_empresa_caso_positivo_no_se_ve_afectado():
+    # La organización real sigue siendo el primer candidato cuando el
+    # titular no tiene ningún verbo/nombre de persona que filtrar antes.
+    assert detectar_empresa("Nubank anuncia nueva ronda de inversión") == "Nubank"
+
+
+def test_detectar_empresa_organizacion_ausente_es_none_no_inventada():
+    # Titular sin ninguna organización nombrable: la ausencia se representa
+    # como None, nunca como una entidad inventada por descarte.
+    assert detectar_empresa(
+        "Juan Pérez fue nombrado nuevo director general de la compañía"
+    ) is None

@@ -73,6 +73,38 @@ _STOP_CAP = {
     # Incidente real 2026-09-10: "Lana" (palabra común, no nombre de empresa)
     # detectada como organización en un titular.
     "lana",
+    # Auditoría 2026-09-11 (hallazgo ALTO): verbos conjugados en 3ª persona
+    # que encabezan titulares en orden invertido verbo-sujeto ("Cierra Konfío
+    # tercera adquisición"). Capitalizados solo por ir al inicio de la
+    # oración, no son nombres propios. Lista cerrada, incident-driven: no
+    # pretende cubrir todo verbo posible, solo los ya observados en el
+    # corpus real de titulares de negocio en español.
+    "cierra", "anuncia", "lanza", "compra", "vende", "despide", "recorta",
+    "adquiere", "firma", "presenta", "confirma", "niega", "revela", "gana",
+    "pierde", "crece", "cae", "sube", "baja", "abre", "renuncia", "nombra",
+    "designa", "reporta", "invierte", "levanta", "recauda", "cierran",
+}
+
+# Nombres de pila comunes en español (LATAM/México) que NO deben promoverse a
+# organización cuando aparecen como el primer candidato capitalizado de un
+# titular (p. ej. "Ana Ríos, CEO de Kavak..." o "...nuevo CEO: Armando
+# Herrera"). Auditoría 2026-09-11 (hallazgo ALTO), reproducido con evidencia
+# real del flujo de escritura/clasificación/promoción.
+#
+# Lista cerrada y DELIBERADAMENTE INCOMPLETA (no existe un léxico exhaustivo
+# de nombres de pila): reduce el riesgo, no lo elimina. Cubre los casos ya
+# auditados más un conjunto acotado de nombres frecuentes en bylines de
+# prensa de negocios en español. Ver CLAUDE.md "Errores recurrentes" para el
+# criterio de cuándo ampliar una lista cerrada por incidente.
+_NOMBRES_PROPIOS_PERSONA = {
+    "ana", "sofia", "armando", "juan", "maria", "jose", "luis", "carlos",
+    "miguel", "jorge", "fernando", "alejandro", "ricardo", "roberto",
+    "eduardo", "francisco", "antonio", "manuel", "pedro", "rafael",
+    "sergio", "diego", "andres", "pablo", "daniel", "david", "gabriel",
+    "adriana", "alejandra", "alicia", "carmen", "claudia", "cristina",
+    "elena", "fernanda", "gabriela", "isabel", "laura", "lucia",
+    "mariana", "marisol", "patricia", "paula", "paulina", "rosa",
+    "silvia", "valentina", "valeria", "veronica", "ximena",
 }
 
 # Términos genéricos de sector: describen el rubro, no a la empresa.
@@ -82,6 +114,12 @@ _GENERICOS_SECTOR = {
     "empresa", "empresas", "compania", "companias", "firma", "banco", "bancos",
     "plataforma", "app", "aplicacion", "mercado", "sector", "industria",
     "tecnologia", "digital", "ronda", "serie",
+    # Auditoría 2026-09-11: "Grupo"/"Galería" solas (sin nombre propio
+    # pegado) son clasificadores genéricos, no una empresa — mismo patrón ya
+    # establecido para "banco" ("Banco Santander" -> se descarta "Banco" y se
+    # detecta "Santander"; "Grupo Bimbo" -> se descarta "Grupo" y se detecta
+    # "Bimbo").
+    "grupo", "galeria",
 }
 
 # Siglas que NUNCA son empresa: cargos ejecutivos y organismos de gobierno/
@@ -110,13 +148,31 @@ def detectar_empresa(titulo: str) -> Optional[str]:
     nombre propio (mayúscula inicial o sigla) y no sea palabra común ni término
     de sector. No garantiza que sea "la" empresa; garantiza que HAY una entidad
     nombrada, que es la condición objetiva pedida.
+
+    Conservador por diseño (auditoría 2026-09-11, hallazgo ALTO): ante duda
+    entre "es una organización" y "es una persona/un verbo", se descarta y se
+    sigue buscando, nunca se inventa una organización. Dos mecanismos, ambos
+    sobre listas cerradas ya existentes en el módulo:
+
+    1. Un nombre de pila conocido (``_NOMBRES_PROPIOS_PERSONA``) nunca se
+       devuelve como organización.
+    2. El token INMEDIATAMENTE contiguo (solo espacio de por medio) al que
+       acaba de descartarse por ser un nombre de pila se trata como su
+       apellido y tampoco se devuelve — evita que "Ana Ríos" o "Armando
+       Herrera" terminen devolviendo la mitad del nombre de una persona.
     """
     if not titulo:
         return None
-    # Tokens conservando mayúsculas; separadores no alfanuméricos fuera.
-    # Se ignora el sufijo " - Medio" (no es contenido ni una empresa).
-    for bruto in re.findall(r"[\wÁÉÍÓÚÑÜáéíóúñü]+", _sin_medio(titulo)):
-        limpio = bruto.strip()
+    texto = _sin_medio(titulo)
+    fin_anterior: Optional[int] = None
+    saltar_apellido = False
+    for m in re.finditer(r"[\wÁÉÍÓÚÑÜáéíóúñü]+", texto):
+        limpio = m.group(0).strip()
+        contiguo = fin_anterior is not None and texto[fin_anterior:m.start()].strip() == ""
+        es_apellido_descartado = saltar_apellido and contiguo
+        saltar_apellido = False
+        fin_anterior = m.end()
+
         if len(limpio) < 3:
             # Siglas cortas de 2 (p. ej. "BQ") son raras; exigimos 3+ salvo sigla.
             if not _es_sigla(limpio):
@@ -125,8 +181,16 @@ def detectar_empresa(titulo: str) -> Optional[str]:
         if base in _STOP_CAP or base in _GENERICOS_SECTOR or base in _SIGLAS_NO_EMPRESA:
             continue
         primera = limpio[0]
-        if primera.isupper() or _es_sigla(limpio):
-            return limpio
+        if not (primera.isupper() or _es_sigla(limpio)):
+            continue
+        if es_apellido_descartado:
+            # Apellido contiguo a un nombre de pila ya descartado: parte del
+            # mismo nombre de persona, no una organización nueva.
+            continue
+        if base in _NOMBRES_PROPIOS_PERSONA:
+            saltar_apellido = True
+            continue
+        return limpio
     return None
 
 
