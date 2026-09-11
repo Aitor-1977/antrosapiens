@@ -3076,6 +3076,10 @@ def drift_capturar(payload: DriftCapturarIn,
     """
     _exigir_token(x_ingest_token)
     nombre = payload.org_nombre.strip()
+    # Criba de Capa 0: Evaluación de la Tríada Estructural
+    dictamen = motor_curaduria.evaluar_triada(nombre, str(payload.notas))
+    if not dictamen.get("valida", False):
+        raise HTTPException(400, f"Rechazado por Motor Epistémico (Ruido PR/Sin Tensión): {dictamen.get("jerarquia")}")
     sitio = payload.sitio_web.strip()
     if not nombre:
         raise HTTPException(400, "org_nombre vacío")
@@ -3146,6 +3150,10 @@ def onlife_observar(payload: OnlifeObservarIn,
     """
     _exigir_token(x_ingest_token)
     nombre = payload.org_nombre.strip()
+    # Criba de Capa 0: Evaluación de la Tríada Estructural
+    dictamen = motor_curaduria.evaluar_triada(nombre, str(payload.notas))
+    if not dictamen.get("valida", False):
+        raise HTTPException(400, f"Rechazado por Motor Epistémico (Ruido PR/Sin Tensión): {dictamen.get("jerarquia")}")
     if not nombre:
         raise HTTPException(400, "org_nombre vacío")
 
@@ -3664,11 +3672,18 @@ class PipelineIn(BaseModel):
 
 
 @app.post("/pipeline/registrar")
+from sandbox.motor_epistemico import motor_curaduria
+
+@app.post("/pipeline/registrar")
 def pipeline_registrar(payload: PipelineIn,
                        x_ingest_token: Optional[str] = Header(None)) -> dict:
     """Registra o actualiza una organización en el pipeline comercial. Autenticado."""
     _exigir_token(x_ingest_token)
     nombre = payload.org_nombre.strip()
+    # Criba de Capa 0: Evaluación de la Tríada Estructural
+    dictamen = motor_curaduria.evaluar_triada(nombre, str(payload.notas))
+    if not dictamen.get("valida", False):
+        raise HTTPException(400, f"Rechazado por Motor Epistémico (Ruido PR/Sin Tensión): {dictamen.get("jerarquia")}")
     if not nombre:
         raise HTTPException(400, "org_nombre vacío")
     try:
@@ -3683,6 +3698,10 @@ def pipeline_avanzar(payload: PipelineIn,
     """Mueve una organización a una nueva etapa del pipeline. Autenticado."""
     _exigir_token(x_ingest_token)
     nombre = payload.org_nombre.strip()
+    # Criba de Capa 0: Evaluación de la Tríada Estructural
+    dictamen = motor_curaduria.evaluar_triada(nombre, str(payload.notas))
+    if not dictamen.get("valida", False):
+        raise HTTPException(400, f"Rechazado por Motor Epistémico (Ruido PR/Sin Tensión): {dictamen.get("jerarquia")}")
     if not nombre:
         raise HTTPException(400, "org_nombre vacío")
     try:
