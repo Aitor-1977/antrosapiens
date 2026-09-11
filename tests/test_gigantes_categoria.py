@@ -72,6 +72,15 @@ def test_anthropic_sin_fila_en_prospectos_queda_forzado_a_corporativo(cli, db):
     titular literalmente nombra al gigante) Y de detectar_empresa (que si no,
     "descubriría" otra palabra capitalizada como organización). Ambos
     mecanismos comparten GIGANTES y se refuerzan, no se duplican.
+
+    Actualización 2026-09-11 (corrección "identidad ≠ relación/contexto",
+    autorizada por el operador): `evaluar_relevancia` ahora recibe la
+    organización ya identificada y descarta por `relevancia:gigante` cuando
+    ESA organización coincide con `GIGANTES` — sin importar si el gigante se
+    nombra literalmente en el titular. Decisión explícita del operador: un
+    gigante sin fila en `prospectos` ya no se muestra reclasificado como
+    Corporativo, se descarta por completo (mismo criterio que si el titular
+    lo nombrara directamente).
     """
     _sembrar_evidencia(
         db, empresa="Anthropic",
@@ -85,14 +94,14 @@ def test_anthropic_sin_fila_en_prospectos_queda_forzado_a_corporativo(cli, db):
     assert "Anthropic" not in nombres_startup, (
         "Anthropic NO debe calificar como candidato Startup/ICP")
 
-    # /expedientes SIN filtro de categoria no pre-filtra por la columna cruda
-    # de `evidencias` (esa restricción SQL solo aplica cuando se pide una
-    # categoria puntual): así se confirma la categoria YA RESUELTA por
-    # _construir_expedientes, que es lo que el fix cambia.
+    # Con la corrección de identidad-vs-contexto, un gigante sin fila en
+    # prospectos se descarta por relevancia:gigante antes de llegar a
+    # _construir_expedientes: no aparece en /expedientes bajo ningún filtro.
     r_todas = cli.get("/expedientes", params={"limite": 100})
     por_nombre = {e["nombre"]: e["categoria"] for e in r_todas.json()["expedientes"]}
-    assert por_nombre.get("Anthropic") == "Corporativo", (
-        "Anthropic debe quedar forzado a Corporativo sin fila en prospectos")
+    assert "Anthropic" not in por_nombre, (
+        "Anthropic (gigante sin fila en prospectos) debe descartarse por "
+        "completo, no solo dejar de calificar como Startup/ICP")
 
 
 def test_organizacion_no_gigante_sin_fila_conserva_categoria_de_la_consulta(cli, db):

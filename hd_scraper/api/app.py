@@ -507,7 +507,7 @@ def listar_evidencias(
         org = detectar_empresa(titulo)
         if limpio:
             ok, _ = evaluar_relevancia(titulo, item.get("keywords") or [], bool(org),
-                                       exigir_evento=False)
+                                       exigir_evento=False, organizacion=org or "")
             if not org or not ok:
                 continue
         item["organizacion"] = org or (item.get("empresa_mencionada") or "")
@@ -985,7 +985,8 @@ def investigacion_automatica(payload: InvestigacionIn,
         try:
             def _procesar_noticia(p: dict) -> dict:
                 ok, _ = evaluar_relevancia(p.get("texto", ""), [], True,
-                                           exigir_evento=False)
+                                           exigir_evento=False,
+                                           organizacion=p.get("org_name") or "")
                 if not ok:
                     return {"senales_detectadas": 0}
                 return _procesar_capa0(db, p.get("texto", ""), p.get("url", ""),
@@ -2142,7 +2143,8 @@ def ingesta_noticias(payload: IngestaNoticiasIn,
 
     def procesar(p: dict) -> dict:
         # Descarta ruido/gigantes/geo antes de la Capa 0 (calidad de la señal).
-        ok, _ = evaluar_relevancia(p.get("texto", ""), [], True, exigir_evento=False)
+        ok, _ = evaluar_relevancia(p.get("texto", ""), [], True, exigir_evento=False,
+                                   organizacion=p.get("org_name") or "")
         if not ok:
             return {"senales_detectadas": 0}
         return _procesar_capa0(db, p.get("texto", ""), p.get("url", ""),
@@ -2223,7 +2225,7 @@ from ..observatorio import (
     riesgos_culturales,
 )
 from .. import expediente_vivo as _exp_vivo
-from ..relevance import GIGANTES, _sin_acentos
+from ..relevance import GIGANTES, MOTIVO_GIGANTE, _sin_acentos
 from ..publicador import (
     generar_csv,
     generar_html,
@@ -2269,6 +2271,19 @@ def _construir_expedientes(categorias: list[str] | None, limite: int = 30) -> di
         tuple(params),
     )
 
+    # categoria estructural (prospectos.categoria, declarada por el operador al
+    # alta) es la autoridad real sobre el ecosistema de una organización — NO la
+    # categoria de la fila de evidencia, que solo registra bajo qué consulta se
+    # rastreó ese titular en su momento y puede quedar desactualizada (p. ej.
+    # Nubank/Rappi/Kavak/Bitso se rastrearon alguna vez bajo consultas de
+    # "Startup", pero el operador ya las reclasificó como Corporativo en
+    # prospectos el 2026-08-22 — ver seed_prospectos.py). Se calcula ANTES del
+    # bucle principal (movido 2026-09-11) porque también decide si el rechazo
+    # automático por MOTIVO_GIGANTE aplica: ver comentario en el bucle.
+    categorias_prospecto: dict[str, str] = {}
+    for p in db.fetch_all("SELECT nombre, categoria FROM prospectos"):
+        categorias_prospecto[(p["nombre"] or "").strip().lower()] = p["categoria"] or ""
+
     orgs: dict[str, dict] = {}
     for row in filas:
         titulo = row["cita_textual"] or ""
@@ -2286,10 +2301,19 @@ def _construir_expedientes(categorias: list[str] | None, limite: int = 30) -> di
             )
             continue
         kws = _keywords(row)
-        ok, _ = evaluar_relevancia(titulo, kws, bool(org), exigir_evento=False)
-        if not ok:
-            continue
         key = org.lower()
+        ok, motivo = evaluar_relevancia(titulo, kws, bool(org), exigir_evento=False,
+                                        organizacion=org)
+        if not ok:
+            # La fila estructural en `prospectos` es la autoridad final sobre
+            # la organización (doctrina: "categoria sigue siendo declarada,
+            # no inferida") y gana SIEMPRE sobre la heurística automática de
+            # identidad-gigante (decisión del operador 2026-09-11): si el
+            # operador ya dio de alta esta organización, el rechazo por
+            # MOTIVO_GIGANTE no aplica — cualquier otro motivo de rechazo
+            # (opinión, no-LATAM, ruido, sin evento…) sigue aplicando igual.
+            if not (motivo == MOTIVO_GIGANTE and key in categorias_prospecto):
+                continue
         if key not in orgs:
             orgs[key] = {"nombre": org, "evidencias_raw": [],
                          "keywords_set": set(),
@@ -2343,31 +2367,29 @@ def _construir_expedientes(categorias: list[str] | None, limite: int = 30) -> di
             "enunciador_dominio": c["enunciador_dominio"],
         }
 
-    # categoria estructural (prospectos.categoria, declarada por el operador al
-    # alta) es la autoridad real sobre el ecosistema de una organización — NO la
-    # categoria de la fila de evidencia, que solo registra bajo qué consulta se
-    # rastreó ese titular en su momento y puede quedar desactualizada (p. ej.
-    # Nubank/Rappi/Kavak/Bitso se rastrearon alguna vez bajo consultas de
-    # "Startup", pero el operador ya las reclasificó como Corporativo en
-    # prospectos el 2026-08-22 — ver seed_prospectos.py). Mismo patrón que
-    # `escalas` arriba: si existe una fila estructural, manda ella.
-    categorias_prospecto: dict[str, str] = {}
-    for p in db.fetch_all("SELECT nombre, categoria FROM prospectos"):
-        categorias_prospecto[(p["nombre"] or "").strip().lower()] = p["categoria"] or ""
+    # `categorias_prospecto` ya se calculó arriba, antes del bucle principal.
 
+    # Gigante tecnológico reconocible (GIGANTES, relevance.py) SIN fila
+    # estructural en `prospectos`: se descarta por completo, NO se reclasifica
+    # a Corporativo. Decisión del operador 2026-09-11 ("identidad ≠ relación/
+    # contexto"): la fila estructural declarada sigue siendo la autoridad
+    # final sobre categoria (si existe, gana siempre — ver `cat_estructural`
+    # abajo); sin ella, un gigante ya no aparece bajo ningún filtro de
+    # /expedientes, mismo criterio que `relevancia:gigante` en
+    # `evaluar_relevancia` cuando el titular identifica directamente al
+    # gigante. Reemplaza la reclasificación forzada a Corporativo usada hasta
+    # el incidente de Anthropic con ICP 81 (2026-09-10): esa reclasificación
+    # dejaba pasar candidatos que ahora se excluyen en origen.
+    claves_gigante_sin_fila: set[str] = set()
     for key, data in orgs.items():
         cat_estructural = categorias_prospecto.get(key)
         if cat_estructural:
             data["categoria"] = cat_estructural
-        # Gigante tecnológico reconocible (GIGANTES, relevance.py): forzado a
-        # Corporativo SIEMPRE, sin importar si tiene fila en `prospectos` ni
-        # bajo qué categoria se etiquetó la consulta que la capturó. Cierra el
-        # hueco que dejaba pasar candidatos sin fila estructural (incidente
-        # real: Anthropic con ICP 81, sin fila en prospectos, 2026-09-10). No
-        # borra evidencia: solo dejan de calificar como candidato ICP, mismo
-        # patrón que la exclusión por escala 501+/201-500 en android_v2.
         elif any(g in _sin_acentos(key) for g in GIGANTES):
-            data["categoria"] = "Corporativo"
+            claves_gigante_sin_fila.add(key)
+    if claves_gigante_sin_fila:
+        orgs = {key: data for key, data in orgs.items()
+                if key not in claves_gigante_sin_fila}
 
     # FASE territorial: excluye organizaciones cuyo país estructural esté
     # declarado y no sea PAIS_PERMITIDO. `paises.get(key, PAIS_PERMITIDO)`
