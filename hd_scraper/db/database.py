@@ -17,6 +17,7 @@ dev) no necesitan tenerlo instalado.
 from __future__ import annotations
 
 import sqlite3
+import threading
 from pathlib import Path
 from typing import Any, Iterable, Optional
 
@@ -37,6 +38,20 @@ class Database:
             dsn = settings.database_url
         dsn = str(dsn)
         self._dsn = dsn
+        # Serializa TODO acceso a self.conn entre hilos. Causa raíz real del
+        # timeout intermitente en producción (2026-09-11, diagnosticado tras
+        # descartar Neon/vercel.json): los endpoints de app.py son `def`
+        # síncronos, así que Starlette los corre en hilos del threadpool;
+        # varios hilos concurrentes compartían esta ÚNICA conexión psycopg sin
+        # ningún candado. psycopg (como la mayoría de drivers de Postgres) NO
+        # es seguro para uso concurrente de la misma conexión desde varios
+        # hilos: dos `execute()` simultáneos pueden entrelazar el protocolo de
+        # wire y dejar la conexión en un estado del que nunca vuelve a
+        # responder — exactamente el patrón observado (200/503/504 mezclados
+        # en la misma ráfaga, colgado hasta que Vercel mata la función a los
+        # 60s). Un único Lock por instancia convierte eso en una cola segura:
+        # más lento bajo ráfaga que una corrupción silenciosa, pero correcto.
+        self._lock = threading.Lock()
 
         if _es_postgres(dsn):
             self.dialect = "postgres"
@@ -220,27 +235,35 @@ class Database:
             pass
 
     # -- Operaciones ----------------------------------------------------
+    # Todas bajo self._lock: self.conn es una única conexión compartida entre
+    # los hilos del threadpool de Starlette (endpoints síncronos); dos
+    # `execute()` concurrentes sobre la misma conexión psycopg pueden
+    # entrelazar el protocolo de wire y colgarla (ver comentario en __init__).
     def execute(self, sql: str, params: Iterable[Any] = ()):
-        cur = self.conn.execute(self._q(sql), tuple(params))
-        self.conn.commit()
-        return cur
+        with self._lock:
+            cur = self.conn.execute(self._q(sql), tuple(params))
+            self.conn.commit()
+            return cur
 
     def fetch_one(self, sql: str, params: Iterable[Any] = ()) -> Optional[Any]:
-        return self.conn.execute(self._q(sql), tuple(params)).fetchone()
+        with self._lock:
+            return self.conn.execute(self._q(sql), tuple(params)).fetchone()
 
     def fetch_all(self, sql: str, params: Iterable[Any] = ()) -> list[Any]:
-        return self.conn.execute(self._q(sql), tuple(params)).fetchall()
+        with self._lock:
+            return self.conn.execute(self._q(sql), tuple(params)).fetchall()
 
     def insert_returning_id(self, sql: str, params: Iterable[Any] = ()) -> int:
         """INSERT que devuelve el id generado, portable entre motores."""
-        if self.dialect == "sqlite":
-            cur = self.conn.execute(sql, tuple(params))
+        with self._lock:
+            if self.dialect == "sqlite":
+                cur = self.conn.execute(sql, tuple(params))
+                self.conn.commit()
+                return cur.lastrowid
+            cur = self.conn.execute(self._q(sql) + " RETURNING id", tuple(params))
+            rid = cur.fetchone()["id"]
             self.conn.commit()
-            return cur.lastrowid
-        cur = self.conn.execute(self._q(sql) + " RETURNING id", tuple(params))
-        rid = cur.fetchone()["id"]
-        self.conn.commit()
-        return rid
+            return rid
 
     def reconectar(self) -> None:
         """Cierra la conexión actual (si sigue viva) y abre una nueva.
@@ -250,17 +273,19 @@ class Database:
         sí es lo que murió, no hay nada que reparar en la sesión SQL. Reusa el
         DSN original.
         """
-        try:
-            self.conn.close()
-        except Exception:
-            pass
-        if self.dialect == "postgres":
-            self._connect_postgres(self._dsn)
-        else:
-            self._connect_sqlite(self._dsn)
+        with self._lock:
+            try:
+                self.conn.close()
+            except Exception:
+                pass
+            if self.dialect == "postgres":
+                self._connect_postgres(self._dsn)
+            else:
+                self._connect_sqlite(self._dsn)
 
     def close(self) -> None:
-        self.conn.close()
+        with self._lock:
+            self.conn.close()
 
     def __enter__(self) -> "Database":
         return self
@@ -271,6 +296,11 @@ class Database:
 
 _db_singleton: Database | None = None
 _schema_ready: bool = False
+# Serializa la creación/reemplazo del singleton entre hilos (ver el Lock por
+# instancia en Database.__init__): sin esto, dos hilos podrían ver
+# `_db_singleton is not None` a la vez, uno cerrarlo tras un ping fallido
+# mientras el otro sigue usando la conexión ya cerrada.
+_singleton_lock = threading.Lock()
 
 
 def get_db() -> Database:
@@ -282,29 +312,30 @@ def get_db() -> Database:
     aplica una sola vez por proceso (es idempotente de todos modos).
     """
     global _db_singleton, _schema_ready
-    if _db_singleton is not None:
-        try:
-            _db_singleton.fetch_one("SELECT 1")
-            return _db_singleton
-        except Exception:
+    with _singleton_lock:
+        if _db_singleton is not None:
             try:
-                _db_singleton.close()
+                _db_singleton.fetch_one("SELECT 1")
+                return _db_singleton
             except Exception:
+                try:
+                    _db_singleton.close()
+                except Exception:
+                    pass
+                _db_singleton = None
+        _db_singleton = Database()
+        if not _schema_ready:
+            _db_singleton.init_schema()
+            # Directorio semilla: asegura organizaciones reales de LATAM en
+            # `prospectos` para que Motor A entregue datos desde el primer
+            # arranque (sin ingesta ni credenciales). Idempotente (ON
+            # CONFLICT), se ejecuta SIEMPRE —no sólo con la tabla vacía— para
+            # poblar también una base persistente que ya tuviera filas. Sin
+            # red; nunca tumba el arranque. Ver `hd_scraper/seed_prospectos.py`.
+            try:
+                from ..seed_prospectos import asegurar_directorio_semilla
+                asegurar_directorio_semilla(_db_singleton)
+            except Exception:  # pragma: no cover - la siembra jamás bloquea la API
                 pass
-            _db_singleton = None
-    _db_singleton = Database()
-    if not _schema_ready:
-        _db_singleton.init_schema()
-        # Directorio semilla: asegura organizaciones reales de LATAM en
-        # `prospectos` para que Motor A entregue datos desde el primer arranque
-        # (sin ingesta ni credenciales). Idempotente (ON CONFLICT), se ejecuta
-        # SIEMPRE —no sólo con la tabla vacía— para poblar también una base
-        # persistente que ya tuviera filas. Sin red; nunca tumba el arranque.
-        # Ver `hd_scraper/seed_prospectos.py`.
-        try:
-            from ..seed_prospectos import asegurar_directorio_semilla
-            asegurar_directorio_semilla(_db_singleton)
-        except Exception:  # pragma: no cover - la siembra jamás bloquea la API
-            pass
-        _schema_ready = True
-    return _db_singleton
+            _schema_ready = True
+        return _db_singleton
