@@ -38,19 +38,28 @@ class Database:
             dsn = settings.database_url
         dsn = str(dsn)
         self._dsn = dsn
-        # Serializa TODO acceso a self.conn entre hilos. Causa raíz real del
-        # timeout intermitente en producción (2026-09-11, diagnosticado tras
-        # descartar Neon/vercel.json): los endpoints de app.py son `def`
-        # síncronos, así que Starlette los corre en hilos del threadpool;
-        # varios hilos concurrentes compartían esta ÚNICA conexión psycopg sin
-        # ningún candado. psycopg (como la mayoría de drivers de Postgres) NO
-        # es seguro para uso concurrente de la misma conexión desde varios
-        # hilos: dos `execute()` simultáneos pueden entrelazar el protocolo de
-        # wire y dejar la conexión en un estado del que nunca vuelve a
-        # responder — exactamente el patrón observado (200/503/504 mezclados
-        # en la misma ráfaga, colgado hasta que Vercel mata la función a los
-        # 60s). Un único Lock por instancia convierte eso en una cola segura:
-        # más lento bajo ráfaga que una corrupción silenciosa, pero correcto.
+        # Lock usado SOLO para SQLite (self.conn persistente, una única
+        # conexión). Postgres usa un pool (ver _connect_postgres): cada hilo
+        # toma su propia conexión física, así que no comparte estado que haya
+        # que serializar con un candado propio (el pool ya es thread-safe).
+        #
+        # Historia (2026-09-11): la causa raíz real del timeout intermitente
+        # en producción no fue Neon ni vercel.json (ambos se investigaron y
+        # corrigieron primero) sino que los endpoints de app.py son `def`
+        # síncronos — Starlette los corre en hilos del threadpool — y TODOS
+        # compartían una única conexión psycopg sin candado. psycopg no es
+        # seguro para uso concurrente de la misma conexión desde varios
+        # hilos: dos `execute()` simultáneos entrelazaban el protocolo de
+        # wire y la dejaban en un estado del que nunca volvía a responder
+        # (200/503/504 mezclados en la misma ráfaga). Un Lock por instancia
+        # arregló la corrupción, pero como _construir_expedientes hace varios
+        # round-trips secuenciales por petición, serializar TODO detrás de un
+        # único candado bajo 4+ peticiones concurrentes empujaba el tiempo
+        # total más allá del maxDuration de 60s. Un pool de conexiones reales
+        # (varias conexiones físicas, una por hilo concurrente) resuelve
+        # ambos problemas a la vez: sin compartir conexión, no hay
+        # entrelazado de protocolo que temer, y varias peticiones progresan
+        # en paralelo de verdad en vez de hacer cola una detrás de otra.
         self._lock = threading.Lock()
 
         if _es_postgres(dsn):
@@ -77,47 +86,53 @@ class Database:
 
         import psycopg
         from psycopg.rows import dict_row
+        from psycopg_pool import ConnectionPool, PoolTimeout
 
         # psycopg acepta el prefijo postgres:// directamente. Neon/Vercel ya
         # incluyen sslmode=require en la cadena.
         #
         # Neon (plan serverless) suspende el cómputo tras inactividad; la
         # PRIMERA conexión tras la suspensión reactiva la base y puede tardar
-        # bastante más que una conexión normal. Sin connect_timeout, psycopg
-        # esperaba indefinidamente y la función serverless de Vercel se
-        # colgaba sin devolver ni error (evidencia real, 2026-09-10: /health y
-        # /expedientes sin respuesta 55s+ tras un rato sin tráfico, <1s en la
-        # siguiente petición inmediata).
+        # bastante más que una conexión normal (evidencia real, 2026-09-10:
+        # /health y /expedientes sin respuesta 55s+ tras un rato sin tráfico).
         #
-        # Segunda causa de cuelgue distinta, confirmada 2026-09-11: bajo una
-        # ráfaga de invocaciones serverless concurrentes (cada una con su
-        # propia conexión TCP vía el singleton de `get_db()`), Neon puede
-        # agotar momentáneamente su límite de conexiones; psycopg.connect()
-        # cuelga/lanza OperationalError igual que en el cold-start. Se usa la
-        # cadena pooled (ver `config._resolve_database_url`, prioriza
-        # POSTGRES_URL/POSTGRES_PRISMA_URL sobre DATABASE_URL) para que el
-        # límite real de Postgres no se sature con tan pocas conexiones
-        # concurrentes, y además se reintenta con backoff corto antes de
-        # rendirse (cubre tanto el cold-start como un agotamiento momentáneo
-        # del pool que se libera en 1-2s).
-        #
-        # Presupuesto de tiempo (2026-09-11, tras restaurar vercel.json con
-        # maxDuration=60): el intento original de 3 reintentos (timeouts
-        # 10/25/25 + esperas 0/1/3) sumaba hasta 64s en el peor caso — MÁS que
-        # los 60s totales de la función, así que ni siquiera dejaba tiempo
-        # para ejecutar la query después de conectar. Se reduce a 2 intentos
-        # (8s + 20s + 1s de espera = 29s peor caso) para dejar margen real al
-        # resto del request. Si ambos fallan, se propaga OperationalError:
-        # `hd_scraper/api/app.py` la traduce a un 503 rápido con
-        # Retry-After en vez de dejar la conexión del cliente colgada.
+        # Pool de conexiones (2026-09-11, reemplaza una única self.conn
+        # compartida): los endpoints de app.py son `def` síncronos — Starlette
+        # los corre en hilos concurrentes del threadpool —, así que varias
+        # peticiones concurrentes necesitan cada una su propia conexión física,
+        # no turnarse una sola tras otra. `min_size=1` mantiene una conexión
+        # lista sin esperar cold-start en el caso común; `max_size=5` acota
+        # cuántas conexiones físicas abre esta instancia cálida (la cadena
+        # pooled de Neon, ver `config._resolve_database_url`, multiplexa esto
+        # más arriba con PgBouncer, así que 5 no agota el límite real de
+        # Postgres). `autocommit=True`: cada `execute()` es su propia
+        # transacción — necesario porque el pool puede entregar la MISMA
+        # conexión física a peticiones distintas en momentos distintos, y
+        # dejar una transacción a medias abierta entre préstamos sería
+        # incorrecto. `check=ConnectionPool.check_connection` valida la
+        # conexión al prestarla (Neon cierra conexiones ociosas).
+        self._pool = ConnectionPool(
+            dsn,
+            min_size=1,
+            max_size=5,
+            kwargs={"row_factory": dict_row, "autocommit": True, "connect_timeout": 10},
+            open=False,
+            timeout=20,
+            check=ConnectionPool.check_connection,
+        )
+        # Abre con un reintento corto: cubre el mismo cold-start de Neon que
+        # antes cubría el reintento de conexión directa, ahora aplicado a
+        # poblar el pool. Presupuesto total (10s + 1s + 20s = 31s) deja
+        # margen real dentro de los 60s de maxDuration configurados en
+        # vercel.json para el resto del request.
         ultimo_error: Exception | None = None
-        for intento, (espera, timeout) in enumerate(((0, 8), (1, 20))):
+        for intento, espera in enumerate((0, 1)):
             if espera:
                 time.sleep(espera)
             try:
-                self.conn = psycopg.connect(dsn, row_factory=dict_row, connect_timeout=timeout)
+                self._pool.open(wait=True, timeout=10 if intento == 0 else 20)
                 return
-            except psycopg.OperationalError as exc:
+            except PoolTimeout as exc:
                 ultimo_error = exc
         raise ultimo_error
 
@@ -131,15 +146,31 @@ class Database:
     def init_schema(self) -> None:
         if self.dialect == "sqlite":
             self.conn.executescript(SCHEMA_SQLITE.read_text(encoding="utf-8"))
-        else:
-            # psycopg admite múltiples sentencias en un execute sin parámetros.
-            self.conn.execute(SCHEMA_POSTGRES.read_text(encoding="utf-8"))
-        self._migrar_pipeline_candidato()
-        self._migrar_organizacion_mencionada()
-        self._migrar_expediente_id_nullable()
-        self._migrar_resumen_fuente()
-        self._migrar_pais_prospecto()
-        self.conn.commit()
+            self._migrar_pipeline_candidato()
+            self._migrar_organizacion_mencionada()
+            self._migrar_expediente_id_nullable()
+            self._migrar_resumen_fuente()
+            self._migrar_pais_prospecto()
+            self.conn.commit()
+            return
+        # Postgres: se corre una sola vez por proceso, dentro del lock del
+        # singleton en get_db() (antes de compartir el objeto con peticiones
+        # concurrentes), así que basta con UNA conexión prestada del pool. Los
+        # métodos `_migrar_*` siguen escritos contra `self.conn` tal cual
+        # (no se tocan, ya están bien probados); se les presta la conexión
+        # temporalmente en ese atributo mientras dura la inicialización.
+        with self._pool.connection() as conn:
+            self.conn = conn
+            try:
+                # psycopg admite múltiples sentencias en un execute sin parámetros.
+                conn.execute(SCHEMA_POSTGRES.read_text(encoding="utf-8"))
+                self._migrar_pipeline_candidato()
+                self._migrar_organizacion_mencionada()
+                self._migrar_expediente_id_nullable()
+                self._migrar_resumen_fuente()
+                self._migrar_pais_prospecto()
+            finally:
+                del self.conn
 
     def _migrar_pais_prospecto(self) -> None:
         """Migración idempotente: añade ``prospectos.pais`` a bases persistentes
@@ -235,38 +266,46 @@ class Database:
             pass
 
     # -- Operaciones ----------------------------------------------------
-    # Todas bajo self._lock: self.conn es una única conexión compartida entre
-    # los hilos del threadpool de Starlette (endpoints síncronos); dos
-    # `execute()` concurrentes sobre la misma conexión psycopg pueden
-    # entrelazar el protocolo de wire y colgarla (ver comentario en __init__).
+    # SQLite: self._lock serializa el acceso a self.conn (única conexión).
+    # Postgres: cada llamada toma su propia conexión física del pool — sin
+    # candado propio, el pool ya resuelve la concurrencia entre hilos (ver
+    # comentario en __init__).
     def execute(self, sql: str, params: Iterable[Any] = ()):
+        if self.dialect == "postgres":
+            with self._pool.connection() as conn:
+                return conn.execute(self._q(sql), tuple(params))
         with self._lock:
             cur = self.conn.execute(self._q(sql), tuple(params))
             self.conn.commit()
             return cur
 
     def fetch_one(self, sql: str, params: Iterable[Any] = ()) -> Optional[Any]:
+        if self.dialect == "postgres":
+            with self._pool.connection() as conn:
+                return conn.execute(self._q(sql), tuple(params)).fetchone()
         with self._lock:
             return self.conn.execute(self._q(sql), tuple(params)).fetchone()
 
     def fetch_all(self, sql: str, params: Iterable[Any] = ()) -> list[Any]:
+        if self.dialect == "postgres":
+            with self._pool.connection() as conn:
+                return conn.execute(self._q(sql), tuple(params)).fetchall()
         with self._lock:
             return self.conn.execute(self._q(sql), tuple(params)).fetchall()
 
     def insert_returning_id(self, sql: str, params: Iterable[Any] = ()) -> int:
         """INSERT que devuelve el id generado, portable entre motores."""
+        if self.dialect == "postgres":
+            with self._pool.connection() as conn:
+                cur = conn.execute(self._q(sql) + " RETURNING id", tuple(params))
+                return cur.fetchone()["id"]
         with self._lock:
-            if self.dialect == "sqlite":
-                cur = self.conn.execute(sql, tuple(params))
-                self.conn.commit()
-                return cur.lastrowid
-            cur = self.conn.execute(self._q(sql) + " RETURNING id", tuple(params))
-            rid = cur.fetchone()["id"]
+            cur = self.conn.execute(sql, tuple(params))
             self.conn.commit()
-            return rid
+            return cur.lastrowid
 
     def reconectar(self) -> None:
-        """Cierra la conexión actual (si sigue viva) y abre una nueva.
+        """Cierra la conexión/pool actual (si sigue vivo) y abre uno nuevo.
 
         Para recuperarse de una red inestable (p. ej. datos móviles en Termux)
         que tumba el socket a media ejecución de un batch largo: la conexión en
@@ -274,18 +313,45 @@ class Database:
         DSN original.
         """
         with self._lock:
+            if self.dialect == "postgres":
+                try:
+                    self._pool.close()
+                except Exception:
+                    pass
+                self._connect_postgres(self._dsn)
+                return
             try:
                 self.conn.close()
             except Exception:
                 pass
-            if self.dialect == "postgres":
-                self._connect_postgres(self._dsn)
-            else:
-                self._connect_sqlite(self._dsn)
+            self._connect_sqlite(self._dsn)
 
     def close(self) -> None:
         with self._lock:
-            self.conn.close()
+            if self.dialect == "postgres":
+                self._pool.close()
+            else:
+                self.conn.close()
+
+    def rollback_seguro(self) -> None:
+        """Deshace una transacción fallida, cuando aplica.
+
+        En Postgres las conexiones del pool usan ``autocommit=True`` (cada
+        `execute()` es su propia transacción independiente — necesario porque
+        el pool puede prestar la misma conexión física a peticiones
+        distintas), así que un INSERT fallido nunca deja la conexión en
+        estado "transaction aborted": no hay nada que revertir. En SQLite
+        (``self.conn`` persistente, sin autocommit) sí puede quedar una
+        transacción implícita abierta tras un error; se revierte para poder
+        seguir usando la conexión (ver `hd_scraper/seed_prospectos.py`).
+        """
+        if self.dialect != "sqlite":
+            return
+        with self._lock:
+            try:
+                self.conn.rollback()
+            except Exception:
+                pass
 
     def __enter__(self) -> "Database":
         return self

@@ -11,6 +11,11 @@ apscheduler>=3.10,<4.0
 python-dateutil>=2.9,<3.0
 # PostgreSQL (producción). SQLite (dev/tests) usa la stdlib, sin paquete.
 psycopg[binary]>=3.1,<4.0
+# Pool de conexiones (producción, serverless): los endpoints de la API son
+# `def` síncronos y Starlette los corre en hilos concurrentes del threadpool;
+# varias peticiones concurrentes necesitan cada una su propia conexión física
+# a Postgres en vez de turnarse una sola (ver hd_scraper/db/database.py).
+psycopg-pool>=3.1,<4.0
 # BeautifulSoup: incluido pero de uso restringido (solo si es indispensable).
 beautifulsoup4>=4.12,<5.0
 python-dotenv>=1.0,<2.0

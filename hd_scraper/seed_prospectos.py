@@ -141,11 +141,16 @@ DIRECTORIO_SEMILLA: tuple[tuple[str, str, str, str, str, str], ...] = (
 
 def _rollback(db: Database) -> None:
     """Deshace una transacción fallida (evita el cascadeo 'transaction aborted'
-    de Postgres, que dejaría 0 filas sembradas si un INSERT falla)."""
-    try:
-        db.conn.rollback()
-    except Exception:  # pragma: no cover
-        pass
+    de Postgres, que dejaría 0 filas sembradas si un INSERT falla).
+
+    Delegado a `Database.rollback_seguro()` (2026-09-11): desde que Postgres
+    usa un pool de conexiones con `autocommit=True`, ya no hay una única
+    `db.conn` persistente a la que llamar `.rollback()` directamente — cada
+    `execute()` toma su propia conexión del pool y es su propia transacción,
+    así que un INSERT fallido no deja nada que revertir ahí. El método
+    encapsula esa diferencia entre motores.
+    """
+    db.rollback_seguro()
 
 
 def asegurar_directorio_semilla(db: Database) -> int:
