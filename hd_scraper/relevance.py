@@ -79,6 +79,10 @@ _STOP_CAP = {
     # (signals.py: reduccion_personal, friccion_retencion) que aparece
     # capitalizado al inicio de titular en orden invertido.
     "despido", "despidos", "demanda", "demandas",
+    # Incidente real 2026-09-12: "Fideicomiso" (sustantivo institucional
+    # común, no nombre de empresa) detectado como organización — mismo
+    # patrón que "Lana"/"Despido"/"Demanda".
+    "fideicomiso",
     # Auditoría 2026-09-11 (hallazgo ALTO): verbos conjugados en 3ª persona
     # que encabezan titulares en orden invertido verbo-sujeto ("Cierra Konfío
     # tercera adquisición"). Capitalizados solo por ir al inicio de la
