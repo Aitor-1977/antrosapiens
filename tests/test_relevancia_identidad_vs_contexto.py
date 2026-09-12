@@ -35,6 +35,16 @@ def test_startup_conserva_alianza_con_gigante():
     assert ok and motivo == ""
 
 
+def test_startup_conserva_mencion_de_aws_como_infraestructura():
+    """Caso explícito pedido por el operador (2026-09-12): mencionar AWS como
+    proveedor de infraestructura no debe descartar a la startup real."""
+    titulo = "Fintual migra su infraestructura a AWS para escalar su plataforma"
+    org = detectar_empresa(titulo)
+    assert org == "Fintual"
+    ok, motivo = _evaluar(titulo, org)
+    assert ok and motivo == ""
+
+
 def test_startup_conserva_competencia_con_gigantes():
     titulo = "Cobre compite contra Google y Apple en el mercado de pagos digitales"
     org = detectar_empresa(titulo)
@@ -65,6 +75,14 @@ def test_gigante_real_sigue_descartado_cuando_es_la_organizacion_identificada():
     titulo = "Oracle despide a 21 mil empleados citando eficiencias por automatización"
     org = detectar_empresa(titulo)
     assert org == "Oracle"
+    ok, motivo = _evaluar(titulo, org)
+    assert not ok and motivo == MOTIVO_GIGANTE
+
+
+def test_aws_como_identidad_sigue_descartado():
+    titulo = "AWS despide a miles de empleados en su división de nube"
+    org = detectar_empresa(titulo)
+    assert org == "AWS"
     ok, motivo = _evaluar(titulo, org)
     assert not ok and motivo == MOTIVO_GIGANTE
 

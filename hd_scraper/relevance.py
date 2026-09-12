@@ -253,7 +253,7 @@ NO_LATAM: tuple[str, ...] = (
 # laboratorios de IA y grandes tecnológicas de capitalización masiva:
 # reconocibles por cualquier persona como "gigante tecnológico", nunca startup.
 GIGANTES: tuple[str, ...] = (
-    "google", "alphabet", "amazon", "meta", "facebook", "instagram", "whatsapp",
+    "google", "alphabet", "amazon", "aws", "meta", "facebook", "instagram", "whatsapp",
     "apple", "microsoft", "netflix", "tesla", "samsung", "huawei", "tiktok",
     "nvidia", "intel", "spotify", "sony", "disney", "nike", "adidas",
     "wendy", "mcdonald", "burger king", "starbucks", "walmart", "coca-cola",

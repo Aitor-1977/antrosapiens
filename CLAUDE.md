@@ -235,6 +235,34 @@ SOLO sobre datos ya extraídos por este mismo motor; sin IA, sin juicio libre):
   Cultural™) sigue exigiendo su propia entrada en esta sección antes de
   escribirse. Implementación: `hd_scraper/concentrador_evidencia.py` (nuevo
   módulo, sin escritura, sin tablas nuevas).
+- **Receptividad Epistemológica para Capa 0 — motor de priorización por
+  triage** (autorizado por el operador —Mario— el 2026-09-12, reencuadre
+  explícito del propósito del sistema): AMPLIACIÓN del scoring/ICP ya
+  admisible (no una categoría nueva), que reemplaza cualquier lectura de
+  "capital alto = mejor prospecto" por una banda de condiciones
+  OBSERVABLES: capital de la última ronda, etapa de inversión declarada,
+  meses desde el fondeo, señales de fricción (vocabulario cerrado:
+  retención, churn, PMF, expansión LATAM degradada) y barreras
+  estructurales (VP, Head of Growth, research/UX interno, dependencia de
+  pauta, procurement largo). Prioridad A: capital entre $1.5M y $10M USD
+  **Y** etapa seed/serie_a **Y** 6-12 meses post-fondeo **Y** al menos una
+  fricción válida — las cuatro condiciones a la vez, ninguna por separado
+  vale. Techo rígido: capital > $15M baja la prioridad SIEMPRE (el capital
+  deja de ser habilitador y pasa a ser barrera), sin importar la fricción;
+  las barreras estructurales detectadas refuerzan la razón pero no son
+  condición necesaria para el techo. Prioridad B (nivel portafolio, GPs de
+  VC): alto burn rate **Y** baja retención **Y** disonancia entre narrativa
+  de crecimiento y resultados — el objeto de inteligencia es el
+  portafolio, no el fondo como comprador. **Determinista, sin IA, sin
+  red**: recibe capital/etapa/meses/señales ya resueltos como parámetros
+  (no los infiere de texto libre — esa extracción estructurada desde
+  `cita_textual` sigue sin construirse, y este módulo no fabrica esos
+  valores). El resultado NUNCA incluye una etiqueta de Deuda Cultural™ ni
+  afirma que la organización "es receptiva a Capa 0": solo clasifica en qué
+  banda de condiciones cae, como triage para Mario, nunca como veredicto.
+  Implementación: `hd_scraper/receptividad.py` (nuevo módulo, aún no
+  conectado a `/expedientes` por falta de la extracción estructurada de
+  capital/etapa/fecha de ronda).
 
 **Exclusivo de RadarHD (JAMÁS aquí):**
 
@@ -251,7 +279,8 @@ estructural preliminar de Deuda sobre el discurso corporativo),
 `hd_scraper/nvidia_parser.py` (síntesis estructural LLM preliminar por
 organización) y `hd_scraper/clasificacion_epistemologica.py` +
 `hd_scraper/clasificacion_store.py` (clasificación epistemológica de la
-evidencia). No reproducir esa lógica en otros módulos.
+evidencia) y `hd_scraper/receptividad.py` (Receptividad Epistemológica para
+Capa 0, priorización por triage). No reproducir esa lógica en otros módulos.
 
 **Regla de ampliación:** cualquier ampliación futura de interpretación en este
 repo exige actualizar **esta misma sección ANTES de escribir código**. Si una
