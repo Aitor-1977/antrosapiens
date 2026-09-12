@@ -130,6 +130,28 @@ def test_categoria_startup_declarada_conserva_score_icp_normal(cli, db):
     assert exp["Fintual"]["score_icp"] > 0
 
 
+def test_fallback_a_startup_sin_fila_real_en_prospectos_no_salva_score_icp(cli, db):
+    """Hueco real cerrado: una evidencia con categoria='Startup' (etiqueta de
+    captura legada) pero SIN ninguna fila en prospectos NO debe conservar
+    score_icp>0 solo por coincidir con el string 'Startup'. La whitelist de
+    Capa 0 exige fila real en prospectos, no solo el valor 'Startup' llegado
+    por cualquier vía (incluido el fallback técnico de evidencias.categoria).
+    El campo 'categoria' mostrado SÍ puede seguir mostrando 'Startup' (fallback
+    de visualización, ya cubierto por
+    test_sin_fila_en_prospectos_cae_al_fallback_tecnico_de_evidencias); lo que
+    no puede pasar es que ese fallback también active el whitelist de ICP."""
+    _sembrar_evidencia(db, empresa="Zonko",
+                       cita_textual="Zonko despide personal tras recorte",
+                       categoria_evidencia="Startup")
+
+    r = cli.get("/expedientes", params={"limite": 30})
+    exp = {e["nombre"]: e for e in r.json()["expedientes"]}
+    assert exp["Zonko"]["categoria"] == "Startup"
+    assert exp["Zonko"]["score_icp"] == 0, (
+        "sin fila real en prospectos, el fallback a 'Startup' no debe "
+        "conservar score_icp>0")
+
+
 def test_analizar_publico_no_se_ve_afectado_por_la_whitelist_de_expedientes():
     """El endpoint público /analizar (cualquier texto, sin contexto de
     prospectos) no debe activar la whitelist de ICP: categoria=None por

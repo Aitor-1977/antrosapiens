@@ -2475,11 +2475,25 @@ def _construir_expedientes(categorias: list[str] | None, limite: int = 30) -> di
                 vertical = v
                 break
 
+        # Whitelist de ICP: exige FILA REAL en prospectos, nunca el fallback
+        # de evidencias.categoria (autoridad estructural declarada por el
+        # operador, no una etiqueta de captura). `data["categoria"]` (usada
+        # para el campo mostrado al frontend) SÍ hereda ese fallback para no
+        # romper `test_sin_fila_en_prospectos_cae_al_fallback_tecnico_de_evidencias`,
+        # pero pasar ese valor aquí dejaba colar el hueco real detectado: una
+        # evidencia con categoria="Startup" (etiqueta de captura legada) sin
+        # ninguna fila en `prospectos` conservaba score_icp>0 solo por
+        # coincidir con el string "Startup", sin que el operador hubiera
+        # dado de alta esa organización. `categorias_prospecto` solo contiene
+        # claves con fila real; `.get(key, "")` nunca cae al fallback de
+        # evidencias, así que una organización sin alta estructural siempre
+        # llega aquí con categoria="" y el muro de contención de analisis.py
+        # la hunde a score_icp=0, sin importar qué diga evidencias.categoria.
         a = analizar(
             all_kws, vertical=vertical,
             confianza=data["mejor_confianza"],
             calidad=data["mejor_calidad"],
-            categoria=data["categoria"],
+            categoria=categorias_prospecto.get(key, ""),
         )
 
         evidencias = []
