@@ -159,7 +159,12 @@
 </nav>
 
 <script>
-    const API = "";
+    // El HTML corre embebido en el APK (WebView sobre assets, no sobre un
+    // servidor): una ruta relativa no resuelve a ningún host en el
+    // dispositivo, por eso los fetch fallaban con "backend no disponible".
+    // Se apunta al backend real de Motor A (mismo que consume la API pública);
+    // nunca se sustituye por datos estáticos/inventados ante un fallo de red.
+    const API = "https://antrosapiens-api-pro.vercel.app";
     // ICP real de HD (doctrina, no un filtro que el usuario deba tocar): nunca
     // VC, Incubadora ni Corporativo. Antes existía un filtro "Foco" que dejaba
     // elegir las 4 categorías; se retira y se fija siempre en Startup.
