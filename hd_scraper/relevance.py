@@ -151,6 +151,22 @@ def _es_sigla(token: str) -> bool:
     return len(token) >= 2 and token.isupper() and token.isalpha()
 
 
+# Desambiguación política estricta (incidente real 2026-09-12): "Clara" es
+# simultáneamente una fintech real y el nombre de pila de una figura política
+# vigente ("Clara Brugada"). A diferencia de _NOMBRES_PROPIOS_PERSONA (que
+# descarta el nombre SIEMPRE, sin importar contexto), esta lista solo se
+# activa cuando el nombre ambiguo está seguido INMEDIATAMENTE por uno de sus
+# apellidos políticos documentados — "Clara" sola, o "Clara" junto a
+# marcadores de ecosistema ("fintech", "levanta", "capital", "serie"...),
+# sigue reconociéndose como empresa (ver
+# test_detectar_empresa_ignora_articulo_inicial_y_sector). Lista cerrada,
+# incident-driven: se amplía solo ante un caso real confirmado, igual que
+# _STOP_CAP.
+_APELLIDOS_POLITICOS_AMBIGUOS: dict[str, set[str]] = {
+    "clara": {"brugada"},
+}
+
+
 def detectar_empresa(titulo: str) -> Optional[str]:
     """Devuelve un candidato a empresa nombrada en el titular, o ``None``.
 
@@ -161,8 +177,8 @@ def detectar_empresa(titulo: str) -> Optional[str]:
 
     Conservador por diseño (auditoría 2026-09-11, hallazgo ALTO): ante duda
     entre "es una organización" y "es una persona/un verbo", se descarta y se
-    sigue buscando, nunca se inventa una organización. Dos mecanismos, ambos
-    sobre listas cerradas ya existentes en el módulo:
+    sigue buscando, nunca se inventa una organización. Mecanismos, todos sobre
+    listas cerradas ya existentes en el módulo:
 
     1. Un nombre de pila conocido (``_NOMBRES_PROPIOS_PERSONA``) nunca se
        devuelve como organización.
@@ -170,13 +186,19 @@ def detectar_empresa(titulo: str) -> Optional[str]:
        acaba de descartarse por ser un nombre de pila se trata como su
        apellido y tampoco se devuelve — evita que "Ana Ríos" o "Armando
        Herrera" terminen devolviendo la mitad del nombre de una persona.
+    3. Desambiguación política estricta (``_APELLIDOS_POLITICOS_AMBIGUOS``):
+       un nombre ambiguo entre fintech real y figura política solo se
+       descarta (junto a su apellido contiguo) cuando el apellido político
+       documentado aparece pegado — "Clara Brugada" se descarta, "Clara"
+       sola o con marcadores de ecosistema no.
     """
     if not titulo:
         return None
     texto = _sin_medio(titulo)
+    tokens = list(re.finditer(r"[\wÁÉÍÓÚÑÜáéíóúñü]+", texto))
     fin_anterior: Optional[int] = None
     saltar_apellido = False
-    for m in re.finditer(r"[\wÁÉÍÓÚÑÜáéíóúñü]+", texto):
+    for idx, m in enumerate(tokens):
         limpio = m.group(0).strip()
         contiguo = fin_anterior is not None and texto[fin_anterior:m.start()].strip() == ""
         es_apellido_descartado = saltar_apellido and contiguo
@@ -200,6 +222,18 @@ def detectar_empresa(titulo: str) -> Optional[str]:
         if base in _NOMBRES_PROPIOS_PERSONA:
             saltar_apellido = True
             continue
+        apellidos_ambiguos = _APELLIDOS_POLITICOS_AMBIGUOS.get(base)
+        if apellidos_ambiguos:
+            siguiente = tokens[idx + 1] if idx + 1 < len(tokens) else None
+            sig_contiguo = (
+                siguiente is not None
+                and texto[m.end():siguiente.start()].strip() == ""
+            )
+            if sig_contiguo:
+                sig_base = _sin_acentos(siguiente.group(0)).lower()
+                if sig_base in apellidos_ambiguos:
+                    saltar_apellido = True
+                    continue
         return limpio
     return None
 
