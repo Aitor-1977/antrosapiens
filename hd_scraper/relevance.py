@@ -73,6 +73,12 @@ _STOP_CAP = {
     # Incidente real 2026-09-10: "Lana" (palabra común, no nombre de empresa)
     # detectada como organización en un titular.
     "lana",
+    # Incidente real 2026-09-12: "Despido"/"Demanda" (sustantivos comunes en
+    # español, no nombres propios) detectados como organización en /expedientes
+    # — mismo patrón que "Lana", vocabulario propio de las señales de negocio
+    # (signals.py: reduccion_personal, friccion_retencion) que aparece
+    # capitalizado al inicio de titular en orden invertido.
+    "despido", "despidos", "demanda", "demandas",
     # Auditoría 2026-09-11 (hallazgo ALTO): verbos conjugados en 3ª persona
     # que encabezan titulares en orden invertido verbo-sujeto ("Cierra Konfío
     # tercera adquisición"). Capitalizados solo por ir al inicio de la

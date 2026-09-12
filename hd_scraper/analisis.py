@@ -353,6 +353,17 @@ def analizar(
     icp += CALIDAD_PESO.get((calidad or "").strip(), 0)
     score_icp = max(0, min(icp, 100))
 
+    # Muro de contención estructural (autorizado por el operador): el ICP de
+    # HD son startups Seed–Serie A, nunca VC/Incubadora/Corporativo. Cuando la
+    # categoria estructural (prospectos.categoria, ver _construir_expedientes)
+    # identifica a la organización como uno de esos tres ecosistemas, el
+    # score_icp cae a 0 sin importar la señal capturada. No corrige el caso de
+    # una organización sin fila en prospectos (categoria="" cae al fallback de
+    # evidencias.categoria) — eso es un problema de identidad/alta, no de
+    # scoring, y no se resuelve inventando o forzando una categoria aquí.
+    if categoria in ("Corporativo", "VC", "Incubadora"):
+        score_icp = 0
+
     vert_hd = vert in VERTICALES_HD_SET
     viabilidad = _calcular_viabilidad(scoring, profundidad, hay_dolor, vert_hd)
 
