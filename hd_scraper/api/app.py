@@ -565,6 +565,16 @@ def obtener_evidencia(evidencia_id: int) -> dict:
     return _row_a_evidencia(row)
 
 
+def _es_termino_busqueda_crudo(empresa: str) -> bool:
+    """True si ``empresa`` es estructuralmente un término de búsqueda de
+    ``discovery.queries_para`` (grupo OR entre paréntesis), nunca una empresa
+    real. Detección estructural (sin ambigüedad): ninguna compañía se llama
+    "(algo OR algo)"; solo la evidencia legada de descubrimiento por categoría
+    capturada antes de la corrección en ``pipeline.run_connector`` tiene esta
+    forma en ``empresa_mencionada``."""
+    return " OR " in empresa or empresa.startswith("(")
+
+
 def _row_a_corpus(row) -> dict:
     """Contrato del corpus (Motor A → Motor B / RadarHD). Solo hechos objetivos.
 
@@ -573,9 +583,25 @@ def _row_a_corpus(row) -> dict:
     (Alta|Media|Baja), no una interpretación. Los consumidores previos que no la
     esperan la ignoran; RadarHD la usa como contexto para reducir falsos
     positivos. NO se añade Deuda Cultural™, Interés ni hipótesis (eso es Motor B).
+
+    ``empresa`` normalmente es ``empresa_mencionada`` tal cual (declarada por
+    el operador en consulta dirigida, o ya corregida por
+    ``pipeline.run_connector`` en descubrimiento por categoría — ver el
+    comentario en ``listar_evidencias``). EXCEPCIÓN estructural: evidencia
+    capturada antes de esa corrección quedó con el TÉRMINO DE BÚSQUEDA crudo en
+    ``empresa_mencionada`` (un grupo OR compuesto por ``discovery.py``, nunca
+    una compañía real — se reconoce sin ambigüedad porque una empresa jamás
+    contiene `` OR `` ni empieza con paréntesis). Solo en ese caso se deriva la
+    organización real del titular (misma extracción que ``GET /evidencias``);
+    el resto de las filas no se toca. El contrato ``motor_a.corpus.v1`` que
+    consume RadarHD no puede propagar un término de búsqueda como si fuera la
+    empresa observada; se corrige en la lectura, sin tocar la tabla.
     """
+    empresa = row["empresa_mencionada"] or ""
+    if _es_termino_busqueda_crudo(empresa):
+        empresa = detectar_empresa(row["cita_textual"]) or empresa
     return {
-        "empresa": row["empresa_mencionada"],
+        "empresa": empresa,
         "fuente": row["nombre_medio"],
         "fecha": row["fecha_publicacion"],
         "texto": row["cita_textual"],
