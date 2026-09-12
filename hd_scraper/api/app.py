@@ -1871,7 +1871,12 @@ class AnalizarIn(BaseModel):
     vertical: str = ""
     confianza: float = 0.0
     calidad: str = "Baja"
-    categoria: str = ""
+    # None (default) = sin contexto de ecosistema declarado: la whitelist de
+    # analizar() no se activa, igual que antes de la whitelist estructural de
+    # /expedientes (este endpoint público analiza CUALQUIER texto, no está
+    # atado al ICP de prospectos). Si el llamador SÍ declara una categoria,
+    # se le aplica la misma regla que a /expedientes.
+    categoria: Optional[str] = None
     dominio: str = ""            # opcional: para rutas de contacto (hipótesis)
     nombre_decisor: str = ""     # opcional: afina los patrones de correo
 

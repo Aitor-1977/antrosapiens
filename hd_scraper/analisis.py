@@ -302,7 +302,7 @@ def analizar(
     vertical: str = "",
     confianza: float = 0.0,
     calidad: str = "Baja",
-    categoria: str = "",
+    categoria: Optional[str] = None,
 ) -> dict:
     """Convierte señales capturadas en análisis profundo (determinista).
 
@@ -353,15 +353,29 @@ def analizar(
     icp += CALIDAD_PESO.get((calidad or "").strip(), 0)
     score_icp = max(0, min(icp, 100))
 
-    # Muro de contención estructural (autorizado por el operador): el ICP de
-    # HD son startups Seed–Serie A, nunca VC/Incubadora/Corporativo. Cuando la
-    # categoria estructural (prospectos.categoria, ver _construir_expedientes)
-    # identifica a la organización como uno de esos tres ecosistemas, el
-    # score_icp cae a 0 sin importar la señal capturada. No corrige el caso de
-    # una organización sin fila en prospectos (categoria="" cae al fallback de
-    # evidencias.categoria) — eso es un problema de identidad/alta, no de
-    # scoring, y no se resuelve inventando o forzando una categoria aquí.
-    if categoria in ("Corporativo", "VC", "Incubadora"):
+    # Whitelist estructural de Capa 0 (ampliación autorizada por el operador,
+    # 2026-09-12: "cero ruido sobre volumen"). Antes esto era una lista negra
+    # (Corporativo/VC/Incubadora -> 0), y dejaba pasar dos fugas reales,
+    # confirmadas en producción: (a) organizaciones SIN fila en prospectos
+    # (categoria="" por fallback a evidencias.categoria) — huérfanos de NLP o
+    # de ruido de búsqueda (AliExpress, BASF, Crehana, "Clara Brugada"); (b)
+    # cualquier categoria futura fuera de las tres ya previstas. Ahora es una
+    # whitelist: SOLO "Startup" (declarado explícitamente en prospectos, o
+    # heredado del fallback de evidencias.categoria cuando no hay fila)
+    # conserva su score_icp; cualquier otro valor, incluido "", cae a 0.
+    # Consecuencia aceptada explícitamente por el operador: organizaciones
+    # reales pero aún no dadas de alta en prospectos (ej. "Ripple") también
+    # caen a 0 hasta que se les dé de alta — prioridad absoluta a precisión
+    # sobre volumen.
+    #
+    # ``categoria=None`` (el default) es distinto de ``categoria=""``: None
+    # significa que el LLAMADOR no declaró contexto de ecosistema en absoluto
+    # (p. ej. el endpoint público /analizar, informes, tarjetas — nunca
+    # tuvieron relación con el filtro ICP de prospectos) y la whitelist no se
+    # aplica, igual que antes de este cambio. "" es una declaración real
+    # (_construir_expedientes SIEMPRE pasa categoria, aunque sea vacía por no
+    # tener fila en prospectos) y sí activa la whitelist.
+    if categoria is not None and categoria != "Startup":
         score_icp = 0
 
     vert_hd = vert in VERTICALES_HD_SET

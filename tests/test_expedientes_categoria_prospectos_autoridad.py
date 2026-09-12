@@ -97,3 +97,45 @@ def test_sin_fila_en_prospectos_cae_al_fallback_tecnico_de_evidencias(cli, db):
     r = cli.get("/expedientes", params={"limite": 30})
     por_nombre = {e["nombre"]: e["categoria"] for e in r.json()["expedientes"]}
     assert por_nombre.get("Oficializa") == "Startup"
+
+
+def test_huerfano_sin_fila_en_prospectos_score_icp_cae_a_cero(cli, db):
+    """Whitelist estructural de Capa 0 (2026-09-12, 'cero ruido sobre
+    volumen'): una organización sin fila en prospectos Y sin categoria en la
+    evidencia (huérfano puro de detectar_empresa/ruido de búsqueda, ej.
+    AliExpress/BASF/Crehana/'Clara Brugada') debe caer a score_icp=0, no solo
+    quedar con categoria vacía. Consecuencia aceptada explícitamente por el
+    operador: también hunde organizaciones reales aún no dadas de alta."""
+    _sembrar_evidencia(db, empresa="AliExpress",
+                       cita_textual="AliExpress despide personal en su sede regional",
+                       categoria_evidencia="")
+
+    r = cli.get("/expedientes", params={"limite": 30})
+    exp = {e["nombre"]: e for e in r.json()["expedientes"]}
+    assert exp["AliExpress"]["categoria"] == ""
+    assert exp["AliExpress"]["score_icp"] == 0
+
+
+def test_categoria_startup_declarada_conserva_score_icp_normal(cli, db):
+    """Control: con prospectos.categoria='Startup' explícito, la whitelist
+    NO fuerza el score a 0 — solo penaliza lo que NO es Startup."""
+    _sembrar_prospecto(db, nombre="Fintual", categoria="Startup")
+    _sembrar_evidencia(db, empresa="Fintual",
+                       cita_textual="Fintual despide al 10% de su plantilla tras ronda fallida",
+                       categoria_evidencia="")
+
+    r = cli.get("/expedientes", params={"limite": 30})
+    exp = {e["nombre"]: e for e in r.json()["expedientes"]}
+    assert exp["Fintual"]["categoria"] == "Startup"
+    assert exp["Fintual"]["score_icp"] > 0
+
+
+def test_analizar_publico_no_se_ve_afectado_por_la_whitelist_de_expedientes():
+    """El endpoint público /analizar (cualquier texto, sin contexto de
+    prospectos) no debe activar la whitelist de ICP: categoria=None por
+    defecto en AnalizarIn/analizar() preserva el comportamiento histórico."""
+    from hd_scraper.analisis import analizar
+
+    resultado = analizar(["friccion_retencion", "reduccion_personal"],
+                         vertical="fintech", confianza=1.0, calidad="Alta")
+    assert resultado["score_icp"] > 0
