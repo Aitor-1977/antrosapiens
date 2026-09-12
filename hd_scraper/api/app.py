@@ -2327,7 +2327,7 @@ def _construir_expedientes(categorias: list[str] | None, limite: int = 30) -> di
         clausula, params = "estado = ?", [ESTADO_OK]
 
     filas = db.fetch_all(
-        f"SELECT * FROM evidencias WHERE {clausula} ORDER BY creado_en DESC LIMIT 500",
+        f"SELECT * FROM evidencias WHERE {clausula} ORDER BY creado_en DESC LIMIT 5000",
         tuple(params),
     )
 
