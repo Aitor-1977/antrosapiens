@@ -2377,7 +2377,7 @@ def _construir_expedientes(categorias: list[str] | None, limite: int = 30) -> di
         if key not in orgs:
             orgs[key] = {"nombre": org, "evidencias_raw": [],
                          "keywords_set": set(),
-                         "categoria": row["categoria"] or "",
+                         "categoria": categorias_prospecto.get(key) or row["categoria"] or "",
                          "mejor_confianza": 0.0, "mejor_calidad": "Baja"}
         orgs[key]["evidencias_raw"].append(row)
         orgs[key]["keywords_set"].update(kws)
