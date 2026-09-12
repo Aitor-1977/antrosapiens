@@ -156,12 +156,19 @@ def evaluar_receptividad_organizacion(
     # es en la ventana A, es la barrera. Las barreras estructurales detectadas
     # (si las hay) se citan como refuerzo de la razón, no como condición
     # necesaria: el techo aplica por capital solo.
+    #
+    # Hipótesis de diseño de ESTA regla (por qué el operador la declaró así),
+    # documentada aquí como comentario interno, NUNCA como conclusión en un
+    # campo que consuma Mario (auditoría 2026-09-12): por encima del techo, la
+    # organización PODRÍA tener margen para subsidiar el error y blindaje
+    # ejecutivo que vuelva la fricción menos visible. Es la razón de ser de
+    # la regla, no una observación — el motor no tiene evidencia de que eso
+    # esté ocurriendo en un caso concreto, así que `razon` no debe afirmarlo.
     if supera_techo:
         razon = (
-            f"capital (${capital_usd:,.0f}) supera el techo de "
-            f"${CAPITAL_TECHO:,.0f}: margen para subsidiar el error y "
-            "blindaje ejecutivo probable, la fricción deja de ser visible "
-            "aunque exista"
+            f"capital (${capital_usd:,.0f}) supera el techo declarado de "
+            f"${CAPITAL_TECHO:,.0f}; se aplica la regla de techo "
+            "independientemente de las señales de fricción recibidas"
         )
         if barreras:
             razon += f"; barreras estructurales detectadas: {', '.join(sorted(barreras))}"

@@ -154,6 +154,51 @@ def test_ningun_campo_del_resultado_afirma_deuda_cultural_ni_receptividad():
         assert frase not in texto, f"el output no debe afirmar: {frase!r}"
 
 
+def test_razon_del_techo_no_afirma_mecanismo_organizacional_no_observado():
+    """Auditoría 2026-09-12 (operador): la razón de la rama `techo` describía
+    "margen para subsidiar el error", "blindaje ejecutivo probable" y "la
+    fricción deja de ser visible aunque exista" -- una hipótesis de mecanismo
+    organizacional sin evidencia de barreras_estructurales que la respalde.
+    Regla inviolable: el motor puede aplicar una regla sobre capital: no
+    puede convertir el capital en evidencia de blindaje, subsidio del error
+    o incapacidad epistemológica. La razón debe describir solo la condición
+    mecánica (capital > techo declarado), nunca el porqué hipotético.
+
+    Se prueba tanto SIN barreras detectadas (el caso más sensible: nada
+    respalda la hipótesis de blindaje) como CON barreras detectadas (donde
+    listar los tags SÍ es admisible, por ser un hecho observado, pero el
+    mecanismo/consecuencia sigue sin poder afirmarse)."""
+    prohibidas_mecanismo = (
+        "subsidi", "blindaje", "invisible", "deja de ser visible",
+        "aunque exista", "probable",
+    )
+
+    sin_barreras = evaluar_receptividad_organizacion(
+        capital_usd=20_000_000, etapa="scaleup", meses_post_fondeo=10,
+        senales_friccion={"retencion"},
+    )
+    con_barreras = evaluar_receptividad_organizacion(
+        capital_usd=25_000_000, etapa="scaleup", meses_post_fondeo=10,
+        senales_friccion={"retencion"},
+        barreras_estructurales={"vp_ejecutivo", "head_growth"},
+    )
+    for r in (sin_barreras, con_barreras):
+        assert r["prioridad"] == PRIORIDAD_TECHO
+        razon = r["razon"].lower()
+        for frase in prohibidas_mecanismo:
+            assert frase not in razon, (
+                f"la razón del techo no debe afirmar mecanismo no observado: {frase!r} -> {r['razon']!r}"
+            )
+        # La razón sigue siendo trazable: cita el monto y el umbral declarado.
+        assert "techo" in razon
+        assert "20,000,000" in r["razon"] or "25,000,000" in r["razon"]
+
+    # Con barreras detectadas, listar los TAGS observados sigue siendo
+    # admisible (es un hecho, no una interpretación del mecanismo).
+    assert "vp_ejecutivo" in con_barreras["razon"]
+    assert "head_growth" in con_barreras["razon"]
+
+
 # ── Prioridad B: nivel portafolio (GPs de VC) ───────────────────────────────
 
 def test_portafolio_con_las_tres_condiciones_alcanza_prioridad_b():
