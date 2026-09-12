@@ -2576,8 +2576,16 @@ def _construir_expedientes(categorias: list[str] | None, limite: int = 30) -> di
 
         expedientes.append(expediente)
 
+    # Jerarquía de orden (autorizada por el operador): el encaje ICP precede a
+    # la gravedad de la señal. Nivel 1: score_icp==0 (muro de contención de
+    # analisis.py para Corporativo/VC/Incubadora) se hunde al fondo SIEMPRE,
+    # sin importar su scoring A/B/C — antes, un Corporativo con señal de dolor
+    # (scoring="A") seguía flotando por encima de Startups reales con
+    # scoring B/C. Nivel 2: gravedad de señal (A/B/C). Nivel 3: score_icp
+    # descendente dentro del mismo nivel.
     expedientes.sort(
-        key=lambda x: (_ORDEN_SCORING.get(x["scoring"], 9), -x["score_icp"]))
+        key=lambda x: (x["score_icp"] == 0, _ORDEN_SCORING.get(x["scoring"], 9),
+                        -x["score_icp"]))
 
     resumen = {"A": 0, "B": 0, "C": 0}
     for e in expedientes:
