@@ -1871,7 +1871,12 @@ class AnalizarIn(BaseModel):
     vertical: str = ""
     confianza: float = 0.0
     calidad: str = "Baja"
-    categoria: str = ""
+    # None (default) = sin contexto de ecosistema declarado: la whitelist de
+    # analizar() no se activa, igual que antes de la whitelist estructural de
+    # /expedientes (este endpoint público analiza CUALQUIER texto, no está
+    # atado al ICP de prospectos). Si el llamador SÍ declara una categoria,
+    # se le aplica la misma regla que a /expedientes.
+    categoria: Optional[str] = None
     dominio: str = ""            # opcional: para rutas de contacto (hipótesis)
     nombre_decisor: str = ""     # opcional: afina los patrones de correo
 
@@ -2327,7 +2332,7 @@ def _construir_expedientes(categorias: list[str] | None, limite: int = 30) -> di
         clausula, params = "estado = ?", [ESTADO_OK]
 
     filas = db.fetch_all(
-        f"SELECT * FROM evidencias WHERE {clausula} ORDER BY creado_en DESC LIMIT 500",
+        f"SELECT * FROM evidencias WHERE {clausula} ORDER BY creado_en DESC LIMIT 5000",
         tuple(params),
     )
 
@@ -2377,7 +2382,7 @@ def _construir_expedientes(categorias: list[str] | None, limite: int = 30) -> di
         if key not in orgs:
             orgs[key] = {"nombre": org, "evidencias_raw": [],
                          "keywords_set": set(),
-                         "categoria": row["categoria"] or "",
+                         "categoria": categorias_prospecto.get(key) or row["categoria"] or "",
                          "mejor_confianza": 0.0, "mejor_calidad": "Baja"}
         orgs[key]["evidencias_raw"].append(row)
         orgs[key]["keywords_set"].update(kws)
@@ -2470,11 +2475,25 @@ def _construir_expedientes(categorias: list[str] | None, limite: int = 30) -> di
                 vertical = v
                 break
 
+        # Whitelist de ICP: exige FILA REAL en prospectos, nunca el fallback
+        # de evidencias.categoria (autoridad estructural declarada por el
+        # operador, no una etiqueta de captura). `data["categoria"]` (usada
+        # para el campo mostrado al frontend) SÍ hereda ese fallback para no
+        # romper `test_sin_fila_en_prospectos_cae_al_fallback_tecnico_de_evidencias`,
+        # pero pasar ese valor aquí dejaba colar el hueco real detectado: una
+        # evidencia con categoria="Startup" (etiqueta de captura legada) sin
+        # ninguna fila en `prospectos` conservaba score_icp>0 solo por
+        # coincidir con el string "Startup", sin que el operador hubiera
+        # dado de alta esa organización. `categorias_prospecto` solo contiene
+        # claves con fila real; `.get(key, "")` nunca cae al fallback de
+        # evidencias, así que una organización sin alta estructural siempre
+        # llega aquí con categoria="" y el muro de contención de analisis.py
+        # la hunde a score_icp=0, sin importar qué diga evidencias.categoria.
         a = analizar(
             all_kws, vertical=vertical,
             confianza=data["mejor_confianza"],
             calidad=data["mejor_calidad"],
-            categoria=data["categoria"],
+            categoria=categorias_prospecto.get(key, ""),
         )
 
         evidencias = []
@@ -2576,8 +2595,16 @@ def _construir_expedientes(categorias: list[str] | None, limite: int = 30) -> di
 
         expedientes.append(expediente)
 
+    # Jerarquía de orden (autorizada por el operador): el encaje ICP precede a
+    # la gravedad de la señal. Nivel 1: score_icp==0 (muro de contención de
+    # analisis.py para Corporativo/VC/Incubadora) se hunde al fondo SIEMPRE,
+    # sin importar su scoring A/B/C — antes, un Corporativo con señal de dolor
+    # (scoring="A") seguía flotando por encima de Startups reales con
+    # scoring B/C. Nivel 2: gravedad de señal (A/B/C). Nivel 3: score_icp
+    # descendente dentro del mismo nivel.
     expedientes.sort(
-        key=lambda x: (_ORDEN_SCORING.get(x["scoring"], 9), -x["score_icp"]))
+        key=lambda x: (x["score_icp"] == 0, _ORDEN_SCORING.get(x["scoring"], 9),
+                        -x["score_icp"]))
 
     resumen = {"A": 0, "B": 0, "C": 0}
     for e in expedientes:

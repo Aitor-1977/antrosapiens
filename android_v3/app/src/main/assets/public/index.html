@@ -391,7 +391,13 @@
                 });
             }
 
-            let items = (dataExp.expedientes || []).filter(p => p.categoria === CATEGORIA_ICP);
+            // Extracción (API -> expedientes reales) separada del criterio ICP:
+            // "categoria" ya llega como autoridad estructural de prospectos.categoria
+            // (hd_scraper/api/app.py:_construir_expedientes, hotfix 00d3cb1), no como
+            // etiqueta de captura de evidencias. El corte por CATEGORIA_ICP es una
+            // etapa explícita y separada, no parte de la extracción.
+            const expedientes = dataExp.expedientes || [];
+            let items = expedientes.filter(p => p.categoria === CATEGORIA_ICP);
             if (verticalActiva) items = items.filter(p => p.vertical === verticalActiva);
             items = items.filter(p => escalaCoincide(p.escala, escalaActiva));
             if (q) items = items.filter(p => (p.nombre || "").toLowerCase().includes(q));

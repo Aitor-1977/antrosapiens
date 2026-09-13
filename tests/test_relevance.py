@@ -29,6 +29,33 @@ def test_detectar_empresa_acepta_siglas():
     assert detectar_empresa("BBVA lanza un nuevo producto") == "BBVA"
 
 
+# ── desambiguación política estricta (incidente real 2026-09-12) ────────────
+# "Clara" es simultáneamente una fintech real y el nombre de pila de una
+# figura política vigente ("Clara Brugada", alcaldesa de Ciudad de México).
+# Debe distinguirse por CONTEXTO (apellido político contiguo), no perderse
+# la detección de la empresa real.
+
+def test_detectar_empresa_descarta_colision_politica_clara_brugada():
+    # Ni "Clara" ni "Brugada" deben devolverse: ambos tokens se descartan
+    # como el nombre de la figura política. El titular puede seguir
+    # devolviendo OTRO candidato distinto más adelante (comportamiento
+    # conservador ya existente de detectar_empresa, igual que con "Ana
+    # Ríos y Nubank..." -> "Nubank"); lo que esta prueba fija es que la
+    # fintech "Clara" no absorbe esta evidencia política.
+    resultado = detectar_empresa("Clara Brugada acompaña a Sheinbaum en CDMX")
+    assert resultado not in ("Clara", "Brugada")
+
+
+def test_detectar_empresa_clara_sola_sigue_siendo_empresa():
+    assert detectar_empresa("Clara despide a directivos tras reestructura") == "Clara"
+
+
+def test_detectar_empresa_clara_con_marcador_ecosistema_sigue_siendo_empresa():
+    # Regresión directa: la desambiguación de "Clara Brugada" no debe romper
+    # el caso ya cubierto arriba (test_detectar_empresa_ignora_articulo_inicial_y_sector).
+    assert detectar_empresa("La fintech Clara levanta capital serie B") == "Clara"
+
+
 def test_detectar_empresa_sin_nombre_propio():
     # Tendencia genérica sin empresa nombrada.
     assert detectar_empresa("las startups enfrentan un año difícil") is None
