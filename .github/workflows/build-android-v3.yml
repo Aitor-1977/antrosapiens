@@ -1,0 +1,63 @@
+name: Build Android APK (android_v3)
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "android_v3/**"
+      - ".github/workflows/build-android-v3.yml"
+  release:
+    types: [published]
+  workflow_dispatch: {}
+
+permissions:
+  contents: write # necesario para publicar el Release del paso final
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: "zulu"
+          java-version: "17"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x android_v3/gradlew
+
+      - name: Build debug APK
+        working-directory: android_v3
+        run: ./gradlew clean assembleDebug --stacktrace
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: antrosapiens-v3-debug
+          path: android_v3/app/build/outputs/apk/debug/app-debug.apk
+
+      # Mismo patrón que build-apk.yml (android_v2): un GitHub Release con el
+      # archivo adjunto da un link fijo y directo al .apk, instalable con un
+      # toque desde el navegador del teléfono (a diferencia del artifact, que
+      # viene zippeado y solo se baja bien desde el sitio de escritorio).
+      # Si el disparo fue un release publicado a mano, el APK se adjunta a
+      # ESE release (softprops actualiza el existente, no crea uno nuevo).
+      # Si fue push/workflow_dispatch, se crea un release nuevo con prefijo
+      # "apk-v3-" para no chocar con los tags "apk-N" que ya usa el workflow
+      # de android_v2 (build-apk.yml): cada workflow cuenta run_number por
+      # separado y podrían coincidir en el mismo número.
+      - name: Publicar / adjuntar APK al Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event_name == 'release' && github.event.release.tag_name || format('apk-v3-{0}', github.run_number) }}
+          name: ${{ github.event_name == 'release' && github.event.release.name || format('APK android_v3 de prueba #{0}', github.run_number) }}
+          body: ${{ github.event_name == 'release' && github.event.release.body || format('Build automático de android_v3 desde {0}.', github.sha) }}
+          files: android_v3/app/build/outputs/apk/debug/app-debug.apk
+          prerelease: ${{ github.event_name != 'release' }}
