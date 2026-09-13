@@ -31,3 +31,5 @@ __pycache__/
 .env*
 android_v3/app/build/
 android_v2/app/build/
+.buildozer/
+antrosapiens/
