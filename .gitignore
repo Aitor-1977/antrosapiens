@@ -29,3 +29,5 @@ android_v2/local.properties
 __pycache__/
 .vercel
 .env*
+android_v3/app/build/
+android_v2/app/build/
