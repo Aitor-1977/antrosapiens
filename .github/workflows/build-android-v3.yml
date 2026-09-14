@@ -43,6 +43,20 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x android_v3/gradlew
 
+      - name: Ajustar aapt2 para CI (no aplica en Termux)
+        # android_v3/gradle.properties fija android.aapt2FromMavenOverride a
+        # un binario de Termux (/data/data/com.termux/...) porque el aapt2
+        # estándar de Maven, compilado para Linux/macOS de escritorio, no
+        # corre en el arm64 de Termux. En este runner (Ubuntu x86_64) esa
+        # ruta no existe y rompe el build ("Specified AAPT2 executable does
+        # not exist") — confirmado en la primera corrida de este workflow.
+        # Se quitan esas dos líneas SOLO en este checkout efímero del CI,
+        # sin tocar el archivo del repo que Termux sigue necesitando: sin
+        # el override, AGP resuelve el aapt2 estándar desde Maven, correcto
+        # para x86_64.
+        run: |
+          sed -i '/android\.useAapt2=false/d; /android\.aapt2FromMavenOverride/d' android_v3/gradle.properties
+
       - name: Build debug APK
         working-directory: android_v3
         run: ./gradlew clean assembleDebug --stacktrace
