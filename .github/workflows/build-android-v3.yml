@@ -29,6 +29,16 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          # Bloqueo externo real, no de este código: el default de la acción
+          # (`tools platform-tools`) intenta instalar el paquete legacy
+          # `tools`, que Google retiró de su repositorio del SDK. Rompe con
+          # "Failed to find package 'tools'" — confirmado que el workflow
+          # gemelo de android_v2 (build-apk.yml, mismo `uses`) lleva varias
+          # corridas fallando por lo mismo desde antes de esta tarea. Se
+          # pide solo lo que gradle necesita para compilar, sin la meta-
+          # herramienta obsoleta.
+          packages: "platform-tools platforms;android-34 build-tools;34.0.0"
 
       - name: Grant execute permission for gradlew
         run: chmod +x android_v3/gradlew
