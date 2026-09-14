@@ -254,7 +254,10 @@
                     <div class="p-5 bg-[#5A7A00]/5 border-b border-[#111111]/10">
                         <span class="font-tech text-xs font-bold text-[#5A7A00] uppercase tracking-wider">Lo que sabemos (Hecho)</span>
                         <p class="text-[#111111] leading-relaxed mt-2">${esc(ev.texto || '')}</p>
-                        <div class="mt-3"><span class="font-tech text-[10px] bg-[#111111]/5 px-2 py-1 rounded text-[#111111]/60 uppercase">Fuente: ${esc(ev.fuente || '')}</span></div>
+                        <div class="mt-3 flex items-center gap-2 flex-wrap">
+                            <span class="font-tech text-[10px] bg-[#111111]/5 px-2 py-1 rounded text-[#111111]/60 uppercase">Fuente: ${esc(ev.fuente || '')}</span>
+                            ${/^https?:\/\//.test(ev.url || '') ? `<a href="${esc(ev.url)}" class="font-tech text-[10px] bg-[#5A7A00]/10 px-2 py-1 rounded text-[#5A7A00] uppercase font-bold">Ver fuente ↗</a>` : ''}
+                        </div>
                     </div>
                     <div class="p-5">
                         <span class="font-tech text-xs font-bold text-[#111111]/60 uppercase tracking-wider">Lo que no sabemos (Vacíos)</span>
