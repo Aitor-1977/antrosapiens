@@ -56,8 +56,13 @@ jobs:
       - name: Publicar / adjuntar APK al Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event_name == 'release' && github.event.release.tag_name || format('apk-v3-{0}', github.run_number) }}
-          name: ${{ github.event_name == 'release' && github.event.release.name || format('APK android_v3 de prueba #{0}', github.run_number) }}
-          body: ${{ github.event_name == 'release' && github.event.release.body || format('Build automático de android_v3 desde {0}.', github.sha) }}
+          # Los valores van entre comillas explícitas: sin ellas, YAML trata
+          # un " #" (espacio + numeral) dentro del texto de `format(...)`
+          # como inicio de comentario y trunca la expresión a la mitad —
+          # error real detectado al intentar disparar este workflow, no
+          # solo cosmético (rompía el parseo de GitHub Actions).
+          tag_name: "${{ github.event_name == 'release' && github.event.release.tag_name || format('apk-v3-{0}', github.run_number) }}"
+          name: "${{ github.event_name == 'release' && github.event.release.name || format('APK android_v3 de prueba #{0}', github.run_number) }}"
+          body: "${{ github.event_name == 'release' && github.event.release.body || format('Build automático de android_v3 desde {0}.', github.sha) }}"
           files: android_v3/app/build/outputs/apk/debug/app-debug.apk
           prerelease: ${{ github.event_name != 'release' }}
