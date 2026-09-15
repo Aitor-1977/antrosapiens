@@ -47,6 +47,67 @@ def _sin_medio(titulo: str) -> str:
     return recortado or t
 
 
+# Simétrico a ``_RE_MEDIO`` pero al INICIO: algunos medios anteponen una
+# etiqueta de sección separada por "|" ("Primicia | Plataforma Tul anuncia...").
+# Solo el separador "|" (nunca ":") porque los dos puntos son parte normal de
+# un titular en español con subtítulo propio ("Santander México:
+# Transformación Digital..." — ahí "Santander México" SÍ es contenido, no una
+# etiqueta desechable; usar ":" como señal habría recortado la empresa real).
+# El "|" wire-service SÍ es una convención de etiqueta desechable, no de
+# subtítulo. Caso real (auditoría 2026-09-14): "Primicia | Plataforma Tul
+# anuncia recorte..." detectaba "Primicia" en vez de "Tul".
+_RE_PREFIJO_SECCION = re.compile(
+    r"^[A-ZÁÉÍÓÚÑÜ][\wÁÉÍÓÚÑÜáéíóúñü]*(?:\s+[A-ZÁÉÍÓÚÑÜa-záéíóúñü]+)?\s*\|\s+"
+)
+
+
+def _sin_prefijo_seccion(titulo: str) -> str:
+    t = (titulo or "").strip()
+    recortado = _RE_PREFIJO_SECCION.sub("", t).strip()
+    return recortado or t
+
+
+# Sufijos de futuro simple en español, 3ª persona singular/plural de verbos
+# regulares -ar/-er/-ir ("condonará"/"condonarán", "venderá"/"venderán",
+# "invertirá"/"invertirán"...), sobre el token YA sin acentos y en minúsculas
+# (mismo ``base`` que ya calcula el bucle de abajo: "-ará" y "-ara" son
+# indistinguibles sin acento, y da igual — ambas son formas verbales, nunca
+# un nombre propio). Un verbo conjugado que encabeza un titular en orden
+# invertido queda capitalizado SOLO por ir al inicio de la oración, no es un
+# nombre propio. A diferencia de la lista de verbos en presente de
+# ``_STOP_CAP`` (cerrada, un verbo por incidente confirmado), este es un
+# patrón MORFOLÓGICO: cubre cualquier verbo regular en ese tiempo sin
+# enumerarlo, porque el sufijo es productivo en español y una empresa real no
+# termina en él. Caso real (auditoría 2026-09-14): "Condonarán deuda a
+# productores rurales..." detectaba "Condonarán" como organización.
+_RE_SUFIJO_FUTURO = re.compile(r"(?:ar|er|ir)an?$")
+
+
+def _parece_verbo_conjugado(base: str) -> bool:
+    """¿``base`` (ya sin acentos, en minúsculas) termina en un sufijo de
+    futuro simple español? Longitud mínima para no descartar nombres propios
+    cortos por coincidencia accidental de las últimas letras."""
+    return len(base) >= 6 and bool(_RE_SUFIJO_FUTURO.search(base))
+
+
+# Sufijo nominalizador "-aje": productivo en español para sustantivos comunes
+# de acción/colectivo formados sobre un verbo o una raíz ("reciclar" ->
+# "reciclaje", "aprender" -> "aprendizaje", "hospedar" -> "hospedaje").
+# Igual que ``_RE_SUFIJO_FUTURO``, es un patrón MORFOLÓGICO (no una lista de
+# palabras): ninguna empresa real usa este sufijo como nombre propio, así que
+# un token que lo lleva y va capitalizado solo por abrir la oración no es una
+# organización. Caso real (auditoría 2026-09-14): "Reciclaje de baterías...
+# en Redwood Materials" detectaba "Reciclaje" en vez de "Redwood Materials".
+_RE_SUFIJO_SUSTANTIVO_COMUN = re.compile(r"aje$")
+
+
+def _parece_sustantivo_comun(base: str) -> bool:
+    """¿``base`` (ya sin acentos, en minúsculas) termina en un sufijo
+    nominalizador español productivo de sustantivo común? Longitud mínima
+    para no descartar siglas o nombres propios cortos por coincidencia."""
+    return len(base) >= 5 and bool(_RE_SUFIJO_SUSTANTIVO_COMUN.search(base))
+
+
 # ── Detección de empresa (objetiva, sin IA) ──────────────────────────────────
 #
 # Heurística estructural: una empresa aparece como NOMBRE PROPIO en el titular.
@@ -132,6 +193,20 @@ _GENERICOS_SECTOR = {
     "grupo", "galeria",
 }
 
+# Sufijos de forma jurídica/corporativa: acompañan al nombre real de una
+# empresa ("Acme Corp", "Acme Inc", "Acme S.A.") pero no son parte de la
+# identidad distintiva de la organización — mismo patrón estructural que
+# "banco"/"grupo" en ``_GENERICOS_SECTOR`` (un clasificador institucional
+# genérico, no la empresa), aplicado aquí a la extensión de un candidato ya
+# encontrado: no debe fundirse "Acme" con "Corp" en un solo nombre "Acme
+# Corp" cuando el sufijo es puramente la forma jurídica. Lista cerrada de
+# abreviaturas de forma jurídica realmente usadas en LATAM/EE.UU., no de
+# nombres de empresa.
+_SUFIJOS_CORPORATIVOS = {
+    "corp", "inc", "ltd", "llc", "plc", "srl", "sa", "sab", "sapi", "sas",
+    "co",
+}
+
 # Siglas que NUNCA son empresa: cargos ejecutivos y organismos de gobierno/
 # regulación. detectar_empresa() las trata como _es_sigla() por forma (todo
 # mayúsculas), pero no son una entidad nombrada — son un rol o un regulador.
@@ -167,18 +242,51 @@ _APELLIDOS_POLITICOS_AMBIGUOS: dict[str, set[str]] = {
 }
 
 
+def _token_extiende_candidato(token_texto: str) -> bool:
+    """¿Puede este token CONTINUAR un candidato de empresa ya iniciado?
+
+    Versión ligera del filtro principal, sin el manejo de estado
+    (apellido/ambigüedad política) que solo aplica al primer token de un
+    candidato: un token de continuación válido es capitalizado o sigla, no
+    es palabra común/término de sector/sigla-no-empresa/sufijo de forma
+    jurídica (evita fundir "Acme" con "Corp" en "Acme Corp" — caso real:
+    ``test_api_materializar_y_listar`` esperaba "Acme" desde "Acme Corp
+    enfrenta fricción"), no es un nombre de pila (evita fundir "Redwood" con
+    el apellido de una persona citada más adelante) y no parece un verbo
+    conjugado.
+    """
+    limpio = token_texto.strip()
+    if len(limpio) < 3 and not _es_sigla(limpio):
+        return False
+    base = _sin_acentos(limpio).lower()
+    if (
+        base in _STOP_CAP
+        or base in _GENERICOS_SECTOR
+        or base in _SIGLAS_NO_EMPRESA
+        or base in _SUFIJOS_CORPORATIVOS
+    ):
+        return False
+    if base in _NOMBRES_PROPIOS_PERSONA:
+        return False
+    if not (limpio[0].isupper() or _es_sigla(limpio)):
+        return False
+    if _parece_verbo_conjugado(base):
+        return False
+    return not _parece_sustantivo_comun(base)
+
+
 def detectar_empresa(titulo: str) -> Optional[str]:
     """Devuelve un candidato a empresa nombrada en el titular, o ``None``.
 
-    Objetivo (sin IA): recorre los tokens y devuelve el primero que parezca
-    nombre propio (mayúscula inicial o sigla) y no sea palabra común ni término
-    de sector. No garantiza que sea "la" empresa; garantiza que HAY una entidad
+    Objetivo (sin IA): recorre los tokens y devuelve el que parezca nombre
+    propio (mayúscula inicial o sigla) y no sea palabra común ni término de
+    sector. No garantiza que sea "la" empresa; garantiza que HAY una entidad
     nombrada, que es la condición objetiva pedida.
 
     Conservador por diseño (auditoría 2026-09-11, hallazgo ALTO): ante duda
     entre "es una organización" y "es una persona/un verbo", se descarta y se
     sigue buscando, nunca se inventa una organización. Mecanismos, todos sobre
-    listas cerradas ya existentes en el módulo:
+    listas cerradas o patrones morfológicos ya existentes en el módulo:
 
     1. Un nombre de pila conocido (``_NOMBRES_PROPIOS_PERSONA``) nunca se
        devuelve como organización.
@@ -191,10 +299,37 @@ def detectar_empresa(titulo: str) -> Optional[str]:
        descarta (junto a su apellido contiguo) cuando el apellido político
        documentado aparece pegado — "Clara Brugada" se descarta, "Clara"
        sola o con marcadores de ecosistema no.
+    4. Un verbo conjugado en futuro simple que encabeza un titular en orden
+       invertido ("Condonarán deuda a...") se descarta por su SUFIJO
+       morfológico (``_parece_verbo_conjugado``), no por estar en una lista.
+    5. Un sustantivo común formado con el sufijo nominalizador "-aje"
+       ("Reciclaje de baterías...") se descarta por su SUFIJO morfológico
+       (``_parece_sustantivo_comun``), tampoco por estar en una lista.
+
+    Devuelve el PRIMER candidato individualmente válido que aparece en el
+    titular (orden de lectura), extendido localmente hacia adelante mientras
+    los tokens contiguos también califiquen ("Redwood" + "Materials",
+    "Tailwind" + "CSS"). NO compara la longitud de este candidato contra
+    otros candidatos que pudieran existir más adelante en el titular:
+    comparar secuencias de posiciones distintas causó regresiones reales
+    (auditoría 2026-09-15) — "Nubank acelera su entrada a EE.UU. mediante una
+    alianza con Lead Bank" devolvía "Lead Bank" (2 tokens) en vez de "Nubank"
+    (1 token, pero es la empresa real del titular y el primer candidato
+    válido). La combinación correcta para casos como "Reciclaje... Redwood
+    Materials" es que "Reciclaje" quede rechazado en su propia posición por
+    ser un sustantivo común (regla 5), no que se compare su longitud contra
+    "Redwood Materials".
     """
     if not titulo:
         return None
-    texto = _sin_medio(titulo)
+    # Orden importa: la etiqueta de sección va al INICIO ("Primicia | ...") y
+    # el medio al FINAL ("... - El Economista"). Si `_sin_medio` corriera
+    # primero sobre un titular con "|", su regex de sufijo (que también
+    # reconoce "|" como separador) confundiría TODO lo que sigue al "|" con
+    # el "medio" y se comería el titular real completo, dejando solo la
+    # etiqueta de sección ("Primicia"). Quitar primero la etiqueta de
+    # sección evita esa colisión entre los dos separadores.
+    texto = _sin_medio(_sin_prefijo_seccion(titulo))
     tokens = list(re.finditer(r"[\wÁÉÍÓÚÑÜáéíóúñü]+", texto))
     fin_anterior: Optional[int] = None
     saltar_apellido = False
@@ -234,7 +369,27 @@ def detectar_empresa(titulo: str) -> Optional[str]:
                 if sig_base in apellidos_ambiguos:
                     saltar_apellido = True
                     continue
-        return limpio
+        if _parece_verbo_conjugado(base):
+            continue
+        if _parece_sustantivo_comun(base):
+            continue
+
+        # Primer candidato individualmente válido: extender hacia adelante
+        # mientras los tokens siguientes sean contiguos y cada uno, por sí
+        # mismo, también calificaría como candidato, y devolver de inmediato
+        # (sin seguir buscando ni comparar contra candidatos posteriores).
+        fin_run = m.end()
+        j = idx + 1
+        while j < len(tokens):
+            sig = tokens[j]
+            if texto[fin_run:sig.start()].strip() != "":
+                break
+            if not _token_extiende_candidato(sig.group(0)):
+                break
+            fin_run = sig.end()
+            j += 1
+        return texto[m.start():fin_run].strip()
+
     return None
 
 
