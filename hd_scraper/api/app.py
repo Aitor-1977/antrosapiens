@@ -1176,6 +1176,91 @@ def mobile_scrape(payload: MobileScrapeIn, request: Request) -> dict:
         "promoted": rep_prom.get("promovidos", 0),
         "rejected": rechazadas,
         "duplicates": total_duplicadas,
+        # Siempre "completed": clasificación y promoción ya se ejecutaron
+        # arriba, en esta misma petición síncrona — nunca queda un job
+        # aparte corriendo tras devolver la respuesta (ver docstring).
+        "processing_status": "completed",
+    }
+
+
+# --- Reset + reconstrucción de datos DERIVADOS (mantenimiento) -------------
+#
+# Mapa de dependencias verificado por grep sobre schema_postgres.sql/schema.sql:
+# el único FK saliente de `evidencia_clasificada` es `expediente_id ->
+# expedientes_candidatos`; ninguna otra tabla depende de ninguna de las dos
+# (candidato.py usa las tablas separadas `candidatos`/`candidato_transiciones`
+# — identidad BC-I, no tocadas aquí). Por eso el orden de borrado es
+# `evidencia_clasificada` primero y `expedientes_candidatos` después: no
+# hace falta CASCADE.
+#
+# Motivo: una fila DERIVADA clasificada con reglas antiguas (p. ej. el caso
+# real "Clara", ver commit 88906d7) puede quedar obsoleta para siempre si
+# nadie la reprocesa — `clasificar_lote` es de un solo disparo por diseño.
+# Reconstruir TODO desde `evidencias` (fuente de verdad, nunca tocada) con
+# el algoritmo VIGENTE es la corrección general (no un parche por
+# organización): mismas dos funciones que ya usa /mobile/scrape, sin
+# reimplementar nada.
+_TABLAS_DERIVADAS_RECONSTRUIBLES = ("evidencia_clasificada", "expedientes_candidatos")
+
+
+def _conteos_derivados(db) -> dict:
+    return {
+        "evidencias": db.fetch_one("SELECT COUNT(*) n FROM evidencias")["n"],
+        "evidencia_clasificada": db.fetch_one(
+            "SELECT COUNT(*) n FROM evidencia_clasificada")["n"],
+        "expedientes_candidatos": db.fetch_one(
+            "SELECT COUNT(*) n FROM expedientes_candidatos")["n"],
+    }
+
+
+@app.get("/admin/reconstruir-derivados")
+def reconstruir_derivados(
+    x_ingest_token: Optional[str] = Header(None),
+    token: Optional[str] = Query(None),
+    aplicar: bool = Query(False),
+) -> dict:
+    """Reset + reconstrucción determinista de los datos DERIVADOS
+    (evidencia_clasificada, expedientes_candidatos) desde `evidencias` + el
+    algoritmo vigente. Operación administrativa protegida por el MISMO
+    X-Ingest-Token de la intake — no crea autenticación nueva ni un bypass.
+
+    NUNCA toca `evidencias` (fuente de verdad), `prospectos`, ni ninguna
+    tabla de configuración/migraciones/credenciales.
+
+    Reconstrucción = `clasificacion_store.clasificar_lote(aplicar=True)` +
+    `promocion_store.promover_lote(aplicar=True)` sobre TODO el corpus
+    (sin acotar por organización, a diferencia de /mobile/scrape) — las
+    mismas funciones ya existentes, nunca reimplementadas.
+
+    Dry-run por defecto (sin ``?aplicar=true``): solo reporta los conteos
+    actuales, sin escribir nada. Reejecutar con ``?aplicar=true`` es seguro
+    (idempotente): tras un reset+reconstrucción ya aplicado, un segundo
+    reset vuelve a vaciar (0 filas si nada cambió en `evidencias` desde
+    entonces) y reconstruye idéntico, sin duplicar — ambas funciones ya
+    eran idempotentes por diseño propio.
+    """
+    _exigir_token(x_ingest_token or token)
+    db = get_db()
+    antes = _conteos_derivados(db)
+
+    if not aplicar:
+        return {"aplicado": False, "antes": antes}
+
+    for tabla in _TABLAS_DERIVADAS_RECONSTRUIBLES:
+        db.execute(f"DELETE FROM {tabla}")
+
+    rep_clas = clasificar_lote(db, aplicar=True)
+    rep_prom = promover_lote(db, aplicar=True)
+    despues = _conteos_derivados(db)
+
+    return {
+        "aplicado": True,
+        "antes": antes,
+        "despues": despues,
+        "reclasificadas": rep_clas.get("escritas", 0),
+        "distribucion": rep_clas.get("distribucion", {}),
+        "repromovidas": rep_prom.get("promovidos", 0),
+        "evidencia_cruda_intacta": antes["evidencias"] == despues["evidencias"],
     }
 
 
