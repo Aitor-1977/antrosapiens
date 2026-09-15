@@ -1051,7 +1051,11 @@ def scrape(payload: ScrapeIn, x_ingest_token: Optional[str] = Header(None)) -> d
         raise HTTPException(400, "indica una empresa o una categoria")
 
     total = sum(r.get("escritos", 0) for r in resultados)
-    return {**modo, "total_escritos": total, "resultados": resultados}
+    # timestamp de esta corrida (no de la evidencia individual, que ya trae
+    # la suya): permite al cliente (Android) distinguir "esto es lo que
+    # acaba de traer mi búsqueda" de resultados servidos desde /expedientes
+    # en una consulta anterior.
+    return {**modo, "timestamp": ahora_iso(), "total_escritos": total, "resultados": resultados}
 
 
 # --- Investigación Automática (un solo clic = ciclo completo) ---------------
