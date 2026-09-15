@@ -6,11 +6,6 @@
 <title>AntrolabsHD — Indagar</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
-<!-- Generado en tiempo de compilación (build.gradle.kts:generateHdConfig). Define
-     window.HD_INGEST_TOKEN ("" si el build no lo configuró). No existe en el
-     repo ni en git: si falta (build viejo sin la tarea), la app degrada a
-     solo-lectura en vez de romperse (ver "typeof" al usarlo abajo). -->
-<script src="hd_config.js"></script>
 <style>
     html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
     body { background-color: #E8E4DC; color: #111111; font-family: 'Inter', sans-serif; min-height: max(884px, 100dvh); }
@@ -370,23 +365,25 @@
         }
     }
 
-    // --- Búsqueda EN VIVO (POST /scrape) ----------------------------------------
+    // --- Búsqueda EN VIVO (POST /mobile/scrape) ---------------------------------
     // Sin esto, "Actualizar búsqueda" solo reordenaba/filtraba lo que YA estaba en
     // Neon (GET /expedientes + GET /verificados): con una base vacía o desactualizada
     // la app no servía como buscador, solo como visor de un histórico estático.
-    // /scrape ya existe en el backend (hd_scraper/api/app.py) y consulta Google
-    // News + GDELT AL MOMENTO, con dedup y el mismo contrato de evidencia — esta
-    // función solo lo conecta desde la UI. Requiere X-Ingest-Token (ver
-    // hd_config.js, generado en build.gradle.kts:generateHdConfig): sin token
-    // configurado en el build, degrada a solo-lectura en vez de romperse.
-    const CONECTORES_BUSQUEDA_VIVA = ['google_news', 'gdelt'];
-
-    function ocultarBannerBusqueda() {
-        const b = document.getElementById('busquedaEnVivo');
-        b.classList.add('hidden');
-        b.innerHTML = '';
-    }
-
+    //
+    // /mobile/scrape (hd_scraper/api/app.py) es un adaptador sobre /scrape que
+    // NO exige X-Ingest-Token: un secreto embebido en un APK distribuido deja
+    // de ser un secreto, así que ese token NUNCA viaja a este cliente ni vive
+    // en este archivo — el backend lo usa internamente. Tres estados posibles,
+    // nunca confundidos entre sí:
+    //   LIVE_SEARCH_SUCCESS — se buscó de verdad y hay evidencia nueva.
+    //   LIVE_SEARCH_EMPTY   — se buscó de verdad, no había nada nuevo (200,
+    //                         new_evidence=0: NO es un error).
+    //   LIVE_SEARCH_ERROR   — la búsqueda NO se ejecutó (red caída, payload
+    //                         rechazado, límite de frecuencia). Se muestra el
+    //                         motivo explícito; nunca se sustituye en silencio
+    //                         por la lista ya cacheada de abajo (que sigue
+    //                         siendo, aparte, siempre lo ya capturado en Neon,
+    //                         nunca presentado como resultado de esta búsqueda).
     function mostrarBannerBusqueda(html, tono) {
         const b = document.getElementById('busquedaEnVivo');
         b.classList.remove('hidden', 'bg-[#5A7A00]/10', 'text-[#5A7A00]',
@@ -399,37 +396,23 @@
         b.innerHTML = html;
     }
 
-    // Best-effort: CUALQUIER fallo (sin token, red caída, backend ocupado) se
-    // muestra explícitamente en el banner y la función retorna sin escribir
-    // nada — nunca sustituye en silencio con datos viejos etiquetados como
-    // nuevos (la lista de abajo sigue siendo, aparte, siempre lo ya capturado).
     async function buscarEnVivo(q) {
-        const token = (typeof window.HD_INGEST_TOKEN === 'string') ? window.HD_INGEST_TOKEN : '';
-        if (!token) {
-            mostrarBannerBusqueda(
-                'Búsqueda en vivo no disponible en este build (sin token de intake configurado). Mostrando solo lo ya capturado.',
-                'aviso');
-            return;
-        }
         mostrarBannerBusqueda(`Buscando &ldquo;${esc(q)}&rdquo; en fuentes en vivo (Google News, GDELT)…`, 'aviso');
         let res, data;
         try {
-            res = await fetch(`${API}/scrape`, {
+            res = await fetch(`${API}/mobile/scrape`, {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json', 'X-Ingest-Token': token},
-                body: JSON.stringify({empresa: q, tipo_evento: 'queja', connectors: CONECTORES_BUSQUEDA_VIVA}),
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({empresa: q}),
             });
             data = await res.json();
         } catch (e) {
-            mostrarBannerBusqueda(
-                'No se pudo conectar con el laboratorio para la búsqueda en vivo. Mostrando solo lo ya capturado, sin resultados nuevos.',
-                'error');
+            mostrarBannerBusqueda(`Error en búsqueda en vivo: no se pudo conectar con el laboratorio.`, 'error');
             return;
         }
         if (!res.ok) {
-            mostrarBannerBusqueda(
-                `Fallo en la búsqueda en vivo (HTTP ${res.status}): ${esc(data.detail || 'error desconocido')}. Mostrando solo lo ya capturado, sin resultados nuevos.`,
-                'error');
+            const motivo = data.detail || `HTTP ${res.status}`;
+            mostrarBannerBusqueda(`Error en búsqueda en vivo: ${esc(motivo)}.`, 'error');
             return;
         }
         const hora = new Date(data.timestamp || Date.now()).toLocaleTimeString();
@@ -437,7 +420,7 @@
             ? `${esc(r.connector)}: ${esc(r.error)}`
             : `${esc(r.connector)}: ${r.vistos ?? 0} vistos, ${r.escritos ?? 0} nueva(s)`
         ).join(' · ');
-        const totalNuevas = data.total_escritos ?? 0;
+        const totalNuevas = data.new_evidence ?? 0;
         mostrarBannerBusqueda(
             `Búsqueda en vivo · ${esc(hora)} · ${totalNuevas} evidencia(s) nueva(s). ${porConector}`,
             totalNuevas > 0 ? 'ok' : 'aviso');
@@ -448,7 +431,7 @@
         if (q) {
             await buscarEnVivo(q);
         } else {
-            ocultarBannerBusqueda();
+            document.getElementById('busquedaEnVivo').classList.add('hidden');
         }
         await cargarHallazgos();
     }

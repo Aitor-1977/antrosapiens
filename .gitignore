@@ -30,6 +30,5 @@ __pycache__/
 .vercel
 .env*
 
-# android_v3: generado en tiempo de compilación, puede contener HD_INGEST_TOKEN
-android_v3/app/src/main/assets/public/hd_config.js
+# android_v3: local por máquina (sdk.dir), mismo criterio que android_v2
 android_v3/local.properties
