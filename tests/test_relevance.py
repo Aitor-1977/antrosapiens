@@ -1,4 +1,6 @@
 """Captura Inteligente: filtro de relevancia y calidad (objetivos, sin IA)."""
+import pytest
+
 from hd_scraper.relevance import (
     CALIDAD_ALTA,
     CALIDAD_BAJA,
@@ -313,3 +315,89 @@ def test_detectar_empresa_organizacion_ausente_es_none_no_inventada():
     assert detectar_empresa(
         "Juan Pérez fue nombrado nuevo director general de la compañía"
     ) is None
+
+
+# ── Regresión: heurística de organización sin comparación GLOBAL de          ─
+# secuencias (auditoría 2026-09-15) — fixture reproducible de la corrección
+# de las dos causas raíz de "Clara jefa de gobierno de CDMX" y "las startups
+# que antes no salían" reportadas por el operador. Cuatro casos negativos
+# reales (Reciclaje/Tailwind/Primicia/Condonarán) + diez organizaciones
+# legítimas que deben seguir detectándose sin cambios.
+
+def test_detectar_empresa_rechaza_sustantivo_comun_y_extiende_nombre_compuesto():
+    # "Reciclaje" (sustantivo común, sufijo "-aje") se descarta por
+    # morfología, no por lista de palabras; el primer candidato válido real
+    # es "Redwood", extendido localmente a "Redwood Materials" (nombre propio
+    # compuesto). Nunca se compara la longitud de esta secuencia contra
+    # ninguna otra: es simplemente la primera válida del titular.
+    assert detectar_empresa(
+        "Reciclaje de baterías de litio despega en LATAM: la clave está en "
+        "Redwood Materials"
+    ) == "Redwood Materials"
+
+
+def test_detectar_empresa_extiende_nombre_propio_con_sigla_contigua():
+    assert detectar_empresa(
+        "Tailwind CSS revoluciona el desarrollo frontend en startups mexicanas"
+    ) == "Tailwind CSS"
+
+
+def test_detectar_empresa_prefijo_de_seccion_no_se_confunde_con_sufijo_de_medio():
+    # "Primicia | " es una etiqueta de sección desechable, no la empresa.
+    # Debe quitarse ANTES de intentar quitar un posible sufijo de medio al
+    # final: si se hiciera al revés, la regex del sufijo (que también
+    # reconoce "|" como separador) confundiría todo el resto del titular con
+    # el "medio" y dejaría solo "Primicia" — regresión real detectada al
+    # implementar esta misma corrección.
+    assert detectar_empresa(
+        "Primicia | Plataforma Tul anuncia recorte de personal en su "
+        "operación de México"
+    ) == "Tul"
+    assert detectar_empresa(
+        "Primicia | Plataforma Tul anuncia recorte - El Economista"
+    ) == "Tul"
+
+
+def test_detectar_empresa_rechaza_verbo_futuro_sin_otro_candidato():
+    assert detectar_empresa(
+        "Condonarán deuda a productores rurales tras sequía histórica"
+    ) is None
+
+
+@pytest.mark.parametrize(
+    "titulo,esperado",
+    [
+        ("Jüsto levanta ronda serie C liderada por fondos internacionales", "Jüsto"),
+        ("Kavak despide al 10% de su plantilla en México", "Kavak"),
+        ("Nowports cierra alianza logística con socio brasileño", "Nowports"),
+        ("Bitso lanza nuevo producto de staking para usuarios LATAM", "Bitso"),
+        ("Konfío firma acuerdo de financiamiento con banco de desarrollo", "Konfío"),
+        # Caso real (auditoría 2026-09-15): comparar la longitud de
+        # secuencias en posiciones distintas del titular devolvía "Lead
+        # Bank" (2 tokens) en vez de "Nubank" (la empresa real, primer
+        # candidato válido). "Lead Bank" solo aparece por relación/contexto
+        # (una alianza), no es la identidad de la evidencia.
+        (
+            "Nubank acelera su entrada a EE.UU. mediante una alianza con Lead Bank",
+            "Nubank",
+        ),
+        ("Zubale despide personal tras reestructura operativa", "Zubale"),
+        ("Banorte reporta crecimiento en banca digital durante el trimestre", "Banorte"),
+        # Caso real: "Santander México:" es un titular normal con subtítulo
+        # propio (dos puntos), no una etiqueta de sección desechable — debe
+        # seguir detectando "Santander", no "Transformación".
+        ("Santander México: Transformación Digital con Plataforma Gravity", "Santander"),
+        ("Clara levanta capital en nueva ronda de inversión serie B", "Clara"),
+    ],
+)
+def test_detectar_empresa_organizaciones_legitimas_no_se_ven_afectadas(titulo, esperado):
+    assert detectar_empresa(titulo) == esperado
+
+
+def test_detectar_empresa_no_funde_sufijo_de_forma_juridica():
+    # Regresión real detectada al validar esta misma corrección: la
+    # extensión de candidato ("Acme" + "Corp") no debe fundir un sufijo de
+    # forma jurídica (Corp/Inc/Ltd/S.A....) con el nombre real de la
+    # organización. `tests/test_candidato.py::test_api_materializar_y_listar`
+    # ya fijaba "Acme" (no "Acme Corp") como la identidad esperada.
+    assert detectar_empresa("Acme Corp enfrenta fricción") == "Acme"
