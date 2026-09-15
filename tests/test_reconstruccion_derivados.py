@@ -185,3 +185,92 @@ def test_reconstruccion_es_idempotente_segunda_corrida_sin_duplicados(db):
     assert n_clas_1 == n_clas_2, "no debe duplicar clasificaciones"
     assert estado_1 == estado_2, "el resultado lógico debe ser idéntico"
     assert "Clara" not in [org for org, e in estado_2.items() if org == "Clara Brugada"]
+
+
+# ── GET /admin/reconstruir-derivados (endpoint administrativo real) ───────
+# Mismo escenario que arriba, pero disparado por el endpoint que Mario
+# podría llamar sin tocar SQL — protegido por el X-Ingest-Token existente,
+# nunca un bypass ni una autenticación nueva.
+
+import importlib
+
+import pytest
+from fastapi.testclient import TestClient
+
+from hd_scraper.config import settings
+
+RUTA_RECONSTRUIR = "/admin/reconstruir-derivados"
+
+
+@pytest.fixture()
+def cli(db, monkeypatch):
+    api = importlib.import_module("hd_scraper.api.app")
+    monkeypatch.setattr(api, "get_db", lambda: db)
+    object.__setattr__(settings, "ingest_token", "secreto-123")
+    yield TestClient(api.app)
+    object.__setattr__(settings, "ingest_token", "")
+
+
+H = {"X-Ingest-Token": "secreto-123"}
+
+
+def test_admin_reconstruir_derivados_requiere_token(cli):
+    assert cli.get(RUTA_RECONSTRUIR).status_code == 401
+
+
+def test_admin_reconstruir_derivados_dry_run_no_escribe(cli, db):
+    _sembrar_corpus_mixto(db)
+    _sembrar_fila_derivada_obsoleta(db)
+    n_antes = db.fetch_one("SELECT COUNT(*) n FROM evidencia_clasificada")["n"]
+
+    r = cli.get(RUTA_RECONSTRUIR, headers=H)
+    assert r.status_code == 200
+    assert r.json()["aplicado"] is False
+
+    n_despues = db.fetch_one("SELECT COUNT(*) n FROM evidencia_clasificada")["n"]
+    assert n_antes == n_despues, "dry-run no debe escribir nada"
+
+
+def test_admin_reconstruir_derivados_aplicar_elimina_clara_falsa(cli, db):
+    _sembrar_corpus_mixto(db)
+    _sembrar_fila_derivada_obsoleta(db)
+    total_raw = db.fetch_one("SELECT COUNT(*) n FROM evidencias")["n"]
+
+    r = cli.get(RUTA_RECONSTRUIR, params={"aplicar": "true"}, headers=H)
+    assert r.status_code == 200
+    d = r.json()
+    assert d["aplicado"] is True
+    assert d["evidencia_cruda_intacta"] is True
+    assert d["reclasificadas"] == total_raw
+
+    estado = _estado_expedientes(db)
+    assert estado.get("Clara") == "candidato"  # sostenido por evidencia real
+    fila_clara = db.fetch_one(
+        "SELECT tipo_epistemologico FROM evidencia_clasificada WHERE evidencia_id = 1")
+    assert dict(fila_clara)["tipo_epistemologico"] == "contextual"
+    assert estado.get("Globex") == "abierto"  # Corporativo, excluido
+    assert db.fetch_one("SELECT COUNT(*) n FROM evidencias")["n"] == total_raw
+
+
+def test_admin_reconstruir_derivados_endpoint_es_idempotente(cli, db):
+    # "Idempotente" aquí significa RESULTADO LÓGICO estable entre corridas
+    # (mismo estado final, sin acumular filas): cada llamada es un reset
+    # COMPLETO (borra y reconstruye TODO desde evidencias), así que
+    # "reclasificadas" es el mismo número en ambas corridas — la prueba real
+    # de no-duplicación es que expedientes/estado no crecen ni cambian.
+    _sembrar_corpus_mixto(db)
+    _sembrar_fila_derivada_obsoleta(db)
+
+    r1 = cli.get(RUTA_RECONSTRUIR, params={"aplicar": "true"}, headers=H)
+    d1 = r1.json()
+    estado_1 = _estado_expedientes(db)
+    n_exp_1 = db.fetch_one("SELECT COUNT(*) n FROM expedientes_candidatos")["n"]
+
+    r2 = cli.get(RUTA_RECONSTRUIR, params={"aplicar": "true"}, headers=H)
+    d2 = r2.json()
+    estado_2 = _estado_expedientes(db)
+    n_exp_2 = db.fetch_one("SELECT COUNT(*) n FROM expedientes_candidatos")["n"]
+
+    assert d1["reclasificadas"] == d2["reclasificadas"]
+    assert estado_1 == estado_2, "el resultado lógico debe ser idéntico entre corridas"
+    assert n_exp_1 == n_exp_2, "no debe acumular expedientes duplicados"

@@ -86,6 +86,9 @@ def test_mobile_scrape_respuesta_incluye_timestamp_y_live(cli):
     d = r.json()
     assert d["live"] is True
     assert d["timestamp"]
+    # Todo el procesamiento (clasificación + promoción) ya ocurrió en esta
+    # misma respuesta: nunca queda un job aparte corriendo después.
+    assert d["processing_status"] == "completed"
 
 
 def test_mobile_scrape_busqueda_real_sin_resultados_no_es_error(cli, monkeypatch):
