@@ -42,6 +42,7 @@ from .. import pipeline_comercial as _pipeline
 from ..analisis import analizar
 from ..clasificacion_epistemologica import clasificar_atribucion
 from ..clasificacion_store import clasificar_lote
+from ..promocion_store import promover_lote
 from ..curaduria import curar
 from ..dictamen import generar_dictamen, generar_ranking
 from ..engine.rule_engine import RuleEngine
@@ -3078,6 +3079,89 @@ def oportunidades_endpoint(limite: int = Query(10, ge=1, le=100)) -> dict:
     ops = oportunidades(_todos_expedientes(), limite)
     return {"total": len(ops), "oportunidades": ops}
 
+
+
+# --- Búsqueda móvil en vivo -------------------------------------------------
+class MobileScrapeIn(BaseModel):
+    empresa: str
+
+
+@app.post("/mobile/scrape")
+def mobile_scrape(payload: MobileScrapeIn) -> dict:
+    """Entrada pública mínima para AntroLabsHD.
+
+    El APK NO conoce HD_INGEST_TOKEN.
+    Reutiliza exclusivamente el motor de /scrape:
+      RAW -> clasificación -> promoción -> expedientes verificables.
+
+    No interpreta antropológicamente ni crea reglas nuevas.
+    """
+    empresa = payload.empresa.strip()
+
+    if not empresa:
+        raise HTTPException(400, "empresa vacía")
+
+    if len(empresa) > 200:
+        raise HTTPException(400, "empresa demasiado larga")
+
+    db = get_db()
+
+    # Misma consulta de empresa que /scrape.
+    query = QuerySpec(
+        empresa=empresa,
+        tipo_evento="queja",
+        terminos=region_clause("LATAM"),
+    )
+
+    # Conectores públicos permitidos para búsqueda móvil.
+    resultados = _correr_query(
+        db,
+        query,
+        ["google_news", "gdelt"],
+    )
+
+    total_escritos = sum(
+        r.get("escritos", 0) for r in resultados
+    )
+
+    # Clasificación existente. No se duplica lógica.
+    rep_clasificacion = clasificar_lote(
+        db,
+        org=empresa,
+        limite=200,
+        aplicar=True,
+    )
+
+    # Promoción existente, restringida a la organización buscada.
+    rep_promocion = promover_lote(
+        db,
+        org=empresa,
+        limite=50,
+        aplicar=True,
+    )
+
+    # Solo devolvemos expedientes realmente promovidos.
+    todos_verificados = listar_candidatos_verificados(db, limite=200)
+
+    candidatos = [
+        item for item in todos_verificados
+        if str(item.get("organizacion", "")).strip().lower() == empresa.lower()
+    ]
+
+    return {
+        "ok": True,
+        "live": True,
+        "empresa": empresa,
+        "timestamp": ahora_iso(),
+        "new_evidence": total_escritos,
+        "classified": rep_clasificacion.get("procesadas", 0),
+        "promoted": rep_promocion.get("promovidos", 0),
+        "rejected": rep_promocion.get("evaluados", 0)
+            - rep_promocion.get("promovidos", 0),
+        "processing_status": "completed",
+        "candidates": candidatos,
+        "resultados": resultados,
+    }
 
 @app.get("/prioridades")
 def prioridades_endpoint(limite: int = Query(10, ge=1, le=100)) -> dict:
