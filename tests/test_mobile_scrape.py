@@ -155,12 +155,15 @@ def test_busqueda_kavak_atraviesa_scrape_clasificacion_promocion_y_verificados(
         lambda self, url: _FIXTURE_RSS_KAVAK,
     )
     # Determinista y sin red: el link de fixture tiene forma de wrapper de
-    # Google News (mismo patrón que otros fixtures de este repo), lo que de
-    # otro modo dispararía un intento real de _resolver_url_real (best-effort,
-    # ver google_news.py) — ya cubierto por su propia suite de tests.
+    # Google News (mismo patrón que otros fixtures de este repo), lo que en
+    # las versiones del conector que ya resuelven wrappers dispararía un
+    # intento real de _resolver_url_real (best-effort, ver google_news.py)
+    # — ya cubierto por su propia suite de tests. raising=False: el método
+    # no existe en todas las variantes de esta rama del conector.
     monkeypatch.setattr(
         "hd_scraper.connectors.google_news.GoogleNewsConnector._resolver_url_real",
         lambda self, url: None,
+        raising=False,
     )
 
     r = cli.post("/mobile/scrape", json={"empresa": "Kavak"})
