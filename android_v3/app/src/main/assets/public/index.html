@@ -393,6 +393,14 @@
         b.innerHTML = html;
     }
 
+    // El backend procesa TODO de forma síncrona en esta misma llamada
+    // (scrape -> clasificación -> promoción, ver hd_scraper/api/app.py:
+    // mobile_scrape): no hay un job aparte que consultar, así que no existe
+    // un estado intermedio real que mostrar entre "buscando" y el resultado
+    // final — mostrar un "Clasificando…" fijo por un tiempo arbitrario
+    // fingiría una etapa que no ocurre por separado. El banner final ya
+    // reporta cada etapa con sus números reales (clasificadas/promovidas/
+    // rechazadas), que es la evidencia genuina de que sí ocurrieron.
     async function buscarEnVivo(q) {
         mostrarBannerBusqueda(`Buscando &ldquo;${esc(q)}&rdquo; en fuentes en vivo (Google News, GDELT)…`, 'aviso');
         let res, data;
@@ -418,9 +426,13 @@
             : `${esc(r.connector)}: ${r.vistos ?? 0} vistos, ${r.escritos ?? 0} nueva(s)`
         ).join(' · ');
         const totalNuevas = data.new_evidence ?? 0;
+        const promovidas = data.promoted ?? 0;
+        const resumenProcesamiento = totalNuevas > 0
+            ? ` · clasificadas: ${data.classified ?? 0} · candidatos nuevos: ${promovidas} · descartadas: ${data.rejected ?? 0}`
+            : '';
         mostrarBannerBusqueda(
-            `Búsqueda en vivo · ${esc(hora)} · ${totalNuevas} evidencia(s) nueva(s). ${porConector}`,
-            totalNuevas > 0 ? 'ok' : 'aviso');
+            `Búsqueda en vivo · ${esc(hora)} · ${totalNuevas} evidencia(s) nueva(s)${resumenProcesamiento}. ${porConector}`,
+            promovidas > 0 ? 'ok' : 'aviso');
     }
 
     async function actualizarBusqueda() {

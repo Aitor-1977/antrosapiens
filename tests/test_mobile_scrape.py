@@ -118,3 +118,102 @@ def test_scrape_sigue_exigiendo_token_sin_cambios(cli):
     # protección de siempre, sin debilitarse por la existencia de la nueva.
     r = cli.post("/scrape", json={"empresa": "Nubank"})
     assert r.status_code == 401
+
+
+# ── FASE 10 (misión "AntroLabsHD operativo"): prueba end-to-end de la     ──
+# cadena completa disparada por una sola búsqueda — RAW -> clasificación ->
+# promoción -> /verificados — no solo "el HTTP fue 200".
+
+_FIXTURE_RSS_KAVAK = """<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+<channel>
+  <title>Kavak - Google News</title>
+  <item>
+    <title>Carlos Herrera, CEO de Kavak, anunció una ronda de inversión para su expansión en LATAM</title>
+    <link>https://news.google.com/rss/articles/KAVAK1?oc=5</link>
+    <pubDate>Wed, 01 Jul 2026 10:00:00 GMT</pubDate>
+    <source url="https://www.example.com">Prensa X</source>
+  </item>
+</channel>
+</rss>
+"""
+
+
+def test_busqueda_kavak_atraviesa_scrape_clasificacion_promocion_y_verificados(
+    cli, db, monkeypatch
+):
+    from hd_scraper.candidatos_verificados import listar_candidatos_verificados
+
+    # Búsqueda de una organización DISTINTA de "Clara": clasificar/promover
+    # están acotados a org="Kavak" (evidencias_sin_clasificar/expedientes_
+    # abiertos con ese filtro), así que esta búsqueda nunca toca ni
+    # reprocesa ninguna fila ajena — el caso histórico de "Clara" (cubierto
+    # en tests/test_reparacion_clara.py y test_reconstruccion_derivados.py)
+    # es un expediente completamente independiente del de "Kavak".
+    monkeypatch.setattr(
+        "hd_scraper.connectors.google_news.GoogleNewsConnector._get",
+        lambda self, url: _FIXTURE_RSS_KAVAK,
+    )
+    # Determinista y sin red: el link de fixture tiene forma de wrapper de
+    # Google News (mismo patrón que otros fixtures de este repo), lo que de
+    # otro modo dispararía un intento real de _resolver_url_real (best-effort,
+    # ver google_news.py) — ya cubierto por su propia suite de tests.
+    monkeypatch.setattr(
+        "hd_scraper.connectors.google_news.GoogleNewsConnector._resolver_url_real",
+        lambda self, url: None,
+    )
+
+    r = cli.post("/mobile/scrape", json={"empresa": "Kavak"})
+    assert r.status_code == 200
+    d = r.json()
+
+    # 1. evidencia nueva existe
+    assert d["new_evidence"] >= 1
+    assert db.fetch_one(
+        "SELECT COUNT(*) n FROM evidencias WHERE empresa_mencionada = 'Kavak'"
+    )["n"] >= 1
+
+    # 2. clasificación nueva existe (no solo escrita, VERIFICADA en la tabla),
+    # específicamente la fila real de la autodeclaración de Google News (el
+    # fixture de GDELT reutiliza un texto genérico ajeno, por eso se filtra
+    # por cita_textual, no basta con "alguna fila de Kavak").
+    assert d["classified"] >= 1
+    fila_clasificada = db.fetch_one(
+        "SELECT ec.tipo_epistemologico FROM evidencia_clasificada ec "
+        "JOIN evidencias e ON e.id = ec.evidencia_id "
+        "WHERE e.empresa_mencionada = 'Kavak' AND e.connector = 'google_news'")
+    assert fila_clasificada is not None
+    assert fila_clasificada["tipo_epistemologico"] == "senal_primaria_autodeclaracion"
+
+    # 3. candidato válido aparece en /verificados
+    assert d["promoted"] >= 1
+    nombres = {c["organizacion"] for c in listar_candidatos_verificados(db)}
+    assert "Kavak" in nombres
+
+    # 4. segunda ejecución (misma búsqueda) no duplica nada
+    n_evidencias_1 = db.fetch_one(
+        "SELECT COUNT(*) n FROM evidencias WHERE empresa_mencionada = 'Kavak'")["n"]
+    n_clasificadas_1 = db.fetch_one(
+        "SELECT COUNT(*) n FROM evidencia_clasificada ec "
+        "JOIN evidencias e ON e.id = ec.evidencia_id "
+        "WHERE e.empresa_mencionada = 'Kavak'")["n"]
+    n_expedientes_1 = db.fetch_one(
+        "SELECT COUNT(*) n FROM expedientes_candidatos WHERE organizacion = 'Kavak'")["n"]
+
+    r2 = cli.post("/mobile/scrape", json={"empresa": "Kavak"})
+    d2 = r2.json()
+    assert d2["new_evidence"] == 0    # dedup por hash_dedup
+    assert d2["classified"] == 0      # ya_clasificada, no reclasifica
+    assert d2["promoted"] == 0        # WHERE estado='abierto', ya es candidato
+
+    n_evidencias_2 = db.fetch_one(
+        "SELECT COUNT(*) n FROM evidencias WHERE empresa_mencionada = 'Kavak'")["n"]
+    n_clasificadas_2 = db.fetch_one(
+        "SELECT COUNT(*) n FROM evidencia_clasificada ec "
+        "JOIN evidencias e ON e.id = ec.evidencia_id "
+        "WHERE e.empresa_mencionada = 'Kavak'")["n"]
+    n_expedientes_2 = db.fetch_one(
+        "SELECT COUNT(*) n FROM expedientes_candidatos WHERE organizacion = 'Kavak'")["n"]
+    assert (n_evidencias_1, n_clasificadas_1, n_expedientes_1) == \
+           (n_evidencias_2, n_clasificadas_2, n_expedientes_2)
+    assert n_expedientes_1 == 1, "no debe crear un segundo expediente para la misma organización"

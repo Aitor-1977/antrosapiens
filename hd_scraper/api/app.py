@@ -43,6 +43,7 @@ from .. import pipeline_comercial as _pipeline
 from ..analisis import analizar
 from ..clasificacion_epistemologica import clasificar_atribucion
 from ..clasificacion_store import clasificar_lote
+from ..promocion_store import promover_lote
 from ..curaduria import curar
 from ..dictamen import generar_dictamen, generar_ranking
 from ..engine.rule_engine import RuleEngine
@@ -1108,6 +1109,20 @@ def mobile_scrape(payload: MobileScrapeIn, request: Request) -> dict:
     patrón ya usado en /investigacion para "búsqueda directa por nombre").
     NUNCA expone HD_INGEST_TOKEN en ninguna rama de esta función.
 
+    Escribir evidencia sin clasificarla/promoverla dejaba al operador
+    dependiendo de un scheduler de 12h que NO corre en Vercel (serverless,
+    sin proceso de larga vida — ver api/index.py) para que una búsqueda
+    apareciera alguna vez en /verificados: en la práctica, nunca. Por eso
+    esta función también clasifica y promueve, SÍNCRONO, en la misma
+    petición — reutilizando tal cual `clasificacion_store.clasificar_lote`
+    y `promocion_store.promover_lote` (nunca reimplementados), acotados a
+    ``org=empresa`` (mismo parámetro que ya soportaban ambas funciones): el
+    costo es bajo (regex/CPU local sobre un puñado de filas nuevas, sin
+    llamadas de red) y cabe con margen en el maxDuration=60s de la función
+    (vercel.json). Ambas funciones son idempotentes por diseño propio
+    (`ya_clasificada` / `WHERE estado='abierto'`): repetir la búsqueda
+    nunca duplica clasificación ni promoción.
+
     Respuesta SIEMPRE distingue búsqueda-real-sin-resultados de error:
     200 con `new_evidence=0` significa "se buscó de verdad y no había nada
     nuevo" (LIVE_SEARCH_EMPTY); una excepción (422/429) significa que la
@@ -1133,8 +1148,19 @@ def mobile_scrape(payload: MobileScrapeIn, request: Request) -> dict:
     query = QuerySpec(empresa=empresa, tipo_evento="queja", terminos=zona)
     resultados = _correr_query(db, query, list(_MOBILE_CONECTORES))
     total_nuevas = sum(r.get("escritos", 0) for r in resultados)
+    total_duplicadas = sum(r.get("duplicados", 0) for r in resultados)
 
-    logger.info("mobile_scrape fin request_id=%s nuevas=%d", request_id, total_nuevas)
+    rep_clas = clasificar_lote(db, org=empresa, aplicar=True)
+    rep_prom = promover_lote(db, org=empresa, aplicar=True)
+    distribucion = rep_clas.get("distribucion", {})
+    rechazadas = (distribucion.get("corroborante", 0)
+                 + distribucion.get("contextual", 0))
+
+    logger.info(
+        "mobile_scrape fin request_id=%s nuevas=%d clasificadas=%d "
+        "promovidas=%d rechazadas=%d",
+        request_id, total_nuevas, rep_clas.get("escritas", 0),
+        rep_prom.get("promovidos", 0), rechazadas)
 
     return {
         "ok": True,
@@ -1144,6 +1170,12 @@ def mobile_scrape(payload: MobileScrapeIn, request: Request) -> dict:
         "new_evidence": total_nuevas,
         "empresa": empresa,
         "resultados": resultados,
+        # Contrato de procesamiento (clasificación + promoción, ya
+        # aplicadas en esta misma respuesta, no en un job aparte):
+        "classified": rep_clas.get("escritas", 0),
+        "promoted": rep_prom.get("promovidos", 0),
+        "rejected": rechazadas,
+        "duplicates": total_duplicadas,
     }
 
 
