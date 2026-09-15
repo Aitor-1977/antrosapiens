@@ -288,6 +288,112 @@ def _reprocesar_temporal_96_tavily(
     }
 
 
+# Evidencia real (auditoría 2026-09-15): "Clara Brugada acompaña a la
+# Presidenta Claudia Sheinbaum..." fue clasificada, ANTES de la corrección de
+# ``_es_parte_de_nombre_mas_largo`` (commit 64ae6f7, 2026-09-04), como
+# ``senal_primaria_autodeclaracion`` vinculada al expediente "Clara" (una
+# fintech real, homónima). Esa fila de ``evidencia_clasificada`` nunca se
+# reprocesó porque ``clasificar_lote`` es deliberadamente de un solo disparo
+# (``ya_clasificada``). El clasificador VIGENTE, ejecutado sobre el mismo
+# insumo, produce ``contextual``/``vinculado=False`` (verificado en esta
+# misma auditoría): la fila es un dato DERIVADO obsoleto, no un error del
+# código actual.
+_EVIDENCIA_ID_CLARA_OBSOLETA = 2479
+_ORG_CLARA = "Clara"
+_TIPOS_PRIMARIOS_OBSOLETOS = (
+    "senal_primaria_autodeclaracion",
+    "senal_primaria_huella_practica",
+)
+
+
+def _snapshot_reparacion_clara(db) -> dict:
+    """Solo lectura: estado de la fila derivada y del expediente "Clara"."""
+    fila = db.fetch_one(
+        "SELECT id, expediente_id, tipo_epistemologico FROM evidencia_clasificada "
+        "WHERE evidencia_id = ?", (_EVIDENCIA_ID_CLARA_OBSOLETA,))
+    expediente = db.fetch_one(
+        "SELECT id, estado FROM expedientes_candidatos WHERE LOWER(organizacion) = ?",
+        (_ORG_CLARA.lower(),))
+    evidencia_cruda = db.fetch_one(
+        "SELECT id FROM evidencias WHERE id = ?", (_EVIDENCIA_ID_CLARA_OBSOLETA,))
+    return {
+        "evidencia_2479_existe": evidencia_cruda is not None,
+        "fila_derivada": dict(fila) if fila else None,
+        "expediente_clara": dict(expediente) if expediente else None,
+    }
+
+
+@app.get("/ops/reparar-clara-0e72ee25e22c6f67")
+def _reparar_clasificacion_clara_2479(
+    x_ingest_token: Optional[str] = Header(None),
+    token: Optional[str] = Query(None),
+    aplicar: bool = Query(False),
+) -> dict:
+    """Endpoint TEMPORAL de un solo uso (2026-09-15) — se elimina de este
+    archivo inmediatamente después de usarse, y se hace un redeploy sin él.
+    Mismo patrón que el precedente ``/ops/reproc-4bf45f8085f14016e440d7845b67dd0d``
+    (Tavily, 2026-09-05): ruta con sufijo aleatorio no adivinable, protegida
+    por el mismo ``X-Ingest-Token`` de la intake.
+
+    Operación ESTRICTAMENTE limitada a un único registro conocido de
+    antemano (``_EVIDENCIA_ID_CLARA_OBSOLETA = 2479``): nunca acepta un
+    ``evidencia_id`` por parámetro, nunca borra en masa, nunca toca
+    ``evidencias`` (evidencia cruda). Idempotente en el sentido fuerte: solo
+    actúa si la fila existente todavía tiene uno de los dos tipos PRIMARIOS
+    obsoletos (``senal_primaria_autodeclaracion``/``senal_primaria_huella_
+    practica``, ver ``_TIPOS_PRIMARIOS_OBSOLETOS``). Si no hay fila, o si ya
+    quedó en ``contextual``/``corroborante`` (ya reparada, por esta misma
+    llamada o por cualquier corrida normal de ``clasificar_lote``), NO
+    vuelve a borrar ni a reclasificar — reporta ``ya_reparada`` sin escribir
+    nada. Sin este chequeo, una segunda llamada con ``?aplicar=true`` sobre
+    una fila ya corregida la borraría y recrearía de nuevo sin necesidad
+    (detectado al probar el endpoint contra una fila sintética antes de usarlo
+    en producción).
+
+    Por defecto (sin ``?aplicar=true``) es dry-run: solo devuelve el snapshot
+    antes/después (iguales en dry-run) sin escribir nada.
+
+    Pasos, con ``?aplicar=true``:
+      1. localizar por evidencia_id=2479 la fila de ``evidencia_clasificada``;
+      2. si no existe, o si ya no es un tipo primario, reportar
+         ``ya_reparada`` sin tocar nada más;
+      3. si existe y aún es un tipo primario, borrar SOLO esa fila (por su
+         propio id, no por rango);
+      4. reejecutar ``clasificacion_store.clasificar_lote`` (el mecanismo YA
+         EXISTENTE del sistema, sin reimplementar la cascada) acotado a
+         ``org="Clara"`` — reclasifica únicamente evidencia sin fila en
+         ``evidencia_clasificada`` para esa organización, sin duplicar y sin
+         tocar ninguna otra evidencia del corpus.
+    """
+    _exigir_token(x_ingest_token or token)
+    db = get_db()
+    antes = _snapshot_reparacion_clara(db)
+
+    if not aplicar:
+        return {"aplicado": False, "antes": antes, "despues": antes}
+
+    fila = antes["fila_derivada"]
+    if fila is None or fila["tipo_epistemologico"] not in _TIPOS_PRIMARIOS_OBSOLETOS:
+        return {
+            "aplicado": True,
+            "estado": "ya_reparada",
+            "antes": antes,
+            "despues": antes,
+        }
+
+    db.execute("DELETE FROM evidencia_clasificada WHERE id = ?", (fila["id"],))
+    reporte = clasificar_lote(db, org=_ORG_CLARA, aplicar=True)
+    despues = _snapshot_reparacion_clara(db)
+    return {
+        "aplicado": True,
+        "estado": "reparada",
+        "fila_borrada": fila,
+        "reporte_clasificar_lote": {k: v for k, v in reporte.items() if k != "muestra"},
+        "antes": antes,
+        "despues": despues,
+    }
+
+
 def _alta(payload: ProspectoIn) -> dict:
     record = nuevo_prospecto(
         payload.nombre, payload.categoria,
