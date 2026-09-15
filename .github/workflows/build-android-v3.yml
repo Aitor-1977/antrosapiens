@@ -1,0 +1,92 @@
+name: Build Android APK (android_v3)
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "android_v3/**"
+      - ".github/workflows/build-android-v3.yml"
+  release:
+    types: [published]
+  workflow_dispatch: {}
+
+permissions:
+  contents: write # necesario para publicar el Release del paso final
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: "zulu"
+          java-version: "17"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          # Bloqueo externo real, no de este código: el default de la acción
+          # (`tools platform-tools`) intenta instalar el paquete legacy
+          # `tools`, que Google retiró de su repositorio del SDK. Rompe con
+          # "Failed to find package 'tools'" — confirmado que el workflow
+          # gemelo de android_v2 (build-apk.yml, mismo `uses`) lleva varias
+          # corridas fallando por lo mismo desde antes de esta tarea. Se
+          # pide solo lo que gradle necesita para compilar, sin la meta-
+          # herramienta obsoleta.
+          packages: "platform-tools platforms;android-34 build-tools;34.0.0"
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x android_v3/gradlew
+
+      - name: Ajustar aapt2 para CI (no aplica en Termux)
+        # android_v3/gradle.properties fija android.aapt2FromMavenOverride a
+        # un binario de Termux (/data/data/com.termux/...) porque el aapt2
+        # estándar de Maven, compilado para Linux/macOS de escritorio, no
+        # corre en el arm64 de Termux. En este runner (Ubuntu x86_64) esa
+        # ruta no existe y rompe el build ("Specified AAPT2 executable does
+        # not exist") — confirmado en la primera corrida de este workflow.
+        # Se quitan esas dos líneas SOLO en este checkout efímero del CI,
+        # sin tocar el archivo del repo que Termux sigue necesitando: sin
+        # el override, AGP resuelve el aapt2 estándar desde Maven, correcto
+        # para x86_64.
+        run: |
+          sed -i '/android\.useAapt2=false/d; /android\.aapt2FromMavenOverride/d' android_v3/gradle.properties
+
+      - name: Build debug APK
+        working-directory: android_v3
+        run: ./gradlew clean assembleDebug --stacktrace
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: antrosapiens-v3-debug
+          path: android_v3/app/build/outputs/apk/debug/app-debug.apk
+
+      # Mismo patrón que build-apk.yml (android_v2): un GitHub Release con el
+      # archivo adjunto da un link fijo y directo al .apk, instalable con un
+      # toque desde el navegador del teléfono (a diferencia del artifact, que
+      # viene zippeado y solo se baja bien desde el sitio de escritorio).
+      # Si el disparo fue un release publicado a mano, el APK se adjunta a
+      # ESE release (softprops actualiza el existente, no crea uno nuevo).
+      # Si fue push/workflow_dispatch, se crea un release nuevo con prefijo
+      # "apk-v3-" para no chocar con los tags "apk-N" que ya usa el workflow
+      # de android_v2 (build-apk.yml): cada workflow cuenta run_number por
+      # separado y podrían coincidir en el mismo número.
+      - name: Publicar / adjuntar APK al Release
+        uses: softprops/action-gh-release@v2
+        with:
+          # Los valores van entre comillas explícitas: sin ellas, YAML trata
+          # un " #" (espacio + numeral) dentro del texto de `format(...)`
+          # como inicio de comentario y trunca la expresión a la mitad —
+          # error real detectado al intentar disparar este workflow, no
+          # solo cosmético (rompía el parseo de GitHub Actions).
+          tag_name: "${{ github.event_name == 'release' && github.event.release.tag_name || format('apk-v3-{0}', github.run_number) }}"
+          name: "${{ github.event_name == 'release' && github.event.release.name || format('APK android_v3 de prueba #{0}', github.run_number) }}"
+          body: "${{ github.event_name == 'release' && github.event.release.body || format('Build automático de android_v3 desde {0}.', github.sha) }}"
+          files: android_v3/app/build/outputs/apk/debug/app-debug.apk
+          prerelease: ${{ github.event_name != 'release' }}
