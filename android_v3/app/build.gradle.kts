@@ -81,13 +81,20 @@ val generateBuildId by tasks.registering {
 // solo-lectura (igual que hasta ahora), sin romperse.
 val generateHdConfig by tasks.registering {
     val outFile = layout.projectDirectory.file("src/main/assets/public/hd_config.js")
-    val localProps = java.util.Properties()
     val localPropsFile = rootProject.file("local.properties")
-    if (localPropsFile.exists()) {
-        localPropsFile.inputStream().use { localProps.load(it) }
-    }
+    // Sin `java.util.Properties`: mismo motivo que ya documenta
+    // `generateBuildId` arriba (no resuelve de forma confiable en el
+    // classpath de este script Kotlin DSL — confirmado en CI: "Unresolved
+    // reference: util" al intentarlo). Parseo manual de una sola línea
+    // "CLAVE=valor", suficiente para este archivo de dos o tres claves.
+    val tokenDeArchivo = if (localPropsFile.exists()) {
+        localPropsFile.readLines()
+            .map { it.trim() }
+            .firstOrNull { it.startsWith("HD_INGEST_TOKEN=") }
+            ?.substringAfter("=")
+    } else null
     val token = (project.findProperty("HD_INGEST_TOKEN") as String?)
-        ?: localProps.getProperty("HD_INGEST_TOKEN")
+        ?: tokenDeArchivo
         ?: System.getenv("HD_INGEST_TOKEN")
         ?: ""
     // No se registra el valor como input (solo si está presente o no): un
