@@ -17,6 +17,7 @@ import json
 import logging
 import os
 import time
+import uuid
 from pathlib import Path
 from typing import Optional
 
@@ -1056,6 +1057,94 @@ def scrape(payload: ScrapeIn, x_ingest_token: Optional[str] = Header(None)) -> d
     # acaba de traer mi búsqueda" de resultados servidos desde /expedientes
     # en una consulta anterior.
     return {**modo, "timestamp": ahora_iso(), "total_escritos": total, "resultados": resultados}
+
+
+# --- Búsqueda en vivo desde Android (BFF de un solo operador) ---------------
+#
+# /scrape (arriba) es la intake real del operador: escribe evidencia, y por
+# eso exige X-Ingest-Token. AntrolabsHD (el cliente Android) necesita poder
+# disparar la MISMA búsqueda en vivo sin llevar ese token dentro del APK —
+# un secreto embebido en un cliente distribuido deja de ser un secreto. Este
+# endpoint es una superficie DISTINTA, deliberadamente más angosta: un único
+# parámetro (empresa), sin categoría/tipo_evento/lista de conectores
+# elegibles por el cliente, sin devolver nunca el token (nunca lo necesita:
+# llama directo a `_correr_query`, la misma función que ya usa /scrape, en
+# vez de reenviar una petición HTTP a sí mismo con el token inyectado — ni
+# la duplica ni la reimplementa). Sigue siendo de un solo operador: rate
+# limit en memoria por IP, sin necesitar una tabla ni un secreto nuevo.
+_MOBILE_CONECTORES = ("google_news", "gdelt")
+_MOBILE_EMPRESA_MAX_LEN = 200
+_MOBILE_RATE_LIMIT_MAX = 6
+_MOBILE_RATE_LIMIT_VENTANA_S = 60.0
+# Estado en memoria del proceso: se resetea en cada cold start de la función
+# serverless. Suficiente para el caso real (un solo operador, un teléfono);
+# no pretende ser un límite distribuido correcto entre instancias.
+_mobile_rate_ventanas: dict[str, list[float]] = {}
+
+
+def _mobile_rate_limit_ok(client_id: str) -> bool:
+    ahora = time.monotonic()
+    ventana = _mobile_rate_ventanas.setdefault(client_id, [])
+    corte = ahora - _MOBILE_RATE_LIMIT_VENTANA_S
+    while ventana and ventana[0] < corte:
+        ventana.pop(0)
+    if len(ventana) >= _MOBILE_RATE_LIMIT_MAX:
+        return False
+    ventana.append(ahora)
+    return True
+
+
+class MobileScrapeIn(BaseModel):
+    empresa: str
+
+
+@app.post("/mobile/scrape")
+def mobile_scrape(payload: MobileScrapeIn, request: Request) -> dict:
+    """Búsqueda en vivo para el cliente Android: sin X-Ingest-Token.
+
+    Adaptador sobre `_correr_query` (la misma función que usa POST /scrape):
+    NO reimplementa el scraping, NO acepta categoría/tipo_evento/conectores
+    del cliente (fijos: google_news + gdelt, tipo_evento="queja" — mismo
+    patrón ya usado en /investigacion para "búsqueda directa por nombre").
+    NUNCA expone HD_INGEST_TOKEN en ninguna rama de esta función.
+
+    Respuesta SIEMPRE distingue búsqueda-real-sin-resultados de error:
+    200 con `new_evidence=0` significa "se buscó de verdad y no había nada
+    nuevo" (LIVE_SEARCH_EMPTY); una excepción (422/429) significa que la
+    búsqueda NO se ejecutó (LIVE_SEARCH_ERROR) — el cliente no debe
+    confundir ambos casos.
+    """
+    empresa = (payload.empresa or "").strip()
+    if not empresa:
+        raise HTTPException(422, "empresa vacía")
+    if len(empresa) > _MOBILE_EMPRESA_MAX_LEN:
+        raise HTTPException(422, f"empresa excede {_MOBILE_EMPRESA_MAX_LEN} caracteres")
+
+    client_id = request.client.host if request.client else "desconocido"
+    if not _mobile_rate_limit_ok(client_id):
+        raise HTTPException(429, "demasiadas búsquedas en vivo; espera un momento")
+
+    request_id = uuid.uuid4().hex[:12]
+    logger.info("mobile_scrape inicio request_id=%s empresa=%r cliente=%s",
+               request_id, empresa, client_id)
+
+    db = get_db()
+    zona = region_clause("LATAM")
+    query = QuerySpec(empresa=empresa, tipo_evento="queja", terminos=zona)
+    resultados = _correr_query(db, query, list(_MOBILE_CONECTORES))
+    total_nuevas = sum(r.get("escritos", 0) for r in resultados)
+
+    logger.info("mobile_scrape fin request_id=%s nuevas=%d", request_id, total_nuevas)
+
+    return {
+        "ok": True,
+        "live": True,
+        "timestamp": ahora_iso(),
+        "connectors": list(_MOBILE_CONECTORES),
+        "new_evidence": total_nuevas,
+        "empresa": empresa,
+        "resultados": resultados,
+    }
 
 
 # --- Investigación Automática (un solo clic = ciclo completo) ---------------

@@ -68,57 +68,7 @@ val generateBuildId by tasks.registering {
     }
 }
 
-// --- Token de ingesta embebido en el APK (búsqueda en vivo) ---
-// AntrolabsHD es una herramienta de un solo operador (Mario): el mismo
-// X-Ingest-Token que ya protege /scrape, /investigacion y el resto de la
-// intake (ver hd_scraper/api/app.py:_exigir_token) se embebe en SU PROPIO
-// build para que la app pueda disparar una búsqueda real (POST /scrape)
-// en vez de solo leer lo que ya hay en Neon. Nunca se commitea un token
-// real: esta tarea lee HD_INGEST_TOKEN de (en orden) una property de
-// Gradle (-PHD_INGEST_TOKEN=...), local.properties (gitignored, igual que
-// sdk.dir) o la variable de entorno del mismo nombre; sin ninguna,
-// window.HD_INGEST_TOKEN queda "" y la app sigue funcionando en modo
-// solo-lectura (igual que hasta ahora), sin romperse.
-val generateHdConfig by tasks.registering {
-    val outFile = layout.projectDirectory.file("src/main/assets/public/hd_config.js")
-    val localPropsFile = rootProject.file("local.properties")
-    // Sin `java.util.Properties`: mismo motivo que ya documenta
-    // `generateBuildId` arriba (no resuelve de forma confiable en el
-    // classpath de este script Kotlin DSL — confirmado en CI: "Unresolved
-    // reference: util" al intentarlo). Parseo manual de una sola línea
-    // "CLAVE=valor", suficiente para este archivo de dos o tres claves.
-    val tokenDeArchivo = if (localPropsFile.exists()) {
-        localPropsFile.readLines()
-            .map { it.trim() }
-            .firstOrNull { it.startsWith("HD_INGEST_TOKEN=") }
-            ?.substringAfter("=")
-    } else null
-    val token = (project.findProperty("HD_INGEST_TOKEN") as String?)
-        ?: tokenDeArchivo
-        ?: System.getenv("HD_INGEST_TOKEN")
-        ?: ""
-    // No se registra el valor como input (solo si está presente o no): un
-    // cambio de token no debe filtrarse a los logs de Gradle.
-    inputs.property("hdIngestTokenPresente", token.isNotBlank())
-    outputs.file(outFile)
-    doLast {
-        outFile.asFile.parentFile.mkdirs()
-        outFile.asFile.writeText(
-            "// Generado en tiempo de compilación. NO editar a mano.\n" +
-            "// NO commitear: este archivo está en .gitignore precisamente porque\n" +
-            "// puede contener el token real de intake.\n" +
-            "window.HD_INGEST_TOKEN = \"${token}\";\n"
-        )
-        println(
-            if (token.isBlank())
-                "HD_INGEST_TOKEN no configurado: búsqueda en vivo deshabilitada en este build (modo solo-lectura)."
-            else
-                "HD_INGEST_TOKEN configurado: búsqueda en vivo habilitada en este build."
-        )
-    }
-}
-
-tasks.named("preBuild") { dependsOn(generateBuildId, generateHdConfig) }
+tasks.named("preBuild") { dependsOn(generateBuildId) }
 
 dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
