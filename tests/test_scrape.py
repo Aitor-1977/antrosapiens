@@ -186,3 +186,13 @@ def test_scrape_vertical_invalida_400(cli):
 
 def test_scrape_sin_empresa_ni_categoria_400(cli):
     assert cli.post("/scrape", json={}, headers=H).status_code == 400
+
+
+def test_scrape_expone_timestamp_de_la_corrida(cli):
+    # La app Android (búsqueda en vivo) distingue "esto acaba de traer mi
+    # búsqueda" de resultados servidos desde /expedientes en una consulta
+    # anterior comparando este timestamp, no el de cada evidencia individual.
+    r = cli.post("/scrape", json={"empresa": "Nubank", "tipo_evento": "ronda",
+                                  "connectors": ["google_news"]}, headers=H)
+    assert r.status_code == 200
+    assert r.json()["timestamp"]
