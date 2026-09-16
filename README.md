@@ -156,6 +156,10 @@ sí tienen una intake autenticada del operador:
   ① **buscar señales** (scraping) → ② **revisar** lo encontrado → ③ dar de alta
   el prospecto con su discurso. Pega el token una vez y opera sin terminal.
 
+## App Android
+
+App Android activa: android_v3, única versión soportada desde 2026-09-16.
+
 ## Base de datos
 
 SQLite en Fase 1, con esquema escrito para migrar a PostgreSQL sin tocar el
