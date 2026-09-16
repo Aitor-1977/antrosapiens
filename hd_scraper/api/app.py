@@ -1156,6 +1156,28 @@ def mobile_scrape(payload: MobileScrapeIn, request: Request) -> dict:
     rechazadas = (distribucion.get("corroborante", 0)
                  + distribucion.get("contextual", 0))
 
+    # Resultado ACOTADO a esta organización (bug quirúrgico 2026-09-15): el
+    # cliente Android rellenaba la pantalla de resultados con GET /expedientes
+    # + GET /verificados sobre TODO el corpus histórico, filtrado solo por
+    # substring de texto — eso podía mostrar organizaciones ajenas a la
+    # búsqueda actual (p. ej. "Clara", ver hilo anterior de esta sesión).
+    # Reutiliza tal cual `_construir_expedientes`/`listar_candidatos_verificados`
+    # (mismas funciones que ya usan /expedientes y /verificados, sin
+    # reimplementar clasificación/scoring/promoción) y filtra su salida a la
+    # ÚNICA organización de esta request, por coincidencia exacta de nombre
+    # (no substring): así el cliente puede renderizar exclusivamente lo que
+    # pertenece a esta búsqueda, sin volver a golpear /expedientes ni
+    # /verificados.
+    empresa_norm = empresa.strip().lower()
+    expediente_actual = next(
+        (e for e in _construir_expedientes(None, limite=500)["expedientes"]
+         if (e.get("nombre") or "").strip().lower() == empresa_norm),
+        None)
+    candidato_actual = next(
+        (c for c in listar_candidatos_verificados(db, limite=500)
+         if (c.get("organizacion") or "").strip().lower() == empresa_norm),
+        None)
+
     logger.info(
         "mobile_scrape fin request_id=%s nuevas=%d clasificadas=%d "
         "promovidas=%d rechazadas=%d",
@@ -1180,6 +1202,11 @@ def mobile_scrape(payload: MobileScrapeIn, request: Request) -> dict:
         # arriba, en esta misma petición síncrona — nunca queda un job
         # aparte corriendo tras devolver la respuesta (ver docstring).
         "processing_status": "completed",
+        # Único expediente/candidato de ESTA organización, o null si no
+        # existe evidencia suficiente todavía — nunca una lista del corpus
+        # histórico completo (ver comentario arriba).
+        "expediente": expediente_actual,
+        "candidato": candidato_actual,
     }
 
 
