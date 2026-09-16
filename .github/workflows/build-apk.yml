@@ -1,56 +1,71 @@
-name: Build Android APK (android_v2)
-
-on:
-  push:
-    branches:
-      - main
-    paths:
-      - "android_v2/**"
-      - ".github/workflows/build-apk.yml"
-  workflow_dispatch: {}
-
-permissions:
-  contents: write # necesario para publicar el Release del paso final
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Java JDK
-        uses: actions/setup-java@v4
-        with:
-          distribution: "zulu"
-          java-version: "17"
-
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x android_v2/gradlew
-
-      - name: Build debug APK
-        working-directory: android_v2
-        run: ./gradlew clean assembleDebug --stacktrace
-
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: antrosapiens-v2-debug
-          path: android_v2/app/build/outputs/apk/debug/app-debug.apk
-
-      # Práctica estándar de la comunidad para repartir un APK de prueba desde CI: un
-      # GitHub Release con el archivo adjunto, en vez de un "artifact" (que viene
-      # zippeado y solo se baja bien desde el sitio de escritorio de GitHub, no desde
-      # la app móvil ni con curl anónimo). El Release da un link fijo y directo al
-      # .apk, instalable con un solo toque desde el navegador del teléfono.
-      - name: Publicar Release con el APK
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: apk-${{ github.run_number }}
-          name: "APK de prueba #${{ github.run_number }}"
-          body: "Build automático de android_v2 desde ${{ github.sha }}."
-          files: android_v2/app/build/outputs/apk/debug/app-debug.apk
-          prerelease: true
+# DESACTIVADO 2026-09-16: android_v2 quedó sin commits desde 2026-09-11
+# (último: 1ee6cab). Desde el 2026-09-12, todo el desarrollo Android real se
+# mueve a android_v3 (mismo applicationId "com.hamacadigital.antrosapiens.v2"
+# que android_v2, así que no pueden coexistir instalados como apps
+# separadas), que tiene su propio workflow activo:
+# .github/workflows/build-android-v3.yml.
+#
+# Este archivo se COMENTA completo (no se borra): sin un bloque `on:` válido,
+# GitHub Actions no lo registra como workflow disparable, así que un push a
+# android_v2/** ya no dispara una build ni publica un Release. El código de
+# android_v2/ NO se toca aquí — solo se apaga el CI. Ver README.md ("Apps
+# Android") para la declaración de cuál directorio es el activo.
+#
+# Para reactivarlo: descomentar todo lo de abajo.
+#
+# name: Build Android APK (android_v2)
+#
+# on:
+#   push:
+#     branches:
+#       - main
+#     paths:
+#       - "android_v2/**"
+#       - ".github/workflows/build-apk.yml"
+#   workflow_dispatch: {}
+#
+# permissions:
+#   contents: write # necesario para publicar el Release del paso final
+#
+# jobs:
+#   build:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout repository
+#         uses: actions/checkout@v4
+#
+#       - name: Setup Java JDK
+#         uses: actions/setup-java@v4
+#         with:
+#           distribution: "zulu"
+#           java-version: "17"
+#
+#       - name: Setup Android SDK
+#         uses: android-actions/setup-android@v3
+#
+#       - name: Grant execute permission for gradlew
+#         run: chmod +x android_v2/gradlew
+#
+#       - name: Build debug APK
+#         working-directory: android_v2
+#         run: ./gradlew clean assembleDebug --stacktrace
+#
+#       - name: Upload APK artifact
+#         uses: actions/upload-artifact@v4
+#         with:
+#           name: antrosapiens-v2-debug
+#           path: android_v2/app/build/outputs/apk/debug/app-debug.apk
+#
+#       # Práctica estándar de la comunidad para repartir un APK de prueba desde CI: un
+#       # GitHub Release con el archivo adjunto, en vez de un "artifact" (que viene
+#       # zippeado y solo se baja bien desde el sitio de escritorio de GitHub, no desde
+#       # la app móvil ni con curl anónimo). El Release da un link fijo y directo al
+#       # .apk, instalable con un solo toque desde el navegador del teléfono.
+#       - name: Publicar Release con el APK
+#         uses: softprops/action-gh-release@v2
+#         with:
+#           tag_name: apk-${{ github.run_number }}
+#           name: "APK de prueba #${{ github.run_number }}"
+#           body: "Build automático de android_v2 desde ${{ github.sha }}."
+#           files: android_v2/app/build/outputs/apk/debug/app-debug.apk
+#           prerelease: true

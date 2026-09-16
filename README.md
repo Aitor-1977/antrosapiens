@@ -156,6 +156,10 @@ sí tienen una intake autenticada del operador:
   ① **buscar señales** (scraping) → ② **revisar** lo encontrado → ③ dar de alta
   el prospecto con su discurso. Pega el token una vez y opera sin terminal.
 
+## App Android
+
+**Declarado 2026-09-16:** `android_v3/` es la app activa (todo el desarrollo real desde 2026-09-12); `android_v2/` está **deprecada** (sin commits desde 2026-09-11, CI desactivado en `.github/workflows/build-apk.yml`). Ambas comparten `applicationId` (`com.hamacadigital.antrosapiens.v2`), así que no pueden coexistir instaladas como apps separadas en un mismo dispositivo.
+
 ## Base de datos
 
 SQLite en Fase 1, con esquema escrito para migrar a PostgreSQL sin tocar el
