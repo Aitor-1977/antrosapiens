@@ -77,7 +77,7 @@ from ..filtros import (
 _diagnostic_logging.configure_logging()
 logger = logging.getLogger(__name__)
 
-# ICP real de HD (mismo criterio que android_v2/.../index.html:CATEGORIA_ICP):
+# ICP real de HD (mismo criterio que android_v3/.../index.html:CATEGORIA_ICP):
 # nunca VC, Incubadora ni Corporativo. Se usa solo en /api/dashboard para que
 # el número que audita coincida con el que la app realmente muestra.
 CATEGORIA_ICP_DASHBOARD = "Startup"

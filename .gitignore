@@ -20,15 +20,11 @@ data/pytest-of-*/
 data/pytest-of-*/
 data/pytest-of-*/
 
-# android_v2 build artifacts
-android_v2/app/build/
-android_v2/.gradle/
-android_v2/local.properties
 *.apk
 .smoke/
 __pycache__/
 .vercel
 .env*
 
-# android_v3: local por máquina (sdk.dir), mismo criterio que android_v2
+# android_v3: local por máquina (sdk.dir)
 android_v3/local.properties

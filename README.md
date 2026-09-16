@@ -158,7 +158,7 @@ sí tienen una intake autenticada del operador:
 
 ## App Android
 
-**Declarado 2026-09-16:** `android_v3/` es la app activa (todo el desarrollo real desde 2026-09-12); `android_v2/` está **deprecada** (sin commits desde 2026-09-11, CI desactivado en `.github/workflows/build-apk.yml`). Ambas comparten `applicationId` (`com.hamacadigital.antrosapiens.v2`), así que no pueden coexistir instaladas como apps separadas en un mismo dispositivo.
+App Android activa: android_v3, única versión soportada desde 2026-09-16.
 
 ## Base de datos
 
