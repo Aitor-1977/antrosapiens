@@ -411,6 +411,9 @@
                 body: JSON.stringify({empresa: q}),
             });
             data = await res.json();
+            // Observabilidad (Fase 5): el JSON REAL de /mobile/scrape tal
+            // como llegó al dispositivo, ANTES de renderizar el banner.
+            console.log('[AntroLabsHD] /mobile/scrape payload:', JSON.stringify(data));
         } catch (e) {
             mostrarBannerBusqueda(`Error en búsqueda en vivo: no se pudo conectar con el laboratorio.`, 'error');
             return;
@@ -473,6 +476,11 @@
             const verificadosPorNombre = {};
             if (resVer && resVer.ok) {
                 const dataVer = await resVer.json();
+                // Observabilidad (Fase 5): el JSON REAL de /verificados tal
+                // como llegó al dispositivo, ANTES de usarse para renderizar
+                // nada. Ver MainActivity.kt (WebChromeClient.onConsoleMessage)
+                // para verlo en `adb logcat -s AntroLabsHD-WebView`.
+                console.log('[AntroLabsHD] /verificados payload:', JSON.stringify(dataVer));
                 (dataVer.items || []).forEach(it => {
                     const key = String(it.organizacion || "").trim().toLowerCase();
                     if (key) verificadosPorNombre[key] = it;

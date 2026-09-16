@@ -1,6 +1,9 @@
 package com.hamacadigital.antrosapiens.v2
 
 import android.os.Bundle
+import android.util.Log
+import android.webkit.ConsoleMessage
+import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
@@ -35,6 +38,23 @@ class MainActivity : AppCompatActivity() {
                 request: WebResourceRequest
             ): WebResourceResponse? {
                 return assetLoader.shouldInterceptRequest(request.url)
+            }
+        }
+
+        // Observabilidad (Fase 5, inspección del contrato de /verificados,
+        // 2026-09-16): sin WebChromeClient, `console.log` desde el JS de
+        // index.html no llega de forma garantizada a Logcat. Esto SOLO
+        // reenvía los mensajes de consola ya existentes (o los que se
+        // agreguen) al log — no cambia render, filtros ni comportamiento
+        // visual. Ver `console.log` junto a los fetch de /verificados y
+        // /mobile/scrape en index.html: permite observar con
+        // `adb logcat -s AntroLabsHD-WebView` el JSON real que llegó al
+        // dispositivo antes de pintarse.
+        webView.webChromeClient = object : WebChromeClient() {
+            override fun onConsoleMessage(message: ConsoleMessage): Boolean {
+                Log.d("AntroLabsHD-WebView",
+                    "${message.message()} (${message.sourceId()}:${message.lineNumber()})")
+                return true
             }
         }
 
