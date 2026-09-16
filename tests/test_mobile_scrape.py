@@ -196,6 +196,15 @@ def test_busqueda_kavak_atraviesa_scrape_clasificacion_promocion_y_verificados(
     nombres = {c["organizacion"] for c in listar_candidatos_verificados(db)}
     assert "Kavak" in nombres
 
+    # 3b. bug quirúrgico 2026-09-15: la RESPUESTA MISMA de /mobile/scrape ya
+    # trae el candidato/expediente de ESTA organización, acotado por nombre
+    # exacto — el cliente no necesita (y no debe) volver a golpear
+    # /expedientes ni /verificados para saber qué mostrar.
+    assert d["expediente"] is not None
+    assert d["expediente"]["nombre"] == "Kavak"
+    assert d["candidato"] is not None
+    assert d["candidato"]["organizacion"] == "Kavak"
+
     # 4. segunda ejecución (misma búsqueda) no duplica nada
     n_evidencias_1 = db.fetch_one(
         "SELECT COUNT(*) n FROM evidencias WHERE empresa_mencionada = 'Kavak'")["n"]
@@ -223,3 +232,49 @@ def test_busqueda_kavak_atraviesa_scrape_clasificacion_promocion_y_verificados(
     assert (n_evidencias_1, n_clasificadas_1, n_expedientes_1) == \
            (n_evidencias_2, n_clasificadas_2, n_expedientes_2)
     assert n_expedientes_1 == 1, "no debe crear un segundo expediente para la misma organización"
+    # la repetición sigue devolviendo el candidato de Kavak en la respuesta
+    # misma (no null solo porque promoted==0 esta vez: ya era candidato).
+    assert d2["candidato"] is not None
+    assert d2["candidato"]["organizacion"] == "Kavak"
+
+
+# ── bug quirúrgico 2026-09-15: una búsqueda NUNCA debe filtrarse con         ──
+# organizaciones ajenas que ya existan históricamente en /verificados —
+# reproduce el caso real reportado: "Clara" (candidato histórico stale)
+# apareciendo en la pantalla al buscar una empresa distinta.
+def test_mobile_scrape_no_filtra_candidato_historico_de_otra_organizacion(cli, db):
+    from hd_scraper.db.models import ahora_iso
+
+    # Candidato histórico "Clara" ya promovido (simula el caso real de
+    # producción: una fila stale en evidencia_clasificada/expedientes_
+    # candidatos, sin depender de correr el reset/reconstrucción).
+    db.execute(
+        "INSERT INTO evidencias (id, cita_textual, fecha_extraccion, "
+        "fecha_publicacion, url_fuente, nombre_medio, empresa_mencionada, "
+        "tipo_evento, origen_declaracion, hash_dedup, connector, estado, creado_en) "
+        "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        (9001, "Clara Brugada acompaña a la Presidenta...", ahora_iso(),
+         "2026-07-09", "https://example.com/clara", "CDMX", "Clara",
+         "ronda", "prensa", "hash-clara-historico", "google_news", "ok",
+         ahora_iso()))
+    exp_id = db.insert_returning_id(
+        "INSERT INTO expedientes_candidatos (organizacion, estado) VALUES (?, ?)",
+        ("Clara", "candidato"))
+    db.execute(
+        "INSERT INTO evidencia_clasificada (expediente_id, evidencia_id, "
+        "tipo_epistemologico, enunciador_nombre, enunciador_cargo) "
+        "VALUES (?,?,?,?,?)",
+        (exp_id, 9001, "senal_primaria_autodeclaracion", "Clara Brugada",
+         "Presidenta"))
+
+    # Búsqueda real de una organización DISTINTA de "Clara".
+    r = cli.post("/mobile/scrape", json={"empresa": "Kavak"})
+    assert r.status_code == 200
+    d = r.json()
+
+    cuerpo = r.text
+    assert "Clara" not in cuerpo, "una búsqueda de Kavak jamás debe traer el candidato histórico Clara"
+    if d["expediente"] is not None:
+        assert d["expediente"]["nombre"] == "Kavak"
+    if d["candidato"] is not None:
+        assert d["candidato"]["organizacion"] == "Kavak"
