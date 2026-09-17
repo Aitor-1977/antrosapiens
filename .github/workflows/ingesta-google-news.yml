@@ -1,0 +1,64 @@
+name: Ingesta automática Google News
+
+# Automatiza el ÚNICO conector actualmente operativo y validado (Google News
+# RSS) para que AntroLabsHD incorpore evidencia nueva sin que el operador
+# tenga que correr el scraping a mano. Orquesta tal cual, sin modificar
+# ninguno, los tres scripts que ya existían por separado — mismo patrón que
+# prospeccion-tavily.yml, un paso más (la promoción, que Tavily deja fuera a
+# propósito porque su identidad organizacional es distinta):
+#
+#   python -m scripts.run_once                    (sin argumentos: barre los
+#     objetivos por defecto con el conector por defecto, google_news — GDELT
+#     NUNCA se invoca aquí, no hace falta --connector porque ya es el default)
+#   python -m scripts.clasificar_evidencia --aplicar
+#   python -m scripts.promover_candidatos --aplicar
+#
+# Autorizado por el operador (Mario) el 2026-09-18, alcance explícitamente
+# acotado a esta única fuente. GDELT queda deliberadamente fuera mientras
+# siga con el problema de conectividad en producción (ver /salud-fuentes).
+
+on:
+  schedule:
+    # 4 corridas diarias, evitando la hora en punto (recomendación de GitHub
+    # para no coincidir con los picos de carga de cron a :00).
+    - cron: "17 2,8,14,20 * * *"
+  workflow_dispatch: {} # permite disparar una corrida manual desde GitHub
+
+concurrency:
+  group: ingesta-google-news
+  cancel-in-progress: false
+
+jobs:
+  ingesta-clasificacion-promocion:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      # El runner es efímero: el crudo comprimido no sobrevive entre
+      # corridas, así que retenerlo en disco no aporta nada (mismo criterio
+      # que ya usa prospeccion-tavily.yml y el propio proyecto en Vercel).
+      HD_RAW_ENABLED: "0"
+
+    steps:
+      - name: Clonar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependencias de producción
+        run: pip install -r requirements.txt
+
+      - name: Asegurar esquema (idempotente, no destructivo sobre datos existentes)
+        run: python -m scripts.migrate
+
+      - name: Capturar evidencia real (Google News, objetivos por defecto)
+        run: python -m scripts.run_once
+
+      - name: Clasificar evidencia pendiente (epistemológica, aplica cambios)
+        run: python -m scripts.clasificar_evidencia --aplicar
+
+      - name: Promover expedientes listos ('abierto' -> 'candidato')
+        run: python -m scripts.promover_candidatos --aplicar
