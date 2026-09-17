@@ -2766,7 +2766,17 @@ def _construir_expedientes(categorias: list[str] | None, limite: int = 30) -> di
     orgs: dict[str, dict] = {}
     for row in filas:
         titulo = row["cita_textual"] or ""
-        org = detectar_empresa(titulo) or (row["empresa_mencionada"] or "").strip()
+        mencionada = (row["empresa_mencionada"] or "").strip()
+        # Si el titular no trae una entidad reconocible, `empresa_mencionada`
+        # solo se acepta como organización cuando ELLA MISMA supera el mismo
+        # filtro de nombre propio que ya se exige a los titulares
+        # (`detectar_empresa`). Sin esto, una consulta libre sin nombre real
+        # (p. ej. una frase de descubrimiento como "startup tecnológica ronda
+        # de inversión", escrita en el buscador de Android o generada por
+        # `discovery.queries_para`) se colaba tal cual como si fuera la
+        # organización detectada, cuando ningún artículo la mencionó como
+        # entidad: nunca hubo un nombre real, solo el término de la consulta.
+        org = detectar_empresa(titulo) or (mencionada if detectar_empresa(mencionada) else "")
         if not org:
             db.execute(
                 "INSERT INTO rechazos (connector, motivo, payload_json, creado_en) "
