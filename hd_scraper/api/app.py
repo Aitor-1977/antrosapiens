@@ -396,6 +396,77 @@ def _reparar_clasificacion_clara_2479(
     }
 
 
+@app.get("/ops/gdelt-exclusivo-0bcd2097ddbe200e")
+def _gdelt_organizaciones_exclusivas(
+    x_ingest_token: Optional[str] = Header(None),
+    token: Optional[str] = Query(None),
+    desde: Optional[str] = Query(None, description="creado_en >= (ISO 8601), opcional"),
+    hasta: Optional[str] = Query(None, description="creado_en <= (ISO 8601), opcional"),
+) -> dict:
+    """Endpoint TEMPORAL de solo lectura (2026-09-17) — se elimina de este
+    archivo cuando ya no haga falta, mismo patrón que los precedentes
+    ``/ops/reproc-...`` y ``/ops/reparar-clara-...`` (ruta con sufijo
+    aleatorio, protegida por el mismo ``X-Ingest-Token``).
+
+    Responde la pregunta del "criterio de continuidad" de GDELT (encargo de
+    Mario, 2026-09-16): ¿para cuántas organizaciones distintas la evidencia
+    de ``connector='gdelt'`` es la MÁS TEMPRANA de todo el corpus, es decir,
+    ningún otro conector la había encontrado antes?
+
+    NUNCA escribe nada (no acepta ``aplicar``): es una lectura agregada
+    sobre `evidencias` (fuente de verdad, sin tocar). Sirve tanto para el
+    conteo retrospectivo (sin ``desde``/``hasta``, o acotado al rango que se
+    pida) como para el seguimiento a 7 días (pasando ``desde`` = hoy).
+
+    Regla: para cada ``empresa_mencionada``, compara la fecha de creación
+    (``creado_en``) más temprana entre filas de GDELT contra la más temprana
+    entre filas de cualquier OTRO conector. Si GDELT no tiene ninguna fila
+    para esa organización, o si otro conector la encontró antes o el mismo
+    día, esa organización NO cuenta. Solo cuentan las organizaciones donde
+    GDELT es estrictamente la primera fuente en todo el historial de
+    `evidencias` — exactamente lo que pidió Mario ("que ningún otro conector
+    había detectado antes").
+    """
+    _exigir_token(x_ingest_token or token)
+    db = get_db()
+
+    filas = db.fetch_all(
+        "SELECT empresa_mencionada AS org, "
+        "MIN(CASE WHEN connector = 'gdelt' THEN creado_en END) AS primera_gdelt, "
+        "MIN(CASE WHEN connector <> 'gdelt' THEN creado_en END) AS primera_otro "
+        "FROM evidencias "
+        "WHERE empresa_mencionada IS NOT NULL AND empresa_mencionada <> '' "
+        "GROUP BY empresa_mencionada"
+    )
+
+    organizaciones: list[dict] = []
+    for fila in filas:
+        f = dict(fila)
+        primera_gdelt = f["primera_gdelt"]
+        if not primera_gdelt:
+            continue
+        if desde and primera_gdelt < desde:
+            continue
+        if hasta and primera_gdelt > hasta:
+            continue
+        primera_otro = f["primera_otro"]
+        if primera_otro is not None and primera_otro <= primera_gdelt:
+            continue
+        organizaciones.append({
+            "organizacion": f["org"],
+            "primera_evidencia_gdelt": primera_gdelt,
+            "primera_evidencia_otro_conector": primera_otro,
+        })
+
+    organizaciones.sort(key=lambda o: o["primera_evidencia_gdelt"])
+    return {
+        "desde": desde,
+        "hasta": hasta,
+        "total_organizaciones_exclusivas_de_gdelt": len(organizaciones),
+        "organizaciones": organizaciones,
+    }
+
+
 def _alta(payload: ProspectoIn) -> dict:
     record = nuevo_prospecto(
         payload.nombre, payload.categoria,
