@@ -23,7 +23,15 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5A7A00" stroke-width="2"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
         <span class="font-tech text-xs uppercase tracking-wider text-[#5A7A00] font-bold">AntrolabsHD</span>
     </div>
-    <span class="font-tech text-xs text-[#111111]/60">NIVEL 0: INDAGAR</span>
+    <div class="flex items-center gap-3">
+        <span class="font-tech text-xs text-[#111111]/60">NIVEL 0: INDAGAR</span>
+        <!-- Punto de entrada al Observatorio (segunda función, ventana
+             separada, ver ObservatorioActivity): no es una pantalla más del
+             flujo INDAGAR/OBSERVAR/TRIANGULAR/FIJAR, solo abre esa Activity
+             distinta. Excepción puntual autorizada por el operador
+             (Mario, 2026-09-18) al congelamiento de este archivo. -->
+        <button id="btnObservatorio" class="font-tech text-[10px] uppercase tracking-wider text-[#111111]/50 border border-[#111111]/15 rounded-full px-2 py-1 hover:border-[#111111]/40" title="Observatorio Antropológico">Observatorio</button>
+    </div>
 </header>
 <main class="max-w-md mx-auto px-4 pt-6 flex flex-col gap-6">
     <section class="flex flex-col gap-2 pt-2">
@@ -543,6 +551,14 @@
     }
 
     document.getElementById('btnExplorar').addEventListener('click', actualizarBusqueda);
+
+    // Observatorio Antropológico del Ecosistema: ventana separada, no
+    // pantalla del flujo de arriba. window.PuenteObservatorio lo inyecta
+    // MainActivity.kt (addJavascriptInterface); sin él (p. ej. abriendo este
+    // HTML fuera de la app), el botón no hace nada, nunca rompe la pantalla.
+    document.getElementById('btnObservatorio').addEventListener('click', () => {
+        if (window.PuenteObservatorio) window.PuenteObservatorio.abrirObservatorio();
+    });
 
     cargarFiltroProspectos('verticalFilters', 'verticalLoading', 'vertical');
     cargarFiltroProspectos('escalaFilters', 'escalaLoading', 'escala');
