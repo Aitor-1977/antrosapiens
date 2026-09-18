@@ -10,6 +10,8 @@ de `promocion_candidatos.py` / `promocion_store.py`.
 """
 from __future__ import annotations
 
+from .schema_expediente import ExpedienteVerificado, normalizar_categoria
+
 # Orden de prioridad determinista cuando un expediente tiene más de una
 # evidencia primaria: autodeclaración (máxima autoridad) antes que huella
 # práctica (acto publicado sin declaración de persona).
@@ -57,7 +59,8 @@ def listar_candidatos_verificados(db, *, limite: int = 50) -> list[dict]:
     for fila in expedientes:
         exp = dict(fila)
         evidencia = db.fetch_one(
-            "SELECT ec.tipo_epistemologico, e.cita_textual, e.url_fuente, "
+            "SELECT ec.tipo_epistemologico, ec.enunciador_nombre, "
+            "ec.enunciador_cargo, e.cita_textual, e.url_fuente, "
             "e.nombre_medio, e.fecha_publicacion, e.persona_citada, e.cargo, "
             "e.categoria AS categoria_evidencia FROM evidencia_clasificada ec "
             "JOIN evidencias e ON e.id = ec.evidencia_id "
@@ -75,17 +78,26 @@ def listar_candidatos_verificados(db, *, limite: int = 50) -> list[dict]:
         # categoria estructural (prospectos.categoria, declarada por el
         # operador) es la autoridad, igual que en _construir_expedientes;
         # sin fila en prospectos, cae a la categoria de la propia evidencia
-        # (la etiqueta de la consulta que la capturó).
-        categoria = exp["categoria_prospecto"] or ev["categoria_evidencia"] or ""
-        resultado.append({
-            "organizacion": exp["organizacion"],
-            "categoria": categoria,
-            "tipo_epistemologico": ev["tipo_epistemologico"],
-            "cita_textual": ev["cita_textual"],
-            "url_fuente": ev["url_fuente"],
-            "nombre_medio": ev["nombre_medio"],
-            "fecha_publicacion": ev["fecha_publicacion"],
-            "persona_citada": ev["persona_citada"],
-            "cargo": ev["cargo"],
-        })
+        # (la etiqueta de la consulta que la capturó). normalizar_categoria
+        # (contrato canónico, Fase 1.5 decisión 2) restringe el resultado a
+        # los 4 literales estructurales; cualquier otro valor queda "".
+        categoria = normalizar_categoria(
+            exp["categoria_prospecto"] or ev["categoria_evidencia"] or "")
+        # persona_citada/cargo (estructurales) y enunciador_nombre/
+        # enunciador_cargo (de la clasificación epistemológica) NUNCA se
+        # fusionan (Fase 1.5 decisión 3): viajan siempre por separado, aunque
+        # describan a la misma persona.
+        resultado.append(ExpedienteVerificado(
+            organizacion=exp["organizacion"],
+            categoria=categoria,
+            tipo_epistemologico=ev["tipo_epistemologico"],
+            cita_textual=ev["cita_textual"],
+            url_fuente=ev["url_fuente"],
+            nombre_medio=ev["nombre_medio"],
+            fecha_publicacion=ev["fecha_publicacion"],
+            persona_citada=ev["persona_citada"],
+            cargo=ev["cargo"],
+            enunciador_nombre=ev["enunciador_nombre"],
+            enunciador_cargo=ev["enunciador_cargo"],
+        ).to_dict())
     return resultado
