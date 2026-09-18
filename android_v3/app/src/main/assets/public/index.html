@@ -266,7 +266,10 @@
                     <div class="p-5 bg-[#5A7A00]/5 border-b border-[#111111]/10">
                         <span class="font-tech text-xs font-bold text-[#5A7A00] uppercase tracking-wider">Lo que sabemos (Hecho)</span>
                         <p class="text-[#111111] leading-relaxed mt-2">${esc(ev.texto || '')}</p>
-                        <div class="mt-3"><span class="font-tech text-[10px] bg-[#111111]/5 px-2 py-1 rounded text-[#111111]/60 uppercase">Fuente: ${esc(ev.fuente || '')}</span></div>
+                        <div class="mt-3 flex items-center gap-2 flex-wrap">
+                            <span class="font-tech text-[10px] bg-[#111111]/5 px-2 py-1 rounded text-[#111111]/60 uppercase">Fuente: ${esc(ev.fuente || '')}</span>
+                            ${/^https?:\/\//.test(ev.url || '') ? `<a href="${esc(ev.url)}" class="font-tech text-[10px] bg-[#5A7A00]/10 px-2 py-1 rounded text-[#5A7A00] uppercase font-bold">Ver fuente ↗</a>` : ''}
+                        </div>
                     </div>
                     <div class="p-5">
                         <span class="font-tech text-xs font-bold text-[#111111]/60 uppercase tracking-wider">Lo que no sabemos (Vacíos)</span>
@@ -409,7 +412,39 @@
     // fingiría una etapa que no ocurre por separado. El banner final ya
     // reporta cada etapa con sus números reales (clasificadas/promovidas/
     // rechazadas), que es la evidencia genuina de que sí ocurrieron.
+    //
+    // Resultados EXCLUSIVOS de esta búsqueda (bug quirúrgico 2026-09-15):
+    // antes, tras /mobile/scrape, la pantalla volvía a golpear /expedientes
+    // + /verificados sobre TODO el histórico (cargarHallazgos()) y filtraba
+    // por substring de texto — así podía mostrar organizaciones ajenas a la
+    // búsqueda actual (p. ej. "Clara" apareciendo al buscar otra empresa).
+    // Ahora la respuesta de /mobile/scrape ya trae, acotados a ESTA
+    // organización, "expediente" y "candidato" (o null); la pantalla se
+    // limpia ANTES de lanzar la búsqueda y se repinta EXCLUSIVAMENTE con lo
+    // que venga en esta respuesta — nunca se vuelve a llamar /expedientes
+    // ni /verificados, nunca se mezclan tarjetas de una búsqueda anterior.
+    function limpiarResultadosBusqueda() {
+        const seccion = document.getElementById('resultados');
+        const lista = document.getElementById('resultadosList');
+        const count = document.getElementById('resultadosCount');
+        seccion.classList.remove('hidden');
+        lista.innerHTML = '';
+        count.textContent = '';
+        window._items = [];
+    }
+
+    function mostrarResultadoBusqueda(data) {
+        const item = data.expediente
+            ? {...data.expediente, _verificado: data.candidato || null}
+            : null;
+        renderizarTarjetas(item ? [item] : [], {
+            vacio: `<p class="text-sm text-[#111111]/70">Sin candidato confirmado todavía para &ldquo;${esc(data.empresa || '')}&rdquo;. La evidencia nueva sigue en revisión.</p>`,
+            contadorTexto: (n) => n ? `${n} candidato(s) de esta búsqueda` : '0 candidatos de esta búsqueda',
+        });
+    }
+
     async function buscarEnVivo(q) {
+        limpiarResultadosBusqueda();
         mostrarBannerBusqueda(`Buscando &ldquo;${esc(q)}&rdquo; en fuentes en vivo (Google News, GDELT)…`, 'aviso');
         let res, data;
         try {
@@ -441,16 +476,23 @@
         mostrarBannerBusqueda(
             `Búsqueda en vivo · ${esc(hora)} · ${totalNuevas} evidencia(s) nueva(s)${resumenProcesamiento}. ${porConector}`,
             promovidas > 0 ? 'ok' : 'aviso');
+        mostrarResultadoBusqueda(data);
     }
 
     async function actualizarBusqueda() {
         const q = document.querySelector('input[type="text"]').value.trim();
         if (q) {
+            // Búsqueda real: los resultados salen EXCLUSIVAMENTE de la
+            // respuesta de /mobile/scrape (ver buscarEnVivo/mostrarResultadoBusqueda),
+            // nunca de un repaso posterior del histórico completo.
             await buscarEnVivo(q);
         } else {
             document.getElementById('busquedaEnVivo').classList.add('hidden');
+            // Sin texto de búsqueda: no hay una búsqueda que acotar, así que
+            // se muestra el panorama general ya capturado (comportamiento
+            // previo, sin cambios).
+            await cargarHallazgos();
         }
-        await cargarHallazgos();
     }
 
     // --- Candidatos a prospecto: UNA sola lista, fusión de /expedientes (todo lo detectado)
@@ -506,48 +548,65 @@
             items.sort((a, b) => (b._verificado ? 1 : 0) - (a._verificado ? 1 : 0)
                 || (b.score_icp ?? 0) - (a.score_icp ?? 0));
 
-            count.textContent = `${items.length} candidato(s)`;
-            if (!items.length) {
-                const hayFiltros = verticalActiva || escalaActiva || q;
-                lista.innerHTML = hayFiltros
+            renderizarTarjetas(items, {
+                vacio: (verticalActiva || escalaActiva || q)
                     ? `<p class="text-sm text-[#111111]/70">Sin candidatos que combinen estos filtros específicos. Prueba quitando vertical, escala o el texto de búsqueda.</p>`
-                    : `<p class="text-sm text-[#111111]/70">Sin candidatos detectados todavía. El Radar sigue trabajando; vuelve a intentar tras la próxima corrida.</p>`;
-                return;
-            }
-            const badge = (s) => ({A:'bg-[#5A7A00] text-white', B:'bg-[#1F5C8C]/15 text-[#1F5C8C]', C:'bg-[#B00020]/10 text-[#B00020]'}[s] || 'bg-[#111111]/5 text-[#111111]/70');
-            window._items = items;
-            lista.innerHTML = items.slice(0, 30).map((p, idx) => `
-                <div class="p-4 border ${p._verificado ? 'border-[#1F5C8C]/30' : 'border-[#111111]/10'} rounded-lg flex flex-col gap-2 cursor-pointer hover:border-[#5A7A00] transition-colors bg-white" data-idx="${idx}">
-                    <div class="flex items-center gap-2 flex-wrap">
-                        <span class="font-serif-voice font-semibold text-[#111111] text-lg">${esc(p.nombre)}</span>
-                        <span class="px-2 py-0.5 rounded-full text-xs font-tech ${badge(p.scoring)}">${esc(p.scoring || '?')}</span>
-                        <span class="font-tech text-xs text-[#111111]/60">ICP ${esc(p.score_icp ?? 0)}</span>
-                    </div>
-                    ${p._verificado
-                        ? `<span class="px-2 py-0.5 rounded-full text-xs font-tech w-fit bg-[#1F5C8C] text-white uppercase">Confirmado: ${esc(TIPO_LABEL[p._verificado.tipo_epistemologico] || p._verificado.tipo_epistemologico)}</span>
-                           <p class="font-serif-voice italic text-[#111111]/80 text-sm">${esc(p._verificado.cita_textual || '')}</p>
-                           <p class="font-tech text-xs text-[#111111]/60">${esc(p._verificado.nombre_medio || '')}</p>`
-                        : `<span class="px-2 py-0.5 rounded-full text-xs font-tech w-fit bg-[#111111]/5 text-[#111111]/60 uppercase">Mencionado en prensa, sin confirmar</span>
-                           <p class="text-sm text-[#111111]/80"><strong class="text-[#111111]">Señal detectada: ${esc(p.senal_dominante || '—')}</strong></p>
-                           <p class="font-tech text-xs text-[#111111]/60 leading-snug">Coincidencia de palabras clave. Sin situación reconstruida. No constituye hallazgo.</p>`}
-                    <span class="px-2 py-0.5 rounded-full text-xs font-tech w-fit ${(p.validacion_cientifica && p.validacion_cientifica.hipotesis_bloqueada) ? 'bg-[#B00020] text-white' : 'bg-[#5A7A00]/10 text-[#5A7A00]'}">${(p.validacion_cientifica && p.validacion_cientifica.hipotesis_bloqueada) ? 'BLOQUEADA' : 'VALIDADA'}</span>
-                    <p class="font-tech text-xs text-[#111111]/60">
-                        Evidencias: ${p.total_evidencias ?? 0}
-                    </p>
-                    ${(p.evidencias || []).slice(0, 2).map(ev => `
-                        <div class="pl-3 border-l-2 border-[#111111]/15">
-                            <p class="font-serif-voice italic text-[#111111]/80 text-sm">${esc(ev.texto || '')}</p>
-                            <p class="font-tech text-xs text-[#111111]/60">${esc(ev.fuente || '')} · ${esc(ev.fecha || '')}</p>
-                        </div>
-                    `).join('')}
-                </div>
-            `).join('');
-            lista.querySelectorAll('[data-idx]').forEach(el => {
-                el.addEventListener('click', () => mostrarObservar(window._items[Number(el.dataset.idx)]));
+                    : `<p class="text-sm text-[#111111]/70">Sin candidatos detectados todavía. El Radar sigue trabajando; vuelve a intentar tras la próxima corrida.</p>`,
+                contadorTexto: (n) => `${n} candidato(s)`,
             });
         } catch (e) {
-            lista.innerHTML = `<p class="text-sm text-[#B00020]">No se pudo conectar con el laboratorio. Intenta de nuevo.</p>`;
+            document.getElementById('resultadosList').innerHTML =
+                `<p class="text-sm text-[#B00020]">No se pudo conectar con el laboratorio. Intenta de nuevo.</p>`;
         }
+    }
+
+    // --- Render de tarjetas de candidato, compartido entre "ver todo"
+    // (cargarHallazgos, histórico completo) y "resultado de esta búsqueda"
+    // (mostrarResultadoBusqueda, acotado a una sola organización) — misma
+    // marca (p.nombre/scoring/score_icp/_verificado/validacion_cientifica/
+    // evidencias) para que el tap-to-detail (mostrarObservar) funcione
+    // igual en ambos casos.
+    const BADGE_SCORING = (s) => ({A:'bg-[#5A7A00] text-white', B:'bg-[#1F5C8C]/15 text-[#1F5C8C]', C:'bg-[#B00020]/10 text-[#B00020]'}[s] || 'bg-[#111111]/5 text-[#111111]/70');
+
+    function renderizarTarjetas(items, {vacio, contadorTexto}) {
+        const lista = document.getElementById('resultadosList');
+        const count = document.getElementById('resultadosCount');
+        count.textContent = contadorTexto(items.length);
+        if (!items.length) {
+            lista.innerHTML = vacio;
+            window._items = [];
+            return;
+        }
+        window._items = items;
+        lista.innerHTML = items.slice(0, 30).map((p, idx) => `
+            <div class="p-4 border ${p._verificado ? 'border-[#1F5C8C]/30' : 'border-[#111111]/10'} rounded-lg flex flex-col gap-2 cursor-pointer hover:border-[#5A7A00] transition-colors bg-white" data-idx="${idx}">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span class="font-serif-voice font-semibold text-[#111111] text-lg">${esc(p.nombre)}</span>
+                    <span class="px-2 py-0.5 rounded-full text-xs font-tech ${BADGE_SCORING(p.scoring)}">${esc(p.scoring || '?')}</span>
+                    <span class="font-tech text-xs text-[#111111]/60">ICP ${esc(p.score_icp ?? 0)}</span>
+                </div>
+                ${p._verificado
+                    ? `<span class="px-2 py-0.5 rounded-full text-xs font-tech w-fit bg-[#1F5C8C] text-white uppercase">Confirmado: ${esc(TIPO_LABEL[p._verificado.tipo_epistemologico] || p._verificado.tipo_epistemologico)}</span>
+                       <p class="font-serif-voice italic text-[#111111]/80 text-sm">${esc(p._verificado.cita_textual || '')}</p>
+                       <p class="font-tech text-xs text-[#111111]/60">${esc(p._verificado.nombre_medio || '')}</p>`
+                    : `<span class="px-2 py-0.5 rounded-full text-xs font-tech w-fit bg-[#111111]/5 text-[#111111]/60 uppercase">Mencionado en prensa, sin confirmar</span>
+                       <p class="text-sm text-[#111111]/80"><strong class="text-[#111111]">Señal detectada: ${esc(p.senal_dominante || '—')}</strong></p>
+                       <p class="font-tech text-xs text-[#111111]/60 leading-snug">Coincidencia de palabras clave. Sin situación reconstruida. No constituye hallazgo.</p>`}
+                <span class="px-2 py-0.5 rounded-full text-xs font-tech w-fit ${(p.validacion_cientifica && p.validacion_cientifica.hipotesis_bloqueada) ? 'bg-[#B00020] text-white' : 'bg-[#5A7A00]/10 text-[#5A7A00]'}">${(p.validacion_cientifica && p.validacion_cientifica.hipotesis_bloqueada) ? 'BLOQUEADA' : 'VALIDADA'}</span>
+                <p class="font-tech text-xs text-[#111111]/60">
+                    Evidencias: ${p.total_evidencias ?? 0}
+                </p>
+                ${(p.evidencias || []).slice(0, 2).map(ev => `
+                    <div class="pl-3 border-l-2 border-[#111111]/15">
+                        <p class="font-serif-voice italic text-[#111111]/80 text-sm">${esc(ev.texto || '')}</p>
+                        <p class="font-tech text-xs text-[#111111]/60">${esc(ev.fuente || '')} · ${esc(ev.fecha || '')}</p>
+                    </div>
+                `).join('')}
+            </div>
+        `).join('');
+        lista.querySelectorAll('[data-idx]').forEach(el => {
+            el.addEventListener('click', () => mostrarObservar(window._items[Number(el.dataset.idx)]));
+        });
     }
 
     document.getElementById('btnExplorar').addEventListener('click', actualizarBusqueda);

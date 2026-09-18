@@ -1,5 +1,6 @@
 package com.hamacadigital.antrosapiens.v2
 
+import android.content.Intent
 import android.os.Bundle
 import android.webkit.JavascriptInterface
 import android.webkit.WebResourceRequest
@@ -48,6 +49,22 @@ class MainActivity : AppCompatActivity() {
                 request: WebResourceRequest
             ): WebResourceResponse? {
                 return assetLoader.shouldInterceptRequest(request.url)
+            }
+
+            // Un enlace a la fuente real de una evidencia (news.google.com
+            // resuelto, o el medio directo) no es un asset de la app: se abre
+            // en el navegador del sistema, no dentro de este WebView. Sin
+            // esto, tocar "Ver fuente" reemplazaba la UI de la app por el
+            // artículo externo, sin manera de volver (el WebView no tenía
+            // pila de navegación propia configurada).
+            override fun shouldOverrideUrlLoading(
+                view: WebView,
+                request: WebResourceRequest
+            ): Boolean {
+                val url = request.url
+                if (url.host == "appassets.androidplatform.net") return false
+                startActivity(Intent(Intent.ACTION_VIEW, url))
+                return true
             }
         }
 
