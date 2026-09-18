@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Observatorio Antropológico</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+    html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+    /* Paleta deliberadamente distinta de index.html (verde/beige del radar
+       comercial): tonos oscuros/ámbar, para que se sienta como una app
+       aparte, no una pestaña más del radar. */
+    body { background-color: #14110F; color: #EDE6DA; font-family: 'Inter', sans-serif; min-height: max(884px, 100dvh); }
+    .font-serif-voice { font-family: 'Playfair Display', serif; }
+    .font-tech { font-family: 'IBM Plex Mono', monospace; }
+    ::-webkit-scrollbar { width: 0px; background: transparent; }
+</style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+<header class="sticky top-0 z-50 bg-[#14110F]/95 backdrop-blur border-b border-[#EDE6DA]/10 px-4 h-16 flex items-center justify-between">
+    <div class="flex items-center gap-2">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C98A3B" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+        <span class="font-tech text-xs uppercase tracking-wider text-[#C98A3B] font-bold">Observatorio</span>
+    </div>
+    <span class="font-tech text-xs text-[#EDE6DA]/50">Antropológico del Ecosistema</span>
+</header>
+
+<main class="max-w-md mx-auto w-full px-4 pt-6 pb-10 flex flex-col gap-6">
+    <section class="flex flex-col gap-2">
+        <h1 class="font-serif-voice text-2xl font-semibold leading-tight">Discurso citable</h1>
+        <p class="text-sm text-[#EDE6DA]/60 leading-relaxed">Voz directa, entrevistas y podcasts capturados sobre un actor u organización. Sin puntaje, sin ICP: solo lectura.</p>
+    </section>
+
+    <section class="w-full relative">
+        <input id="actorInput" class="w-full bg-[#EDE6DA]/5 border border-[#EDE6DA]/15 focus:border-[#C98A3B] rounded-lg py-3 px-4 text-base text-[#EDE6DA] placeholder:text-[#EDE6DA]/40 focus:ring-0 focus:outline-none transition-colors" placeholder="Actor u organización..." type="text">
+    </section>
+
+    <section class="flex gap-2">
+        <button id="btnBuscar" class="flex-1 bg-[#C98A3B] text-[#14110F] rounded-lg py-3 text-sm font-tech font-bold uppercase tracking-wider hover:opacity-90 transition-opacity">Ver capturado</button>
+        <button id="btnIngesta" class="flex-1 border border-[#C98A3B]/50 text-[#C98A3B] rounded-lg py-3 text-sm font-tech font-bold uppercase tracking-wider hover:bg-[#C98A3B]/10 transition-colors">Buscar nuevo</button>
+    </section>
+
+    <div id="estado" class="hidden font-tech text-xs rounded-lg p-3"></div>
+
+    <section class="flex flex-col gap-3">
+        <div class="flex items-baseline justify-between">
+            <h2 class="font-serif-voice text-lg font-semibold">Fragmentos</h2>
+            <span id="contador" class="font-tech text-xs text-[#EDE6DA]/50"></span>
+        </div>
+        <div id="lista" class="flex flex-col gap-3"></div>
+    </section>
+</main>
+
+<script>
+    // Mismo origen real de backend que MainActivity/index.html (Motor A).
+    // Nunca datos estáticos ante un fallo de red.
+    const API = "https://antrosapiens-api-pro.vercel.app";
+    const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+    function mostrarEstado(html, tono) {
+        const el = document.getElementById('estado');
+        el.classList.remove('hidden', 'bg-[#C98A3B]/10', 'text-[#C98A3B]', 'bg-red-900/20', 'text-red-300', 'bg-[#EDE6DA]/5', 'text-[#EDE6DA]/70');
+        const clases = tono === 'error' ? ['bg-red-900/20', 'text-red-300']
+                     : tono === 'ok'    ? ['bg-[#C98A3B]/10', 'text-[#C98A3B]']
+                     :                    ['bg-[#EDE6DA]/5', 'text-[#EDE6DA]/70'];
+        el.classList.add(...clases);
+        el.innerHTML = html;
+    }
+
+    function renderizarFragmentos(fragmentos) {
+        const lista = document.getElementById('lista');
+        document.getElementById('contador').textContent = `${fragmentos.length} fragmento(s)`;
+        if (!fragmentos.length) {
+            lista.innerHTML = `<p class="text-sm text-[#EDE6DA]/50">Sin fragmentos capturados todavía para este actor.</p>`;
+            return;
+        }
+        lista.innerHTML = fragmentos.map(f => `
+            <div class="p-4 border border-[#EDE6DA]/10 rounded-lg flex flex-col gap-2 bg-[#EDE6DA]/[0.03]">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-tech bg-[#C98A3B]/15 text-[#C98A3B] uppercase">${esc(f.tipo_fuente)}</span>
+                    ${f.tema_libre ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-tech bg-[#EDE6DA]/5 text-[#EDE6DA]/60 uppercase">${esc(f.tema_libre)}</span>` : ''}
+                    <span class="font-tech text-[10px] text-[#EDE6DA]/40">${esc(f.duracion_aprox || '')}</span>
+                </div>
+                <p class="font-serif-voice italic text-[#EDE6DA]/90 text-sm leading-relaxed">${esc((f.texto_citable || '').slice(0, 400))}${(f.texto_citable || '').length > 400 ? '…' : ''}</p>
+                <div class="flex items-center gap-2 flex-wrap font-tech text-[10px] text-[#EDE6DA]/40">
+                    <span>${esc(f.plataforma || '')}</span>
+                    <span>${esc((f.fecha_publicacion || '').slice(0, 10))}</span>
+                    ${/^https?:\/\//.test(f.url || '') ? `<a href="${esc(f.url)}" class="text-[#C98A3B] font-bold">Ver fuente ↗</a>` : ''}
+                </div>
+                <div class="flex gap-2 mt-1">
+                    <input class="notaInput flex-1 bg-[#EDE6DA]/5 border border-[#EDE6DA]/15 rounded px-2 py-1 text-xs text-[#EDE6DA] placeholder:text-[#EDE6DA]/30 focus:outline-none focus:border-[#C98A3B]" placeholder="Agregar nota..." data-fragmento="${f.fragmento_id}">
+                    <button class="btnNota font-tech text-[10px] uppercase text-[#C98A3B] border border-[#C98A3B]/40 rounded px-2" data-fragmento="${f.fragmento_id}">Guardar</button>
+                </div>
+            </div>
+        `).join('');
+
+        lista.querySelectorAll('.btnNota').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const id = btn.dataset.fragmento;
+                const input = lista.querySelector(`.notaInput[data-fragmento="${id}"]`);
+                const contenido = (input.value || '').trim();
+                if (!contenido) return;
+                try {
+                    const res = await fetch(`${API}/observatorio/nota`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({fragmento_id: Number(id), contenido}),
+                    });
+                    if (res.ok) { input.value = ''; input.placeholder = 'Nota guardada ✓'; }
+                    else { input.placeholder = 'No se pudo guardar'; }
+                } catch (e) { input.placeholder = 'Sin conexión'; }
+            });
+        });
+    }
+
+    async function verCapturado() {
+        const actor = document.getElementById('actorInput').value.trim();
+        mostrarEstado('Cargando…', 'aviso');
+        try {
+            const url = new URL(`${API}/observatorio`);
+            if (actor) url.searchParams.set('actor', actor);
+            const res = await fetch(url);
+            const data = await res.json();
+            mostrarEstado(`${data.total} fragmento(s) ya capturado(s).`, 'ok');
+            renderizarFragmentos(data.fragmentos || []);
+        } catch (e) {
+            mostrarEstado('No se pudo conectar con el laboratorio.', 'error');
+        }
+    }
+
+    async function buscarNuevo() {
+        const actor = document.getElementById('actorInput').value.trim();
+        if (!actor) { mostrarEstado('Escribe un actor u organización primero.', 'error'); return; }
+        mostrarEstado(`Buscando discurso citable sobre &ldquo;${esc(actor)}&rdquo;…`, 'aviso');
+        try {
+            const res = await fetch(`${API}/observatorio/ingesta`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({actor, limite: 10}),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                mostrarEstado(`Error: ${esc(data.detail || res.status)}. La búsqueda de fuentes nuevas requiere autorización del operador.`, 'error');
+                return;
+            }
+            mostrarEstado(`Búsqueda completa: ${data.vistos} vistos, ${data.guardados} nuevo(s), ${data.duplicados} ya capturado(s).`, 'ok');
+            await verCapturado();
+        } catch (e) {
+            mostrarEstado('No se pudo conectar con el laboratorio.', 'error');
+        }
+    }
+
+    document.getElementById('btnBuscar').addEventListener('click', verCapturado);
+    document.getElementById('btnIngesta').addEventListener('click', buscarNuevo);
+
+    verCapturado();
+</script>
+</body>
+</html>
