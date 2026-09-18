@@ -3073,6 +3073,101 @@ def verificados_listar(limite: int = Query(50, ge=1, le=200)) -> dict:
     return {"total": len(items), "items": items}
 
 
+# --- Observatorio Antropológico del Ecosistema (segunda función de
+# AntroLabsHD) -----------------------------------------------------------
+#
+# Independiente del radar comercial: guarda discurso citable (voz directa,
+# entrevistas, podcasts...) para lectura humana de Mario. SIN scoring, SIN
+# categoria comercial, SIN estado de candidato. Nunca toca `evidencias`,
+# `evidencia_clasificada` ni `expedientes_candidatos`, y nunca pasa por
+# `clasificacion_epistemologica.py` ni `promocion_candidatos.py` (autorizado
+# por el operador —Mario—, 2026-09-18). No modifica `/verificados` ni
+# `/mobile/scrape`. Implementación: `hd_scraper/observatorio_connector.py`
+# (búsqueda + normalización) y `hd_scraper/observatorio_store.py`
+# (persistencia y lectura).
+
+from ..observatorio_connector import buscar_y_normalizar
+from ..observatorio_store import (
+    fragmento_existe,
+    guardar_fuente_y_fragmento,
+    guardar_nota,
+    listar_observatorio,
+)
+
+
+class ObservatorioIngestaIn(BaseModel):
+    actor: str
+    limite: int = 10
+
+
+@app.post("/observatorio/ingesta")
+def observatorio_ingesta(payload: ObservatorioIngestaIn,
+                         x_ingest_token: Optional[str] = Header(None)) -> dict:
+    """Busca discurso citable (podcast/entrevista) sobre `actor` y lo guarda
+    en `fuente_discursiva`/`fragmento_observado`. Escritura: exige
+    `X-Ingest-Token`, mismo criterio que el resto del intake del operador.
+    """
+    _exigir_token(x_ingest_token)
+    if not payload.actor.strip():
+        raise HTTPException(400, "actor requerido")
+    db = get_db()
+    pares = buscar_y_normalizar(payload.actor.strip(), limite=payload.limite)
+    guardados = 0
+    duplicados = 0
+    for fuente, fragmento in pares:
+        _, creado = guardar_fuente_y_fragmento(db, fuente, fragmento)
+        if creado:
+            guardados += 1
+        else:
+            duplicados += 1
+    return {
+        "actor": payload.actor.strip(),
+        "vistos": len(pares),
+        "guardados": guardados,
+        "duplicados": duplicados,
+    }
+
+
+@app.get("/observatorio")
+def observatorio_listar(
+    actor: Optional[str] = Query(None),
+    tema: Optional[str] = Query(None),
+    fuente: Optional[str] = Query(None),
+    limite: int = Query(50, ge=1, le=200),
+) -> dict:
+    """Fragmentos observados, filtrables por actor, tema o tipo de fuente.
+    Solo lectura. No decide ni interpreta nada."""
+    items = listar_observatorio(get_db(), actor=actor, tema=tema,
+                                fuente_tipo=fuente, limite=limite)
+    return {"total": len(items), "fragmentos": items}
+
+
+class ObservatorioNotaIn(BaseModel):
+    fragmento_id: int
+    contenido: str
+
+
+@app.post("/observatorio/nota")
+def observatorio_nota(payload: ObservatorioNotaIn) -> dict:
+    """Agrega una nota de lectura de Mario a un fragmento ya capturado.
+
+    Sin `X-Ingest-Token`, a propósito: lo llama directo la ventana del
+    Observatorio en el teléfono (mismo criterio que `POST /mobile/scrape`,
+    ver su docstring) — un secreto embebido en un APK distribuido deja de
+    ser un secreto. No es intake de evidencia nueva desde fuentes externas
+    (eso sigue siendo `POST /observatorio/ingesta`, que sí exige token):
+    es Mario anotando, desde su propio teléfono, un fragmento que este
+    mismo sistema ya capturó."""
+    if not payload.contenido.strip():
+        raise HTTPException(400, "contenido requerido")
+    db = get_db()
+    if not fragmento_existe(db, payload.fragmento_id):
+        raise HTTPException(404, f"fragmento {payload.fragmento_id} no existe")
+    nota_id = guardar_nota(db, payload.fragmento_id, payload.contenido.strip(),
+                           ahora_iso())
+    return {"nota_id": nota_id, "fragmento_id": payload.fragmento_id}
+
+
 # --- Capa 11: Validación Científica del Peritaje Antropológico ---------------
 #
 # Somete la hipótesis de Dolor Cultural de una organización a la batería de
