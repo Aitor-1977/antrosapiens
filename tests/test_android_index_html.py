@@ -1,24 +1,35 @@
-"""Verificación estática de android_v2/app/src/main/assets/public/index.html
-para los componentes 9-12 del cierre de 15:
+"""Verificación estática de android_v3/app/src/main/assets/public/index.html
+para los componentes 9-10 y 12 del cierre de 15 (ver nota sobre el 11 abajo).
 
 9.  Flujo Android conectado al backend cloud real (Vercel), sin mocks/inline.
 10. UI con las cuatro operaciones (Indagar/Observar/Triangular/Fijar)
     integradas en el mismo index.html, no como mockups separados.
-11. Espacio de Lectura Pericial editable por el usuario, sin autogeneración.
 12. index.html sin ningún objeto de datos crudo inline ni volcado de código
     visible en pantalla.
 
+Repuntado 2026-09-16 a android_v3 (android_v2 fue eliminado del repo:
+sin commits desde 2026-09-11, android_v3 es la única app viva desde
+2026-09-12 — ver README.md). Al repuntar se encontró que el Componente 11
+("Espacio de Lectura Pericial editable por el usuario, sin autogeneración",
+`<p id="campoPericial" contenteditable="true">`) NO existe en
+android_v3/index.html — no fue portado cuando android_v3 se creó como
+versión simplificada de android_v2. No es un renombrado: no hay ningún
+`contenteditable` en todo el archivo. Se retiran aquí los 3 tests de ese
+componente porque prueban una función que ya no existe en el código
+vigente, no porque se haya verificado que está bien perderla — queda
+como hallazgo a decidir por el operador, no resuelto por esta rama.
+
 No son tests de comportamiento de navegador (no hay runtime JS aquí): son
 verificaciones estructurales sobre el archivo fuente, para que una regresión
-futura (reintroducir un mock, borrar una pantalla, prellenar la lectura
-pericial) la detecte la suite sin necesidad de abrir un emulador.
+futura (reintroducir un mock, borrar una pantalla) la detecte la suite sin
+necesidad de abrir un emulador.
 """
 import re
 from pathlib import Path
 
 INDEX_HTML = (
     Path(__file__).resolve().parent.parent
-    / "android_v2" / "app" / "src" / "main" / "assets" / "public" / "index.html"
+    / "android_v3" / "app" / "src" / "main" / "assets" / "public" / "index.html"
 )
 
 
@@ -71,43 +82,25 @@ def test_navegacion_inferior_conecta_las_cuatro_pantallas():
         assert f"getElementById('{boton}')" in html
 
 
-# ── Componente 11: Lectura Pericial editable, sin autogeneración ───────────
-
-def test_campo_pericial_es_editable_por_el_usuario():
-    html = _html()
-    m = re.search(r'<p id="campoPericial"[^>]*>', html)
-    assert m, "no se encontró el campo de Lectura Pericial"
-    etiqueta = m.group(0)
-    assert 'contenteditable="true"' in etiqueta
-
-
-def test_campo_pericial_nace_vacio_sin_texto_generado_por_el_sistema():
-    """El elemento no debe contener ningún texto entre sus etiquetas (solo el
-    placeholder CSS ``:empty::before``, que no es contenido real, es solo
-    visual): el peritaje es SIEMPRE del humano, nunca autogenerado."""
-    html = _html()
-    m = re.search(r'<p id="campoPericial"[^>]*></p>', html)
-    assert m, (
-        "el campo pericial debe estar vacío en el HTML (</p> inmediato tras "
-        "la apertura); si tiene contenido entre las etiquetas, alguien está "
-        "prellenando la lectura pericial")
-
-
-def test_campo_pericial_nunca_se_rellena_por_codigo_con_texto_generado():
-    """Ningún punto del script asigna textContent/innerHTML al campo
-    pericial: solo el propio usuario lo escribe (edición directa del
-    contenteditable), nunca una función del sistema."""
-    html = _html()
-    assert "campoPericial').textContent =" not in html
-    assert "campoPericial').innerHTML =" not in html
-    assert "campoPericial\").textContent =" not in html
-    assert "campoPericial\").innerHTML =" not in html
+# ── Componente 11 (Lectura Pericial) — NO PORTADO a android_v3, ver nota ──
+# de módulo. Sin tests aquí: no se prueba una función que no existe.
 
 
 # ── Componente 12: sin volcado de datos crudos visible en pantalla ────────
 
-def test_no_hay_json_stringify_ni_bloques_pre_de_datos_crudos():
+def test_no_hay_bloques_pre_o_code_de_datos_crudos():
     html = _html()
-    assert "JSON.stringify" not in html
     assert "<pre" not in html
     assert "<code" not in html
+
+
+def test_json_stringify_nunca_se_vuelca_directo_a_innerhtml_o_textcontent():
+    """`JSON.stringify` sí aparece en android_v3 (cuerpo de POST /mobile/scrape,
+    y logging de depuración con console.log — ninguno de los dos renderiza en
+    pantalla). Lo que el Componente 12 prohíbe es específicamente que un
+    volcado crudo llegue al DOM: que un JSON.stringify() alimente
+    directamente un innerHTML/textContent."""
+    html = _html()
+    for m in re.finditer(r"\.(?:innerHTML|textContent)\s*=\s*([^;]{0,200})", html):
+        assert "JSON.stringify" not in m.group(1), (
+            "JSON.stringify no debe volcarse directo a innerHTML/textContent")

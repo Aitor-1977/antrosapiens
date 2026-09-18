@@ -15,7 +15,7 @@ incluso dentro de sus 100 consultas/día gratis) — decisión del operador.
 
 Aislado del resto del sistema a propósito: valor de ``connector`` propio
 ('busqueda_dinamica_founder'), no toca `clasificacion_epistemologica.py`,
-`promocion_candidatos.py` ni `android_v2`.
+`promocion_candidatos.py` ni el cliente Android.
 
 Sobre la invariante "no interpreta":
   - ``tipo_evento`` NO se infiere leyendo el resultado. Cada FRASE del léxico

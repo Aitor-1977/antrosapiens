@@ -77,7 +77,7 @@ from ..filtros import (
 _diagnostic_logging.configure_logging()
 logger = logging.getLogger(__name__)
 
-# ICP real de HD (mismo criterio que android_v2/.../index.html:CATEGORIA_ICP):
+# ICP real de HD (mismo criterio que android_v3/.../index.html:CATEGORIA_ICP):
 # nunca VC, Incubadora ni Corporativo. Se usa solo en /api/dashboard para que
 # el número que audita coincida con el que la app realmente muestra.
 CATEGORIA_ICP_DASHBOARD = "Startup"
@@ -393,6 +393,77 @@ def _reparar_clasificacion_clara_2479(
         "reporte_clasificar_lote": {k: v for k, v in reporte.items() if k != "muestra"},
         "antes": antes,
         "despues": despues,
+    }
+
+
+@app.get("/ops/gdelt-exclusivo-0bcd2097ddbe200e")
+def _gdelt_organizaciones_exclusivas(
+    x_ingest_token: Optional[str] = Header(None),
+    token: Optional[str] = Query(None),
+    desde: Optional[str] = Query(None, description="creado_en >= (ISO 8601), opcional"),
+    hasta: Optional[str] = Query(None, description="creado_en <= (ISO 8601), opcional"),
+) -> dict:
+    """Endpoint TEMPORAL de solo lectura (2026-09-17) — se elimina de este
+    archivo cuando ya no haga falta, mismo patrón que los precedentes
+    ``/ops/reproc-...`` y ``/ops/reparar-clara-...`` (ruta con sufijo
+    aleatorio, protegida por el mismo ``X-Ingest-Token``).
+
+    Responde la pregunta del "criterio de continuidad" de GDELT (encargo de
+    Mario, 2026-09-16): ¿para cuántas organizaciones distintas la evidencia
+    de ``connector='gdelt'`` es la MÁS TEMPRANA de todo el corpus, es decir,
+    ningún otro conector la había encontrado antes?
+
+    NUNCA escribe nada (no acepta ``aplicar``): es una lectura agregada
+    sobre `evidencias` (fuente de verdad, sin tocar). Sirve tanto para el
+    conteo retrospectivo (sin ``desde``/``hasta``, o acotado al rango que se
+    pida) como para el seguimiento a 7 días (pasando ``desde`` = hoy).
+
+    Regla: para cada ``empresa_mencionada``, compara la fecha de creación
+    (``creado_en``) más temprana entre filas de GDELT contra la más temprana
+    entre filas de cualquier OTRO conector. Si GDELT no tiene ninguna fila
+    para esa organización, o si otro conector la encontró antes o el mismo
+    día, esa organización NO cuenta. Solo cuentan las organizaciones donde
+    GDELT es estrictamente la primera fuente en todo el historial de
+    `evidencias` — exactamente lo que pidió Mario ("que ningún otro conector
+    había detectado antes").
+    """
+    _exigir_token(x_ingest_token or token)
+    db = get_db()
+
+    filas = db.fetch_all(
+        "SELECT empresa_mencionada AS org, "
+        "MIN(CASE WHEN connector = 'gdelt' THEN creado_en END) AS primera_gdelt, "
+        "MIN(CASE WHEN connector <> 'gdelt' THEN creado_en END) AS primera_otro "
+        "FROM evidencias "
+        "WHERE empresa_mencionada IS NOT NULL AND empresa_mencionada <> '' "
+        "GROUP BY empresa_mencionada"
+    )
+
+    organizaciones: list[dict] = []
+    for fila in filas:
+        f = dict(fila)
+        primera_gdelt = f["primera_gdelt"]
+        if not primera_gdelt:
+            continue
+        if desde and primera_gdelt < desde:
+            continue
+        if hasta and primera_gdelt > hasta:
+            continue
+        primera_otro = f["primera_otro"]
+        if primera_otro is not None and primera_otro <= primera_gdelt:
+            continue
+        organizaciones.append({
+            "organizacion": f["org"],
+            "primera_evidencia_gdelt": primera_gdelt,
+            "primera_evidencia_otro_conector": primera_otro,
+        })
+
+    organizaciones.sort(key=lambda o: o["primera_evidencia_gdelt"])
+    return {
+        "desde": desde,
+        "hasta": hasta,
+        "total_organizaciones_exclusivas_de_gdelt": len(organizaciones),
+        "organizaciones": organizaciones,
     }
 
 
@@ -1156,6 +1227,28 @@ def mobile_scrape(payload: MobileScrapeIn, request: Request) -> dict:
     rechazadas = (distribucion.get("corroborante", 0)
                  + distribucion.get("contextual", 0))
 
+    # Resultado ACOTADO a esta organización (bug quirúrgico 2026-09-15): el
+    # cliente Android rellenaba la pantalla de resultados con GET /expedientes
+    # + GET /verificados sobre TODO el corpus histórico, filtrado solo por
+    # substring de texto — eso podía mostrar organizaciones ajenas a la
+    # búsqueda actual (p. ej. "Clara", ver hilo anterior de esta sesión).
+    # Reutiliza tal cual `_construir_expedientes`/`listar_candidatos_verificados`
+    # (mismas funciones que ya usan /expedientes y /verificados, sin
+    # reimplementar clasificación/scoring/promoción) y filtra su salida a la
+    # ÚNICA organización de esta request, por coincidencia exacta de nombre
+    # (no substring): así el cliente puede renderizar exclusivamente lo que
+    # pertenece a esta búsqueda, sin volver a golpear /expedientes ni
+    # /verificados.
+    empresa_norm = empresa.strip().lower()
+    expediente_actual = next(
+        (e for e in _construir_expedientes(None, limite=500)["expedientes"]
+         if (e.get("nombre") or "").strip().lower() == empresa_norm),
+        None)
+    candidato_actual = next(
+        (c for c in listar_candidatos_verificados(db, limite=500)
+         if (c.get("organizacion") or "").strip().lower() == empresa_norm),
+        None)
+
     logger.info(
         "mobile_scrape fin request_id=%s nuevas=%d clasificadas=%d "
         "promovidas=%d rechazadas=%d",
@@ -1180,6 +1273,11 @@ def mobile_scrape(payload: MobileScrapeIn, request: Request) -> dict:
         # arriba, en esta misma petición síncrona — nunca queda un job
         # aparte corriendo tras devolver la respuesta (ver docstring).
         "processing_status": "completed",
+        # Único expediente/candidato de ESTA organización, o null si no
+        # existe evidencia suficiente todavía — nunca una lista del corpus
+        # histórico completo (ver comentario arriba).
+        "expediente": expediente_actual,
+        "candidato": candidato_actual,
     }
 
 
@@ -2668,7 +2766,17 @@ def _construir_expedientes(categorias: list[str] | None, limite: int = 30) -> di
     orgs: dict[str, dict] = {}
     for row in filas:
         titulo = row["cita_textual"] or ""
-        org = detectar_empresa(titulo) or (row["empresa_mencionada"] or "").strip()
+        mencionada = (row["empresa_mencionada"] or "").strip()
+        # Si el titular no trae una entidad reconocible, `empresa_mencionada`
+        # solo se acepta como organización cuando ELLA MISMA supera el mismo
+        # filtro de nombre propio que ya se exige a los titulares
+        # (`detectar_empresa`). Sin esto, una consulta libre sin nombre real
+        # (p. ej. una frase de descubrimiento como "startup tecnológica ronda
+        # de inversión", escrita en el buscador de Android o generada por
+        # `discovery.queries_para`) se colaba tal cual como si fuera la
+        # organización detectada, cuando ningún artículo la mencionó como
+        # entidad: nunca hubo un nombre real, solo el término de la consulta.
+        org = detectar_empresa(titulo) or (mencionada if detectar_empresa(mencionada) else "")
         if not org:
             db.execute(
                 "INSERT INTO rechazos (connector, motivo, payload_json, creado_en) "
@@ -2963,6 +3071,101 @@ def verificados_listar(limite: int = Query(50, ge=1, le=200)) -> dict:
     """
     items = listar_candidatos_verificados(get_db(), limite=limite)
     return {"total": len(items), "items": items}
+
+
+# --- Observatorio Antropológico del Ecosistema (segunda función de
+# AntroLabsHD) -----------------------------------------------------------
+#
+# Independiente del radar comercial: guarda discurso citable (voz directa,
+# entrevistas, podcasts...) para lectura humana de Mario. SIN scoring, SIN
+# categoria comercial, SIN estado de candidato. Nunca toca `evidencias`,
+# `evidencia_clasificada` ni `expedientes_candidatos`, y nunca pasa por
+# `clasificacion_epistemologica.py` ni `promocion_candidatos.py` (autorizado
+# por el operador —Mario—, 2026-09-18). No modifica `/verificados` ni
+# `/mobile/scrape`. Implementación: `hd_scraper/observatorio_connector.py`
+# (búsqueda + normalización) y `hd_scraper/observatorio_store.py`
+# (persistencia y lectura).
+
+from ..observatorio_connector import buscar_y_normalizar
+from ..observatorio_store import (
+    fragmento_existe,
+    guardar_fuente_y_fragmento,
+    guardar_nota,
+    listar_observatorio,
+)
+
+
+class ObservatorioIngestaIn(BaseModel):
+    actor: str
+    limite: int = 10
+
+
+@app.post("/observatorio/ingesta")
+def observatorio_ingesta(payload: ObservatorioIngestaIn,
+                         x_ingest_token: Optional[str] = Header(None)) -> dict:
+    """Busca discurso citable (podcast/entrevista) sobre `actor` y lo guarda
+    en `fuente_discursiva`/`fragmento_observado`. Escritura: exige
+    `X-Ingest-Token`, mismo criterio que el resto del intake del operador.
+    """
+    _exigir_token(x_ingest_token)
+    if not payload.actor.strip():
+        raise HTTPException(400, "actor requerido")
+    db = get_db()
+    pares = buscar_y_normalizar(payload.actor.strip(), limite=payload.limite)
+    guardados = 0
+    duplicados = 0
+    for fuente, fragmento in pares:
+        _, creado = guardar_fuente_y_fragmento(db, fuente, fragmento)
+        if creado:
+            guardados += 1
+        else:
+            duplicados += 1
+    return {
+        "actor": payload.actor.strip(),
+        "vistos": len(pares),
+        "guardados": guardados,
+        "duplicados": duplicados,
+    }
+
+
+@app.get("/observatorio")
+def observatorio_listar(
+    actor: Optional[str] = Query(None),
+    tema: Optional[str] = Query(None),
+    fuente: Optional[str] = Query(None),
+    limite: int = Query(50, ge=1, le=200),
+) -> dict:
+    """Fragmentos observados, filtrables por actor, tema o tipo de fuente.
+    Solo lectura. No decide ni interpreta nada."""
+    items = listar_observatorio(get_db(), actor=actor, tema=tema,
+                                fuente_tipo=fuente, limite=limite)
+    return {"total": len(items), "fragmentos": items}
+
+
+class ObservatorioNotaIn(BaseModel):
+    fragmento_id: int
+    contenido: str
+
+
+@app.post("/observatorio/nota")
+def observatorio_nota(payload: ObservatorioNotaIn) -> dict:
+    """Agrega una nota de lectura de Mario a un fragmento ya capturado.
+
+    Sin `X-Ingest-Token`, a propósito: lo llama directo la ventana del
+    Observatorio en el teléfono (mismo criterio que `POST /mobile/scrape`,
+    ver su docstring) — un secreto embebido en un APK distribuido deja de
+    ser un secreto. No es intake de evidencia nueva desde fuentes externas
+    (eso sigue siendo `POST /observatorio/ingesta`, que sí exige token):
+    es Mario anotando, desde su propio teléfono, un fragmento que este
+    mismo sistema ya capturó."""
+    if not payload.contenido.strip():
+        raise HTTPException(400, "contenido requerido")
+    db = get_db()
+    if not fragmento_existe(db, payload.fragmento_id):
+        raise HTTPException(404, f"fragmento {payload.fragmento_id} no existe")
+    nota_id = guardar_nota(db, payload.fragmento_id, payload.contenido.strip(),
+                           ahora_iso())
+    return {"nota_id": nota_id, "fragmento_id": payload.fragmento_id}
 
 
 # --- Capa 11: Validación Científica del Peritaje Antropológico ---------------

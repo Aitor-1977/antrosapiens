@@ -22,6 +22,32 @@
             </intent-filter>
         </activity>
 
+        <!-- Observatorio Antropológico del Ecosistema: segunda función,
+             ventana separada del radar comercial. La Activity en sí no es
+             LAUNCHER (se abrirá también desde un botón dentro de la app
+             cuando así lo autorice el operador — ver discrepancia
+             reportada sobre MainActivity.kt, congelado). Mientras tanto, un
+             activity-alias propio le da un punto de entrada real y
+             verificable hoy mismo (ícono independiente en el launcher del
+             sistema), sin tocar MainActivity.kt ni index.html. -->
+        <activity
+            android:name=".ObservatorioActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity-alias
+            android:name=".ObservatorioLauncher"
+            android:targetActivity=".ObservatorioActivity"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher"
+            android:roundIcon="@mipmap/ic_launcher"
+            android:label="Observatorio HD">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
     </application>
 
 </manifest>

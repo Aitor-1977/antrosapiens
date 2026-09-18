@@ -98,6 +98,15 @@ class Settings:
     # Umbral de salud: fallos consecutivos que disparan alerta.
     health_alert_threshold: int = _int("HD_HEALTH_ALERT_THRESHOLD", 2)
 
+    # Resolución del wrapper de Google News (news.google.com/rss/articles/...)
+    # a la URL real del medio. Acotado a un tope por corrida para no arriesgar
+    # el maxDuration=60s de la función serverless con feeds grandes: el resto
+    # de los ítems, más allá del tope, conserva el wrapper (sin regresión
+    # respecto al comportamiento anterior, solo sin la mejora).
+    google_news_resolver_max: int = _int("HD_GOOGLE_NEWS_RESOLVER_MAX", 15)
+    google_news_resolver_timeout_s: float = float(
+        os.getenv("HD_GOOGLE_NEWS_RESOLVER_TIMEOUT_S", "5"))
+
     # Token para la intake de prospectos (POST /prospectos y /admin). Si está
     # vacío, la escritura queda DESHABILITADA (la API sigue siendo solo lectura).
     ingest_token: str = os.getenv("HD_INGEST_TOKEN", "")

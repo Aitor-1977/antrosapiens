@@ -443,3 +443,51 @@ CREATE TABLE IF NOT EXISTS evidencia_clasificada (
 CREATE INDEX IF NOT EXISTS idx_evclas_evidencia   ON evidencia_clasificada (evidencia_id);
 CREATE INDEX IF NOT EXISTS idx_evclas_expediente  ON evidencia_clasificada (expediente_id);
 CREATE INDEX IF NOT EXISTS idx_expcand_org        ON expedientes_candidatos (organizacion);
+
+-- ── Observatorio Antropológico del Ecosistema ──────────────────────────────
+-- Espejo de schema.sql. Segunda función de AntroLabsHD, independiente del
+-- radar comercial: guarda discurso citable para lectura humana, SIN scoring,
+-- SIN categoria comercial, SIN estado de candidato. Nunca pasa por
+-- clasificacion_epistemologica.py ni promocion_candidatos.py (autorizado por
+-- el operador —Mario—, 2026-09-18). `tipo_registro` solo admite 'dato' o
+-- 'patron_observable': jamás 'inferencia' ni 'hipotesis'.
+CREATE TABLE IF NOT EXISTS fuente_discursiva (
+    id              BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    tipo_fuente     TEXT NOT NULL,
+    url             TEXT NOT NULL,
+    plataforma      TEXT,
+    actor_principal TEXT NOT NULL,
+    fecha_publicacion TEXT,
+    fecha_captura   TEXT NOT NULL,
+    duracion_aprox  TEXT,
+    hash_contenido  TEXT NOT NULL UNIQUE,
+    CONSTRAINT chk_tipo_fuente CHECK (tipo_fuente IN (
+        'voz_directa', 'entrevista', 'podcast', 'conferencia',
+        'newsletter_propio', 'publicacion_redes', 'documento_institucional',
+        'medio_especializado', 'medio_generalista', 'fuente_secundaria',
+        'fuente_contextual'
+    ))
+);
+
+CREATE TABLE IF NOT EXISTS fragmento_observado (
+    id                  BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    fuente_id           BIGINT NOT NULL REFERENCES fuente_discursiva(id),
+    texto_citable       TEXT NOT NULL,
+    minuto_aproximado   TEXT,
+    tema_libre          TEXT,
+    tipo_registro       TEXT NOT NULL,
+    estado              TEXT NOT NULL DEFAULT 'capturado',
+    CONSTRAINT chk_tipo_registro CHECK (tipo_registro IN ('dato', 'patron_observable')),
+    CONSTRAINT chk_estado_fragmento CHECK (estado IN ('capturado', 'leido', 'fijado', 'descartado'))
+);
+
+CREATE TABLE IF NOT EXISTS nota_de_mario (
+    id          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    fragmento_id BIGINT NOT NULL REFERENCES fragmento_observado(id),
+    contenido   TEXT NOT NULL,
+    fecha       TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_fragmento_fuente    ON fragmento_observado (fuente_id);
+CREATE INDEX IF NOT EXISTS idx_fragmento_actor      ON fuente_discursiva (actor_principal);
+CREATE INDEX IF NOT EXISTS idx_nota_fragmento       ON nota_de_mario (fragmento_id);

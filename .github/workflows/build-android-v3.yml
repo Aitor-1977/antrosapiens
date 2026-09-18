@@ -33,11 +33,8 @@ jobs:
           # Bloqueo externo real, no de este código: el default de la acción
           # (`tools platform-tools`) intenta instalar el paquete legacy
           # `tools`, que Google retiró de su repositorio del SDK. Rompe con
-          # "Failed to find package 'tools'" — confirmado que el workflow
-          # gemelo de android_v2 (build-apk.yml, mismo `uses`) lleva varias
-          # corridas fallando por lo mismo desde antes de esta tarea. Se
-          # pide solo lo que gradle necesita para compilar, sin la meta-
-          # herramienta obsoleta.
+          # "Failed to find package 'tools'". Se pide solo lo que gradle
+          # necesita para compilar, sin la meta-herramienta obsoleta.
           packages: "platform-tools platforms;android-34 build-tools;34.0.0"
 
       - name: Grant execute permission for gradlew
@@ -67,16 +64,14 @@ jobs:
           name: antrosapiens-v3-debug
           path: android_v3/app/build/outputs/apk/debug/app-debug.apk
 
-      # Mismo patrón que build-apk.yml (android_v2): un GitHub Release con el
-      # archivo adjunto da un link fijo y directo al .apk, instalable con un
-      # toque desde el navegador del teléfono (a diferencia del artifact, que
-      # viene zippeado y solo se baja bien desde el sitio de escritorio).
-      # Si el disparo fue un release publicado a mano, el APK se adjunta a
-      # ESE release (softprops actualiza el existente, no crea uno nuevo).
-      # Si fue push/workflow_dispatch, se crea un release nuevo con prefijo
-      # "apk-v3-" para no chocar con los tags "apk-N" que ya usa el workflow
-      # de android_v2 (build-apk.yml): cada workflow cuenta run_number por
-      # separado y podrían coincidir en el mismo número.
+      # Un GitHub Release con el archivo adjunto da un link fijo y directo al
+      # .apk, instalable con un toque desde el navegador del teléfono (a
+      # diferencia del artifact, que viene zippeado y solo se baja bien desde
+      # el sitio de escritorio). Si el disparo fue un release publicado a
+      # mano, el APK se adjunta a ESE release (softprops actualiza el
+      # existente, no crea uno nuevo). Si fue push/workflow_dispatch, se crea
+      # un release nuevo con prefijo "apk-v3-" (histórico: evitaba chocar con
+      # los tags "apk-N" del extinto workflow de android_v2).
       - name: Publicar / adjuntar APK al Release
         uses: softprops/action-gh-release@v2
         with:
