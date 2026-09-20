@@ -10,6 +10,8 @@ de `promocion_candidatos.py` / `promocion_store.py`.
 """
 from __future__ import annotations
 
+from .friccion import existe_friccion
+
 # Orden de prioridad determinista cuando un expediente tiene más de una
 # evidencia primaria: autodeclaración (máxima autoridad) antes que huella
 # práctica (acto publicado sin declaración de persona).
@@ -32,7 +34,9 @@ _ORDEN_TIPO_PRIMARIO = (
 PAIS_PERMITIDO = "México"
 
 
-def listar_candidatos_verificados(db, *, limite: int = 50) -> list[dict]:
+def listar_candidatos_verificados(
+    db, *, limite: int = 50, estado_visibilidad: str = "visible"
+) -> list[dict]:
     """Expedientes 'candidato' con su evidencia primaria citada literalmente.
 
     Determinista: si un expediente tiene varias evidencias primarias, elige la
@@ -41,14 +45,26 @@ def listar_candidatos_verificados(db, *, limite: int = 50) -> list[dict]:
 
     Filtrado territorial: excluye organizaciones cuyo `prospectos.pais`
     (resuelto por nombre exacto) esté declarado y no sea `PAIS_PERMITIDO`.
+
+    Visibilidad (autorizado por el operador —Mario—, 2026-09-19/20, ver
+    CLAUDE.md "Frontera de Interpretación"): cada expediente se etiqueta
+    `visibilidad` ("visible" | "latente") según `friccion.existe_friccion` —
+    NO se toca `estado` en la base ni la lógica de `promocion_candidatos.py`,
+    solo se decide qué se expone como tarjeta en esta capa de lectura. Por
+    defecto (`estado_visibilidad="visible"`) el resultado excluye los
+    "latente"; con `estado_visibilidad="todos"` se devuelven ambos, para que
+    el operador pueda inspeccionar los latentes sin consultar la base directo.
+    El límite se aplica DESPUÉS de filtrar por visibilidad (se sobre-consulta
+    la tabla, igual que `_construir_expedientes`), para no devolver menos de
+    lo pedido solo porque algunos candidatos del rango quedaron latentes.
     """
     expedientes = db.fetch_all(
         "SELECT ec.id, ec.organizacion, p.categoria AS categoria_prospecto "
         "FROM expedientes_candidatos ec "
         "LEFT JOIN prospectos p ON LOWER(TRIM(p.nombre)) = LOWER(TRIM(ec.organizacion)) "
         "WHERE ec.estado = 'candidato' AND (p.pais IS NULL OR p.pais = ?) "
-        "ORDER BY ec.organizacion LIMIT ?",
-        (PAIS_PERMITIDO, int(limite)))
+        "ORDER BY ec.organizacion LIMIT 5000",
+        (PAIS_PERMITIDO,))
 
     orden_caso = " ".join(
         f"WHEN '{tipo}' THEN {i}" for i, tipo in enumerate(_ORDEN_TIPO_PRIMARIO))
@@ -77,6 +93,9 @@ def listar_candidatos_verificados(db, *, limite: int = 50) -> list[dict]:
         # sin fila en prospectos, cae a la categoria de la propia evidencia
         # (la etiqueta de la consulta que la capturó).
         categoria = exp["categoria_prospecto"] or ev["categoria_evidencia"] or ""
+        visible = existe_friccion(db, exp["organizacion"])
+        if estado_visibilidad != "todos" and not visible:
+            continue
         resultado.append({
             "organizacion": exp["organizacion"],
             "categoria": categoria,
@@ -87,5 +106,8 @@ def listar_candidatos_verificados(db, *, limite: int = 50) -> list[dict]:
             "fecha_publicacion": ev["fecha_publicacion"],
             "persona_citada": ev["persona_citada"],
             "cargo": ev["cargo"],
+            "visibilidad": "visible" if visible else "latente",
         })
+        if len(resultado) >= limite:
+            break
     return resultado

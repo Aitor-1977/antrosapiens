@@ -93,7 +93,8 @@ def _sembrar_candidato_verificado(db):
 def test_verificados_identico_antes_y_despues_del_observatorio(cli, db):
     _sembrar_candidato_verificado(db)
 
-    antes = cli.get("/verificados").json()
+    parametros = {"estado_visibilidad": "todos"}
+    antes = cli.get("/verificados", params=parametros).json()
     assert antes["total"] == 1
 
     # Escribe datos del observatorio, sin relación con "Acme": misma
@@ -102,7 +103,7 @@ def test_verificados_identico_antes_y_despues_del_observatorio(cli, db):
         ACTOR_PRUEBA, EPISODIO_CRUDO)
     guardar_fuente_y_fragmento(db, fuente, fragmento)
 
-    despues = cli.get("/verificados").json()
+    despues = cli.get("/verificados", params=parametros).json()
     assert despues == antes, (
         "GET /verificados cambió tras escribir datos del observatorio")
 

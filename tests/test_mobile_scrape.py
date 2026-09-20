@@ -193,7 +193,8 @@ def test_busqueda_kavak_atraviesa_scrape_clasificacion_promocion_y_verificados(
 
     # 3. candidato válido aparece en /verificados
     assert d["promoted"] >= 1
-    nombres = {c["organizacion"] for c in listar_candidatos_verificados(db)}
+    nombres = {c["organizacion"]
+               for c in listar_candidatos_verificados(db, estado_visibilidad="todos")}
     assert "Kavak" in nombres
 
     # 3b. bug quirúrgico 2026-09-15: la RESPUESTA MISMA de /mobile/scrape ya

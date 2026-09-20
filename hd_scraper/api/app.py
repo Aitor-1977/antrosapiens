@@ -621,9 +621,12 @@ def api_dashboard() -> dict:
         db = get_db()
         exp = _construir_expedientes([CATEGORIA_ICP_DASHBOARD], limite=100)
         candidatos = exp["expedientes"]
+        # estado_visibilidad="todos": este conteo estadístico es ajeno al gate
+        # de visibilidad del Radar (2026-09-19/20), que solo aplica a la
+        # tarjeta de /verificados que ve la app.
         verificados_nombres = {
             v["organizacion"].strip().lower()
-            for v in listar_candidatos_verificados(db, limite=200)
+            for v in listar_candidatos_verificados(db, limite=200, estado_visibilidad="todos")
         }
         verticales: dict[str, int] = {}
         escalas: dict[str, int] = {}
@@ -1244,8 +1247,13 @@ def mobile_scrape(payload: MobileScrapeIn, request: Request) -> dict:
         (e for e in _construir_expedientes(None, limite=500)["expedientes"]
          if (e.get("nombre") or "").strip().lower() == empresa_norm),
         None)
+    # estado_visibilidad="todos": el gate de visibilidad del Radar
+    # (2026-09-19/20) aplica al listado pasivo de /verificados, no a esta
+    # respuesta acotada a una búsqueda explícita del operador — fuera de
+    # alcance del encargo que lo introdujo, se preserva el comportamiento
+    # previo de /mobile/scrape sin cambios.
     candidato_actual = next(
-        (c for c in listar_candidatos_verificados(db, limite=500)
+        (c for c in listar_candidatos_verificados(db, limite=500, estado_visibilidad="todos")
          if (c.get("organizacion") or "").strip().lower() == empresa_norm),
         None)
 
@@ -3059,7 +3067,10 @@ from ..candidatos_verificados import listar_candidatos_verificados
 
 
 @app.get("/verificados")
-def verificados_listar(limite: int = Query(50, ge=1, le=200)) -> dict:
+def verificados_listar(
+    limite: int = Query(50, ge=1, le=200),
+    estado_visibilidad: str = Query("visible"),
+) -> dict:
     """Candidatos verificados (Entrega 3): expedientes ya promovidos a
     'candidato' con su evidencia primaria (autodeclaración o huella práctica)
     citada literalmente.
@@ -3068,8 +3079,15 @@ def verificados_listar(limite: int = Query(50, ge=1, le=200)) -> dict:
     preliminar) y de `/candidatos` (Candidato Comercial BC-I→BC-II): esto es
     solo lectura de `expedientes_candidatos.estado='candidato'`, ya escrito por
     `scripts.promover_candidatos --aplicar`. No decide ni promueve nada aquí.
+
+    Visibilidad (autorizado por el operador —Mario—, 2026-09-19/20): por
+    defecto solo devuelve los candidatos con fricción documentada
+    (`visibilidad="visible"`, ver `friccion.existe_friccion`). Con
+    `?estado_visibilidad=todos` incluye también los "latente", para que el
+    operador los inspeccione sin consultar la base directo.
     """
-    items = listar_candidatos_verificados(get_db(), limite=limite)
+    items = listar_candidatos_verificados(
+        get_db(), limite=limite, estado_visibilidad=estado_visibilidad)
     return {"total": len(items), "items": items}
 
 

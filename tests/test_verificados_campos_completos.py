@@ -52,7 +52,7 @@ def test_verificados_incluye_categoria_fecha_persona_y_cargo(db):
                      cargo="CEO", categoria="Startup")
     _clasificar(db, exp, ev, "senal_primaria_autodeclaracion")
 
-    item = listar_candidatos_verificados(db)[0]
+    item = listar_candidatos_verificados(db, estado_visibilidad="todos")[0]
     assert item["organizacion"] == "Acme"
     assert item["categoria"] == "Startup"
     assert item["cita_textual"] == "Ana Ríos, CEO de Acme, anuncia una autodeclaración"
@@ -75,7 +75,7 @@ def test_verificados_categoria_estructural_de_prospectos_gana_sobre_la_de_eviden
                      categoria="Startup")
     _clasificar(db, exp, ev, "senal_primaria_autodeclaracion")
 
-    item = listar_candidatos_verificados(db)[0]
+    item = listar_candidatos_verificados(db, estado_visibilidad="todos")[0]
     assert item["categoria"] == "Corporativo"
 
 
@@ -85,7 +85,7 @@ def test_verificados_persona_citada_y_cargo_ausentes_son_none_no_inventados(db):
                      persona_citada=None, cargo=None)
     _clasificar(db, exp, ev, "senal_primaria_huella_practica")
 
-    item = listar_candidatos_verificados(db)[0]
+    item = listar_candidatos_verificados(db, estado_visibilidad="todos")[0]
     assert item["persona_citada"] is None
     assert item["cargo"] is None
 
@@ -97,7 +97,7 @@ def test_endpoint_get_verificados_expone_los_campos_nuevos(client, db):
                      cargo="CEO", categoria="Startup")
     _clasificar(db, exp, ev, "senal_primaria_autodeclaracion")
 
-    r = client.get("/verificados")
+    r = client.get("/verificados", params={"estado_visibilidad": "todos"})
     assert r.status_code == 200
     item = r.json()["items"][0]
     assert item["categoria"] == "Startup"
