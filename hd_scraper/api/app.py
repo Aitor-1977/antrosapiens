@@ -418,30 +418,29 @@ def _diagnostico_conector_evidencias_mundi(
     por el mismo ``X-Ingest-Token``.
 
     SOLO LECTURA (ni siquiera tiene un modo ``aplicar``): expone el campo
-    ``connector`` de las 3 evidencias reales, ya identificadas de antemano
-    por su ``cita_textual`` exacta, que contaminan el expediente "Mundi" sin
-    mencionarlo (ver CLAUDE.md, "Frontera de Interpretación" — Guardia de
-    identidad). El objetivo es decidir si la Guardia 2 propuesta (exigir
-    mención literal en el titular) puede acotarse a conectores de
-    descubrimiento amplio (``busqueda_dinamica_founder``) sin romper el
-    fallback que protege organizaciones reales de Fase 1 (caso "Toku") — o
-    si, por el contrario, estas 3 evidencias vienen del mismo tipo de
-    conector que Toku y, por lo tanto, no hay guardia determinista simple
-    que resuelva ambos sin sacrificar uno.
+    ``connector`` de TODAS las evidencias con ``empresa_mencionada='Mundi'``
+    (hoy son solo 4 en producción, incluidas las 3 que contaminan el
+    expediente sin mencionarlo — ver CLAUDE.md, "Frontera de Interpretación"
+    — Guardia de identidad). Devuelve el ``cita_textual`` completo de cada
+    una para identificarlas a simple vista, sin depender de un match exacto
+    de texto (primera versión de este endpoint fallaba así: comparaba
+    ``cita_textual`` por igualdad exacta contra un texto sin el sufijo real
+    del medio, p. ej. "El fuego del ébola" vs. el valor real "El fuego del
+    ébola - Substack", y no encontraba ninguna fila). El objetivo es decidir
+    si la Guardia 2 propuesta (exigir mención literal en el titular) puede
+    acotarse a conectores de descubrimiento amplio
+    (``busqueda_dinamica_founder``) sin romper el fallback que protege
+    organizaciones reales de Fase 1 (caso "Toku") — o si, por el contrario,
+    estas evidencias vienen del mismo tipo de conector que Toku y, por lo
+    tanto, no hay guardia determinista simple que resuelva ambos sin
+    sacrificar uno.
     """
     _exigir_token(x_ingest_token or token)
     db = get_db()
-    citas = (
-        "El fuego del ébola",
-        "15 años de una promesa fallida",
-        "Un fondo para subirse a la nueva ola tecnológica",
-    )
-    marcadores = ",".join("?" for _ in citas)
     filas = db.fetch_all(
-        f"SELECT id, cita_textual, connector, nombre_medio, url_fuente, "
-        f"fecha_publicacion FROM evidencias "
-        f"WHERE empresa_mencionada = 'Mundi' AND cita_textual IN ({marcadores})",
-        citas,
+        "SELECT id, cita_textual, connector, nombre_medio, url_fuente, "
+        "fecha_publicacion FROM evidencias WHERE empresa_mencionada = 'Mundi' "
+        "ORDER BY id",
     )
     return {"total": len(filas), "evidencias": [dict(f) for f in filas]}
 
