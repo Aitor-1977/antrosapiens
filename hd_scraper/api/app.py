@@ -41,7 +41,7 @@ from .. import drift as _drift
 from .. import drift_compare as _drift_compare
 from .. import onlife as _onlife
 from .. import pipeline_comercial as _pipeline
-from ..analisis import analizar
+from ..analisis import CAPITAL_ICP_UMBRAL_UNICORNIO, analizar
 from ..clasificacion_epistemologica import (
     _TOKEN as _TOKEN_NOMBRE_PROPIO,
     _es_parte_de_nombre_mas_largo,
@@ -2763,8 +2763,27 @@ def _detectar_patrones(keywords: list[str]) -> list[dict]:
     return patrones
 
 
-def _construir_expedientes(categorias: list[str] | None, limite: int = 30) -> dict:
-    """Agrupa evidencia por organización y enriquece con análisis completo."""
+def _construir_expedientes(
+    categorias: list[str] | None, limite: int = 30, estado_visibilidad: str = "todos",
+) -> dict:
+    """Agrupa evidencia por organización y enriquece con análisis completo.
+
+    Visibilidad por escala (autorizado por el operador —Mario—, 2026-09-20,
+    mismo patrón visible/latente ya usado en `candidatos_verificados.py` para
+    `/verificados`, pero paralelo e independiente: no toca ese módulo ni
+    `promocion_candidatos.py`). Cada expediente se etiqueta `visibilidad`
+    ("visible" | "latente") según capital_acumulado_usd (declarado por el
+    operador en `prospectos`, nunca inferido): `latente` solo cuando ese
+    capital supera CAPITAL_ICP_UMBRAL_UNICORNIO (100 millones, el MISMO
+    umbral ya aprobado para la penalización de score_icp, reutilizado tal
+    cual — no se declara un segundo número para la misma idea de "escala
+    unicornio"). Sin capital declarado (``None``), la organización queda
+    `visible`, sin cambios. `estado_visibilidad="todos"` (el default de esta
+    función) no filtra nada, para no alterar el comportamiento de las
+    llamadas internas ya existentes (dashboard, comparador, observatorio,
+    laboratorio, etc. — ninguna de ellas es INDAGAR); solo `GET /expedientes`
+    pasa su propio parámetro de query, con default `"visible"`.
+    """
     db = get_db()
     cats = list(categorias or [])
     if cats:
@@ -3059,6 +3078,11 @@ def _construir_expedientes(categorias: list[str] | None, limite: int = 30) -> di
             "vertical": vertical,
             "escala": escalas.get(key, ""),
             "capital_acumulado_usd": capitales.get(key),
+            "visibilidad": (
+                "latente" if (capitales.get(key) is not None
+                              and capitales.get(key) > CAPITAL_ICP_UMBRAL_UNICORNIO)
+                else "visible"
+            ),
             "scoring": a["scoring"],
             "score_icp": a["score_icp"],
             "intensidad": a["intensidad"],
@@ -3112,6 +3136,14 @@ def _construir_expedientes(categorias: list[str] | None, limite: int = 30) -> di
         key=lambda x: (x["score_icp"] == 0, _ORDEN_SCORING.get(x["scoring"], 9),
                         -x["score_icp"]))
 
+    # Visibilidad por escala: se filtra DESPUÉS de ordenar y ANTES de aplicar
+    # `limite` (mismo criterio que `candidatos_verificados.py`), para no
+    # devolver menos de lo pedido solo porque algunas del rango quedaron
+    # latentes. `estado_visibilidad="todos"` (default de esta función) no
+    # filtra nada.
+    if estado_visibilidad != "todos":
+        expedientes = [e for e in expedientes if e["visibilidad"] == "visible"]
+
     resumen = {"A": 0, "B": 0, "C": 0}
     for e in expedientes:
         resumen[e["scoring"]] = resumen.get(e["scoring"], 0) + 1
@@ -3128,13 +3160,21 @@ def listar_expedientes(
     categoria: str | None = Query(None),
     categorias: str | None = Query(None),
     limite: int = Query(30, ge=1, le=100),
+    estado_visibilidad: str = Query("visible"),
 ) -> dict:
     """Expedientes Vivos: evidencia agrupada por organización + análisis completo.
 
     Cada expediente incluye todas las evidencias de esa organización, patrones
     detectados, hipótesis de Dolor Cultural, scoring, Interés Analítico y decisor sugerido.
+
+    Visibilidad por escala (2026-09-20, ver `_construir_expedientes`): por
+    defecto solo devuelve los expedientes `visibilidad="visible"` (capital
+    acumulado no declarado, o declarado y dentro de la ventana de HD). Con
+    `?estado_visibilidad=todos` incluye también los `latente` (capital
+    acumulado declarado por encima de CAPITAL_ICP_UMBRAL_UNICORNIO).
     """
-    return _construir_expedientes(_cats_validas(categoria, categorias), limite)
+    return _construir_expedientes(
+        _cats_validas(categoria, categorias), limite, estado_visibilidad=estado_visibilidad)
 
 
 from ..candidatos_verificados import listar_candidatos_verificados
