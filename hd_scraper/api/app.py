@@ -42,6 +42,7 @@ from .. import drift_compare as _drift_compare
 from .. import onlife as _onlife
 from .. import pipeline_comercial as _pipeline
 from ..analisis import CAPITAL_ICP_UMBRAL_UNICORNIO, analizar
+from ..visibilidad import LATENTE, VISIBLE, incluir_segun_visibilidad
 from ..clasificacion_epistemologica import (
     _TOKEN as _TOKEN_NOMBRE_PROPIO,
     _es_parte_de_nombre_mas_largo,
@@ -633,12 +634,13 @@ def api_dashboard() -> dict:
         db = get_db()
         exp = _construir_expedientes([CATEGORIA_ICP_DASHBOARD], limite=100)
         candidatos = exp["expedientes"]
-        # estado_visibilidad="todos": este conteo estadístico es ajeno al gate
-        # de visibilidad del Radar (2026-09-19/20), que solo aplica a la
-        # tarjeta de /verificados que ve la app.
+        # Sin pasar estado_visibilidad: el default de listar_candidatos_verificados
+        # es "todos" (2026-09-20, ver hd_scraper/visibilidad.py), así que este
+        # conteo estadístico sigue viendo todo, ajeno al gate de visibilidad del
+        # Radar (2026-09-19/20), que solo aplica a la tarjeta de /verificados.
         verificados_nombres = {
             v["organizacion"].strip().lower()
-            for v in listar_candidatos_verificados(db, limite=200, estado_visibilidad="todos")
+            for v in listar_candidatos_verificados(db, limite=200)
         }
         verticales: dict[str, int] = {}
         escalas: dict[str, int] = {}
@@ -1261,13 +1263,14 @@ def mobile_scrape(payload: MobileScrapeIn, request: Request) -> dict:
         (e for e in _construir_expedientes(None, limite=500)["expedientes"]
          if (e.get("nombre") or "").strip().lower() == empresa_norm),
         None)
-    # estado_visibilidad="todos": el gate de visibilidad del Radar
-    # (2026-09-19/20) aplica al listado pasivo de /verificados, no a esta
-    # respuesta acotada a una búsqueda explícita del operador — fuera de
-    # alcance del encargo que lo introdujo, se preserva el comportamiento
-    # previo de /mobile/scrape sin cambios.
+    # Sin pasar estado_visibilidad: el default de listar_candidatos_verificados
+    # es "todos" (2026-09-20, ver hd_scraper/visibilidad.py). El gate de
+    # visibilidad del Radar (2026-09-19/20) aplica al listado pasivo de
+    # /verificados, no a esta respuesta acotada a una búsqueda explícita del
+    # operador — fuera de alcance del encargo que lo introdujo, se preserva
+    # el comportamiento previo de /mobile/scrape sin cambios.
     candidato_actual = next(
-        (c for c in listar_candidatos_verificados(db, limite=500, estado_visibilidad="todos")
+        (c for c in listar_candidatos_verificados(db, limite=500)
          if (c.get("organizacion") or "").strip().lower() == empresa_norm),
         None)
 
@@ -2769,9 +2772,10 @@ def _construir_expedientes(
     """Agrupa evidencia por organización y enriquece con análisis completo.
 
     Visibilidad por escala (autorizado por el operador —Mario—, 2026-09-20,
-    mismo patrón visible/latente ya usado en `candidatos_verificados.py` para
-    `/verificados`, pero paralelo e independiente: no toca ese módulo ni
-    `promocion_candidatos.py`). Cada expediente se etiqueta `visibilidad`
+    mismo mecanismo compartido con `candidatos_verificados.py` para
+    `/verificados` desde `hd_scraper/visibilidad.py`, pero regla paralela e
+    independiente: no toca ese módulo ni `promocion_candidatos.py`). Cada
+    expediente se etiqueta `visibilidad`
     ("visible" | "latente") según capital_acumulado_usd (declarado por el
     operador en `prospectos`, nunca inferido): `latente` solo cuando ese
     capital supera CAPITAL_ICP_UMBRAL_UNICORNIO (100 millones, el MISMO
@@ -3079,9 +3083,9 @@ def _construir_expedientes(
             "escala": escalas.get(key, ""),
             "capital_acumulado_usd": capitales.get(key),
             "visibilidad": (
-                "latente" if (capitales.get(key) is not None
-                              and capitales.get(key) > CAPITAL_ICP_UMBRAL_UNICORNIO)
-                else "visible"
+                LATENTE if (capitales.get(key) is not None
+                           and capitales.get(key) > CAPITAL_ICP_UMBRAL_UNICORNIO)
+                else VISIBLE
             ),
             "scoring": a["scoring"],
             "score_icp": a["score_icp"],
@@ -3139,10 +3143,11 @@ def _construir_expedientes(
     # Visibilidad por escala: se filtra DESPUÉS de ordenar y ANTES de aplicar
     # `limite` (mismo criterio que `candidatos_verificados.py`), para no
     # devolver menos de lo pedido solo porque algunas del rango quedaron
-    # latentes. `estado_visibilidad="todos"` (default de esta función) no
-    # filtra nada.
-    if estado_visibilidad != "todos":
-        expedientes = [e for e in expedientes if e["visibilidad"] == "visible"]
+    # latentes. `incluir_segun_visibilidad` (hd_scraper/visibilidad.py, mismo
+    # mecanismo compartido con candidatos_verificados.py) ya deja pasar todo
+    # cuando estado_visibilidad="todos" (default de esta función).
+    expedientes = [e for e in expedientes
+                   if incluir_segun_visibilidad(e["visibilidad"], estado_visibilidad)]
 
     resumen = {"A": 0, "B": 0, "C": 0}
     for e in expedientes:

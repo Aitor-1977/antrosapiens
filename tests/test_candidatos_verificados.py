@@ -120,13 +120,30 @@ def test_orden_alfabetico_por_organizacion(db):
 HOY = ahora_iso()[:10]
 
 
+def test_default_de_la_funcion_es_todos_no_filtra(db):
+    """2026-09-20: el default de listar_candidatos_verificados pasó de
+    "visible" a "todos" (unificado con _construir_expedientes, ver
+    hd_scraper/visibilidad.py). Es GET /verificados quien sigue pidiendo
+    "visible" por defecto a nivel de query; la función en sí ya no filtra
+    si no se le pide explícitamente."""
+    exp = _expediente(db, "Acme", "candidato")
+    _clasificar(db, exp, _evidencia(
+        db, 1, "Acme", "Acme anuncia una ronda de inversión", fecha_publicacion=HOY),
+        "senal_primaria_autodeclaracion")
+
+    # Sin señal de fricción -> latente. Sin pedir "visible", debe aparecer.
+    items = listar_candidatos_verificados(db)
+    assert len(items) == 1
+    assert items[0]["visibilidad"] == "latente"
+
+
 def test_candidato_sin_friccion_queda_latente_score_relevancia_cero(db):
     exp = _expediente(db, "Acme", "candidato")
     _clasificar(db, exp, _evidencia(
         db, 1, "Acme", "Acme anuncia una ronda de inversión", fecha_publicacion=HOY),
         "senal_primaria_autodeclaracion")
 
-    assert listar_candidatos_verificados(db) == []
+    assert listar_candidatos_verificados(db, estado_visibilidad="visible") == []
 
     todos = listar_candidatos_verificados(db, estado_visibilidad="todos")
     assert todos[0]["score_relevancia"] == 0
@@ -176,7 +193,7 @@ def test_friccion_de_un_tercero_no_cuenta_para_la_organizacion(db):
         fecha_publicacion=HOY),
         "senal_primaria_autodeclaracion")
 
-    assert listar_candidatos_verificados(db) == []
+    assert listar_candidatos_verificados(db, estado_visibilidad="visible") == []
     todos = listar_candidatos_verificados(db, estado_visibilidad="todos")
     assert todos[0]["score_relevancia"] == 0
     assert todos[0]["visibilidad"] == "latente"
@@ -200,7 +217,7 @@ def test_relevancia_alta_sin_freshness_sigue_latente_no_promedia(db):
     assert todos[0]["score_relevancia"] == 100
     assert todos[0]["score_freshness"] == 0
     assert todos[0]["visibilidad"] == "latente"
-    assert listar_candidatos_verificados(db) == []
+    assert listar_candidatos_verificados(db, estado_visibilidad="visible") == []
 
 
 def test_freshness_usa_siempre_la_evidencia_primaria_nunca_la_mas_reciente(db):
