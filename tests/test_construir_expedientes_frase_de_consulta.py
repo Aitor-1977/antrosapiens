@@ -158,6 +158,23 @@ def test_sufijo_corporativo_contiguo_no_activa_la_guardia(cli, db):
     assert "Acme" in nombres
 
 
+def test_clasificador_de_sector_contiguo_no_activa_la_guardia(cli, db):
+    """Regresión REAL encontrada en producción (2026-09-20) al desplegar
+    la guardia: "Fintech Mundi destinaría..." se rechazaba a sí mismo,
+    porque "Fintech" pegado antes de "Mundi" se leía como el nombre de pila
+    de un tercero. "Fintech" es un clasificador genérico de sector
+    (`_GENERICOS_SECTOR`), no una persona: no debe activar la guardia."""
+    _sembrar_evidencia(
+        db, empresa="Mundi",
+        cita_textual=(
+            "Fintech Mundi destinaría 20,000 millones de pesos al "
+            "financiamiento de pymes exportadoras"),
+    )
+    r = cli.get("/expedientes", params={"limite": 100})
+    nombres = {e["nombre"] for e in r.json()["expedientes"]}
+    assert "Mundi" in nombres
+
+
 def test_organizacion_de_dos_palabras_no_activa_la_guardia_de_una_palabra(cli, db):
     """La guardia solo aplica a nombres de una sola palabra (mismo criterio
     que `_ocurrencias_org` en clasificacion_epistemologica.py): 'Trace
