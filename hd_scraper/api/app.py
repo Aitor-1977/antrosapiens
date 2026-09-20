@@ -510,8 +510,12 @@ def _limpiar_contaminacion_rss_directo(
     Borra EXACTAMENTE las 6 filas de `_FILAS_CONTAMINADAS_2026_09_20`
     (empresa_mencionada + url_fuente, ambos deben coincidir), confirmadas
     como falsos positivos del bug de subcadena de rss_fijos.py ya corregido.
-    Dry-run por defecto: solo reporta qué borraría. `?aplicar=true` ejecuta
-    el DELETE. No toca ninguna otra fila.
+    Borra primero las dependientes en `evidencia_clasificada` (FK NOT NULL
+    sin ON DELETE CASCADE hacia evidencias.id) para no violar la
+    integridad referencial; no toca `clasificacion_epistemologica.py` ni
+    `promocion_candidatos.py`, solo limpia las filas huérfanas que
+    dejaría el borrado. Dry-run por defecto: solo reporta qué borraría.
+    `?aplicar=true` ejecuta el DELETE. No toca ninguna otra fila.
     """
     _exigir_token(x_ingest_token or token)
     db = get_db()
@@ -524,11 +528,19 @@ def _limpiar_contaminacion_rss_directo(
         if fila is None:
             resultados.append({"empresa": empresa, "url": url, "encontrada": False})
             continue
+        clasificada = db.fetch_one(
+            "SELECT id FROM evidencia_clasificada WHERE evidencia_id = ?",
+            (fila["id"],))
         if aplicar:
+            if clasificada is not None:
+                db.execute(
+                    "DELETE FROM evidencia_clasificada WHERE evidencia_id = ?",
+                    (fila["id"],))
             db.execute("DELETE FROM evidencias WHERE id = ?", (fila["id"],))
         resultados.append({
             "empresa": empresa, "url": url, "encontrada": True,
-            "id": fila["id"], "borrada": bool(aplicar),
+            "id": fila["id"], "tenia_clasificacion": clasificada is not None,
+            "borrada": bool(aplicar),
         })
     return {"aplicado": aplicar, "resultados": resultados}
 
