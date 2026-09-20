@@ -619,3 +619,29 @@ pytest -q                                                # tests
    donde el nombre aparece correcto y sin homónimo, pero el sujeto real de
    la nota es un tercero (el exCEO, para su empresa nueva), no la
    organización misma. Sin solución determinista simple propuesta todavía.
+3. **Guardia 2 de identidad (exigir mención literal en el titular), NO
+   implementada — sacrificio consciente (2026-09-20).** Caso real: 3
+   evidencias de "Mundi" ("El fuego del ébola", "15 años de una promesa
+   fallida", "Un fondo para subirse a la nueva ola tecnológica") no
+   mencionan "Mundi" en el titular y quedan mal atribuidas al expediente vía
+   el fallback de `empresa_mencionada`. Verificado con
+   `/ops/diag-conector-mundi-3381536e7e77d2de` (endpoint temporal, ya
+   eliminado): las 3 vienen de `connector=google_news`, uno de los cuatro
+   conectores de Fase 1 — el mismo origen que tendría en producción real un
+   caso legítimo como "Toku" (`test_organizacion_real_sin_nombre_en_el_
+   titular_sigue_apareciendo`, cuya `empresa_mencionada` tampoco aparece en
+   su titular). Sin ninguna señal estructural que distinga ambos casos
+   (mismo conector, mismo patrón de "mencionada ausente del titular"),
+   exigir mención literal resolvería a Mundi pero rompería a Toku y a
+   cualquier organización real declarada por el operador cuyo titular no
+   repita su nombre — decisión del operador (Mario): se sacrifica Mundi (3
+   evidencias de ruido en una organización con ICP ya bajo), no Toku. La
+   Guardia 2 NO se implementa. Nota aparte (no resuelta, fuera del alcance
+   de esta decisión): la tabla `evidencias` tiene ~100 filas con
+   `empresa_mencionada='Mundi'` producidas por `google_news` que no son
+   sobre la fintech (arquitectos de apellido Mundi, "Anima Mundi" — una
+   instalación de arte en Milán, citas de "Mundi" como fuente de datos
+   aeroespaciales) — la guardia de identidad ya existente en
+   `_construir_expedientes` filtra la enorme mayoría de esas antes de que
+   lleguen a `/expedientes` (100 → 4), pero el volumen real de ruido en la
+   captura para este nombre es mucho mayor de lo que INDAGAR expone hoy.
