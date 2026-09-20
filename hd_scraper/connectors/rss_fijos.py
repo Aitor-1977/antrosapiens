@@ -2,9 +2,19 @@
 
 A diferencia de Google News / GDELT (que buscan por empresa en una API), aquí
 se traen feeds RSS de sitios completos y se filtran las entradas que MENCIONAN
-la empresa por coincidencia literal de subcadena. Ese filtro es extracción
-determinista (¿contiene el texto el nombre de la empresa?), NO interpretación:
-no se lee ni se juzga el contenido.
+la empresa como PALABRA COMPLETA (mismo criterio de `_ocurrencias_org` de
+`clasificacion_epistemologica.py`, reutilizado tal cual, no reimplementado).
+Ese filtro es extracción determinista (¿contiene el texto el nombre de la
+empresa?), NO interpretación: no se lee ni se juzga el contenido.
+
+Corrección 2026-09-20 (ver CLAUDE.md, "Errores recurrentes" #6): antes el
+filtro era `subcadena in texto`, sin límite de palabra, y admitía falsos
+positivos reales de producción ("mundi" dentro de "mundial", "clara" dentro
+de "declaración"/"aclara"). Ahora reutiliza `_ocurrencias_org` (que ya
+combina `\b...\b` con la Guardia 1, `_es_parte_de_nombre_mas_largo`, para
+nombres de una sola palabra — el mismo caso real "Clara"/"Clara Brugada" que
+ya protege `_construir_expedientes`), en vez de una segunda implementación
+de la guardia.
 
 Fuentes fijas de Fase 1: Startupeable, Contxto, LAVCA, LatamList,
 Bloomberg Línea, Forbes México, El CEO, Xataka México, DPL News, Expansión,
@@ -59,6 +69,7 @@ from typing import Iterable, Optional
 
 import feedparser
 
+from ..clasificacion_epistemologica import _ocurrencias_org
 from ..db.models import (
     EvidenceRecord,
     QuerySpec,
@@ -171,8 +182,20 @@ class RssFijosConnector(Connector):
             for entry in feed.entries:
                 titulo = entry.get("title", "")
                 resumen = entry.get("summary", "")
-                # Filtro estructural: ¿el texto menciona literalmente la empresa?
-                if objetivo and objetivo not in _normalizar_texto(f"{titulo} {resumen}"):
+                # Filtro estructural: ¿el texto menciona literalmente la
+                # empresa? Reutiliza la Guardia 1 ya validada
+                # (`_ocurrencias_org`, que internamente usa
+                # `_es_parte_de_nombre_mas_largo`) de
+                # `clasificacion_epistemologica.py`, en vez de un `in` por
+                # subcadena sin límite de palabra. Corrige el falso positivo
+                # real de producción 2026-09-20: "mundi" coincidía dentro de
+                # "mundial" y "clara" dentro de "declaración"/"aclara" (sin
+                # límite de palabra, cualquier subcadena bastaba). Para
+                # nombres de una sola palabra, además descarta el caso ya
+                # conocido ("Clara" pegada a "Brugada", un tercero).
+                texto_filtro = f"{titulo} {resumen}"
+                plano_filtro = _normalizar_texto(texto_filtro)
+                if objetivo and not _ocurrencias_org(texto_filtro, plano_filtro, objetivo):
                     continue
                 link = entry.get("link", "")
                 # Cuerpo vía JSON-LD (2026-09-20): solo se profundiza en URLs
