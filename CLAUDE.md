@@ -522,9 +522,21 @@ certificados; ampliar cobertura de fuentes reales fuera del entorno con proxy.
 1. **Google News RSS** — ✅ implementado y probado de punta a punta.
 2. **GDELT DOC 2.0 API** — ✅ implementado y probado de punta a punta.
 3. **Feeds RSS fijos** (Startupeable, Contxto, LAVCA, LatamList, Bloomberg
-   Línea, Forbes México, El CEO, Xataka México) — ✅ implementado y probado.
-   Filtra por mención literal de la empresa (subcadena sin acentos = extracción,
-   no interpretación). Salud por feed (`rss_fijos:<Medio>`).
+   Línea, Forbes México, El CEO, Xataka México, DPL News, Expansión, El
+   Financiero) — ✅ implementado y probado. Filtra por mención literal de la
+   empresa (subcadena sin acentos = extracción, no interpretación). Salud por
+   feed (`rss_fijos:<Medio>`). **Cuerpo del artículo vía JSON-LD (2026-09-20,
+   ver "Errores recurrentes" #5):** para cada entrada que ya pasó el filtro de
+   mención literal, un fetch adicional a su URL real (nunca la de Google News)
+   lee el bloque `<script type="application/ld+json">`
+   Article/NewsArticle/BlogPosting que el propio medio declara (`articleBody`
+   o, si falta, `description`) — nunca parsea HTML a mano. `cita_textual` pasa
+   a ser titular + cuerpo (titular siempre primero); sin JSON-LD reconocible o
+   si el fetch falla, degrada exactamente al comportamiento anterior (solo
+   titular), sin tumbar las demás entradas. Agregar un medio nuevo es sumar su
+   URL de feed a `FEEDS_DEFAULT`, sin código nuevo. Google News sigue activo
+   como fuente de descubrimiento; deja de ser la vía de contenido primario.
+   Implementación: `hd_scraper/connectors/rss_fijos.py`.
 4. **Job boards JSON** (Greenhouse, Lever, Ashby por slug) — ✅ implementado y
    probado. `tipo_evento=contratacion` y `origen_declaracion=operador` son
    ESTRUCTURALES (una vacante publicada por la empresa). Salud por plataforma;
@@ -740,3 +752,17 @@ pytest -q                                                # tests
    qué conectores pueden producir `origen_declaracion='operador'`.
    `clasificacion_epistemologica.py` NO se tocó como parte de este
    diagnóstico.
+5. **Feeds de medio cerrados para RSS directo (2026-09-20) — no reintentar a
+   ciegas.** Verificado en vivo al construir la captura de cuerpo vía JSON-LD
+   (ver Fase 1, punto 3): **El Economista** bloquea con HTTP 403 incluso la
+   URL de su propio `<link rel="alternate" type="application/rss+xml">`
+   (`eleconomista.com.mx/rss/home.xml`) — no es una ruta equivocada, es
+   protección anti-bot del CDN; nunca se agregó a `FEEDS_DEFAULT`. **Forbes
+   México** SÍ está en `FEEDS_DEFAULT` desde antes (Fase 1 original), pero su
+   feed (`forbes.com.mx/feed/`) responde hoy 403 "invalid or missing feed
+   token" — antes estaba abierto, ahora exige un token; se conserva en la
+   lista porque la salud por feed ya existente (`rss_fijos:Forbes México`)
+   lo reporta caído sin código nuevo, y podría reabrirse. **Bloomberg Línea**
+   sigue en la lista sin cambios (no se investigó su estado en esta entrada).
+   Ninguno de los tres se intentó evadir (sin JS, sin headless browser, sin
+   reversar el token): si algún día abren, basta con reintentar la misma URL.
