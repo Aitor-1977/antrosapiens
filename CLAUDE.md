@@ -263,6 +263,34 @@ SOLO sobre datos ya extraídos por este mismo motor; sin IA, sin juicio libre):
   Implementación: `hd_scraper/receptividad.py` (nuevo módulo, aún no
   conectado a `/expedientes` por falta de la extracción estructurada de
   capital/etapa/fecha de ronda).
+- **Visibilidad del Radar condicionada a fricción documentada (Capa 0 · gate
+  de exhibición)** (autorizado por el operador —Mario— el 2026-09-19,
+  variantes verbales del vocabulario el 2026-09-20): AMPLIACIÓN de la
+  Receptividad Epistemológica ya admitida (misma doctrina de vocabulario
+  cerrado, determinista, sin IA, sin red), aplicada aquí no como triage de
+  prioridad sino como condición de EXHIBICIÓN en `/verificados`. Una
+  organización ya promovida a `estado='candidato'` (Entrega 3, sin cambios)
+  solo se expone como tarjeta visible si, además de los filtros ya vigentes
+  (país, categoría), existe en su propia evidencia ya extraída al menos un
+  marcador léxico cerrado de fricción real — 15 palabras y sus variantes
+  verbales obvias (churn; cancelación/cancelled/canceled/canceló; downgrade;
+  no renovó; discontinued/discontinuó; degradación/degradó; conflicto;
+  disputa/dispute; perdió tracción; stalled) — cuyo sujeto gramatical, por
+  posición dentro de la misma oración, sea la propia organización y no un
+  tercero mencionado en la misma nota (p. ej. "el proveedor X canceló su
+  contrato con Acme" no cuenta para Acme: la organización aparece DESPUÉS del
+  marcador, como objeto, no como sujeto). Sin fricción detectada, el
+  expediente permanece `candidato` en la base tal cual (no se toca `estado`,
+  no se toca `promocion_candidatos.py` ni `clasificacion_epistemologica.py`):
+  solo se le calcula, en la capa de lectura de `/verificados`, un campo
+  derivado `visibilidad` (`visible`|`latente`). Por defecto `/verificados`
+  devuelve solo los `visible`; `?estado_visibilidad=todos` expone también los
+  `latente`, para que el operador los inspeccione sin consultar la base
+  directo. NUNCA declara Deuda Cultural™ ni decide ni ejecuta acción
+  comercial: solo dice si hay evidencia textual de fricción ya extraída.
+  Implementación: `hd_scraper/friccion.py` (detección) y
+  `hd_scraper/candidatos_verificados.py` (aplicación, exclusiva en la capa de
+  lectura de `/verificados`).
 
 **Exclusivo de RadarHD (JAMÁS aquí):**
 
@@ -279,8 +307,10 @@ estructural preliminar de Deuda sobre el discurso corporativo),
 `hd_scraper/nvidia_parser.py` (síntesis estructural LLM preliminar por
 organización) y `hd_scraper/clasificacion_epistemologica.py` +
 `hd_scraper/clasificacion_store.py` (clasificación epistemológica de la
-evidencia) y `hd_scraper/receptividad.py` (Receptividad Epistemológica para
-Capa 0, priorización por triage). No reproducir esa lógica en otros módulos.
+evidencia), `hd_scraper/receptividad.py` (Receptividad Epistemológica para
+Capa 0, priorización por triage) y `hd_scraper/friccion.py` (gate de
+visibilidad del Radar por fricción documentada). No reproducir esa lógica en
+otros módulos.
 
 **Regla de ampliación:** cualquier ampliación futura de interpretación en este
 repo exige actualizar **esta misma sección ANTES de escribir código**. Si una

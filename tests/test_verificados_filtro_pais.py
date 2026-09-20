@@ -56,7 +56,7 @@ def test_verificados_no_incluye_organizaciones_de_pais_distinto_a_mexico(db):
     for org in ("Socialab", "Start-Up Chile", "Toku", "Kavak"):
         _expediente_candidato(db, org)
 
-    items = listar_candidatos_verificados(db, limite=100)
+    items = listar_candidatos_verificados(db, limite=100, estado_visibilidad="todos")
     organizaciones = {i["organizacion"] for i in items}
 
     assert "Kavak" in organizaciones
@@ -72,7 +72,7 @@ def test_verificados_conserva_organizacion_sin_fila_en_prospectos(db):
     ausencia de país no es motivo de exclusión."""
     _expediente_candidato(db, "Acme")
 
-    items = listar_candidatos_verificados(db)
+    items = listar_candidatos_verificados(db, estado_visibilidad="todos")
     assert [i["organizacion"] for i in items] == ["Acme"]
 
 
@@ -81,7 +81,7 @@ def test_endpoint_get_verificados_aplica_el_filtro_territorial(cli, db):
     _expediente_candidato(db, "Toku")
     _expediente_candidato(db, "Kavak")
 
-    r = cli.get("/verificados", params={"limite": 100})
+    r = cli.get("/verificados", params={"limite": 100, "estado_visibilidad": "todos"})
     assert r.status_code == 200
     organizaciones = {i["organizacion"] for i in r.json()["items"]}
     assert organizaciones == {"Kavak"}

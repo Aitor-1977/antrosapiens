@@ -90,7 +90,8 @@ H = {"X-Ingest-Token": "secreto-123"}
 
 def test_clara_aparece_en_verificados_antes_de_reparar(db):
     _sembrar_caso_clara_obsoleto(db)
-    nombres = {c["organizacion"] for c in listar_candidatos_verificados(db)}
+    nombres = {c["organizacion"]
+               for c in listar_candidatos_verificados(db, estado_visibilidad="todos")}
     assert "Clara" in nombres
 
 
@@ -98,14 +99,16 @@ def test_reparacion_elimina_clara_de_verificados_sin_tocar_evidencia(cli, db):
     _sembrar_caso_clara_obsoleto(db)
     _sembrar_candidato_legitimo(db)
 
-    antes = {c["organizacion"] for c in listar_candidatos_verificados(db)}
+    antes = {c["organizacion"]
+             for c in listar_candidatos_verificados(db, estado_visibilidad="todos")}
     assert "Clara" in antes and "Acme" in antes
 
     r = cli.get(RUTA_REPARACION, params={"aplicar": "true"}, headers=H)
     assert r.status_code == 200
     assert r.json()["estado"] == "reparada"
 
-    despues = {c["organizacion"] for c in listar_candidatos_verificados(db)}
+    despues = {c["organizacion"]
+               for c in listar_candidatos_verificados(db, estado_visibilidad="todos")}
     assert "Clara" not in despues, "Clara sigue apareciendo como candidato falso"
     assert "Acme" in despues, "un candidato legítimo no debe verse afectado"
 
