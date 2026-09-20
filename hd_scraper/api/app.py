@@ -59,7 +59,6 @@ from ..contacto import dominio_de, rutas_contacto
 from ..discovery import PAISES_LATAM, REGIONES, VERTICALES_HD, queries_para, region_clause
 from ..enrich import enriquecer, google_search_url, linkedin_search_url, sugerir_vertical
 from ..pipeline import run_connector
-from ..connectors.rss_fijos import RssFijosConnector
 from ..relevance import (
     _GENERICOS_SECTOR,
     _SUFIJOS_CORPORATIVOS,
@@ -478,122 +477,6 @@ def _gdelt_organizaciones_exclusivas(
         "total_organizaciones_exclusivas_de_gdelt": len(organizaciones),
         "organizaciones": organizaciones,
     }
-
-
-# Las 6 filas contaminadas confirmadas como falsos positivos del bug de
-# subcadena de rss_fijos.py (2026-09-20, ver CLAUDE.md "Errores
-# recurrentes" #6): "mundi" dentro de "mundial" (Mundi, 2) y de un titular
-# sin ninguna coincidencia real (Mundi, 1, vía resumen del feed no guardado
-# en cita_textual), y "clara" dentro de "declaración"/"aclara" (Clara, 3).
-# Identificadas por empresa_mencionada + url_fuente exactos, confirmados
-# manualmente contra /corpus antes de este borrado.
-_FILAS_CONTAMINADAS_2026_09_20: tuple[tuple[str, str], ...] = (
-    ("Mundi", "https://expansion.mx/tendencias/2026/09/18/quien-es-el-dueno-de-on-marca-que-ficho-a-mbappe"),
-    ("Mundi", "https://expansion.mx/mundo/2026/09/17/mexico-otros-paises-cuentan-sistema-alerta-sismica"),
-    ("Mundi", "https://dplnews.com/nicaragua-fortalece-su-preparacion-para-la-adopcion-responsable-de-la-inteligencia-artificial-en-salud/"),
-    ("Clara", "https://www.elfinanciero.com.mx/cdmx/2026/09/19/cdmx-tendra-al-menos-3-simulacros-en-2027-cuando-seran-esto-dijo-clara-brugada/"),
-    ("Clara", "https://www.elfinanciero.com.mx/mundo/2026/09/18/trump-a-la-caza-de-migrantes-eu-preguntara-por-estatus-de-ciudadania-en-declaraciones-de-impuestos/"),
-    ("Clara", "https://www.elfinanciero.com.mx/nacional/2026/09/18/declaracion-patrimonial-de-rafael-ojeda-revela-2-creditos-hipotecarios-pero-sin-propiedades/"),
-)
-
-
-@app.get("/ops/limpiar-contaminacion-rss-directo-4b8e6a1d")
-def _limpiar_contaminacion_rss_directo(
-    x_ingest_token: Optional[str] = Header(None),
-    token: Optional[str] = Query(None),
-    aplicar: bool = Query(False),
-) -> dict:
-    """Endpoint TEMPORAL de borrado (2026-09-20) — se elimina de este
-    archivo tras el borrado único autorizado por el operador (mismo patrón
-    que los `/ops/...` anteriores: ruta con sufijo aleatorio, protegida por
-    `X-Ingest-Token`, se borra al cerrar).
-
-    Borra EXACTAMENTE las 6 filas de `_FILAS_CONTAMINADAS_2026_09_20`
-    (empresa_mencionada + url_fuente, ambos deben coincidir), confirmadas
-    como falsos positivos del bug de subcadena de rss_fijos.py ya corregido.
-    Borra primero las dependientes en `evidencia_clasificada` (FK NOT NULL
-    sin ON DELETE CASCADE hacia evidencias.id) para no violar la
-    integridad referencial; no toca `clasificacion_epistemologica.py` ni
-    `promocion_candidatos.py`, solo limpia las filas huérfanas que
-    dejaría el borrado. Dry-run por defecto: solo reporta qué borraría.
-    `?aplicar=true` ejecuta el DELETE. No toca ninguna otra fila.
-    """
-    _exigir_token(x_ingest_token or token)
-    db = get_db()
-    resultados = []
-    for empresa, url in _FILAS_CONTAMINADAS_2026_09_20:
-        fila = db.fetch_one(
-            "SELECT id, cita_textual FROM evidencias "
-            "WHERE empresa_mencionada = ? AND url_fuente = ?",
-            (empresa, url))
-        if fila is None:
-            resultados.append({"empresa": empresa, "url": url, "encontrada": False})
-            continue
-        clasificada = db.fetch_one(
-            "SELECT id FROM evidencia_clasificada WHERE evidencia_id = ?",
-            (fila["id"],))
-        if aplicar:
-            if clasificada is not None:
-                db.execute(
-                    "DELETE FROM evidencia_clasificada WHERE evidencia_id = ?",
-                    (fila["id"],))
-            db.execute("DELETE FROM evidencias WHERE id = ?", (fila["id"],))
-        resultados.append({
-            "empresa": empresa, "url": url, "encontrada": True,
-            "id": fila["id"], "tenia_clasificacion": clasificada is not None,
-            "borrada": bool(aplicar),
-        })
-    return {"aplicado": aplicar, "resultados": resultados}
-
-
-# Los 4 medios de la ampliación de RSS directo (2026-09-20), NO los 11 de
-# FEEDS_DEFAULT: acotado para caber en el tiempo de una función serverless.
-_RSS_DIRECTO_MEDIOS_NUEVOS_2: dict[str, str] = {
-    "DPL News": "https://dplnews.com/feed/",
-    "Expansión": "https://expansion.mx/rss",
-    "El Financiero": "https://www.elfinanciero.com.mx/rss/",
-    "El CEO": "https://elceo.com/feed/",
-}
-
-
-class _RssDirectoUnaVezIn2(BaseModel):
-    empresas: list[str]
-    tipo_evento: str = "ronda"
-
-
-@app.post("/ops/rss-directo-guardia-corregida-2b6e9a41")
-def _rss_directo_correr_una_vez_guardia_corregida(
-    payload: _RssDirectoUnaVezIn2, x_ingest_token: Optional[str] = Header(None),
-) -> dict:
-    """Endpoint TEMPORAL de escritura (2026-09-20) — se elimina de este
-    archivo tras la corrida única que repite, ya con la guardia de
-    identidad corregida (`_ocurrencias_org` en `rss_fijos.py`), la misma
-    ampliación de RSS directo sobre los mismos 4 medios y organizaciones
-    que produjo las 6 filas contaminadas ya borradas. Mismo patrón que
-    los `/ops/...` anteriores: ruta con sufijo aleatorio, protegida por
-    `X-Ingest-Token`, se borra al cerrar. Reutiliza
-    `pipeline.run_connector`, sin lógica nueva.
-    """
-    _exigir_token(x_ingest_token)
-    if payload.tipo_evento not in TIPOS_EVENTO:
-        raise HTTPException(400, f"tipo_evento inválido: {payload.tipo_evento}")
-    db = get_db()
-    resultados = []
-    with RssFijosConnector(feeds=_RSS_DIRECTO_MEDIOS_NUEVOS_2) as conn:
-        for empresa in payload.empresas:
-            query = QuerySpec(empresa=empresa, tipo_evento=payload.tipo_evento)
-            res = run_connector(db, conn, query)
-            resultados.append({
-                "empresa": empresa,
-                "vistos": res.vistos,
-                "escritos": res.escritos,
-                "no_fechados": res.no_fechados,
-                "duplicados": res.duplicados,
-                "rechazados": res.rechazados,
-                "filtrados": res.filtrados,
-                "errores": res.errores,
-            })
-    return {"resultados": resultados}
 
 
 def _alta(payload: ProspectoIn) -> dict:
