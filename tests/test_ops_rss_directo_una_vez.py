@@ -71,6 +71,10 @@ def test_corre_solo_sobre_los_4_medios_nuevos(cli, db, monkeypatch):
     data = r.json()["resultados"][0]
     assert data["empresa"] == "Mundi"
     assert data["escritos"] == 1
+    # Clasifica lo recién escrito (acotado por organización, no todo el
+    # corpus): la cita real trae "Ana Ruiz, CEO de Mundi, declaró...",
+    # patrón Nombre+cargo+verbo declarativo -> autodeclaración.
+    assert data["clasificacion"]["senal_primaria_autodeclaracion"] == 1
 
     fila = db.fetch_one(
         "SELECT cita_textual, nombre_medio, connector FROM evidencias "
