@@ -16,6 +16,7 @@ import io
 import json
 import logging
 import os
+import re
 import time
 import uuid
 from pathlib import Path
@@ -41,7 +42,11 @@ from .. import drift_compare as _drift_compare
 from .. import onlife as _onlife
 from .. import pipeline_comercial as _pipeline
 from ..analisis import analizar
-from ..clasificacion_epistemologica import clasificar_atribucion
+from ..clasificacion_epistemologica import (
+    _TOKEN as _TOKEN_NOMBRE_PROPIO,
+    _es_parte_de_nombre_mas_largo,
+    clasificar_atribucion,
+)
 from ..clasificacion_store import clasificar_lote
 from ..promocion_store import promover_lote
 from ..curaduria import curar
@@ -53,7 +58,7 @@ from ..contacto import dominio_de, rutas_contacto
 from ..discovery import REGIONES, VERTICALES_HD, queries_para, region_clause
 from ..enrich import enriquecer, google_search_url, linkedin_search_url, sugerir_vertical
 from ..pipeline import run_connector
-from ..relevance import detectar_empresa, evaluar_relevancia
+from ..relevance import _SUFIJOS_CORPORATIVOS, detectar_empresa, evaluar_relevancia
 from ..candidatos_verificados import PAIS_PERMITIDO
 from ..signals import detectar_keywords
 from ..prospectos import nuevo_prospecto, upsert_prospecto
@@ -2785,6 +2790,37 @@ def _construir_expedientes(categorias: list[str] | None, limite: int = 30) -> di
         # organización detectada, cuando ningún artículo la mencionó como
         # entidad: nunca hubo un nombre real, solo el término de la consulta.
         org = detectar_empresa(titulo) or (mencionada if detectar_empresa(mencionada) else "")
+        # Guardia de identidad (autorizada por el operador —Mario—,
+        # 2026-09-20): un nombre de organización de UNA sola palabra puede
+        # ser subcadena del nombre de pila de un tercero (caso real: la
+        # fintech "Clara" absorbía evidencia de "Clara Brugada", jefa de
+        # gobierno de CDMX). Reutiliza `_es_parte_de_nombre_mas_largo`
+        # (importada de `clasificacion_epistemologica.py`, no duplicada):
+        # misma función que ya corrigió este bug exacto para la
+        # clasificación epistemológica (commit 64ae6f7); aquí se aplica a la
+        # agrupación de `/expedientes`, que nunca la había adoptado. Si el
+        # nombre no aparece en el propio titular no hay posición que
+        # verificar (queda para una guardia futura, ver "Errores
+        # recurrentes"); si aparece pegado a otro token capitalizado, se
+        # descarta como si no se hubiera detectado ninguna organización —
+        # EXCEPTO cuando ese token contiguo es un sufijo de forma jurídica
+        # ya reconocido (`_SUFIJOS_CORPORATIVOS`, `relevance.py`): sin esta
+        # excepción, "Acme Corp" se rechazaba a sí mismo, porque
+        # `detectar_empresa` ya trunca el nombre a "Acme" (una palabra) y
+        # "Corp" quedaba pegado, indistinguible de un apellido real.
+        if org and len(org.split()) == 1:
+            m = re.search(rf"\b{re.escape(org)}\b", titulo, flags=re.IGNORECASE)
+            if m and _es_parte_de_nombre_mas_largo(titulo, m.start(), m.end()):
+                antes, despues = titulo[:m.start()], titulo[m.end():]
+                m_antes = re.search(rf"({_TOKEN_NOMBRE_PROPIO})\s*$", antes)
+                m_despues = re.match(rf"\s*({_TOKEN_NOMBRE_PROPIO})", despues)
+                token_adyacente = (
+                    (m_antes and m_antes.group(1))
+                    or (m_despues and m_despues.group(1))
+                    or ""
+                )
+                if token_adyacente.lower() not in _SUFIJOS_CORPORATIVOS:
+                    org = ""
         if not org:
             db.execute(
                 "INSERT INTO rechazos (connector, motivo, payload_json, creado_en) "
