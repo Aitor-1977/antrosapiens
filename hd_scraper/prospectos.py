@@ -64,12 +64,14 @@ def upsert_prospecto(db: Database, record: ProspectoRecord) -> dict:
             """INSERT INTO prospectos
                  (nombre, categoria, vertical, sitio_web, linkedin,
                   discurso_corporativo, tipo_discurso, url_perfil,
-                  fuente_discurso, fecha_captura, escala, hash_dedup, creado_en, actualizado_en)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                  fuente_discurso, fecha_captura, escala, capital_acumulado_usd,
+                  hash_dedup, creado_en, actualizado_en)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (record.nombre, record.categoria, record.vertical, record.sitio_web,
              record.linkedin, record.discurso_corporativo, record.tipo_discurso,
              record.url_perfil, record.fuente_discurso, record.fecha_captura,
-             record.escala, record.hash_dedup, ahora, ahora),
+             record.escala, record.capital_acumulado_usd,
+             record.hash_dedup, ahora, ahora),
         )
         return {"ok": True, "accion": "insertado", "id": db.fetch_one(
             "SELECT id FROM prospectos WHERE hash_dedup = ?", (record.hash_dedup,))["id"]}
@@ -86,11 +88,13 @@ def upsert_prospecto(db: Database, record: ProspectoRecord) -> dict:
              fuente_discurso      = COALESCE(?, fuente_discurso),
              fecha_captura        = COALESCE(?, fecha_captura),
              escala               = CASE WHEN ? <> 'indeterminada' THEN ? ELSE escala END,
+             capital_acumulado_usd = COALESCE(?, capital_acumulado_usd),
              actualizado_en       = ?
            WHERE hash_dedup = ?""",
         (record.vertical, record.sitio_web, record.linkedin,
          record.discurso_corporativo, record.tipo_discurso, record.url_perfil,
          record.fuente_discurso, record.fecha_captura, record.escala, record.escala,
+         record.capital_acumulado_usd,
          ahora, record.hash_dedup),
     )
     return {"ok": True, "accion": "actualizado", "id": existe["id"]}

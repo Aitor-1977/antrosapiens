@@ -292,6 +292,13 @@ class ProspectoRecord:
     # 'indeterminada' cuando la fuente no la declara (patrón no_fechado).
     escala: str = "indeterminada"
 
+    # --- Capital acumulado (parámetro estructural OPCIONAL, DECLARADO) ---
+    # Monto total de capital detectado (rondas verificadas), en USD, según
+    # lo declare el operador (autorizado 2026-09-20, ajuste de penalización
+    # por escala del ICP). None cuando no se ha declarado: analisis.py no
+    # penaliza en ese caso. NUNCA se infiere de texto libre en este módulo.
+    capital_acumulado_usd: Optional[float] = None
+
     # --- Metadatos ---
     creado_en: str = field(default_factory=ahora_iso)
     actualizado_en: str = field(default_factory=ahora_iso)
@@ -310,6 +317,7 @@ class ProspectoRecord:
             "fuente_discurso": self.fuente_discurso,
             "fecha_captura": self.fecha_captura,
             "escala": self.escala,
+            "capital_acumulado_usd": self.capital_acumulado_usd,
             "creado_en": self.creado_en,
             "actualizado_en": self.actualizado_en,
         }

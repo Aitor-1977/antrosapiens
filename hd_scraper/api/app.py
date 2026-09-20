@@ -196,6 +196,7 @@ class ProspectoIn(BaseModel):
     url_perfil: Optional[str] = None
     fuente_discurso: Optional[str] = None
     fecha_captura: Optional[str] = None
+    capital_acumulado_usd: Optional[float] = None
 
 
 def _exigir_token(token: Optional[str]) -> None:
@@ -488,6 +489,7 @@ def _alta(payload: ProspectoIn) -> dict:
         url_perfil=payload.url_perfil,
         fuente_discurso=payload.fuente_discurso,
         fecha_captura=payload.fecha_captura,
+        capital_acumulado_usd=payload.capital_acumulado_usd,
     )
     veredicto = validate_prospecto(record)
     if not veredicto.ok:
@@ -2891,6 +2893,17 @@ def _construir_expedientes(categorias: list[str] | None, limite: int = 30) -> di
     for p in db.fetch_all("SELECT nombre, escala FROM prospectos"):
         escalas[(p["nombre"] or "").strip().lower()] = p["escala"] or ""
 
+    # Capital acumulado detectado (autorizado por el operador, 2026-09-20,
+    # ajuste de penalización por escala del ICP): DECLARADO en `prospectos`,
+    # nunca inferido aquí. Ausente o NULL -> no entra en el dict -> analizar()
+    # recibe None -> no penaliza, igual que antes de este cambio.
+    capitales: dict[str, float] = {}
+    for p in db.fetch_all(
+        "SELECT nombre, capital_acumulado_usd FROM prospectos "
+        "WHERE capital_acumulado_usd IS NOT NULL"
+    ):
+        capitales[(p["nombre"] or "").strip().lower()] = p["capital_acumulado_usd"]
+
     # FASE territorial (mismo criterio ya aplicado en /verificados, ver
     # PAIS_PERMITIDO en candidatos_verificados.py): país resuelto por nombre
     # exacto contra prospectos. Solo se guarda cuando SÍ hay un país
@@ -2983,6 +2996,7 @@ def _construir_expedientes(categorias: list[str] | None, limite: int = 30) -> di
             confianza=data["mejor_confianza"],
             calidad=data["mejor_calidad"],
             categoria=categorias_prospecto.get(key, ""),
+            capital_acumulado_usd=capitales.get(key),
         )
 
         evidencias = []
@@ -3042,6 +3056,7 @@ def _construir_expedientes(categorias: list[str] | None, limite: int = 30) -> di
             "categoria": data["categoria"],
             "vertical": vertical,
             "escala": escalas.get(key, ""),
+            "capital_acumulado_usd": capitales.get(key),
             "scoring": a["scoring"],
             "score_icp": a["score_icp"],
             "intensidad": a["intensidad"],
@@ -4940,6 +4955,8 @@ _ADMIN_HTML = """<!doctype html>
   <input id="sitio_web" placeholder="https://…">
   <label>LinkedIn</label>
   <input id="linkedin" placeholder="https://www.linkedin.com/…">
+  <label>Capital acumulado detectado (USD)</label>
+  <input id="capital_acumulado_usd" type="number" step="1" min="0" placeholder="p. ej. 32000000 (déjalo vacío si no lo sabes)">
 
   <label>Discurso corporativo (Thick Data)</label>
   <textarea id="discurso" placeholder="Tesis de inversión, promesa de valor, programa, comunicado…"></textarea>
@@ -5926,7 +5943,8 @@ _ADMIN_HTML = """<!doctype html>
       discurso_corporativo: $("discurso").value.trim() || null,
       tipo_discurso: $("tipo_discurso").value.trim() || null,
       url_perfil: $("url_perfil").value.trim() || null,
-      fuente_discurso: $("fuente_discurso").value.trim() || null };
+      fuente_discurso: $("fuente_discurso").value.trim() || null,
+      capital_acumulado_usd: $("capital_acumulado_usd").value.trim() === "" ? null : Number($("capital_acumulado_usd").value) };
     if (!token) { m.className = "msg err"; m.textContent = "Falta el token."; return; }
     if (!body.nombre) { m.className = "msg err"; m.textContent = "Falta el nombre."; return; }
     $("enviar").disabled = true;
@@ -5935,7 +5953,7 @@ _ADMIN_HTML = """<!doctype html>
         headers: { "Content-Type": "application/json", "X-Ingest-Token": token }, body: JSON.stringify(body) });
       const d = await r.json();
       if (r.ok) { m.className = "msg ok"; m.textContent = `✓ ${body.nombre} [${body.categoria}] — ${d.accion}.`;
-        ["discurso","tipo_discurso","url_perfil","fuente_discurso","vertical","sitio_web","linkedin"].forEach(id => $(id).value = "");
+        ["discurso","tipo_discurso","url_perfil","fuente_discurso","vertical","sitio_web","linkedin","capital_acumulado_usd"].forEach(id => $(id).value = "");
         $("e_links").innerHTML = "";
         refrescarConteo();
       } else { m.className = "msg err"; m.textContent = "Error: " + (d.detail || r.status); }
