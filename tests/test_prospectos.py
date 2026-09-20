@@ -108,6 +108,27 @@ def test_capital_acumulado_usd_se_actualiza_con_nuevo_valor(db):
     assert row["capital_acumulado_usd"] == 65_000_000
 
 
+def test_capital_acumulado_usd_expuesto_en_get_prospectos(db, monkeypatch):
+    """Bug real encontrado en producción (2026-09-20): GET /prospectos y
+    GET /prospectos/{id} nunca proyectaban capital_acumulado_usd, aunque ya
+    se escribía correctamente en la tabla. El operador no podía verificar
+    por esta vía si su declaración se había guardado."""
+    import importlib
+    api = importlib.import_module("hd_scraper.api.app")
+    monkeypatch.setattr(api, "get_db", lambda: db)
+    from fastapi.testclient import TestClient
+
+    upsert_prospecto(db, nuevo_prospecto("Trace Finance", "Startup",
+                                         capital_acumulado_usd=32_000_000))
+    cli = TestClient(api.app)
+    r = cli.get("/prospectos", params={"q": "Trace"})
+    assert r.json()["items"][0]["capital_acumulado_usd"] == 32_000_000
+
+    pid = r.json()["items"][0]["id"]
+    r2 = cli.get(f"/prospectos/{pid}")
+    assert r2.json()["capital_acumulado_usd"] == 32_000_000
+
+
 def test_categoria_distinta_es_otro_prospecto(db):
     # Mismo nombre pero distinta categoria => hash distinto => dos prospectos.
     upsert_prospecto(db, nuevo_prospecto("Globant", "Corporativo"))
