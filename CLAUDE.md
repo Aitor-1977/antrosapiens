@@ -610,3 +610,12 @@ pytest -q                                                # tests
    dejar que él resuelva el encoding. Detectado en auditoría 2026-07-22 (ver
    `AUDITORIA_MOTORES.md`, hallazgo 4). No corregido aún: la auditoría fue de
    solo lectura.
+2. **Límite conocido de la guardia de identidad en `_construir_expedientes`
+   (2026-09-20).** La guardia por adjacencia (`_es_parte_de_nombre_mas_largo`,
+   ver "Frontera de Interpretación") solo descarta un tercero cuando el
+   nombre de la organización SÍ aparece en el titular, pegado a otro nombre
+   propio. No cubre el caso real detectado en Nowports: 2 evidencias
+   ("El exCEO de Nowports atrae US$6 millones para su nueva startup de IA")
+   donde el nombre aparece correcto y sin homónimo, pero el sujeto real de
+   la nota es un tercero (el exCEO, para su empresa nueva), no la
+   organización misma. Sin solución determinista simple propuesta todavía.
