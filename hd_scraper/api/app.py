@@ -59,7 +59,6 @@ from ..contacto import dominio_de, rutas_contacto
 from ..discovery import PAISES_LATAM, REGIONES, VERTICALES_HD, queries_para, region_clause
 from ..enrich import enriquecer, google_search_url, linkedin_search_url, sugerir_vertical
 from ..pipeline import run_connector
-from ..connectors.rss_fijos import RssFijosConnector
 from ..relevance import (
     _GENERICOS_SECTOR,
     _SUFIJOS_CORPORATIVOS,
@@ -478,69 +477,6 @@ def _gdelt_organizaciones_exclusivas(
         "total_organizaciones_exclusivas_de_gdelt": len(organizaciones),
         "organizaciones": organizaciones,
     }
-
-
-# Los 4 medios de la ampliación de RSS directo (2026-09-20), NO los 11 de
-# FEEDS_DEFAULT: acotado para caber en el tiempo de una función serverless.
-_RSS_DIRECTO_MEDIOS_NUEVOS: dict[str, str] = {
-    "DPL News": "https://dplnews.com/feed/",
-    "Expansión": "https://expansion.mx/rss",
-    "El Financiero": "https://www.elfinanciero.com.mx/rss/",
-    "El CEO": "https://elceo.com/feed/",
-}
-
-
-class _RssDirectoUnaVezIn(BaseModel):
-    empresas: list[str]
-    tipo_evento: str = "ronda"
-
-
-@app.post("/ops/rss-directo-una-vez-7f3c1a9d2e")
-def _rss_directo_correr_una_vez(
-    payload: _RssDirectoUnaVezIn, x_ingest_token: Optional[str] = Header(None),
-) -> dict:
-    """Endpoint TEMPORAL de escritura (2026-09-20) — se elimina de este
-    archivo tras la corrida única que pidió el operador para verificar la
-    ampliación de RSS directo (mismo patrón que los `/ops/...` anteriores:
-    ruta con sufijo aleatorio, protegida por `X-Ingest-Token`, se borra al
-    cerrar).
-
-    Corre `RssFijosConnector` (mismo `pipeline.run_connector` que usa el
-    resto del sistema, no lógica nueva) acotado a los 4 medios de la
-    ampliación (DPL News, Expansión, El Financiero, El CEO), no a los 11 de
-    `FEEDS_DEFAULT`, para no agotar el tiempo de la función. Escribe
-    evidencia real en producción.
-
-    Después de escribir, clasifica lo nuevo con
-    `clasificacion_store.clasificar_lote(db, org=empresa, aplicar=True)`,
-    acotado por organización (no todo el corpus: `GET
-    /admin/reconstruir-derivados` sobre el corpus completo agotó el tiempo
-    de la función, 504, al intentarlo — es demasiado grande hoy, un problema
-    preexistente y fuera de alcance de este encargo). Reutiliza tal cual la
-    función ya existente, sin lógica de clasificación nueva.
-    """
-    _exigir_token(x_ingest_token)
-    if payload.tipo_evento not in TIPOS_EVENTO:
-        raise HTTPException(400, f"tipo_evento inválido: {payload.tipo_evento}")
-    db = get_db()
-    resultados = []
-    with RssFijosConnector(feeds=_RSS_DIRECTO_MEDIOS_NUEVOS) as conn:
-        for empresa in payload.empresas:
-            query = QuerySpec(empresa=empresa, tipo_evento=payload.tipo_evento)
-            res = run_connector(db, conn, query)
-            informe_clasificacion = clasificar_lote(db, org=empresa, aplicar=True)
-            resultados.append({
-                "empresa": empresa,
-                "vistos": res.vistos,
-                "escritos": res.escritos,
-                "no_fechados": res.no_fechados,
-                "duplicados": res.duplicados,
-                "rechazados": res.rechazados,
-                "filtrados": res.filtrados,
-                "errores": res.errores,
-                "clasificacion": informe_clasificacion.get("distribucion"),
-            })
-    return {"resultados": resultados}
 
 
 def _alta(payload: ProspectoIn) -> dict:
