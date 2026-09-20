@@ -510,6 +510,14 @@ def _rss_directo_correr_una_vez(
     ampliación (DPL News, Expansión, El Financiero, El CEO), no a los 11 de
     `FEEDS_DEFAULT`, para no agotar el tiempo de la función. Escribe
     evidencia real en producción.
+
+    Después de escribir, clasifica lo nuevo con
+    `clasificacion_store.clasificar_lote(db, org=empresa, aplicar=True)`,
+    acotado por organización (no todo el corpus: `GET
+    /admin/reconstruir-derivados` sobre el corpus completo agotó el tiempo
+    de la función, 504, al intentarlo — es demasiado grande hoy, un problema
+    preexistente y fuera de alcance de este encargo). Reutiliza tal cual la
+    función ya existente, sin lógica de clasificación nueva.
     """
     _exigir_token(x_ingest_token)
     if payload.tipo_evento not in TIPOS_EVENTO:
@@ -520,6 +528,7 @@ def _rss_directo_correr_una_vez(
         for empresa in payload.empresas:
             query = QuerySpec(empresa=empresa, tipo_evento=payload.tipo_evento)
             res = run_connector(db, conn, query)
+            informe_clasificacion = clasificar_lote(db, org=empresa, aplicar=True)
             resultados.append({
                 "empresa": empresa,
                 "vistos": res.vistos,
@@ -529,6 +538,7 @@ def _rss_directo_correr_una_vez(
                 "rechazados": res.rechazados,
                 "filtrados": res.filtrados,
                 "errores": res.errores,
+                "clasificacion": informe_clasificacion.get("distribucion"),
             })
     return {"resultados": resultados}
 
