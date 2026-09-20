@@ -878,6 +878,7 @@ def _row_a_prospecto(row) -> dict:
         "fuente_discurso": row["fuente_discurso"],
         "fecha_captura": row["fecha_captura"],
         "escala": row["escala"],
+        "capital_acumulado_usd": row["capital_acumulado_usd"],
         "creado_en": row["creado_en"],
         "actualizado_en": row["actualizado_en"],
     }
@@ -935,6 +936,7 @@ def prospectos_por_categoria() -> dict:
 
 _EXPORT_COLS = ["id", "nombre", "categoria", "vertical", "sitio_web", "linkedin",
                 "tipo_discurso", "url_perfil", "fuente_discurso", "fecha_captura",
+                "capital_acumulado_usd",
                 "discurso_corporativo", "creado_en", "actualizado_en"]
 
 
