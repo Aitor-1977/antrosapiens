@@ -373,8 +373,13 @@ relevancia por fricción documentada) y `hd_scraper/freshness.py` (score de
 frescura de la evidencia primaria) — ambos gatean la visibilidad del Radar en
 `/verificados`; y la penalización de `score_icp` por escala de capital más el
 gate paralelo de visibilidad por escala en INDAGAR (`analisis.py` +
-`_construir_expedientes` en `api/app.py`, ver entradas 2026-09-20). No
-reproducir esa lógica en otros módulos.
+`_construir_expedientes` en `api/app.py`, ver entradas 2026-09-20). El
+etiquetado literal ("visible"/"latente") y el predicado de filtrado que
+comparten `/verificados` e INDAGAR están extraídos a
+`hd_scraper/visibilidad.py` (2026-09-20, `VISIBLE`, `LATENTE`,
+`incluir_segun_visibilidad`) — cada regla sigue calculando su propio
+booleano de dominio por separado; solo el mecanismo de etiquetado/filtrado
+es compartido. No reproducir esa lógica en otros módulos.
 
 **Regla de ampliación:** cualquier ampliación futura de interpretación en este
 repo exige actualizar **esta misma sección ANTES de escribir código**. Si una

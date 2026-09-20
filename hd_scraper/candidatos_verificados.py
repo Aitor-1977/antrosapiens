@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from .friccion import score_relevancia
 from .freshness import score_freshness
+from .visibilidad import LATENTE, VISIBLE, incluir_segun_visibilidad
 
 UMBRAL_SCORE_RELEVANCIA = 40
 
@@ -38,7 +39,7 @@ PAIS_PERMITIDO = "México"
 
 
 def listar_candidatos_verificados(
-    db, *, limite: int = 50, estado_visibilidad: str = "visible"
+    db, *, limite: int = 50, estado_visibilidad: str = "todos"
 ) -> list[dict]:
     """Expedientes 'candidato' con su evidencia primaria citada literalmente.
 
@@ -60,11 +61,14 @@ def listar_candidatos_verificados(
     `visible` solo si `score_relevancia >= UMBRAL_SCORE_RELEVANCIA` Y
     `score_freshness > 0`, ambas condiciones a la vez, nunca un promedio. NO
     se toca `estado` en la base ni la lógica de `promocion_candidatos.py`,
-    solo se decide qué se expone como tarjeta en esta capa de lectura. Por
-    defecto (`estado_visibilidad="visible"`) el resultado excluye los
-    "latente"; con `estado_visibilidad="todos"` se devuelven ambos, con los
-    dos scores visibles para auditoría. El límite se aplica DESPUÉS de
-    filtrar por visibilidad (se sobre-consulta la tabla, igual que
+    solo se decide qué se expone como tarjeta en esta capa de lectura. El
+    default de ESTA función es `estado_visibilidad="todos"` (no filtra
+    nada): es la ruta `GET /verificados` la que pide explícitamente
+    `"visible"` por defecto (ver su propio default de query), igual que
+    hace `GET /expedientes` con `_construir_expedientes`. Con
+    `estado_visibilidad="todos"` se devuelven ambos, con los dos scores
+    visibles para auditoría. El límite se aplica DESPUÉS de filtrar por
+    visibilidad (se sobre-consulta la tabla, igual que
     `_construir_expedientes`), para no devolver menos de lo pedido solo
     porque algunos candidatos del rango quedaron latentes.
     """
@@ -110,7 +114,8 @@ def listar_candidatos_verificados(
         # primaria es vieja.
         freshness = score_freshness(ev["fecha_publicacion"])
         visible = relevancia >= UMBRAL_SCORE_RELEVANCIA and freshness > 0
-        if estado_visibilidad != "todos" and not visible:
+        etiqueta = VISIBLE if visible else LATENTE
+        if not incluir_segun_visibilidad(etiqueta, estado_visibilidad):
             continue
         resultado.append({
             "organizacion": exp["organizacion"],
@@ -124,7 +129,7 @@ def listar_candidatos_verificados(
             "cargo": ev["cargo"],
             "score_relevancia": relevancia,
             "score_freshness": freshness,
-            "visibilidad": "visible" if visible else "latente",
+            "visibilidad": etiqueta,
         })
         if len(resultado) >= limite:
             break
