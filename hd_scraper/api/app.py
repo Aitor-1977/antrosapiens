@@ -406,6 +406,46 @@ def _reparar_clasificacion_clara_2479(
     }
 
 
+@app.get("/ops/diag-conector-mundi-3381536e7e77d2de")
+def _diagnostico_conector_evidencias_mundi(
+    x_ingest_token: Optional[str] = Header(None),
+    token: Optional[str] = Query(None),
+) -> dict:
+    """Endpoint TEMPORAL de un solo uso (2026-09-20) — se elimina de este
+    archivo inmediatamente después de usarse, y se hace un redeploy sin él.
+    Mismo patrón que los precedentes (``/ops/reparar-clara-...``,
+    ``/ops/reproc-...``): ruta con sufijo aleatorio no adivinable, protegida
+    por el mismo ``X-Ingest-Token``.
+
+    SOLO LECTURA (ni siquiera tiene un modo ``aplicar``): expone el campo
+    ``connector`` de las 3 evidencias reales, ya identificadas de antemano
+    por su ``cita_textual`` exacta, que contaminan el expediente "Mundi" sin
+    mencionarlo (ver CLAUDE.md, "Frontera de Interpretación" — Guardia de
+    identidad). El objetivo es decidir si la Guardia 2 propuesta (exigir
+    mención literal en el titular) puede acotarse a conectores de
+    descubrimiento amplio (``busqueda_dinamica_founder``) sin romper el
+    fallback que protege organizaciones reales de Fase 1 (caso "Toku") — o
+    si, por el contrario, estas 3 evidencias vienen del mismo tipo de
+    conector que Toku y, por lo tanto, no hay guardia determinista simple
+    que resuelva ambos sin sacrificar uno.
+    """
+    _exigir_token(x_ingest_token or token)
+    db = get_db()
+    citas = (
+        "El fuego del ébola",
+        "15 años de una promesa fallida",
+        "Un fondo para subirse a la nueva ola tecnológica",
+    )
+    marcadores = ",".join("?" for _ in citas)
+    filas = db.fetch_all(
+        f"SELECT id, cita_textual, connector, nombre_medio, url_fuente, "
+        f"fecha_publicacion FROM evidencias "
+        f"WHERE empresa_mencionada = 'Mundi' AND cita_textual IN ({marcadores})",
+        citas,
+    )
+    return {"total": len(filas), "evidencias": [dict(f) for f in filas]}
+
+
 @app.get("/ops/gdelt-exclusivo-0bcd2097ddbe200e")
 def _gdelt_organizaciones_exclusivas(
     x_ingest_token: Optional[str] = Header(None),
