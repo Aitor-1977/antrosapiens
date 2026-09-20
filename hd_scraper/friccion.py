@@ -21,6 +21,13 @@ propia era "degrado" (cubre "degradó"/"se degradó"). No se agregó "disputo"
 (verbo de "disputar"): su uso más frecuente en español es "impugnó una
 decisión", sentido distinto de "tuvo una disputa" — se dejó fuera para no
 correr el vocabulario cerrado más allá de lo aprobado.
+
+Score gradual (autorizado por el operador —Mario—, 2026-09-20): `existe_friccion`
+booleano se refina a `score_relevancia` (0-100, densidad de coincidencias) sin
+reescribir el vocabulario, la normalización, el partido por oraciones ni la
+guardia de sujeto — todo eso se reutiliza tal cual. `existe_friccion` se
+conserva como wrapper trivial. Combina con `freshness.score_freshness` en
+`candidatos_verificados.py` para decidir la visibilidad final en /verificados.
 """
 from __future__ import annotations
 
@@ -79,28 +86,46 @@ def _oracion_tiene_friccion_de_la_organizacion(oracion: str, organizacion_norm: 
     return False
 
 
-def existe_friccion(db, organizacion: str) -> bool:
+def _contar_coincidencias_de_friccion(db, organizacion: str) -> int:
     """Determinista: recorre las evidencias YA extraídas de `organizacion`
-    (match exacto de nombre, mismo criterio que `PAIS_PERMITIDO`) buscando el
-    vocabulario cerrado de `MARCADORES_FRICCION`. Sin IA, sin red.
+    (match exacto de nombre, mismo criterio que `PAIS_PERMITIDO`) contando
+    cuántas oraciones (y tags de `keywords`) cumplen el vocabulario cerrado de
+    `MARCADORES_FRICCION` con la guardia de sujeto. Sin IA, sin red.
     """
     organizacion_norm = _norm((organizacion or "").strip())
     if not organizacion_norm:
-        return False
+        return 0
 
     filas = db.fetch_all(
         "SELECT cita_textual, keywords FROM evidencias "
         "WHERE LOWER(TRIM(empresa_mencionada)) = LOWER(TRIM(?))",
         (organizacion,),
     )
+    conteo = 0
     for fila in filas:
         for oracion in _oraciones(fila["cita_textual"]):
             if _oracion_tiene_friccion_de_la_organizacion(oracion, organizacion_norm):
-                return True
+                conteo += 1
         # Los keywords ya están scopeados a esta organización (son metadata
         # de una evidencia cuyo empresa_mencionada ya filtramos arriba), así
         # que aquí no aplica la guardia de sujeto: un tag exacto basta.
         for kw in _keywords_de(fila):
             if _norm(kw) in MARCADORES_FRICCION:
-                return True
-    return False
+                conteo += 1
+    return conteo
+
+
+def score_relevancia(db, organizacion: str) -> int:
+    """0-100 (autorizado por el operador —Mario—, 2026-09-20): densidad de
+    lenguaje de fricción, `min(100, conteo_oraciones_con_friccion_valida * 20)`.
+    Mismo alcance y misma guardia de sujeto que la versión booleana anterior.
+    """
+    return min(100, _contar_coincidencias_de_friccion(db, organizacion) * 20)
+
+
+def existe_friccion(db, organizacion: str) -> bool:
+    """Wrapper trivial (2026-09-20, ver CLAUDE.md): se conserva por nombre y
+    firma para no romper ningún consumidor ya desplegado. Equivalente a
+    `score_relevancia(db, organizacion) > 0`.
+    """
+    return score_relevancia(db, organizacion) > 0
