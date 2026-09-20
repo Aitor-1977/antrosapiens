@@ -55,10 +55,15 @@ from ..engine.rule_engine import RuleEngine
 from ..engine.schemas import Prospecto, SeñalCapa0
 from ..ingesta import noticias as _noticias
 from ..contacto import dominio_de, rutas_contacto
-from ..discovery import REGIONES, VERTICALES_HD, queries_para, region_clause
+from ..discovery import PAISES_LATAM, REGIONES, VERTICALES_HD, queries_para, region_clause
 from ..enrich import enriquecer, google_search_url, linkedin_search_url, sugerir_vertical
 from ..pipeline import run_connector
-from ..relevance import _SUFIJOS_CORPORATIVOS, detectar_empresa, evaluar_relevancia
+from ..relevance import (
+    _GENERICOS_SECTOR,
+    _SUFIJOS_CORPORATIVOS,
+    detectar_empresa,
+    evaluar_relevancia,
+)
 from ..candidatos_verificados import PAIS_PERMITIDO
 from ..signals import detectar_keywords
 from ..prospectos import nuevo_prospecto, upsert_prospecto
@@ -2718,6 +2723,13 @@ from ..observatorio import (
 )
 from .. import expediente_vivo as _exp_vivo
 from ..relevance import GIGANTES, MOTIVO_GIGANTE, _sin_acentos
+
+# Guardia de identidad en _construir_expedientes (ver más abajo): un país de
+# LATAM adyacente al nombre de la organización ("Zubale... fundada en México
+# Zubale", "Nowports Chile") no es el apellido de un tercero. Reutiliza
+# `discovery.PAISES_LATAM`, no una lista nueva. Regresión real encontrada en
+# producción 2026-09-20.
+_PAISES_LATAM_NORM = {_sin_acentos(p).lower() for p in PAISES_LATAM}
 from ..publicador import (
     generar_csv,
     generar_html,
@@ -2804,10 +2816,16 @@ def _construir_expedientes(categorias: list[str] | None, limite: int = 30) -> di
         # recurrentes"); si aparece pegado a otro token capitalizado, se
         # descarta como si no se hubiera detectado ninguna organización —
         # EXCEPTO cuando ese token contiguo es un sufijo de forma jurídica
-        # ya reconocido (`_SUFIJOS_CORPORATIVOS`, `relevance.py`): sin esta
-        # excepción, "Acme Corp" se rechazaba a sí mismo, porque
-        # `detectar_empresa` ya trunca el nombre a "Acme" (una palabra) y
-        # "Corp" quedaba pegado, indistinguible de un apellido real.
+        # (`_SUFIJOS_CORPORATIVOS`), un clasificador genérico de sector
+        # (`_GENERICOS_SECTOR`) o un país de LATAM (`_PAISES_LATAM_NORM`,
+        # todos de `relevance.py`/`discovery.py`, mismas listas que ya usa
+        # `detectar_empresa`): sin estas excepciones, "Acme Corp" se
+        # rechazaba a sí mismo ("Corp" pegado, indistinguible de un
+        # apellido), "Fintech Mundi" también ("Fintech" pegado ANTES del
+        # nombre leído como nombre de pila de un tercero), y "Zubale...
+        # fundada en México Zubale"/"Nowports Chile" también (un país
+        # adyacente no es una persona). Las tres son regresiones reales
+        # encontradas en producción al desplegar esta guardia, 2026-09-20.
         if org and len(org.split()) == 1:
             m = re.search(rf"\b{re.escape(org)}\b", titulo, flags=re.IGNORECASE)
             if m and _es_parte_de_nombre_mas_largo(titulo, m.start(), m.end()):
@@ -2819,7 +2837,10 @@ def _construir_expedientes(categorias: list[str] | None, limite: int = 30) -> di
                     or (m_despues and m_despues.group(1))
                     or ""
                 )
-                if token_adyacente.lower() not in _SUFIJOS_CORPORATIVOS:
+                token_norm = _sin_acentos(token_adyacente).lower()
+                if (token_norm not in _SUFIJOS_CORPORATIVOS
+                        and token_norm not in _GENERICOS_SECTOR
+                        and token_norm not in _PAISES_LATAM_NORM):
                     org = ""
         if not org:
             db.execute(
