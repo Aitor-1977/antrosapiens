@@ -766,34 +766,27 @@ pytest -q                                                # tests
    sigue en la lista sin cambios (no se investigó su estado en esta entrada).
    Ninguno de los tres se intentó evadir (sin JS, sin headless browser, sin
    reversar el token): si algún día abren, basta con reintentar la misma URL.
-6. **Filtro de mención literal de `rss_fijos.py` produce falsos positivos con
-   nombres cortos que son subcadena de una palabra común (2026-09-20).**
-   Confirmado en producción al correr la ampliación de RSS directo sobre
-   Mundi y Clara: el filtro (`objetivo in _normalizar_texto(titulo+resumen)`,
-   documentado desde Fase 1 como "coincidencia literal de subcadena", sin
-   límites de palabra) admitió titulares que NO son sobre esas
-   organizaciones porque "mundi" es subcadena literal de "mundial" (p. ej.
-   "...otros gigantes **mundi**ales", "...para entrar al futbol **mundi**al")
-   y "clara" es subcadena literal de "de**clara**ción"/"a**clara**" (p. ej.
-   "Esto dijo Clara Brugada" vía "de**clara**ciones de impuestos",
-   "**de**clara**ción** patrimonial de Rafael Ojeda"). Resultado real: las 6
-   evidencias nuevas que este filtro escribió para Mundi (3) y Clara (3) al
-   correr contra DPL News/Expansión/El Financiero eran, las 6, ruido sin
-   relación con esas organizaciones — 0 relevantes, así que la clasificación
-   epistemológica resultante (0 `senal_primaria_*`) es correcta pero por la
-   razón equivocada: no hay evidencia real que clasificar, no que la
-   evidencia real carezca de declaración citable. El caso "Clara Brugada" ya
-   tiene guardia en la CAPA DE LECTURA (`_construir_expedientes`, Guardia 1,
-   "Frontera de Interpretación"), que sí impide que estas filas contaminen
-   `/expedientes` — verificado, no aparecen ahí. El caso "mundi"⊂"mundial"
-   NO tiene ninguna guardia hoy (no es un patrón de nombre-pegado-a-nombre,
-   es subcadena dentro de una palabra distinta) y tampoco se sabe si
-   `_construir_expedientes` lo excluye por otra vía (no verificado en esta
-   entrada; las filas no aparecieron bajo "Mundi" en `/expedientes`, pero no
-   se confirmó el mecanismo exacto). Las 6 filas de ruido siguen en
-   `evidencias` (nunca se borran sin autorización explícita del operador
-   sobre una tabla de producción). Sin solución determinista propuesta
-   todavía (candidata obvia: exigir límite de palabra, `\bMundi\b`, igual
-   que ya hace `clasificacion_epistemologica._ocurrencias_org`, pero eso es
-   un cambio a `rss_fijos.py` fuera del alcance de este encargo — pendiente
-   de decisión del operador).
+6. **Filtro de mención literal de `rss_fijos.py` producía falsos positivos
+   con nombres cortos que son subcadena de una palabra común — CORREGIDO el
+   mismo día (2026-09-20).** Confirmado en producción al correr la
+   ampliación de RSS directo sobre Mundi y Clara: el filtro anterior
+   (`objetivo in _normalizar_texto(titulo+resumen)`, documentado desde Fase
+   1 como "coincidencia literal de subcadena", sin límites de palabra)
+   admitía titulares que NO son sobre esas organizaciones porque "mundi" es
+   subcadena literal de "mundial" y "clara" es subcadena literal de
+   "declaración"/"aclara". Las 6 evidencias nuevas escritas para Mundi (3) y
+   Clara (3) al correr contra DPL News/Expansión/El Financiero eran, las 6,
+   ruido sin relación con esas organizaciones — las 6 se eliminan de
+   `evidencias` (autorización explícita del operador; borrado vía endpoint
+   temporal `/ops/limpiar-contaminacion-rss-directo-4b8e6a1d`, ya retirado
+   tras el uso único), no se conservan como evidencia productiva.
+
+   **Corrección aplicada:** `rss_fijos.py` reutiliza `_ocurrencias_org`
+   (importada de `clasificacion_epistemologica.py`, no reimplementada), que
+   ya combina `\b...\b` (límite de palabra, arregla "mundi"⊂"mundial" y
+   "clara"⊂"declaración"/"aclara") con la Guardia 1 ya existente
+   (`_es_parte_de_nombre_mas_largo`, para nombres de una sola palabra —
+   mismo criterio que ya protege `_construir_expedientes` en el caso real
+   "Clara"/"Clara Brugada"). Un solo mecanismo, sin segunda implementación
+   de la guardia. Cubierto por `tests/test_rss_fijos_guardia_identidad.py`
+   (los 3 casos reales de falso positivo, más 3 controles positivos).

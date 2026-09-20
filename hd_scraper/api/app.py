@@ -479,6 +479,60 @@ def _gdelt_organizaciones_exclusivas(
     }
 
 
+# Las 6 filas contaminadas confirmadas como falsos positivos del bug de
+# subcadena de rss_fijos.py (2026-09-20, ver CLAUDE.md "Errores
+# recurrentes" #6): "mundi" dentro de "mundial" (Mundi, 2) y de un titular
+# sin ninguna coincidencia real (Mundi, 1, vía resumen del feed no guardado
+# en cita_textual), y "clara" dentro de "declaración"/"aclara" (Clara, 3).
+# Identificadas por empresa_mencionada + url_fuente exactos, confirmados
+# manualmente contra /corpus antes de este borrado.
+_FILAS_CONTAMINADAS_2026_09_20: tuple[tuple[str, str], ...] = (
+    ("Mundi", "https://expansion.mx/tendencias/2026/09/18/quien-es-el-dueno-de-on-marca-que-ficho-a-mbappe"),
+    ("Mundi", "https://expansion.mx/mundo/2026/09/17/mexico-otros-paises-cuentan-sistema-alerta-sismica"),
+    ("Mundi", "https://dplnews.com/nicaragua-fortalece-su-preparacion-para-la-adopcion-responsable-de-la-inteligencia-artificial-en-salud/"),
+    ("Clara", "https://www.elfinanciero.com.mx/cdmx/2026/09/19/cdmx-tendra-al-menos-3-simulacros-en-2027-cuando-seran-esto-dijo-clara-brugada/"),
+    ("Clara", "https://www.elfinanciero.com.mx/mundo/2026/09/18/trump-a-la-caza-de-migrantes-eu-preguntara-por-estatus-de-ciudadania-en-declaraciones-de-impuestos/"),
+    ("Clara", "https://www.elfinanciero.com.mx/nacional/2026/09/18/declaracion-patrimonial-de-rafael-ojeda-revela-2-creditos-hipotecarios-pero-sin-propiedades/"),
+)
+
+
+@app.get("/ops/limpiar-contaminacion-rss-directo-4b8e6a1d")
+def _limpiar_contaminacion_rss_directo(
+    x_ingest_token: Optional[str] = Header(None),
+    token: Optional[str] = Query(None),
+    aplicar: bool = Query(False),
+) -> dict:
+    """Endpoint TEMPORAL de borrado (2026-09-20) — se elimina de este
+    archivo tras el borrado único autorizado por el operador (mismo patrón
+    que los `/ops/...` anteriores: ruta con sufijo aleatorio, protegida por
+    `X-Ingest-Token`, se borra al cerrar).
+
+    Borra EXACTAMENTE las 6 filas de `_FILAS_CONTAMINADAS_2026_09_20`
+    (empresa_mencionada + url_fuente, ambos deben coincidir), confirmadas
+    como falsos positivos del bug de subcadena de rss_fijos.py ya corregido.
+    Dry-run por defecto: solo reporta qué borraría. `?aplicar=true` ejecuta
+    el DELETE. No toca ninguna otra fila.
+    """
+    _exigir_token(x_ingest_token or token)
+    db = get_db()
+    resultados = []
+    for empresa, url in _FILAS_CONTAMINADAS_2026_09_20:
+        fila = db.fetch_one(
+            "SELECT id, cita_textual FROM evidencias "
+            "WHERE empresa_mencionada = ? AND url_fuente = ?",
+            (empresa, url))
+        if fila is None:
+            resultados.append({"empresa": empresa, "url": url, "encontrada": False})
+            continue
+        if aplicar:
+            db.execute("DELETE FROM evidencias WHERE id = ?", (fila["id"],))
+        resultados.append({
+            "empresa": empresa, "url": url, "encontrada": True,
+            "id": fila["id"], "borrada": bool(aplicar),
+        })
+    return {"aplicado": aplicar, "resultados": resultados}
+
+
 def _alta(payload: ProspectoIn) -> dict:
     record = nuevo_prospecto(
         payload.nombre, payload.categoria,
