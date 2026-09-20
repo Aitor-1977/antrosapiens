@@ -698,3 +698,40 @@ pytest -q                                                # tests
    `_construir_expedientes` filtra la enorme mayoría de esas antes de que
    lleguen a `/expedientes` (100 → 4), pero el volumen real de ruido en la
    captura para este nombre es mucho mayor de lo que INDAGAR expone hoy.
+4. **Techo estructural real de `senal_primaria_*` con captura de solo
+   titular (2026-09-20) — no es un bug de clasificación.** Confirmado
+   empíricamente contra las 23 evidencias reales de los 5 candidatos
+   activos sin evidencia primaria (Mundi 4, Palenca 6, Zubale 19, Trace
+   Finance 2, Clara 11 al momento de la revisión — total 23 tras dedup de
+   duplicados de RSS): 0 casos de `senal_primaria_autodeclaracion` o
+   `senal_primaria_huella_practica` detectables en el texto disponible;
+   el 100% cae en `contextual`. Dos causas, ninguna corregible ajustando
+   el regex de `clasificacion_epistemologica.py`:
+   - **Captura de solo titular (Fase 1).** `cita_textual` es siempre el
+     TITULAR (10–15 palabras), nunca el cuerpo del artículo. Revisados los
+     23 titulares uno por uno: ninguno contiene una declaración citable de
+     una persona con nombre y cargo (son anuncios factuales de tercera
+     persona: "X levanta Y millones", "X nombra a Y", "X cierra alianza
+     con Z"). El único caso con comillas reales (Zubale, "'El principal
+     reto es que el retail impulse ventas en línea': Zubale") atribuye la
+     cita a la marca, no a una persona nombrada: genuinamente
+     inatribuible desde el titular, no un fallo del patrón de atribución.
+   - **`origen_declaracion='operador'` reservado estructuralmente a job
+     boards.** `senal_primaria_huella_practica` exige ese valor
+     (`clasificacion_epistemologica.py:1043`), y por diseño ya declarado
+     en este documento ("un feed de prensa ⇒ prensa; un job board ⇒ el
+     que corresponda por estructura") ningún conector de prensa (Google
+     News, GDELT, RSS fijos — 3 de los 4 de Fase 1) puede producirlo jamás.
+     Un titular como "Clara nombra a Cristina Cacho directora regional en
+     México" es, en espíritu, un acto publicado por la propia
+     organización (huella_practica), pero llega vía prensa, no vía job
+     board, así que estructuralmente nunca puede clasificarse como tal.
+     Ninguno de los 5 candidatos tiene evidencia de job boards.
+
+   **Este es el techo estructural real del pipeline actual, no un bug de
+   clasificación.** Pendiente de decisión futura del operador (Mario),
+   NO decidido ni implementado en esta entrada: si vale la pena capturar
+   el cuerpo completo del artículo en vez de solo el titular, o ampliar
+   qué conectores pueden producir `origen_declaracion='operador'`.
+   `clasificacion_epistemologica.py` NO se tocó como parte de este
+   diagnóstico.
