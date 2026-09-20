@@ -1,8 +1,14 @@
 """Pruebas del endpoint temporal de solo lectura
 GET /ops/diag-conector-mundi-3381536e7e77d2de (encargo de Mario 2026-09-20).
-Nunca escribe: solo expone el campo `connector` de las 3 evidencias reales de
-"Mundi" sin ninguna mención de "Mundi" en su titular, para decidir el alcance
-de la Guardia 2 de identidad.
+Nunca escribe: solo expone el campo `connector` de TODAS las evidencias de
+"Mundi", para decidir el alcance de la Guardia 2 de identidad.
+
+Primera versión de este endpoint filtraba por `cita_textual` exacto y no
+devolvía nada en producción real: el valor real incluye el sufijo del medio
+("El fuego del ébola - Substack"), distinto del texto sin sufijo usado en el
+filtro. Corregido a devolver TODAS las evidencias de la organización, sin
+depender de un match exacto de texto — `test_no_depende_de_match_exacto_de_texto`
+reproduce exactamente ese bug.
 """
 import importlib
 
@@ -56,13 +62,28 @@ def test_expone_connector_de_las_3_evidencias_conocidas(cli, db):
     assert conectores == {"busqueda_dinamica_founder"}
 
 
-def test_no_incluye_evidencias_de_otras_organizaciones_ni_otras_citas(cli, db):
-    _sembrar(db, 1, cita_textual="El fuego del ébola", connector="busqueda_dinamica_founder")
+def test_no_incluye_evidencias_de_otras_organizaciones(cli, db):
+    _sembrar(db, 1, cita_textual="El fuego del ébola - Substack", connector="busqueda_dinamica_founder")
     _sembrar(db, 2, cita_textual="Mundi anuncia una ronda de inversión", connector="google_news")
-    _sembrar(db, 3, cita_textual="El fuego del ébola", connector="gdelt", empresa="Acme")
+    _sembrar(db, 3, cita_textual="El fuego del ébola - Substack", connector="gdelt", empresa="Acme")
+
+    r = cli.get(RUTA, headers=H)
+    assert r.status_code == 200
+    d = r.json()
+    assert d["total"] == 2
+    conectores = {ev["connector"] for ev in d["evidencias"]}
+    assert conectores == {"busqueda_dinamica_founder", "google_news"}
+
+
+def test_no_depende_de_match_exacto_de_texto(cli, db):
+    """Reproduce el bug real de la primera versión: el texto real incluye el
+    sufijo del medio, distinto del texto 'limpio' que se conocía de
+    antemano. El endpoint debe encontrar la fila de todas formas."""
+    _sembrar(db, 1, cita_textual="El fuego del ébola - Substack",
+             connector="busqueda_dinamica_founder")
 
     r = cli.get(RUTA, headers=H)
     assert r.status_code == 200
     d = r.json()
     assert d["total"] == 1
-    assert d["evidencias"][0]["connector"] == "busqueda_dinamica_founder"
+    assert d["evidencias"][0]["cita_textual"] == "El fuego del ébola - Substack"
