@@ -766,3 +766,34 @@ pytest -q                                                # tests
    sigue en la lista sin cambios (no se investigó su estado en esta entrada).
    Ninguno de los tres se intentó evadir (sin JS, sin headless browser, sin
    reversar el token): si algún día abren, basta con reintentar la misma URL.
+6. **Filtro de mención literal de `rss_fijos.py` produce falsos positivos con
+   nombres cortos que son subcadena de una palabra común (2026-09-20).**
+   Confirmado en producción al correr la ampliación de RSS directo sobre
+   Mundi y Clara: el filtro (`objetivo in _normalizar_texto(titulo+resumen)`,
+   documentado desde Fase 1 como "coincidencia literal de subcadena", sin
+   límites de palabra) admitió titulares que NO son sobre esas
+   organizaciones porque "mundi" es subcadena literal de "mundial" (p. ej.
+   "...otros gigantes **mundi**ales", "...para entrar al futbol **mundi**al")
+   y "clara" es subcadena literal de "de**clara**ción"/"a**clara**" (p. ej.
+   "Esto dijo Clara Brugada" vía "de**clara**ciones de impuestos",
+   "**de**clara**ción** patrimonial de Rafael Ojeda"). Resultado real: las 6
+   evidencias nuevas que este filtro escribió para Mundi (3) y Clara (3) al
+   correr contra DPL News/Expansión/El Financiero eran, las 6, ruido sin
+   relación con esas organizaciones — 0 relevantes, así que la clasificación
+   epistemológica resultante (0 `senal_primaria_*`) es correcta pero por la
+   razón equivocada: no hay evidencia real que clasificar, no que la
+   evidencia real carezca de declaración citable. El caso "Clara Brugada" ya
+   tiene guardia en la CAPA DE LECTURA (`_construir_expedientes`, Guardia 1,
+   "Frontera de Interpretación"), que sí impide que estas filas contaminen
+   `/expedientes` — verificado, no aparecen ahí. El caso "mundi"⊂"mundial"
+   NO tiene ninguna guardia hoy (no es un patrón de nombre-pegado-a-nombre,
+   es subcadena dentro de una palabra distinta) y tampoco se sabe si
+   `_construir_expedientes` lo excluye por otra vía (no verificado en esta
+   entrada; las filas no aparecieron bajo "Mundi" en `/expedientes`, pero no
+   se confirmó el mecanismo exacto). Las 6 filas de ruido siguen en
+   `evidencias` (nunca se borran sin autorización explícita del operador
+   sobre una tabla de producción). Sin solución determinista propuesta
+   todavía (candidata obvia: exigir límite de palabra, `\bMundi\b`, igual
+   que ya hace `clasificacion_epistemologica._ocurrencias_org`, pero eso es
+   un cambio a `rss_fijos.py` fuera del alcance de este encargo — pendiente
+   de decisión del operador).
