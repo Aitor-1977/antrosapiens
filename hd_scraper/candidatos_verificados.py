@@ -10,7 +10,10 @@ de `promocion_candidatos.py` / `promocion_store.py`.
 """
 from __future__ import annotations
 
-from .friccion import existe_friccion
+from .friccion import score_relevancia
+from .freshness import score_freshness
+
+UMBRAL_SCORE_RELEVANCIA = 40
 
 # Orden de prioridad determinista cuando un expediente tiene más de una
 # evidencia primaria: autodeclaración (máxima autoridad) antes que huella
@@ -46,17 +49,24 @@ def listar_candidatos_verificados(
     Filtrado territorial: excluye organizaciones cuyo `prospectos.pais`
     (resuelto por nombre exacto) esté declarado y no sea `PAIS_PERMITIDO`.
 
-    Visibilidad (autorizado por el operador —Mario—, 2026-09-19/20, ver
-    CLAUDE.md "Frontera de Interpretación"): cada expediente se etiqueta
-    `visibilidad` ("visible" | "latente") según `friccion.existe_friccion` —
-    NO se toca `estado` en la base ni la lógica de `promocion_candidatos.py`,
+    Visibilidad (autorizado por el operador —Mario—, 2026-09-19/20, score
+    gradual el 2026-09-20, ver CLAUDE.md "Frontera de Interpretación"): cada
+    expediente se etiqueta `visibilidad` ("visible" | "latente") según DOS
+    scores independientes, ninguno sustituye al otro: `score_relevancia`
+    (densidad de lenguaje de fricción, `friccion.score_relevancia`, sobre
+    TODAS las evidencias de la organización) y `score_freshness`
+    (antigüedad de la evidencia PRIMARIA seleccionada más abajo —NUNCA la
+    evidencia más reciente de la organización—, `freshness.score_freshness`).
+    `visible` solo si `score_relevancia >= UMBRAL_SCORE_RELEVANCIA` Y
+    `score_freshness > 0`, ambas condiciones a la vez, nunca un promedio. NO
+    se toca `estado` en la base ni la lógica de `promocion_candidatos.py`,
     solo se decide qué se expone como tarjeta en esta capa de lectura. Por
     defecto (`estado_visibilidad="visible"`) el resultado excluye los
-    "latente"; con `estado_visibilidad="todos"` se devuelven ambos, para que
-    el operador pueda inspeccionar los latentes sin consultar la base directo.
-    El límite se aplica DESPUÉS de filtrar por visibilidad (se sobre-consulta
-    la tabla, igual que `_construir_expedientes`), para no devolver menos de
-    lo pedido solo porque algunos candidatos del rango quedaron latentes.
+    "latente"; con `estado_visibilidad="todos"` se devuelven ambos, con los
+    dos scores visibles para auditoría. El límite se aplica DESPUÉS de
+    filtrar por visibilidad (se sobre-consulta la tabla, igual que
+    `_construir_expedientes`), para no devolver menos de lo pedido solo
+    porque algunos candidatos del rango quedaron latentes.
     """
     expedientes = db.fetch_all(
         "SELECT ec.id, ec.organizacion, p.categoria AS categoria_prospecto "
@@ -93,7 +103,13 @@ def listar_candidatos_verificados(
         # sin fila en prospectos, cae a la categoria de la propia evidencia
         # (la etiqueta de la consulta que la capturó).
         categoria = exp["categoria_prospecto"] or ev["categoria_evidencia"] or ""
-        visible = existe_friccion(db, exp["organizacion"])
+        relevancia = score_relevancia(db, exp["organizacion"])
+        # SIEMPRE sobre la evidencia PRIMARIA de esta fila (ev), nunca sobre
+        # la evidencia más reciente de la organización: una nota nueva pero
+        # irrelevante no debe rejuvenecer un expediente cuya evidencia
+        # primaria es vieja.
+        freshness = score_freshness(ev["fecha_publicacion"])
+        visible = relevancia >= UMBRAL_SCORE_RELEVANCIA and freshness > 0
         if estado_visibilidad != "todos" and not visible:
             continue
         resultado.append({
@@ -106,6 +122,8 @@ def listar_candidatos_verificados(
             "fecha_publicacion": ev["fecha_publicacion"],
             "persona_citada": ev["persona_citada"],
             "cargo": ev["cargo"],
+            "score_relevancia": relevancia,
+            "score_freshness": freshness,
             "visibilidad": "visible" if visible else "latente",
         })
         if len(resultado) >= limite:

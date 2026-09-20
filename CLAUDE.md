@@ -265,32 +265,47 @@ SOLO sobre datos ya extraídos por este mismo motor; sin IA, sin juicio libre):
   capital/etapa/fecha de ronda).
 - **Visibilidad del Radar condicionada a fricción documentada (Capa 0 · gate
   de exhibición)** (autorizado por el operador —Mario— el 2026-09-19,
-  variantes verbales del vocabulario el 2026-09-20): AMPLIACIÓN de la
-  Receptividad Epistemológica ya admitida (misma doctrina de vocabulario
-  cerrado, determinista, sin IA, sin red), aplicada aquí no como triage de
-  prioridad sino como condición de EXHIBICIÓN en `/verificados`. Una
+  variantes verbales del vocabulario el 2026-09-20, **score gradual el
+  2026-09-20**): AMPLIACIÓN de la Receptividad Epistemológica ya admitida
+  (misma doctrina de vocabulario cerrado, determinista, sin IA, sin red),
+  aplicada aquí como condición de EXHIBICIÓN en `/verificados`. Una
   organización ya promovida a `estado='candidato'` (Entrega 3, sin cambios)
-  solo se expone como tarjeta visible si, además de los filtros ya vigentes
-  (país, categoría), existe en su propia evidencia ya extraída al menos un
-  marcador léxico cerrado de fricción real — 15 palabras y sus variantes
-  verbales obvias (churn; cancelación/cancelled/canceled/canceló; downgrade;
-  no renovó; discontinued/discontinuó; degradación/degradó; conflicto;
-  disputa/dispute; perdió tracción; stalled) — cuyo sujeto gramatical, por
-  posición dentro de la misma oración, sea la propia organización y no un
-  tercero mencionado en la misma nota (p. ej. "el proveedor X canceló su
-  contrato con Acme" no cuenta para Acme: la organización aparece DESPUÉS del
-  marcador, como objeto, no como sujeto). Sin fricción detectada, el
-  expediente permanece `candidato` en la base tal cual (no se toca `estado`,
-  no se toca `promocion_candidatos.py` ni `clasificacion_epistemologica.py`):
-  solo se le calcula, en la capa de lectura de `/verificados`, un campo
-  derivado `visibilidad` (`visible`|`latente`). Por defecto `/verificados`
-  devuelve solo los `visible`; `?estado_visibilidad=todos` expone también los
-  `latente`, para que el operador los inspeccione sin consultar la base
-  directo. NUNCA declara Deuda Cultural™ ni decide ni ejecuta acción
-  comercial: solo dice si hay evidencia textual de fricción ya extraída.
-  Implementación: `hd_scraper/friccion.py` (detección) y
-  `hd_scraper/candidatos_verificados.py` (aplicación, exclusiva en la capa de
-  lectura de `/verificados`).
+  se evalúa con DOS scores independientes, ninguno sustituye al otro:
+  **`score_relevancia`** = `min(100, conteo_oraciones_con_friccion_valida *
+  20)`, donde el conteo recorre TODAS las evidencias ya extraídas de esa
+  organización buscando el vocabulario cerrado de 15 palabras y sus
+  variantes verbales obvias (churn; cancelación/cancelled/canceled/canceló;
+  downgrade; no renovó; discontinued/discontinuó; degradación/degradó;
+  conflicto; disputa/dispute; perdió tracción; stalled), con la misma
+  guardia de sujeto por posición dentro de la oración que la versión
+  booleana anterior (un tercero mencionado en la misma nota nunca cuenta:
+  p. ej. "el proveedor X canceló su contrato con Acme" no cuenta para Acme,
+  que aparece DESPUÉS del marcador, como objeto, no como sujeto); y
+  **`score_freshness`** = `max(0, 100 - (dias_desde_fecha_publicacion / 180
+  * 100))`, calculado **SIEMPRE sobre la evidencia PRIMARIA** ya
+  seleccionada por `candidatos_verificados.py` (autodeclaración o huella
+  práctica) — **NUNCA sobre la evidencia más reciente de la organización**:
+  una nota nueva pero irrelevante para la promoción no debe "rejuvenecer" un
+  expediente cuya evidencia primaria es vieja. Una evidencia primaria
+  `no_fechado` vale **0** de freshness, nunca 100. Regla de visibilidad:
+  `visible` solo si `score_relevancia >= 40` **Y** `score_freshness > 0` —
+  ambas condiciones a la vez, nunca un promedio. `existe_friccion()` se
+  conserva como wrapper trivial (`score_relevancia(...) > 0`) para no romper
+  ningún consumidor ya desplegado. Sin relevancia o sin frescura suficiente,
+  el expediente permanece `candidato` en la base tal cual (no se toca
+  `estado`, no se toca `promocion_candidatos.py` ni
+  `clasificacion_epistemologica.py`): solo cambian los campos derivados
+  `score_relevancia`/`score_freshness`/`visibilidad` en la capa de lectura
+  de `/verificados`. **INDAGAR (`/expedientes`, Nivel 0) NO aplica este
+  filtro** — sigue mostrando todo lo que entra por scoring A/B/C, sin
+  cambios. Por defecto `/verificados` devuelve solo los `visible`;
+  `?estado_visibilidad=todos` expone también los `latente`, con ambos
+  scores visibles para auditoría. NUNCA declara Deuda Cultural™ ni decide ni
+  ejecuta acción comercial. Implementación: `hd_scraper/friccion.py`
+  (`score_relevancia`, `existe_friccion` como wrapper),
+  `hd_scraper/freshness.py` (`score_freshness`, nuevo módulo) y
+  `hd_scraper/candidatos_verificados.py` (aplicación, exclusiva en la capa
+  de lectura de `/verificados`).
 
 **Exclusivo de RadarHD (JAMÁS aquí):**
 
@@ -308,9 +323,10 @@ estructural preliminar de Deuda sobre el discurso corporativo),
 organización) y `hd_scraper/clasificacion_epistemologica.py` +
 `hd_scraper/clasificacion_store.py` (clasificación epistemológica de la
 evidencia), `hd_scraper/receptividad.py` (Receptividad Epistemológica para
-Capa 0, priorización por triage) y `hd_scraper/friccion.py` (gate de
-visibilidad del Radar por fricción documentada). No reproducir esa lógica en
-otros módulos.
+Capa 0, priorización por triage), `hd_scraper/friccion.py` (score de
+relevancia por fricción documentada) y `hd_scraper/freshness.py` (score de
+frescura de la evidencia primaria) — ambos gatean la visibilidad del Radar en
+`/verificados`. No reproducir esa lógica en otros módulos.
 
 **Regla de ampliación:** cualquier ampliación futura de interpretación en este
 repo exige actualizar **esta misma sección ANTES de escribir código**. Si una
