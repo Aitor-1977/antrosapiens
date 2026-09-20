@@ -700,16 +700,21 @@ pytest -q                                                # tests
    captura para este nombre es mucho mayor de lo que INDAGAR expone hoy.
 4. **Techo estructural real de `senal_primaria_*` con captura de solo
    titular (2026-09-20) — no es un bug de clasificación.** Confirmado
-   empíricamente contra las 23 evidencias reales de los 5 candidatos
-   activos sin evidencia primaria (Mundi 4, Palenca 6, Zubale 19, Trace
-   Finance 2, Clara 11 al momento de la revisión — total 23 tras dedup de
-   duplicados de RSS): 0 casos de `senal_primaria_autodeclaracion` o
-   `senal_primaria_huella_practica` detectables en el texto disponible;
-   el 100% cae en `contextual`. Dos causas, ninguna corregible ajustando
+   empíricamente contra las 42 evidencias reales (40 URLs únicas, Palenca
+   trae 2 pares duplicados de RSS) de los 5 candidatos activos sin
+   evidencia primaria (Mundi 4, Palenca 6, Zubale 19, Trace Finance 2,
+   Clara 11 al momento de la revisión): 0 casos de
+   `senal_primaria_autodeclaracion` o `senal_primaria_huella_practica`
+   detectables en el texto disponible; el 100% cae en `contextual`.
+   **Corrección (mismo día):** una respuesta anterior de esta sesión citó
+   "23 evidencias" de memoria sin re-verificar contra la base; el conteo
+   real, recalculado directo de `/expedientes`, es 42 filas / 40 URLs
+   únicas. Se corrige aquí para que el número documentado sea el
+   verificado, no el recordado. Dos causas, ninguna corregible ajustando
    el regex de `clasificacion_epistemologica.py`:
    - **Captura de solo titular (Fase 1).** `cita_textual` es siempre el
      TITULAR (10–15 palabras), nunca el cuerpo del artículo. Revisados los
-     23 titulares uno por uno: ninguno contiene una declaración citable de
+     42 titulares uno por uno: ninguno contiene una declaración citable de
      una persona con nombre y cargo (son anuncios factuales de tercera
      persona: "X levanta Y millones", "X nombra a Y", "X cierra alianza
      con Z"). El único caso con comillas reales (Zubale, "'El principal
