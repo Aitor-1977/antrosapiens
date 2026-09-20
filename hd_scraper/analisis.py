@@ -21,6 +21,18 @@ from __future__ import annotations
 
 from typing import Optional
 
+from .receptividad import CAPITAL_TECHO
+
+# Segunda banda de penalización por escala del ICP (autorizado por el
+# operador, 2026-09-20: "corregir el cálculo de ICP para que penalice
+# escala excesiva, no solo mida notoriedad/volumen de menciones"). Por
+# encima de este monto la organización ya no es una Serie A tardía sino de
+# escala unicornio. CAPITAL_TECHO (15 millones) se REUTILIZA tal cual de
+# receptividad.py: es la MISMA doctrina ya declarada por el operador ("el
+# capital deja de ser habilitador y pasa a ser barrera"), no un número
+# nuevo inventado aquí; solo este umbral superior es nuevo.
+CAPITAL_ICP_UMBRAL_UNICORNIO = 100_000_000
+
 # Verticales dependientes de contexto que le interesan a HD (perfil ideal).
 VERTICALES_HD_SET = {
     "fintech", "edtech", "healthtech", "salud mental", "logística agrícola",
@@ -303,12 +315,17 @@ def analizar(
     confianza: float = 0.0,
     calidad: str = "Baja",
     categoria: Optional[str] = None,
+    capital_acumulado_usd: Optional[float] = None,
 ) -> dict:
     """Convierte señales capturadas en análisis profundo (determinista).
 
     El Interés Analítico (score_icp) se calcula cruzando la PROFUNDIDAD del
     dolor detectado con el perfil de la vertical. No se basa en lo llamativo
     del titular, sino en la profundidad de la fricción estructural.
+
+    ``capital_acumulado_usd`` (opcional, DECLARADO por el operador, nunca
+    inferido de texto) topa score_icp cuando supera CAPITAL_TECHO o
+    CAPITAL_ICP_UMBRAL_UNICORNIO; ``None`` no penaliza nada.
 
     Devuelve dict con scoring, tipo_deuda, deuda_razon, score_icp, decisor,
     viabilidad, profundidad_dolor y razon.
@@ -378,6 +395,27 @@ def analizar(
     if categoria is not None and categoria != "Startup":
         score_icp = 0
 
+    # Penalización por escala excesiva (autorizado por el operador,
+    # 2026-09-20): score_icp medía profundidad de la señal y encaje de
+    # vertical, pero nunca el tamaño real de la organización — un unicornio
+    # con señales de dolor genuinas (recortes, restructuración) puntuaba
+    # igual o más alto que una Serie A temprana con el mismo patrón, aunque
+    # esté muy fuera de la ventana de intervención de HD (Seed a Serie A,
+    # 1.5 a 10 millones de dólares). ``capital_acumulado_usd`` es un dato
+    # DECLARADO por el operador (``prospectos.capital_acumulado_usd``),
+    # nunca inferido de texto libre por este módulo. Se aplica como TECHO
+    # (``min``), nunca puede subir un score_icp ya más bajo. ``None`` (el
+    # caso de hoy para toda organización sin este campo declarado) no
+    # penaliza nada: el comportamiento previo a este cambio queda intacto.
+    penalizado_por_escala = False
+    if capital_acumulado_usd is not None:
+        if capital_acumulado_usd > CAPITAL_ICP_UMBRAL_UNICORNIO:
+            score_icp = min(score_icp, 20)
+            penalizado_por_escala = True
+        elif capital_acumulado_usd > CAPITAL_TECHO:
+            score_icp = min(score_icp, 55)
+            penalizado_por_escala = True
+
     vert_hd = vert in VERTICALES_HD_SET
     viabilidad = _calcular_viabilidad(scoring, profundidad, hay_dolor, vert_hd)
 
@@ -393,6 +431,10 @@ def analizar(
         partes.append(f"vertical HD «{vert}»")
     partes.append(f"profundidad {profundidad}")
     partes.append(f"confianza captura {confianza:.2f}")
+    if capital_acumulado_usd is not None:
+        partes.append(f"capital acumulado ${capital_acumulado_usd:,.0f}")
+        if penalizado_por_escala:
+            partes.append("score_icp topado por escala excesiva")
     razon = "; ".join(partes) + "."
 
     return {

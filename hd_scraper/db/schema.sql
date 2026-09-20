@@ -82,6 +82,11 @@ CREATE TABLE IF NOT EXISTS prospectos (
     -- Escala/tamaño: parámetro estructural OBLIGATORIO extraído de la fuente
     -- orgánica. 'indeterminada' cuando la fuente no lo declara (patrón no_fechado).
     escala                TEXT NOT NULL DEFAULT 'indeterminada',
+    -- Capital acumulado detectado, en USD (autorizado por el operador,
+    -- 2026-09-20, ajuste de penalización por escala del ICP). DECLARADO por
+    -- el operador al alta/edición del prospecto, NUNCA inferido de texto
+    -- libre por este motor: NULL cuando no se ha declarado (no penaliza).
+    capital_acumulado_usd REAL,
     -- Metadatos
     hash_dedup            TEXT NOT NULL UNIQUE,  -- sha256(nombre normalizado + categoria)
     creado_en             TEXT NOT NULL,

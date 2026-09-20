@@ -76,6 +76,11 @@ CREATE TABLE IF NOT EXISTS prospectos (
     fecha_captura         TEXT,
     -- Escala/tamaño: parámetro estructural OBLIGATORIO desde fuente orgánica.
     escala                TEXT NOT NULL DEFAULT 'indeterminada',
+    -- Capital acumulado detectado, en USD (autorizado por el operador,
+    -- 2026-09-20, ajuste de penalización por escala del ICP). DECLARADO por
+    -- el operador al alta/edición del prospecto, NUNCA inferido de texto
+    -- libre por este motor: NULL cuando no se ha declarado (no penaliza).
+    capital_acumulado_usd DOUBLE PRECISION,
     hash_dedup            TEXT NOT NULL UNIQUE,
     creado_en             TEXT NOT NULL,
     actualizado_en        TEXT NOT NULL,
@@ -88,6 +93,7 @@ ALTER TABLE prospectos ADD COLUMN IF NOT EXISTS sitio_web TEXT;
 ALTER TABLE prospectos ADD COLUMN IF NOT EXISTS linkedin  TEXT;
 ALTER TABLE prospectos ADD COLUMN IF NOT EXISTS escala    TEXT NOT NULL DEFAULT 'indeterminada';
 ALTER TABLE prospectos ADD COLUMN IF NOT EXISTS pais      TEXT;
+ALTER TABLE prospectos ADD COLUMN IF NOT EXISTS capital_acumulado_usd DOUBLE PRECISION;
 
 CREATE INDEX IF NOT EXISTS idx_prospectos_categoria ON prospectos (categoria);
 CREATE INDEX IF NOT EXISTS idx_prospectos_nombre    ON prospectos (nombre);

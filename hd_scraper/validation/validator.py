@@ -116,4 +116,7 @@ def validate_prospecto(record: ProspectoRecord) -> ValidationResult:
     if record.fecha_captura and not _es_iso8601(record.fecha_captura):
         return ValidationResult(False, motivo="fecha_captura_no_iso8601")
 
+    if record.capital_acumulado_usd is not None and record.capital_acumulado_usd < 0:
+        return ValidationResult(False, motivo="capital_acumulado_usd_negativo")
+
     return ValidationResult(True, estado=ESTADO_OK)

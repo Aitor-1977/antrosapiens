@@ -77,6 +77,37 @@ def test_prospecto_invalido_va_a_rechazos(db):
     assert db.fetch_one("SELECT COUNT(*) n FROM rechazos WHERE connector='prospecto'")["n"] == 1
 
 
+def test_capital_acumulado_usd_se_declara_y_persiste(db):
+    upsert_prospecto(db, nuevo_prospecto("Trace Finance", "Startup",
+                                         capital_acumulado_usd=32_000_000))
+    row = db.fetch_one("SELECT capital_acumulado_usd FROM prospectos WHERE nombre='Trace Finance'")
+    assert row["capital_acumulado_usd"] == 32_000_000
+
+
+def test_capital_acumulado_usd_ausente_por_defecto_es_none(db):
+    upsert_prospecto(db, nuevo_prospecto("Mundi", "Startup"))
+    row = db.fetch_one("SELECT capital_acumulado_usd FROM prospectos WHERE nombre='Mundi'")
+    assert row["capital_acumulado_usd"] is None
+
+
+def test_capital_acumulado_usd_no_se_borra_con_none(db):
+    upsert_prospecto(db, nuevo_prospecto("Jüsto", "Startup",
+                                         capital_acumulado_usd=217_000_000))
+    # Re-alta sin declarar capital: COALESCE conserva el monto ya declarado.
+    upsert_prospecto(db, nuevo_prospecto("Jüsto", "Startup"))
+    row = db.fetch_one("SELECT capital_acumulado_usd FROM prospectos WHERE nombre='Jüsto'")
+    assert row["capital_acumulado_usd"] == 217_000_000
+
+
+def test_capital_acumulado_usd_se_actualiza_con_nuevo_valor(db):
+    upsert_prospecto(db, nuevo_prospecto("Zubale", "Startup",
+                                         capital_acumulado_usd=40_000_000))
+    upsert_prospecto(db, nuevo_prospecto("Zubale", "Startup",
+                                         capital_acumulado_usd=65_000_000))
+    row = db.fetch_one("SELECT capital_acumulado_usd FROM prospectos WHERE nombre='Zubale'")
+    assert row["capital_acumulado_usd"] == 65_000_000
+
+
 def test_categoria_distinta_es_otro_prospecto(db):
     # Mismo nombre pero distinta categoria => hash distinto => dos prospectos.
     upsert_prospecto(db, nuevo_prospecto("Globant", "Corporativo"))

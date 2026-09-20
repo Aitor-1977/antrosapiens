@@ -151,6 +151,7 @@ class Database:
             self._migrar_expediente_id_nullable()
             self._migrar_resumen_fuente()
             self._migrar_pais_prospecto()
+            self._migrar_capital_acumulado()
             self.conn.commit()
             return
         # Postgres: se corre una sola vez por proceso, dentro del lock del
@@ -169,6 +170,7 @@ class Database:
                 self._migrar_expediente_id_nullable()
                 self._migrar_resumen_fuente()
                 self._migrar_pais_prospecto()
+                self._migrar_capital_acumulado()
             finally:
                 del self.conn
 
@@ -182,6 +184,22 @@ class Database:
         """
         try:
             self.conn.execute("ALTER TABLE prospectos ADD COLUMN pais TEXT")
+        except Exception:
+            pass
+
+    def _migrar_capital_acumulado(self) -> None:
+        """Migración idempotente (2026-09-20, ajuste de penalización por
+        escala del ICP): añade ``prospectos.capital_acumulado_usd`` a bases
+        persistentes previas a esta ampliación. El ALTER es un no-op cuando
+        la columna ya existe. NULL para las filas ya sembradas hasta que el
+        operador lo declare a mano (o vía ``POST /prospectos``): sin este
+        dato, ``analizar()`` no aplica ninguna penalización, igual que antes
+        de este cambio.
+        """
+        try:
+            self.conn.execute(
+                "ALTER TABLE prospectos ADD COLUMN capital_acumulado_usd "
+                + ("DOUBLE PRECISION" if self.dialect == "postgres" else "REAL"))
         except Exception:
             pass
 
