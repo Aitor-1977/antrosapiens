@@ -296,9 +296,11 @@ SOLO sobre datos ya extraídos por este mismo motor; sin IA, sin juicio libre):
   `estado`, no se toca `promocion_candidatos.py` ni
   `clasificacion_epistemologica.py`): solo cambian los campos derivados
   `score_relevancia`/`score_freshness`/`visibilidad` en la capa de lectura
-  de `/verificados`. **INDAGAR (`/expedientes`, Nivel 0) NO aplica este
-  filtro** — sigue mostrando todo lo que entra por scoring A/B/C, sin
-  cambios. Por defecto `/verificados` devuelve solo los `visible`;
+  de `/verificados`. **INDAGAR (`/expedientes`, Nivel 0) NO aplica ESTE
+  filtro de fricción** — sigue mostrando todo lo que entra por scoring
+  A/B/C sin filtrar por fricción; SÍ aplica, desde el 2026-09-20, un filtro
+  distinto y paralelo por escala de capital (ver entrada siguiente). Por
+  defecto `/verificados` devuelve solo los `visible`;
   `?estado_visibilidad=todos` expone también los `latente`, con ambos
   scores visibles para auditoría. NUNCA declara Deuda Cultural™ ni decide ni
   ejecuta acción comercial. Implementación: `hd_scraper/friccion.py`
@@ -306,6 +308,49 @@ SOLO sobre datos ya extraídos por este mismo motor; sin IA, sin juicio libre):
   `hd_scraper/freshness.py` (`score_freshness`, nuevo módulo) y
   `hd_scraper/candidatos_verificados.py` (aplicación, exclusiva en la capa
   de lectura de `/verificados`).
+- **Penalización de score_icp por escala excesiva de capital** (autorizado
+  por el operador —Mario— el 2026-09-20): AMPLIACIÓN de la "Aplicación de
+  criterios ICP" ya admitida. Motivo: `score_icp` medía solo profundidad de
+  señal de dolor y encaje de vertical, nunca el tamaño real de la
+  organización — un unicornio (Jüsto, Nowports) con señales de dolor
+  genuinas puntuaba tan alto como una Serie A temprana con el mismo patrón,
+  muy fuera de la ventana de intervención de HD (Seed a Serie A, 1.5 a 10
+  millones de dólares). `capital_acumulado_usd` es un campo estructural
+  OPCIONAL nuevo en `prospectos`, DECLARADO por el operador (vía `/admin` o
+  `POST /prospectos`), NUNCA inferido de texto libre por este motor; `NULL`
+  (el caso de toda organización sin declararlo) no penaliza nada.
+  `analizar()` aplica un TECHO (`min`, nunca sube un score ya más bajo):
+  capital > `CAPITAL_TECHO` (15 millones, MISMO umbral ya vigente en
+  `receptividad.py`, reutilizado tal cual) topa `score_icp` a 55; capital >
+  `CAPITAL_ICP_UMBRAL_UNICORNIO` (100 millones, único número nuevo de esta
+  entrada) topa a 20. Determinista, sin IA, sin red. No decide ni ejecuta
+  acción comercial. Implementación: `hd_scraper/analisis.py` (constante y
+  lógica del techo), `hd_scraper/prospectos.py` +
+  `hd_scraper/db/models.py` (columna y escritura del campo declarado),
+  `hd_scraper/api/app.py` (`_construir_expedientes` pasa el capital
+  declarado a `analizar()`).
+- **Visibilidad de INDAGAR condicionada a escala de capital (Nivel 0 ·
+  gate paralelo, NO de fricción)** (autorizado por el operador —Mario— el
+  2026-09-20): mismo patrón visible/latente ya usado en `/verificados`
+  (entrada anterior), pero paralelo e independiente — no toca
+  `candidatos_verificados.py` ni `promocion_candidatos.py`, ni la regla de
+  fricción ya vigente ahí. Cada expediente de `_construir_expedientes` se
+  etiqueta `visibilidad` ("visible" | "latente") según
+  `capital_acumulado_usd`: `latente` solo cuando ese capital es
+  ESTRICTAMENTE MAYOR a `CAPITAL_ICP_UMBRAL_UNICORNIO` (100 millones, el
+  MISMO umbral de la entrada anterior — no se declara un segundo número
+  para la misma idea de "escala unicornio"); exactamente 100 millones se
+  mantiene `visible`. Sin capital declarado (`None`), la organización queda
+  `visible`, sin cambios frente al comportamiento previo. `GET /expedientes`
+  devuelve por defecto solo `visible`; `?estado_visibilidad=todos` expone
+  también los `latente`. Las llamadas internas ya existentes a
+  `_construir_expedientes` (dashboard, comparador, observatorio,
+  laboratorio, etc. — ninguna es INDAGAR) NO pasan este parámetro y
+  conservan el default `"todos"`: ven exactamente lo mismo que antes de
+  este cambio, sin excepción. NUNCA declara Deuda Cultural™ ni decide ni
+  ejecuta acción comercial. Implementación: `hd_scraper/api/app.py`
+  (`_construir_expedientes`, campo `visibilidad` y filtro; ruta
+  `GET /expedientes`).
 
 **Exclusivo de RadarHD (JAMÁS aquí):**
 
@@ -326,7 +371,10 @@ evidencia), `hd_scraper/receptividad.py` (Receptividad Epistemológica para
 Capa 0, priorización por triage), `hd_scraper/friccion.py` (score de
 relevancia por fricción documentada) y `hd_scraper/freshness.py` (score de
 frescura de la evidencia primaria) — ambos gatean la visibilidad del Radar en
-`/verificados`. No reproducir esa lógica en otros módulos.
+`/verificados`; y la penalización de `score_icp` por escala de capital más el
+gate paralelo de visibilidad por escala en INDAGAR (`analisis.py` +
+`_construir_expedientes` en `api/app.py`, ver entradas 2026-09-20). No
+reproducir esa lógica en otros módulos.
 
 **Regla de ampliación:** cualquier ampliación futura de interpretación en este
 repo exige actualizar **esta misma sección ANTES de escribir código**. Si una

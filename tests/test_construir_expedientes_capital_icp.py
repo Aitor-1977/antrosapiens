@@ -46,7 +46,12 @@ def _sembrar_evidencia(db, *, empresa, cita_textual, n=1):
 
 
 def _score_icp_de(cli, nombre):
-    r = cli.get("/expedientes", params={"limite": 100})
+    # estado_visibilidad="todos": estos tests verifican score_icp, no el
+    # filtro de visibilidad por escala (2026-09-20, ver
+    # test_construir_expedientes_visibilidad_escala.py) — sin esto, un
+    # unicornio declarado quedaría "latente" y ya no aparecería con el
+    # default "visible" del endpoint, rompiendo estas aserciones.
+    r = cli.get("/expedientes", params={"limite": 100, "estado_visibilidad": "todos"})
     for e in r.json()["expedientes"]:
         if e["nombre"] == nombre:
             return e
