@@ -31,6 +31,7 @@ patrón que ``rss_fijos.py``; sin cuerpo disponible, degrada al titular solo.
 """
 from __future__ import annotations
 
+import html
 import json
 from datetime import datetime, timezone
 from typing import Callable, Iterable
@@ -76,7 +77,13 @@ def _ms_a_iso(ms: int | None) -> str | None:
 def _parse_greenhouse(data: dict) -> list[dict]:
     out = []
     for j in data.get("jobs", []) if isinstance(data, dict) else []:
-        cuerpo = texto_plano(j.get("content") or "")[:MAX_CUERPO_CHARS]
+        # El campo `content` viene con entidades escapadas incluso sobre las
+        # propias etiquetas (p. ej. "&lt;div&gt;" en vez de "<div>"): un solo
+        # unescape con la stdlib revela el HTML real antes de limpiarlo con
+        # `texto_plano` (si no, sus regex de tags nunca matchean nada y las
+        # etiquetas quedan como texto literal tras el propio unescape interno
+        # de `texto_plano`).
+        cuerpo = texto_plano(html.unescape(j.get("content") or ""))[:MAX_CUERPO_CHARS]
         out.append({
             "titulo": j.get("title", ""),
             "url": j.get("absolute_url", ""),

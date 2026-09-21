@@ -67,6 +67,24 @@ def test_parse_greenhouse_extrae_cuerpo_desde_html():
     assert out[0]["cuerpo"] == "Turn insights into root causes of user friction."
 
 
+def test_parse_greenhouse_content_doblemente_escapado_caso_real():
+    """Caso real de producción (Clara, 2026-09-21): el campo `content` de la
+    API pública de Greenhouse trae las propias etiquetas escapadas como
+    entidades ("&lt;div&gt;" en vez de "<div>"). Sin un unescape previo,
+    `texto_plano` no encuentra tags reales que limpiar y su propio unescape
+    interno termina revelando las etiquetas como texto literal en
+    `cita_textual` — confirmado en vivo, degradaba la clasificación de
+    `senal_primaria_huella_practica` a `contextual`."""
+    data = {"jobs": [{
+        "title": "T", "absolute_url": "u",
+        "content": ("&lt;div&gt;&lt;p&gt;Root causes of &lt;strong&gt;user "
+                    "friction&lt;/strong&gt;.&lt;/p&gt;&lt;/div&gt;"),
+    }]}
+    out = _parse_greenhouse(data)
+    assert out[0]["cuerpo"] == "Root causes of user friction ."
+    assert "<" not in out[0]["cuerpo"] and "&lt;" not in out[0]["cuerpo"]
+
+
 def test_parse_greenhouse_sin_content_da_cuerpo_vacio():
     out = _parse_greenhouse({"jobs": [{"title": "T", "absolute_url": "u"}]})
     assert out[0]["cuerpo"] == ""
