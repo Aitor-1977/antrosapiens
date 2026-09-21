@@ -15,6 +15,19 @@ Sobre la invariante "no interpreta" (aquí es especialmente clara):
 Salud por plataforma: cada una es una sub-fuente (``job_boards:<Plataforma>``).
 Un 404 significa "ese slug no existe en esa plataforma" y NO cuenta como fallo
 de salud; un 5xx / error de red sí.
+
+**Cuerpo de la vacante (2026-09-21):** las tres plataformas exponen la
+descripción completa en el mismo endpoint público, sin fetch adicional ni
+parámetro de autenticación:
+  - **Greenhouse**: requiere ``?content=true`` en la URL; el campo ``content``
+    viene en HTML — se limpia con ``perfil_fundacional.texto_plano`` (ya
+    existente, no se reimplementa).
+  - **Lever**: ``descriptionPlain`` ya viene en texto plano en la respuesta
+    estándar (``mode=json``), sin parámetro extra.
+  - **Ashby**: ``descriptionPlain`` ya viene en texto plano en la respuesta
+    estándar, sin parámetro extra.
+``cita_textual`` pasa a ser título + cuerpo (título siempre primero), mismo
+patrón que ``rss_fijos.py``; sin cuerpo disponible, degrada al titular solo.
 """
 from __future__ import annotations
 
@@ -32,7 +45,12 @@ from ..db.models import (
     ahora_iso,
     calcular_hash_dedup,
 )
+from ..perfil_fundacional import texto_plano
 from .base import Connector
+
+# Tope de longitud del cuerpo capturado, mismo criterio que
+# ``connectors/rss_fijos.py:MAX_CUERPO_CHARS``.
+MAX_CUERPO_CHARS = 4000
 
 
 def _iso_or_none(valor: str | None) -> str | None:
@@ -58,10 +76,12 @@ def _ms_a_iso(ms: int | None) -> str | None:
 def _parse_greenhouse(data: dict) -> list[dict]:
     out = []
     for j in data.get("jobs", []) if isinstance(data, dict) else []:
+        cuerpo = texto_plano(j.get("content") or "")[:MAX_CUERPO_CHARS]
         out.append({
             "titulo": j.get("title", ""),
             "url": j.get("absolute_url", ""),
             "fecha_publicacion": _iso_or_none(j.get("updated_at")),
+            "cuerpo": cuerpo,
         })
     return out
 
@@ -69,10 +89,12 @@ def _parse_greenhouse(data: dict) -> list[dict]:
 def _parse_lever(data: list) -> list[dict]:
     out = []
     for j in data if isinstance(data, list) else []:
+        cuerpo = (j.get("descriptionPlain") or "").strip()[:MAX_CUERPO_CHARS]
         out.append({
             "titulo": j.get("text", ""),
             "url": j.get("hostedUrl", ""),
             "fecha_publicacion": _ms_a_iso(j.get("createdAt")),
+            "cuerpo": cuerpo,
         })
     return out
 
@@ -80,17 +102,19 @@ def _parse_lever(data: list) -> list[dict]:
 def _parse_ashby(data: dict) -> list[dict]:
     out = []
     for j in data.get("jobs", []) if isinstance(data, dict) else []:
+        cuerpo = (j.get("descriptionPlain") or "").strip()[:MAX_CUERPO_CHARS]
         out.append({
             "titulo": j.get("title", ""),
             "url": j.get("jobUrl") or j.get("applyUrl") or "",
             "fecha_publicacion": _iso_or_none(j.get("publishedAt") or j.get("updatedAt")),
+            "cuerpo": cuerpo,
         })
     return out
 
 
 # Plataforma -> (plantilla de URL por slug, parser)
 PLATFORMS: dict[str, tuple[str, Callable]] = {
-    "Greenhouse": ("https://boards-api.greenhouse.io/v1/boards/{slug}/jobs", _parse_greenhouse),
+    "Greenhouse": ("https://boards-api.greenhouse.io/v1/boards/{slug}/jobs?content=true", _parse_greenhouse),
     "Lever": ("https://api.lever.co/v0/postings/{slug}?mode=json", _parse_lever),
     "Ashby": ("https://api.ashbyhq.com/posting-api/job-board/{slug}", _parse_ashby),
 }
@@ -143,6 +167,7 @@ class JobBoardsConnector(Connector):
                     "link": p["url"],
                     "medio": plataforma,
                     "fecha_publicacion": p["fecha_publicacion"],
+                    "cuerpo": p.get("cuerpo", ""),
                     "empresa": query.empresa,
                     # tipo_evento estructural, no del contenido:
                     "tipo_evento": self.tipo_evento_estructural,
@@ -167,8 +192,11 @@ class JobBoardsConnector(Connector):
         m = raw.meta
         empresa = m.get("empresa", "")
         url_fuente = m.get("link") or raw.url
+        titulo = (m.get("titulo") or "").strip()
+        cuerpo = (m.get("cuerpo") or "").strip()
+        cita_textual = f"{titulo}. {cuerpo}" if cuerpo else titulo
         return EvidenceRecord(
-            cita_textual=(m.get("titulo") or "").strip(),
+            cita_textual=cita_textual,
             fecha_extraccion=ahora_iso(),
             url_fuente=url_fuente,
             nombre_medio=m.get("medio", "").strip(),

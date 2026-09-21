@@ -3,6 +3,7 @@ import json
 import httpx
 
 from hd_scraper.connectors.job_boards import (
+    MAX_CUERPO_CHARS,
     JobBoardsConnector,
     _iso_or_none,
     _ms_a_iso,
@@ -50,6 +51,73 @@ def test_parsers_por_plataforma():
     assert lv[0]["titulo"] == "T" and lv[0]["fecha_publicacion"] is not None
     ash = _parse_ashby({"jobs": [{"title": "T", "jobUrl": "u", "publishedAt": "2026-06-01T00:00:00Z"}]})
     assert ash[0]["url"] == "u"
+
+
+# --- Cuerpo completo de la vacante (2026-09-21) --------------------------
+
+def test_parse_greenhouse_extrae_cuerpo_desde_html():
+    data = {"jobs": [{
+        "title": "Global Head of Customer Happiness",
+        "absolute_url": "u",
+        "updated_at": "2026-07-01T00:00:00Z",
+        "content": "<div><p>Turn insights into <strong>root causes</strong> "
+                   "of user friction.</p></div>",
+    }]}
+    out = _parse_greenhouse(data)
+    assert out[0]["cuerpo"] == "Turn insights into root causes of user friction."
+
+
+def test_parse_greenhouse_sin_content_da_cuerpo_vacio():
+    out = _parse_greenhouse({"jobs": [{"title": "T", "absolute_url": "u"}]})
+    assert out[0]["cuerpo"] == ""
+
+
+def test_parse_lever_usa_description_plain_directo():
+    out = _parse_lever([{
+        "text": "T", "hostedUrl": "u",
+        "descriptionPlain": "Root causes of user friction, explained.",
+    }])
+    assert out[0]["cuerpo"] == "Root causes of user friction, explained."
+
+
+def test_parse_ashby_usa_description_plain_directo():
+    out = _parse_ashby({"jobs": [{
+        "title": "T", "jobUrl": "u",
+        "descriptionPlain": "Root causes of user friction, explained.",
+    }]})
+    assert out[0]["cuerpo"] == "Root causes of user friction, explained."
+
+
+def test_cuerpo_se_recorta_al_tope():
+    largo = "x" * (MAX_CUERPO_CHARS + 500)
+    out = _parse_lever([{"text": "T", "hostedUrl": "u", "descriptionPlain": largo}])
+    assert len(out[0]["cuerpo"]) == MAX_CUERPO_CHARS
+
+
+def test_normalize_cita_textual_incluye_titulo_y_cuerpo(monkeypatch):
+    def fake_get(url: str) -> str:
+        if "greenhouse" in url:
+            return json.dumps({"jobs": [{
+                "title": "Global Head of Customer Happiness",
+                "absolute_url": "https://boards.greenhouse.io/acme/jobs/9",
+                "updated_at": "2026-07-01T00:00:00Z",
+                "content": "<p>Analyzing root causes of user friction.</p>",
+            }]})
+        _raise_404(url)
+
+    c = JobBoardsConnector()
+    monkeypatch.setattr(c, "_get", fake_get)
+    items = list(c.search(QuerySpec(empresa="Acme", tipo_evento="contratacion", slug="acme")))
+    rec = c.normalize(items[0])
+    assert rec.cita_textual == (
+        "Global Head of Customer Happiness. Analyzing root causes of user friction.")
+
+
+def test_normalize_sin_cuerpo_degrada_a_solo_titulo(monkeypatch):
+    c = _connector(monkeypatch)
+    items = list(c.search(QuerySpec(empresa="Acme", tipo_evento="contratacion", slug="acme")))
+    rec = c.normalize(items[0])
+    assert rec.cita_textual == "Ingeniero Backend"
 
 
 def test_conversion_fechas():
