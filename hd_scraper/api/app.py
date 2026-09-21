@@ -46,7 +46,6 @@ from ..visibilidad import LATENTE, VISIBLE, incluir_segun_visibilidad
 from ..clasificacion_epistemologica import (
     _TOKEN as _TOKEN_NOMBRE_PROPIO,
     _es_parte_de_nombre_mas_largo,
-    clasificar,
     clasificar_atribucion,
 )
 from ..clasificacion_store import clasificar_lote
@@ -60,7 +59,6 @@ from ..contacto import dominio_de, rutas_contacto
 from ..discovery import PAISES_LATAM, REGIONES, VERTICALES_HD, queries_para, region_clause
 from ..enrich import enriquecer, google_search_url, linkedin_search_url, sugerir_vertical
 from ..pipeline import run_connector
-from ..connectors.job_boards import JobBoardsConnector
 from ..relevance import (
     _GENERICOS_SECTOR,
     _SUFIJOS_CORPORATIVOS,
@@ -478,47 +476,6 @@ def _gdelt_organizaciones_exclusivas(
         "hasta": hasta,
         "total_organizaciones_exclusivas_de_gdelt": len(organizaciones),
         "organizaciones": organizaciones,
-    }
-
-
-@app.get("/ops/job-boards-clara-una-vez-9a2f61de")
-def _job_boards_clara_una_vez(
-    x_ingest_token: Optional[str] = Header(None),
-) -> dict:
-    """Endpoint TEMPORAL de escritura (2026-09-21) — se elimina de este
-    archivo tras la corrida única que pidió el operador para verificar que
-    el conector `job_boards` (Fase 1, ya existente, sin cambios de lógica)
-    produce evidencia real al correr contra el slug de Clara en Greenhouse
-    (recién agregado a `HD_TRACKED_SLUGS`). Mismo patrón que los
-    `/ops/...` anteriores: ruta con sufijo aleatorio, protegida por
-    `X-Ingest-Token`, se borra al cerrar. Reutiliza `pipeline.run_connector`,
-    sin lógica nueva.
-    """
-    _exigir_token(x_ingest_token)
-    db = get_db()
-    with JobBoardsConnector() as conn:
-        query = QuerySpec(empresa="Clara", tipo_evento="contratacion", slug="clara")
-        res = run_connector(db, conn, query)
-    fila = db.fetch_one(
-        "SELECT id, cita_textual, empresa_mencionada, nombre_medio, "
-        "origen_declaracion, persona_citada, cargo FROM evidencias "
-        "WHERE url_fuente = ?",
-        ("https://job-boards.greenhouse.io/clara/jobs/5222043007",))
-    clasificacion_happiness = None
-    if fila is not None:
-        c = clasificar(dict(fila))
-        clasificacion_happiness = {
-            "cita_textual": fila["cita_textual"],
-            "tipo_epistemologico": c.tipo,
-            "razon": c.razon,
-        }
-    return {
-        "empresa": "Clara", "slug": "clara",
-        "vistos": res.vistos, "escritos": res.escritos,
-        "no_fechados": res.no_fechados, "duplicados": res.duplicados,
-        "rechazados": res.rechazados, "filtrados": res.filtrados,
-        "errores": res.errores,
-        "clasificacion_vacante_customer_happiness": clasificacion_happiness,
     }
 
 
