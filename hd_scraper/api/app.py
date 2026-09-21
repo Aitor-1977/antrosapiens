@@ -46,6 +46,7 @@ from ..visibilidad import LATENTE, VISIBLE, incluir_segun_visibilidad
 from ..clasificacion_epistemologica import (
     _TOKEN as _TOKEN_NOMBRE_PROPIO,
     _es_parte_de_nombre_mas_largo,
+    clasificar,
     clasificar_atribucion,
 )
 from ..clasificacion_store import clasificar_lote
@@ -476,6 +477,48 @@ def _gdelt_organizaciones_exclusivas(
         "hasta": hasta,
         "total_organizaciones_exclusivas_de_gdelt": len(organizaciones),
         "organizaciones": organizaciones,
+    }
+
+
+@app.get("/ops/barrido-clara-huella-b71c4a92")
+def _barrido_clara_huella(x_ingest_token: Optional[str] = Header(None)) -> dict:
+    """Endpoint TEMPORAL de solo lectura (2026-09-21) — se elimina de este
+    archivo tras el barrido único que pidió el operador: clasifica las 135
+    vacantes de Clara en Greenhouse (ya capturadas en `evidencias`, con el
+    titular viejo) usando `job_boards.search()`/`normalize()` en memoria (con
+    la captura de cuerpo completo ya desplegada) y `clasificar()`, sin
+    escribir nada. Devuelve solo las filas con
+    `senal_primaria_huella_practica`/`senal_primaria_autodeclaracion`
+    (REGLA DURA ya descarta el resto) para lectura manual del operador —
+    no clasifica "relevancia" ni "situación observable": eso sigue siendo
+    lectura humana, no una capa de interpretación nueva.
+    """
+    _exigir_token(x_ingest_token)
+    from ..connectors.job_boards import JobBoardsConnector
+    with JobBoardsConnector() as conn:
+        query = QuerySpec(empresa="Clara", tipo_evento="contratacion", slug="clara")
+        crudos = list(conn.search(query))
+        resultados = []
+        for raw in crudos:
+            rec = conn.normalize(raw)
+            c = clasificar({
+                "cita_textual": rec.cita_textual,
+                "empresa_mencionada": rec.empresa_mencionada,
+                "nombre_medio": rec.nombre_medio,
+                "origen_declaracion": rec.origen_declaracion,
+                "persona_citada": rec.persona_citada,
+                "cargo": rec.cargo,
+            })
+            if c.tipo in ("senal_primaria_huella_practica", "senal_primaria_autodeclaracion"):
+                resultados.append({
+                    "url": rec.url_fuente,
+                    "cita_textual": rec.cita_textual,
+                    "tipo_epistemologico": c.tipo,
+                })
+    return {
+        "total_vacantes": len(crudos),
+        "con_senal_primaria": len(resultados),
+        "resultados": resultados,
     }
 
 
