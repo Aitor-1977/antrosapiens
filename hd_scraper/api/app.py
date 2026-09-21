@@ -59,6 +59,7 @@ from ..contacto import dominio_de, rutas_contacto
 from ..discovery import PAISES_LATAM, REGIONES, VERTICALES_HD, queries_para, region_clause
 from ..enrich import enriquecer, google_search_url, linkedin_search_url, sugerir_vertical
 from ..pipeline import run_connector
+from ..connectors.job_boards import JobBoardsConnector
 from ..relevance import (
     _GENERICOS_SECTOR,
     _SUFIJOS_CORPORATIVOS,
@@ -476,6 +477,33 @@ def _gdelt_organizaciones_exclusivas(
         "hasta": hasta,
         "total_organizaciones_exclusivas_de_gdelt": len(organizaciones),
         "organizaciones": organizaciones,
+    }
+
+
+@app.get("/ops/job-boards-clara-una-vez-9a2f61de")
+def _job_boards_clara_una_vez(
+    x_ingest_token: Optional[str] = Header(None),
+) -> dict:
+    """Endpoint TEMPORAL de escritura (2026-09-21) — se elimina de este
+    archivo tras la corrida única que pidió el operador para verificar que
+    el conector `job_boards` (Fase 1, ya existente, sin cambios de lógica)
+    produce evidencia real al correr contra el slug de Clara en Greenhouse
+    (recién agregado a `HD_TRACKED_SLUGS`). Mismo patrón que los
+    `/ops/...` anteriores: ruta con sufijo aleatorio, protegida por
+    `X-Ingest-Token`, se borra al cerrar. Reutiliza `pipeline.run_connector`,
+    sin lógica nueva.
+    """
+    _exigir_token(x_ingest_token)
+    db = get_db()
+    with JobBoardsConnector() as conn:
+        query = QuerySpec(empresa="Clara", tipo_evento="contratacion", slug="clara")
+        res = run_connector(db, conn, query)
+    return {
+        "empresa": "Clara", "slug": "clara",
+        "vistos": res.vistos, "escritos": res.escritos,
+        "no_fechados": res.no_fechados, "duplicados": res.duplicados,
+        "rechazados": res.rechazados, "filtrados": res.filtrados,
+        "errores": res.errores,
     }
 
 
