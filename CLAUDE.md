@@ -541,6 +541,15 @@ certificados; ampliar cobertura de fuentes reales fuera del entorno con proxy.
    probado. `tipo_evento=contratacion` y `origen_declaracion=operador` son
    ESTRUCTURALES (una vacante publicada por la empresa). Salud por plataforma;
    un 404 = "ese slug no está en esa plataforma", no cuenta como fallo.
+   **Cuerpo completo de la vacante (2026-09-21, cierra el hueco de "Errores
+   recurrentes" #4 para esta fuente):** confirmado que las tres plataformas
+   exponen la descripción completa en el mismo endpoint público, sin
+   autenticación — Greenhouse con `?content=true` (HTML, limpiado con
+   `perfil_fundacional.texto_plano`, ya existente, no reimplementado); Lever y
+   Ashby con `descriptionPlain` ya en texto plano en la respuesta estándar,
+   sin parámetro extra. `cita_textual` pasa a ser título + cuerpo, mismo
+   patrón que `rss_fijos.py`; sin cuerpo disponible, degrada al titular solo.
+   Implementación: `hd_scraper/connectors/job_boards.py`.
 
 **Fase 1 COMPLETA.** Los 4 conectores funcionan de punta a punta.
 
