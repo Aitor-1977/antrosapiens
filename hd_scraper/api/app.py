@@ -46,6 +46,7 @@ from ..visibilidad import LATENTE, VISIBLE, incluir_segun_visibilidad
 from ..clasificacion_epistemologica import (
     _TOKEN as _TOKEN_NOMBRE_PROPIO,
     _es_parte_de_nombre_mas_largo,
+    clasificar,
     clasificar_atribucion,
 )
 from ..clasificacion_store import clasificar_lote
@@ -498,12 +499,26 @@ def _job_boards_clara_una_vez(
     with JobBoardsConnector() as conn:
         query = QuerySpec(empresa="Clara", tipo_evento="contratacion", slug="clara")
         res = run_connector(db, conn, query)
+    fila = db.fetch_one(
+        "SELECT id, cita_textual, empresa_mencionada, nombre_medio, "
+        "origen_declaracion, persona_citada, cargo FROM evidencias "
+        "WHERE url_fuente = ?",
+        ("https://job-boards.greenhouse.io/clara/jobs/5222043007",))
+    clasificacion_happiness = None
+    if fila is not None:
+        c = clasificar(dict(fila))
+        clasificacion_happiness = {
+            "cita_textual": fila["cita_textual"],
+            "tipo_epistemologico": c.tipo,
+            "razon": c.razon,
+        }
     return {
         "empresa": "Clara", "slug": "clara",
         "vistos": res.vistos, "escritos": res.escritos,
         "no_fechados": res.no_fechados, "duplicados": res.duplicados,
         "rechazados": res.rechazados, "filtrados": res.filtrados,
         "errores": res.errores,
+        "clasificacion_vacante_customer_happiness": clasificacion_happiness,
     }
 
 
