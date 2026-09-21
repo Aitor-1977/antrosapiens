@@ -46,6 +46,7 @@ from ..visibilidad import LATENTE, VISIBLE, incluir_segun_visibilidad
 from ..clasificacion_epistemologica import (
     _TOKEN as _TOKEN_NOMBRE_PROPIO,
     _es_parte_de_nombre_mas_largo,
+    clasificar,
     clasificar_atribucion,
 )
 from ..clasificacion_store import clasificar_lote
@@ -476,6 +477,50 @@ def _gdelt_organizaciones_exclusivas(
         "hasta": hasta,
         "total_organizaciones_exclusivas_de_gdelt": len(organizaciones),
         "organizaciones": organizaciones,
+    }
+
+
+@app.get("/ops/verificar-cuerpo-clara-5e8b1c73")
+def _verificar_cuerpo_clara(x_ingest_token: Optional[str] = Header(None)) -> dict:
+    """Endpoint TEMPORAL de solo lectura (2026-09-21) — se elimina de este
+    archivo tras la verificación única que pidió el operador: confirma que
+    la ampliación de `job_boards.py` (captura de cuerpo completo, Greenhouse
+    `?content=true`) produce ahora la frase real de fricción en
+    `cita_textual` para la vacante "Global Head of Customer Happiness" de
+    Clara, y que `clasificar()` (sin modificar) sigue devolviendo
+    `senal_primaria_huella_practica`. NO escribe en `evidencias`: llama
+    `search()`/`normalize()` del conector directamente (funciones puras,
+    sin red de por medio salvo la consulta a Greenhouse), sin pasar por
+    `pipeline.run_connector` — así evita que el dedup por `hash_dedup`
+    (empresa+URL, no cambia con el cuerpo) oculte la fila ya existente en
+    producción con el `cita_textual` viejo (solo título).
+    """
+    _exigir_token(x_ingest_token)
+    from ..connectors.job_boards import JobBoardsConnector
+    with JobBoardsConnector() as conn:
+        query = QuerySpec(empresa="Clara", tipo_evento="contratacion", slug="clara")
+        crudos = [
+            r for r in conn.search(query)
+            if "5222043007" in r.url
+        ]
+    if not crudos:
+        return {"encontrada": False}
+    rec = conn.normalize(crudos[0])
+    c = clasificar({
+        "cita_textual": rec.cita_textual,
+        "empresa_mencionada": rec.empresa_mencionada,
+        "nombre_medio": rec.nombre_medio,
+        "origen_declaracion": rec.origen_declaracion,
+        "persona_citada": rec.persona_citada,
+        "cargo": rec.cargo,
+    })
+    return {
+        "encontrada": True,
+        "cita_textual": rec.cita_textual,
+        "longitud": len(rec.cita_textual),
+        "contiene_friccion_real": "friction" in rec.cita_textual.lower(),
+        "tipo_epistemologico": c.tipo,
+        "razon": c.razon,
     }
 
 
