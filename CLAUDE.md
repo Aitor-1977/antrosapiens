@@ -663,6 +663,20 @@ pytest -q                                                # tests
 > posible aquí; se validó de punta a punta con fixtures y escritura real en
 > SQLite. Fuera de este entorno, `run_once` funciona contra las fuentes reales.
 
+> Nota de entorno (2026-09-21): `yt-dlp` en esta sesión recibe de YouTube
+> `HTTP 429` y luego `"Sign in to confirm you're not a bot"` de forma
+> persistente (5 reintentos con cooldown creciente, mismo resultado), incluso
+> para descargar solo el subtítulo automático (`--skip-download`), sin
+> relación con el conector `ingesta/youtube.py` en sí (que sí funcionó
+> exitosamente para 2 de 5 videos de prueba antes de que el bloqueo se
+> volviera consistente). **No se investigó** si esto es específico de la IP
+> compartida de este entorno (mismo patrón que Google News/GDELT) o un
+> endurecimiento estructural de YouTube contra automatización en general —
+> decisión explícita del operador de no invertir tiempo en diagnosticarlo
+> todavía, y de NO construir ningún conector/infraestructura de
+> transcripciones hasta saberlo. Pendiente de una prueba fuera de este
+> entorno antes de decidir si vale la pena un conector de entrevistas.
+
 ## Errores recurrentes
 
 1. **Feeds parseados desde `resp.text` en vez de bytes (2 ocurrencias).**
