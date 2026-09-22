@@ -46,11 +46,9 @@ from ..visibilidad import LATENTE, VISIBLE, incluir_segun_visibilidad
 from ..clasificacion_epistemologica import (
     _TOKEN as _TOKEN_NOMBRE_PROPIO,
     _es_parte_de_nombre_mas_largo,
-    clasificar,
     clasificar_atribucion,
 )
-from ..clasificacion_store import clasificar_lote, orgs_conocidas
-from ..connectors.job_boards import JobBoardsConnector
+from ..clasificacion_store import clasificar_lote
 from ..promocion_store import promover_lote
 from ..curaduria import curar
 from ..dictamen import generar_dictamen, generar_ranking
@@ -479,104 +477,6 @@ def _gdelt_organizaciones_exclusivas(
         "hasta": hasta,
         "total_organizaciones_exclusivas_de_gdelt": len(organizaciones),
         "organizaciones": organizaciones,
-    }
-
-
-@app.get("/ops/actualizar-cuerpo-clara-7f3e21ab")
-def _actualizar_cuerpo_clara_una_vez(
-    x_ingest_token: Optional[str] = Header(None),
-) -> dict:
-    """Endpoint TEMPORAL de escritura (2026-09-22) — se elimina de este
-    archivo tras la corrida única que pidió el operador.
-
-    Las 76 filas de Clara en `evidencias` (conector `job_boards`, Greenhouse)
-    se capturaron ANTES del fix de cuerpo completo (2026-09-21): tienen solo
-    el título en `cita_textual`. Este endpoint NO borra ni recrea nada: por
-    cada fila existente cuyo `url_fuente` siga publicado en el board de
-    Clara, hace UPDATE de `cita_textual` a título+cuerpo (mismo criterio que
-    `job_boards.py`, ya desplegado sin cambios de lógica). Filas sin match
-    (vacante ya no publicada) quedan intactas. Después re-clasifica SOLO las
-    filas que ya tenían una fila en `evidencia_clasificada` (UPDATE de
-    `tipo_epistemologico`/`enunciador_*`, mismo `expediente_id`, sin insertar
-    ni borrar expedientes). Alcance exclusivo: Clara. Se retira tras el uso
-    único, mismo patrón que los `/ops/...` anteriores.
-    """
-    _exigir_token(x_ingest_token)
-    db = get_db()
-
-    with JobBoardsConnector() as conn:
-        query = QuerySpec(empresa="Clara", tipo_evento="contratacion", slug="clara")
-        raws = list(conn.search(query))
-        nuevas_por_url = {}
-        for raw in raws:
-            ev = conn.normalize(raw)
-            nuevas_por_url[ev.url_fuente] = ev.cita_textual
-
-    existentes = db.fetch_all(
-        "SELECT id, url_fuente, cita_textual, empresa_mencionada, "
-        "nombre_medio, origen_declaracion, persona_citada, cargo "
-        "FROM evidencias WHERE LOWER(empresa_mencionada) = 'clara'"
-    )
-
-    actualizadas = []
-    for fila in existentes:
-        nueva_cita = nuevas_por_url.get(fila["url_fuente"])
-        if not nueva_cita or len(nueva_cita) <= len(fila["cita_textual"] or ""):
-            continue
-        db.execute(
-            "UPDATE evidencias SET cita_textual = ? WHERE id = ?",
-            (nueva_cita, fila["id"]),
-        )
-        actualizadas.append({
-            "evidencia_id": fila["id"],
-            "url_fuente": fila["url_fuente"],
-            "cita_anterior_len": len(fila["cita_textual"] or ""),
-            "cita_nueva_len": len(nueva_cita),
-        })
-
-    conocidas = orgs_conocidas(db)
-    reclasificadas = []
-    distribucion_nueva: dict[str, int] = {}
-    for act in actualizadas:
-        fila_actual = db.fetch_one(
-            "SELECT cita_textual, empresa_mencionada, nombre_medio, "
-            "origen_declaracion, persona_citada, cargo FROM evidencias "
-            "WHERE id = ?", (act["evidencia_id"],),
-        )
-        clas = clasificar(dict(fila_actual), conocidas)
-        existe = db.fetch_one(
-            "SELECT id FROM evidencia_clasificada WHERE evidencia_id = ?",
-            (act["evidencia_id"],),
-        )
-        if existe:
-            db.execute(
-                "UPDATE evidencia_clasificada SET tipo_epistemologico = ?, "
-                "enunciador_nombre = ?, enunciador_cargo = ?, "
-                "enunciador_dominio = ? WHERE evidencia_id = ?",
-                (clas.tipo, clas.enunciador_nombre, clas.enunciador_cargo,
-                 clas.enunciador_dominio, act["evidencia_id"]),
-            )
-            reclasificadas.append({"evidencia_id": act["evidencia_id"], "tipo": clas.tipo})
-            distribucion_nueva[clas.tipo] = distribucion_nueva.get(clas.tipo, 0) + 1
-
-    # Filas actualizadas que NUNCA tuvieron fila en evidencia_clasificada
-    # (evidencia capturada pero todavía no clasificada) usan el mecanismo YA
-    # EXISTENTE del sistema (`clasificacion_store.clasificar_lote`, mismo que
-    # usa `/ops/reparar-clara-...`), acotado a org="Clara": solo clasifica lo
-    # que aún no tiene fila, sin duplicar ni tocar otra organización.
-    reporte_lote = clasificar_lote(db, org="Clara", aplicar=True)
-
-    return {
-        "empresa": "Clara",
-        "vistos_en_greenhouse": len(nuevas_por_url),
-        "filas_existentes_en_evidencias": len(existentes),
-        "filas_actualizadas_con_cuerpo": len(actualizadas),
-        "filas_reclasificadas_ya_existentes": len(reclasificadas),
-        "distribucion_tipo_epistemologico_reclasificadas": distribucion_nueva,
-        "reporte_clasificar_lote_pendientes": {
-            k: v for k, v in reporte_lote.items() if k != "muestra"
-        },
-        "muestra_actualizadas": actualizadas[:5],
     }
 
 
