@@ -559,13 +559,23 @@ def _actualizar_cuerpo_clara_una_vez(
             reclasificadas.append({"evidencia_id": act["evidencia_id"], "tipo": clas.tipo})
             distribucion_nueva[clas.tipo] = distribucion_nueva.get(clas.tipo, 0) + 1
 
+    # Filas actualizadas que NUNCA tuvieron fila en evidencia_clasificada
+    # (evidencia capturada pero todavía no clasificada) usan el mecanismo YA
+    # EXISTENTE del sistema (`clasificacion_store.clasificar_lote`, mismo que
+    # usa `/ops/reparar-clara-...`), acotado a org="Clara": solo clasifica lo
+    # que aún no tiene fila, sin duplicar ni tocar otra organización.
+    reporte_lote = clasificar_lote(db, org="Clara", aplicar=True)
+
     return {
         "empresa": "Clara",
         "vistos_en_greenhouse": len(nuevas_por_url),
         "filas_existentes_en_evidencias": len(existentes),
         "filas_actualizadas_con_cuerpo": len(actualizadas),
-        "filas_reclasificadas": len(reclasificadas),
+        "filas_reclasificadas_ya_existentes": len(reclasificadas),
         "distribucion_tipo_epistemologico_reclasificadas": distribucion_nueva,
+        "reporte_clasificar_lote_pendientes": {
+            k: v for k, v in reporte_lote.items() if k != "muestra"
+        },
         "muestra_actualizadas": actualizadas[:5],
     }
 
