@@ -351,6 +351,54 @@ SOLO sobre datos ya extraídos por este mismo motor; sin IA, sin juicio libre):
   ejecuta acción comercial. Implementación: `hd_scraper/api/app.py`
   (`_construir_expedientes`, campo `visibilidad` y filtro; ruta
   `GET /expedientes`).
+- **Filtro de Situación Observable y Ficha de Prospección HD (Capa 20)**
+  (autorizado por el operador —Mario— el 2026-09-22, tras validar
+  empíricamente en Clara/Greenhouse que "texto completo de job boards →
+  evidencia real de fricción → clasificación epistemológica determinista"
+  produce señal útil): sobre evidencia YA clasificada por Entrega 2
+  (`tipo_epistemologico` en `senal_primaria_autodeclaracion` /
+  `senal_primaria_huella_practica` — la REGLA DURA de Entrega 2 sigue
+  intacta y sin tocar), un segundo filtro determinista distingue, por
+  léxico cerrado y sin IA, si el TEXTO describe una **situación observable
+  concreta** orientada al cliente/usuario (fricción de usuario, retención,
+  adopción, onboarding, cuellos de botella manuales, implementación
+  compleja, quejas de clientes) frente a **huella práctica genérica** (la
+  misma señal primaria estructural, pero sin ese marcador — p. ej.
+  "buscamos optimizar procesos y mejorar eficiencia" sin mención al
+  cliente). Solo la primera categoría genera una **Ficha de Prospección
+  HD**: organización, situación observable, fragmento textual grounded,
+  fuente(s), fecha(s), persona/cargo si existe, `tipo_epistemologico`,
+  `origen_declaracion`, corroboración y recurrencia (documentos
+  distintos que describen la MISMA situación, agrupados por marcador —
+  nunca una ficha por documento), contexto organizacional, y un **estado
+  de evaluación** (`SIN_SITUACION` | `SITUACION_OBSERVABLE` |
+  `PROSPECTO_INVESTIGABLE` cuando la recurrencia ≥ 2; `DESCARTADO` para
+  lo que nunca alcanzó señal primaria — reutiliza la REGLA DURA de
+  Entrega 2, no la reinterpreta). **Regla dura propia de esta capa:**
+  "si no existe una situación observable, no hay ficha de prospección" —
+  la huella práctica genérica se conserva como evidencia secundaria en la
+  base, pero nunca produce ficha. El **`score_icp`** (ya admisible) viaja
+  en la ficha como campo `fit_comercial` **estrictamente separado y
+  aditivo**: se calcula igual que siempre vía `analisis.analizar()`, se
+  muestra junto a la ficha, pero **jamás decide si una situación aparece,
+  se agrupa o se descarta** — el firewall epistemológico auditado el
+  2026-09-21 (`promocion_candidatos.py` sin import de `score_icp`) no se
+  toca. La Ficha **NUNCA nombra Deuda Cultural™** ni ninguno de sus cinco
+  tipos, y **nunca decide ni ejecuta acción comercial**: dice "existe esta
+  situación observable, respaldada por esta evidencia", no "esta
+  organización tiene [tipo de Deuda]" — esa lectura sigue siendo exclusiva
+  de Mario. No se automatiza ninguna fuente nueva con esta entrada (sigue
+  vigente solo Greenhouse/Lever/Ashby vía `job_boards.py`; HireHive,
+  FactorialHR y careers propios quedan explícitamente en espera, sin
+  conector, hasta que el operador autorice construirlo). Determinista,
+  sin IA, sin red, reproducible (mismo insumo ⇒ misma ficha).
+  Implementación: `hd_scraper/situacion_observable.py` (clasificador
+  A/B/D), `hd_scraper/estado_evidencia.py` (estados de evaluación),
+  `hd_scraper/ficha_prospeccion.py` (constructor de la ficha, puro, sin
+  BD) y la ruta `GET /ficha-prospeccion/{organizacion}` en
+  `hd_scraper/api/app.py` (orquesta: lee `evidencias` +
+  `evidencia_clasificada`, calcula `fit_comercial` vía `analizar()` ya
+  existente, sin lógica comercial nueva).
 
 **Exclusivo de RadarHD (JAMÁS aquí):**
 
@@ -379,7 +427,10 @@ comparten `/verificados` e INDAGAR están extraídos a
 `hd_scraper/visibilidad.py` (2026-09-20, `VISIBLE`, `LATENTE`,
 `incluir_segun_visibilidad`) — cada regla sigue calculando su propio
 booleano de dominio por separado; solo el mecanismo de etiquetado/filtrado
-es compartido. No reproducir esa lógica en otros módulos.
+es compartido. No reproducir esa lógica en otros módulos. La Capa 20
+(Filtro de Situación Observable y Ficha de Prospección, 2026-09-22) vive
+en `hd_scraper/situacion_observable.py`, `hd_scraper/estado_evidencia.py`
+y `hd_scraper/ficha_prospeccion.py`.
 
 **Regla de ampliación:** cualquier ampliación futura de interpretación en este
 repo exige actualizar **esta misma sección ANTES de escribir código**. Si una

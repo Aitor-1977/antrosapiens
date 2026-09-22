@@ -59,6 +59,7 @@ from ..contacto import dominio_de, rutas_contacto
 from ..discovery import PAISES_LATAM, REGIONES, VERTICALES_HD, queries_para, region_clause
 from ..enrich import enriquecer, google_search_url, linkedin_search_url, sugerir_vertical
 from ..pipeline import run_connector
+from ..ficha_prospeccion import generar_fichas
 from ..relevance import (
     _GENERICOS_SECTOR,
     _SUFIJOS_CORPORATIVOS,
@@ -3460,6 +3461,70 @@ def _sintesis_resuelta(nombre: str, evidencias: list[dict], base: dict) -> dict:
             f"{base['nota']} Fallback determinista: LLM no disponible ({error.mensaje})."
         )
         return base
+
+
+# --- Capa 20: Filtro de Situación Observable y Ficha de Prospección HD ------
+#
+# Autorizado por el operador el 2026-09-22 (CLAUDE.md → Frontera de
+# Interpretación). Sobre evidencia YA clasificada por Entrega 2, agrupa por
+# situación observable y produce la unidad de salida que Mario puede leer y
+# decidir sin volver a investigar manualmente. "Si no existe una situación
+# observable, no hay ficha de prospección." fit_comercial (score_icp) viaja
+# separado y aditivo: nunca decide qué situación se muestra.
+
+@app.get("/ficha-prospeccion/{org_nombre}")
+def ficha_prospeccion_org(org_nombre: str) -> dict:
+    """Fichas de Prospección HD (Capa 20) de una organización.
+
+    Lee `evidencias` + `evidencia_clasificada` ya existentes (no clasifica
+    nada nuevo), agrupa por marcador de situación observable
+    (`situacion_observable.clasificar_situacion`) y arma cada ficha
+    (`ficha_prospeccion.generar_fichas`). `fit_comercial.score_icp` se
+    calcula con `analisis.analizar()`, ya existente, sin lógica comercial
+    nueva. Determinista, sin IA. NUNCA nombra Deuda Cultural™.
+    """
+    db = get_db()
+    nombre = (org_nombre or "").strip()
+    filas = db.fetch_all(
+        "SELECT ev.cita_textual, ev.url_fuente, ev.nombre_medio, "
+        "ev.fecha_publicacion, ev.persona_citada, ev.cargo, "
+        "ev.origen_declaracion, ec.tipo_epistemologico, "
+        "ec.enunciador_nombre, ec.enunciador_cargo "
+        "FROM evidencia_clasificada ec "
+        "JOIN evidencias ev ON ev.id = ec.evidencia_id "
+        "WHERE LOWER(ev.empresa_mencionada) = LOWER(?)",
+        (nombre,),
+    )
+    filas_dict = [dict(f) for f in filas]
+
+    prospecto = db.fetch_one(
+        "SELECT categoria, capital_acumulado_usd, escala FROM prospectos "
+        "WHERE LOWER(nombre) = LOWER(?) LIMIT 1", (nombre,))
+    categoria = prospecto["categoria"] if prospecto else None
+    capital = prospecto["capital_acumulado_usd"] if prospecto else None
+    escala = prospecto["escala"] if prospecto else None
+    contexto = ", ".join(p for p in (categoria, f"escala {escala}" if escala else None) if p)
+
+    vertical = ""
+    for f in filas_dict:
+        v = sugerir_vertical(f.get("cita_textual") or "")
+        if v:
+            vertical = v
+            break
+    kws = detectar_keywords(" ".join(f.get("cita_textual") or "" for f in filas_dict))
+    a = analizar(kws, vertical=vertical, categoria=categoria, capital_acumulado_usd=capital)
+
+    fichas = generar_fichas(
+        nombre, filas_dict,
+        contexto_organizacional=contexto,
+        score_icp=a["score_icp"],
+    )
+    return {
+        "organizacion": nombre,
+        "fichas": [f.to_dict() for f in fichas],
+        "total_fichas": len(fichas),
+        "evidencia_evaluada": len(filas_dict),
+    }
 
 
 # --- Capa 12: Gobernanza Científica, Auditoría Total y Reproducibilidad ------
