@@ -399,6 +399,63 @@ SOLO sobre datos ya extraídos por este mismo motor; sin IA, sin juicio libre):
   `hd_scraper/api/app.py` (orquesta: lee `evidencias` +
   `evidencia_clasificada`, calcula `fit_comercial` vía `analizar()` ya
   existente, sin lógica comercial nueva).
+- **Motor de Colisión Estructural (Capa 21 · gate adicional para
+  `/verificados`)** (autorizado por el operador —Mario— el 2026-09-22,
+  alcance recortado en la misma fecha tras verificación técnica: sin
+  `VECTOR_FATIGA` ni `VECTOR_SILENCIO`, sin umbral de capital nuevo).
+  Sobre evidencia YA extraída (mismos metadatos ya existentes:
+  `origen_declaracion`, `connector`, `cita_textual`, `fecha_publicacion`
+  — ningún dato nuevo, ninguna fuente nueva), clasifica cada evidencia en
+  hasta dos vectores estructurales, por metadato, no por juicio de
+  contenido: **`VECTOR_NARRATIVA`** (`origen_declaracion == "prensa"`:
+  discurso público ya capturado por Google News/GDELT/RSS fijos, sin
+  costo adicional de captura) y **`VECTOR_OPERATIVO`** (`connector ==
+  "job_boards"` Y `cita_textual` contiene al menos una de las palabras
+  cerradas *retention, onboarding, customer success, behavioral* —
+  vacante correctiva real, no boilerplate). **`VECTOR_FATIGA`**
+  (transcripciones de podcast/entrevista) y **`VECTOR_SILENCIO`**
+  (ausencia de actividad del founder) del encargo original del operador
+  **NO se implementan**: exigen fuentes de datos que este motor no
+  captura hoy (sin conector de transcripciones — decisión ya vigente de
+  no construirlo hasta probar YouTube fuera de este entorno) y, en el
+  caso de Silencio, tratar "no encontramos evidencia" como
+  señal positiva de alarma **contradice directamente** la Regla Dura de
+  Capa 20 ("no encontré evidencia" y "no pude evaluar la fuente" no
+  pueden significar lo mismo) — decisión explícita del operador de no
+  romper ese principio. **Colisión**: dado el histórico de evidencia YA
+  extraída de una organización, si existe al menos un par
+  (`VECTOR_NARRATIVA`, `VECTOR_OPERATIVO`) cuyas `fecha_publicacion`
+  distan **9 meses o menos**, el estado es `COLISION_DETECTADA`; si
+  existe evidencia de un solo vector (o de ambos pero sin par dentro de
+  la ventana), `SENAL_AISLADA`; sin evidencia de ningún vector,
+  `SIN_SENAL`. Evidencia `no_fechado` (sin `fecha_publicacion`) nunca
+  participa del cálculo de ventana — la ausencia de fecha no inventa una
+  colisión, mismo criterio que `freshness.py`. **Guillotina de capital:**
+  reutiliza el umbral YA vigente `receptividad.CAPITAL_TECHO` ($15
+  millones) — el operador confirmó explícitamente NO crear un tercer
+  número de capital (ya conviven `CAPITAL_TECHO`=$15M en
+  `receptividad.py`/`analisis.py` y `CAPITAL_ICP_UMBRAL_UNICORNIO`=$100M
+  en INDAGAR); capital declarado > $15M excluye de `/verificados`
+  igual que excluye de la banda de prioridad A de Receptividad. **Gate
+  ADITIVO, no reemplazo:** `/verificados` sigue exigiendo
+  `score_relevancia >= 40` Y `score_freshness > 0` (Capa de fricción,
+  2026-09-19/20, INTACTA, sin tocar `friccion.py` ni `freshness.py`) —
+  la Colisión y la Guillotina se agregan como condiciones adicionales
+  (`visible` requiere las CUATRO a la vez); esto es una decisión de
+  diseño conservadora (no se reemplaza una capa que ya funciona por
+  otra sin demostrar), documentada aquí para que el operador pueda pedir
+  el reemplazo explícitamente si lo prefiere. Determinista, sin IA, sin
+  red, booleano puro sobre metadatos ya existentes (dominio/conector,
+  palabra en el texto, fecha) — nunca infiere costo, sentimiento ni
+  colisión por lectura libre. **NUNCA nombra Deuda Cultural™** ni decide
+  ni ejecuta acción comercial: solo dice si hay o no colisión estructural
+  entre dos tipos de evidencia ya extraída. No toca
+  `clasificacion_epistemologica.py` (clasificador congelado por el
+  operador el 2026-09-22) ni `friccion.py` (frizado igual). Implementación:
+  `hd_scraper/colision_estructural.py` (nuevo módulo puro, sin BD propia
+  más allá de la lectura ya existente vía `db.fetch_all`, mismo patrón que
+  `friccion.py`) y `hd_scraper/candidatos_verificados.py` (aplicación
+  aditiva en la capa de lectura de `/verificados`).
 
 **Exclusivo de RadarHD (JAMÁS aquí):**
 
@@ -430,7 +487,9 @@ booleano de dominio por separado; solo el mecanismo de etiquetado/filtrado
 es compartido. No reproducir esa lógica en otros módulos. La Capa 20
 (Filtro de Situación Observable y Ficha de Prospección, 2026-09-22) vive
 en `hd_scraper/situacion_observable.py`, `hd_scraper/estado_evidencia.py`
-y `hd_scraper/ficha_prospeccion.py`.
+y `hd_scraper/ficha_prospeccion.py`. La Capa 21 (Motor de Colisión
+Estructural, 2026-09-22) vive en `hd_scraper/colision_estructural.py` y se
+aplica de forma aditiva en `hd_scraper/candidatos_verificados.py`.
 
 **Regla de ampliación:** cualquier ampliación futura de interpretación en este
 repo exige actualizar **esta misma sección ANTES de escribir código**. Si una
