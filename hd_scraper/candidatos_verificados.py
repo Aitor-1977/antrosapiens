@@ -10,8 +10,10 @@ de `promocion_candidatos.py` / `promocion_store.py`.
 """
 from __future__ import annotations
 
-from .friccion import score_relevancia
+from .colision_estructural import ESTADO_COLISION_DETECTADA, detectar_colision
 from .freshness import score_freshness
+from .friccion import score_relevancia
+from .receptividad import CAPITAL_TECHO
 from .visibilidad import LATENTE, VISIBLE, incluir_segun_visibilidad
 
 UMBRAL_SCORE_RELEVANCIA = 40
@@ -59,8 +61,18 @@ def listar_candidatos_verificados(
     (antigüedad de la evidencia PRIMARIA seleccionada más abajo —NUNCA la
     evidencia más reciente de la organización—, `freshness.score_freshness`).
     `visible` solo si `score_relevancia >= UMBRAL_SCORE_RELEVANCIA` Y
-    `score_freshness > 0`, ambas condiciones a la vez, nunca un promedio. NO
-    se toca `estado` en la base ni la lógica de `promocion_candidatos.py`,
+    `score_freshness > 0`, ambas condiciones a la vez, nunca un promedio.
+
+    Capa 21 (Motor de Colisión Estructural, 2026-09-22, ADITIVA, ver CLAUDE.md
+    "Frontera de Interpretación"): dos condiciones MÁS, ninguna sustituye a
+    las de arriba. `colision_estructural.detectar_colision` sobre TODAS las
+    evidencias de la organización debe devolver `COLISION_DETECTADA`
+    (`VECTOR_NARRATIVA` + `VECTOR_OPERATIVO` dentro de 9 meses), Y el capital
+    declarado del prospecto (si existe) no debe superar `CAPITAL_TECHO` (los
+    $15M ya vigentes en `receptividad.py`, sin umbral nuevo). `visible`
+    exige las CUATRO condiciones a la vez.
+
+    NO se toca `estado` en la base ni la lógica de `promocion_candidatos.py`,
     solo se decide qué se expone como tarjeta en esta capa de lectura. El
     default de ESTA función es `estado_visibilidad="todos"` (no filtra
     nada): es la ruta `GET /verificados` la que pide explícitamente
@@ -73,7 +85,8 @@ def listar_candidatos_verificados(
     porque algunos candidatos del rango quedaron latentes.
     """
     expedientes = db.fetch_all(
-        "SELECT ec.id, ec.organizacion, p.categoria AS categoria_prospecto "
+        "SELECT ec.id, ec.organizacion, p.categoria AS categoria_prospecto, "
+        "p.capital_acumulado_usd AS capital_prospecto "
         "FROM expedientes_candidatos ec "
         "LEFT JOIN prospectos p ON LOWER(TRIM(p.nombre)) = LOWER(TRIM(ec.organizacion)) "
         "WHERE ec.estado = 'candidato' AND (p.pais IS NULL OR p.pais = ?) "
@@ -113,7 +126,24 @@ def listar_candidatos_verificados(
         # irrelevante no debe rejuvenecer un expediente cuya evidencia
         # primaria es vieja.
         freshness = score_freshness(ev["fecha_publicacion"])
-        visible = relevancia >= UMBRAL_SCORE_RELEVANCIA and freshness > 0
+
+        # Capa 21 (Motor de Colisión Estructural, 2026-09-22): gate ADITIVO,
+        # no reemplaza la fricción/frescura de arriba. Reutiliza
+        # CAPITAL_TECHO ya vigente (receptividad.py), sin umbral nuevo.
+        filas_evidencia = db.fetch_all(
+            "SELECT origen_declaracion, connector, cita_textual, "
+            "fecha_publicacion FROM evidencias "
+            "WHERE LOWER(TRIM(empresa_mencionada)) = LOWER(TRIM(?))",
+            (exp["organizacion"],))
+        colision = detectar_colision([dict(f) for f in filas_evidencia])
+        capital = exp["capital_prospecto"]
+        bajo_guillotina = capital is None or capital <= CAPITAL_TECHO
+
+        visible = (
+            relevancia >= UMBRAL_SCORE_RELEVANCIA and freshness > 0
+            and bajo_guillotina
+            and colision.estado == ESTADO_COLISION_DETECTADA
+        )
         etiqueta = VISIBLE if visible else LATENTE
         if not incluir_segun_visibilidad(etiqueta, estado_visibilidad):
             continue
@@ -129,6 +159,11 @@ def listar_candidatos_verificados(
             "cargo": ev["cargo"],
             "score_relevancia": relevancia,
             "score_freshness": freshness,
+            "colision_estructural": {
+                "estado": colision.estado,
+                "vectores_presentes": list(colision.vectores_presentes),
+            },
+            "capital_acumulado_usd": capital,
             "visibilidad": etiqueta,
         })
         if len(resultado) >= limite:

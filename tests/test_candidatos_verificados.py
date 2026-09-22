@@ -26,6 +26,22 @@ def _evidencia(db, n, org, cita, *, fecha_publicacion=None):
          fecha_publicacion, ahora_iso()))
 
 
+def _evidencia_operativa(db, n, org, *, fecha_publicacion=None):
+    """Vacante de job_boards con marcador correctivo (Capa 21): satisface
+    VECTOR_OPERATIVO para que la colisión con VECTOR_NARRATIVA (_evidencia,
+    ya `origen_declaracion='prensa'`) sea detectable en los tests de esta
+    capa que ya existían antes del gate aditivo."""
+    return db.insert_returning_id(
+        "INSERT INTO evidencias (cita_textual, fecha_extraccion, url_fuente, "
+        "nombre_medio, empresa_mencionada, tipo_evento, origen_declaracion, "
+        "hash_dedup, connector, fecha_publicacion, creado_en) "
+        "VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+        (f"Customer Success Manager en {org}: foco en onboarding y retention",
+         ahora_iso(), f"https://ej.test/op{n}", "Greenhouse", org,
+         "contratacion", "operador", f"hcvop{n}", "job_boards",
+         fecha_publicacion, ahora_iso()))
+
+
 def _expediente(db, org, estado):
     return db.insert_returning_id(
         "INSERT INTO expedientes_candidatos (organizacion, estado) VALUES (?, ?)",
@@ -173,6 +189,11 @@ def test_dos_oraciones_de_friccion_cruzan_el_umbral_y_quedan_visibles(db):
         "Además, Acme sufrió un fuerte churn este trimestre.",
         fecha_publicacion=HOY),
         "senal_primaria_autodeclaracion")
+    # Capa 21 (Motor de Colisión Estructural): la evidencia de arriba ya es
+    # VECTOR_NARRATIVA (origen_declaracion='prensa'); se agrega una vacante
+    # VECTOR_OPERATIVO en la misma ventana para que la colisión aditiva se
+    # detecte y el caso siga siendo 'visible' como antes de esta capa.
+    _evidencia_operativa(db, 1, "Acme", fecha_publicacion=HOY)
 
     items = listar_candidatos_verificados(db)
     assert len(items) == 1
@@ -180,6 +201,67 @@ def test_dos_oraciones_de_friccion_cruzan_el_umbral_y_quedan_visibles(db):
     assert items[0]["score_relevancia"] == 40
     assert items[0]["score_freshness"] == 100
     assert items[0]["visibilidad"] == "visible"
+    assert items[0]["colision_estructural"]["estado"] == "COLISION_DETECTADA"
+
+
+def test_sin_colision_estructural_queda_latente_aunque_friccion_y_freshness_pasen(db):
+    """Capa 21, gate ADITIVO: fricción=40 y freshness=100 (como el test de
+    arriba) ya no bastan solos si no hay colisión NARRATIVA+OPERATIVO."""
+    exp = _expediente(db, "Acme", "candidato")
+    _clasificar(db, exp, _evidencia(
+        db, 1, "Acme",
+        "Acme entró en conflicto con su distribuidor principal. "
+        "Además, Acme sufrió un fuerte churn este trimestre.",
+        fecha_publicacion=HOY),
+        "senal_primaria_autodeclaracion")
+    # Sin _evidencia_operativa: solo VECTOR_NARRATIVA presente -> SENAL_AISLADA.
+
+    todos = listar_candidatos_verificados(db, estado_visibilidad="todos")
+    assert todos[0]["visibilidad"] == "latente"
+    assert todos[0]["colision_estructural"]["estado"] == "SENAL_AISLADA"
+    assert listar_candidatos_verificados(db, estado_visibilidad="visible") == []
+
+
+def test_guillotina_de_capital_bloquea_pese_a_colision_detectada(db):
+    """Capa 21: capital declarado > CAPITAL_TECHO ($15M) excluye de
+    /verificados aunque exista colisión NARRATIVA+OPERATIVO real."""
+    ahora = ahora_iso()
+    db.execute(
+        "INSERT INTO prospectos (nombre, categoria, escala, "
+        "capital_acumulado_usd, hash_dedup, creado_en, actualizado_en) "
+        "VALUES (?,?,?,?,?,?,?)",
+        ("Acme", "Startup", "indeterminada", 20_000_000,
+         "hash-guillotina-acme", ahora, ahora))
+    exp = _expediente(db, "Acme", "candidato")
+    _clasificar(db, exp, _evidencia(
+        db, 1, "Acme",
+        "Acme entró en conflicto con su distribuidor principal. "
+        "Además, Acme sufrió un fuerte churn este trimestre.",
+        fecha_publicacion=HOY),
+        "senal_primaria_autodeclaracion")
+    _evidencia_operativa(db, 1, "Acme", fecha_publicacion=HOY)
+
+    todos = listar_candidatos_verificados(db, estado_visibilidad="todos")
+    assert todos[0]["colision_estructural"]["estado"] == "COLISION_DETECTADA"
+    assert todos[0]["capital_acumulado_usd"] == 20_000_000
+    assert todos[0]["visibilidad"] == "latente"
+
+
+def test_sin_capital_declarado_no_bloquea_la_guillotina(db):
+    """Ausencia de capital declarado no es evidencia de organización grande:
+    no bloquea, mismo criterio que el resto del sistema (nunca se inventa)."""
+    exp = _expediente(db, "Acme", "candidato")
+    _clasificar(db, exp, _evidencia(
+        db, 1, "Acme",
+        "Acme entró en conflicto con su distribuidor principal. "
+        "Además, Acme sufrió un fuerte churn este trimestre.",
+        fecha_publicacion=HOY),
+        "senal_primaria_autodeclaracion")
+    _evidencia_operativa(db, 1, "Acme", fecha_publicacion=HOY)
+
+    item = listar_candidatos_verificados(db, estado_visibilidad="todos")[0]
+    assert item["capital_acumulado_usd"] is None
+    assert item["visibilidad"] == "visible"
 
 
 def test_friccion_de_un_tercero_no_cuenta_para_la_organizacion(db):
@@ -298,6 +380,9 @@ def test_endpoint_get_verificados_por_defecto_solo_visibles(client, db):
                            "Beta entró en conflicto con un proveedor clave.",
                            fecha_publicacion=hoy),
                 "senal_primaria_autodeclaracion")
+    # Capa 21: colisión NARRATIVA (evidencia de arriba, prensa) + OPERATIVO
+    # (vacante correctiva) en la misma ventana, para que Beta siga 'visible'.
+    _evidencia_operativa(db, 2, "Beta", fecha_publicacion=hoy)
 
     r = client.get("/verificados")
     assert r.status_code == 200
